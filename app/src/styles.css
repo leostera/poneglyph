@@ -61,39 +61,9 @@ button {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 14px 14px 16px;
+  padding: 34px 14px 16px;
   border-right: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(255, 255, 255, 0.02);
-}
-
-.left-rail__window {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 24px;
-}
-
-.traffic-lights {
-  display: inline-flex;
-  gap: 10px;
-}
-
-.traffic {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-}
-
-.traffic--close {
-  background: #ff5f57;
-}
-
-.traffic--min {
-  background: #febc2e;
-}
-
-.traffic--max {
-  background: #28c840;
 }
 
 .rail-top-actions,

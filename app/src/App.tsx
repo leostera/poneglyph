@@ -330,25 +330,6 @@ export function App() {
       <div className="desktop-frame">
         <div className="workspace-shell">
           <aside className="left-rail">
-            <div className="left-rail__window">
-              <div className="traffic-lights">
-                <span className="traffic traffic--close" />
-                <span className="traffic traffic--min" />
-                <span className="traffic traffic--max" />
-              </div>
-              <div className="rail-top-actions">
-                <button className="rail-icon-button" type="button" aria-label="Back">
-                  <ArrowLeftIcon />
-                </button>
-                <button className="rail-icon-button" type="button" aria-label="Forward">
-                  <ArrowRightIcon />
-                </button>
-                <button className="rail-icon-button" type="button" aria-label="History">
-                  <ClockIcon />
-                </button>
-              </div>
-            </div>
-
             <div className="workspace-switcher">
               <div>
                 <div className="workspace-wordmark">Poneglyph.</div>
@@ -771,52 +752,6 @@ export function App() {
         </CommandDialog>
       </div>
     </ThemeRoot>
-  );
-}
-
-function ArrowLeftIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16">
-      <path
-        d="M9.75 3.5 5.25 8l4.5 4.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </svg>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16">
-      <path
-        d="M6.25 3.5 10.75 8l-4.5 4.5"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" fill="none" r="5.75" stroke="currentColor" strokeWidth="1.4" />
-      <path
-        d="M8 4.7v3.55l2.35 1.25"
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.4"
-      />
-    </svg>
   );
 }
 
