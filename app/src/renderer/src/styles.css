@@ -108,6 +108,19 @@ button {
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+.workspace-brand {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.workspace-brand__logo {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+}
+
 .workspace-wordmark,
 .detail-header h1 {
   margin: 0;

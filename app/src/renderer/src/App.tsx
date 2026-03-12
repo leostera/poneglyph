@@ -5,11 +5,14 @@ import {
   CommandItem,
   Kbd,
   NavItem,
+  PoneglyphLogo3D,
   StatusDot,
   ThemeRoot,
 } from "@poneglyph/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HashRouter, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import poneglyphMark from "../../../../assets/poneglyph.svg";
+import poneglyphTexture from "../../../../assets/poneglyph_texture.svg";
 
 type SectionId = "entities" | "facts" | "settings";
 
@@ -350,7 +353,16 @@ function SectionScreen({ section }: { section: SectionId }) {
       <div className="workspace-shell">
         <aside className="left-rail">
           <div className="workspace-switcher">
-            <div className="workspace-wordmark">Poneglyph.</div>
+            <div className="workspace-brand">
+              <PoneglyphLogo3D
+                alt="Poneglyph"
+                className="workspace-brand__logo"
+                fallbackSrc={poneglyphMark}
+                size={34}
+                textureSrc={poneglyphTexture}
+              />
+              <div className="workspace-wordmark">Poneglyph.</div>
+            </div>
             <Button
               className="search-launch"
               onClick={() => setSearchOpen(true)}
