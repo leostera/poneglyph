@@ -745,10 +745,17 @@ function TuneIcon() {
 function EntitiesIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 16 16">
-      <circle cx="4" cy="4" fill="none" r="2.1" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="12" cy="4" fill="none" r="2.1" stroke="currentColor" strokeWidth="1.4" />
-      <circle cx="8" cy="11.5" fill="none" r="2.1" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M5.7 5.5 7.1 9M10.3 5.5 8.9 9" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="4" cy="4" fill="none" r="1.75" stroke="currentColor" strokeWidth="1.35" />
+      <circle cx="12" cy="4" fill="none" r="1.75" stroke="currentColor" strokeWidth="1.35" />
+      <circle cx="8" cy="12" fill="none" r="1.75" stroke="currentColor" strokeWidth="1.35" />
+      <path
+        d="M5.25 5.1 6.95 10.15M10.75 5.1 9.05 10.15M5.75 4h4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.35"
+      />
     </svg>
   );
 }
@@ -757,25 +764,25 @@ function FactsIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 16 16">
       <path
-        d="M4.25 2.75h5.7l2.05 2.1v8.4H4.25z"
+        d="M4 2.5h5l3 3v8H4z"
         fill="none"
         stroke="currentColor"
         strokeLinejoin="round"
-        strokeWidth="1.4"
+        strokeWidth="1.35"
       />
       <path
-        d="M9.95 2.75v2.1H12"
+        d="M9 2.5v3h3"
         fill="none"
         stroke="currentColor"
         strokeLinejoin="round"
-        strokeWidth="1.4"
+        strokeWidth="1.35"
       />
       <path
-        d="M6.25 8h3.6M6.25 10.75h3.6"
+        d="M6 7.75h4M6 10h4M6 12.25h2.75"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
-        strokeWidth="1.4"
+        strokeWidth="1.35"
       />
     </svg>
   );
@@ -784,14 +791,16 @@ function FactsIcon() {
 function SettingsIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" fill="none" r="2" stroke="currentColor" strokeWidth="1.4" />
       <path
-        d="M8 2.3v1.5M8 12.2v1.5M13.7 8h-1.5M3.8 8H2.3M11.95 4.05l-1.05 1.05M5.1 10.9l-1.05 1.05M11.95 11.95 10.9 10.9M5.1 5.1 4.05 4.05"
+        d="M3 4h10M3 8h10M3 12h10"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
-        strokeWidth="1.4"
+        strokeWidth="1.35"
       />
+      <circle cx="6" cy="4" fill="#0a0a0a" r="1.6" stroke="currentColor" strokeWidth="1.35" />
+      <circle cx="10.5" cy="8" fill="#0a0a0a" r="1.6" stroke="currentColor" strokeWidth="1.35" />
+      <circle cx="7.5" cy="12" fill="#0a0a0a" r="1.6" stroke="currentColor" strokeWidth="1.35" />
     </svg>
   );
 }
