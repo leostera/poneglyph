@@ -322,24 +322,36 @@ export function App() {
               <div className="rail-nav">
                 <NavItem
                   active={activeSection === "entities"}
-                  meta="graph"
                   onClick={() => setActiveSection("entities")}
                 >
-                  Entities
+                  <span className="nav-entry">
+                    <span className="nav-entry__icon">
+                      <EntitiesIcon />
+                    </span>
+                    <span className="nav-entry__label">Entities</span>
+                  </span>
                 </NavItem>
                 <NavItem
                   active={activeSection === "facts"}
-                  meta="log"
                   onClick={() => setActiveSection("facts")}
                 >
-                  Facts
+                  <span className="nav-entry">
+                    <span className="nav-entry__icon">
+                      <FactsIcon />
+                    </span>
+                    <span className="nav-entry__label">Facts</span>
+                  </span>
                 </NavItem>
                 <NavItem
                   active={activeSection === "settings"}
-                  meta="config"
                   onClick={() => setActiveSection("settings")}
                 >
-                  Settings
+                  <span className="nav-entry">
+                    <span className="nav-entry__icon">
+                      <SettingsIcon />
+                    </span>
+                    <span className="nav-entry__label">Settings</span>
+                  </span>
                 </NavItem>
               </div>
             </div>
@@ -726,6 +738,60 @@ function TuneIcon() {
       <circle cx="6" cy="4" fill="currentColor" r="1.3" />
       <circle cx="10" cy="8" fill="currentColor" r="1.3" />
       <circle cx="7" cy="12" fill="currentColor" r="1.3" />
+    </svg>
+  );
+}
+
+function EntitiesIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16">
+      <circle cx="4" cy="4" fill="none" r="2.1" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="12" cy="4" fill="none" r="2.1" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="8" cy="11.5" fill="none" r="2.1" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M5.7 5.5 7.1 9M10.3 5.5 8.9 9" fill="none" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function FactsIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16">
+      <path
+        d="M4.25 2.75h5.7l2.05 2.1v8.4H4.25z"
+        fill="none"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M9.95 2.75v2.1H12"
+        fill="none"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M6.25 8h3.6M6.25 10.75h3.6"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.4"
+      />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16">
+      <circle cx="8" cy="8" fill="none" r="2" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M8 2.3v1.5M8 12.2v1.5M13.7 8h-1.5M3.8 8H2.3M11.95 4.05l-1.05 1.05M5.1 10.9l-1.05 1.05M11.95 11.95 10.9 10.9M5.1 5.1 4.05 4.05"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="1.4"
+      />
     </svg>
   );
 }

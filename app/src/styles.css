@@ -166,6 +166,36 @@ button {
   gap: 6px;
 }
 
+.nav-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.nav-entry__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: rgba(245, 245, 242, 0.56);
+  flex-shrink: 0;
+}
+
+.nav-entry__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.nav-entry__label {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .browser-pane {
   display: flex;
   flex-direction: column;
