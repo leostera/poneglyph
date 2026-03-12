@@ -221,6 +221,7 @@ button {
   border-right: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(255, 255, 255, 0.015);
   min-height: 0;
+  overflow: hidden;
 }
 
 .pane-header {
@@ -241,6 +242,8 @@ button {
 }
 
 .browser-list {
+  flex: 1;
+  min-height: 0;
   display: grid;
   gap: 6px;
   padding: 12px;
@@ -305,6 +308,7 @@ button {
   flex-direction: column;
   background: rgba(255, 255, 255, 0.01);
   min-height: 0;
+  overflow: hidden;
 }
 
 .detail-header {
@@ -332,10 +336,13 @@ button {
 }
 
 .detail-body {
+  flex: 1;
+  min-height: 0;
   display: grid;
   gap: 16px;
   padding: 18px 24px 24px;
   overflow: auto;
+  align-content: start;
 }
 
 .detail-hero,
