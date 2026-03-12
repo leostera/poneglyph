@@ -23,7 +23,7 @@ const meta = {
     <AppShell
       {...args}
       sidebar={
-        <div style={{ display: "grid", gap: 12, minWidth: 240 }}>
+        <div className="grid min-w-60 gap-3">
           <SectionTitle
             description="Primary views for operating the local graph."
             eyebrow="Workspace"
@@ -36,7 +36,7 @@ const meta = {
         </div>
       }
     >
-      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <SectionTitle
             description="Consolidation is eventual, deterministic, and replay-safe."
@@ -45,7 +45,7 @@ const meta = {
           />
         </Card>
         <Card tone="accent">
-          <div style={{ display: "grid", gap: 12 }}>
+          <div className="grid gap-3">
             <Badge tone="accent">Projection healthy</Badge>
             <Button label="Open inspector" />
           </div>

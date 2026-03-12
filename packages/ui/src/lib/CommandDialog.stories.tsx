@@ -15,13 +15,13 @@ const meta = {
     onQueryChange: () => undefined,
   },
   render: (args) => (
-    <ThemeRoot style={{ minHeight: "100vh", padding: 24 }}>
+    <ThemeRoot className="min-h-screen p-6">
       <CommandDialog {...args}>
         <CommandItem meta="spotify:album:1xndb8d9an" title="Album: 2112" trailing={<Kbd>↵</Kbd>} />
         <CommandItem meta="Projection action" title="Replay search index" trailing={<Kbd>R</Kbd>} />
         <CommandItem
           meta="Recent fact"
-          title="spotify:displayName → 2112"
+          title="spotify:displayName -> 2112"
           trailing={<Kbd>F</Kbd>}
         />
       </CommandDialog>

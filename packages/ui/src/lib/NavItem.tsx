@@ -18,9 +18,22 @@ export function NavItem({
   ...props
 }: NavItemProps) {
   return (
-    <button className={cn("pg-nav-item", className)} data-active={active} type={type} {...props}>
+    <button
+      className={cn(
+        "grid min-h-8 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-3 text-left text-[13px] text-muted-foreground transition-colors",
+        active ? "bg-white/8 text-foreground" : "hover:bg-white/4 hover:text-foreground",
+        className,
+      )}
+      data-active={active}
+      type={type}
+      {...props}
+    >
       <span>{children}</span>
-      {meta ? <span className="pg-nav-item__meta">{meta}</span> : null}
+      {meta ? (
+        <span className="text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
+          {meta}
+        </span>
+      ) : null}
     </button>
   );
 }

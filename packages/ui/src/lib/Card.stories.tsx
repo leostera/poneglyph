@@ -9,7 +9,7 @@ const meta = {
     children: "Facts are durable truth. Entities are derived views.",
   },
   render: (args) => (
-    <div style={{ width: 360 }}>
+    <div className="w-[360px]">
       <Card {...args} />
     </div>
   ),

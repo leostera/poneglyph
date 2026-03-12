@@ -9,9 +9,9 @@ const meta = {
     tone: "healthy",
   },
   render: (args) => (
-    <div style={{ alignItems: "center", display: "flex", gap: 16 }}>
+    <div className="flex items-center gap-4">
       <StatusDot {...args} />
-      <span>Status indicator</span>
+      <span className="text-sm text-foreground">Status indicator</span>
     </div>
   ),
 } satisfies Meta<typeof StatusDot>;

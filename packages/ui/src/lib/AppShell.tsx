@@ -19,58 +19,22 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div className={cn("pg-theme", className)} style={shellStyle}>
-      <header style={headerStyle}>
-        <div>
-          <div style={eyebrowStyle}>{eyebrow}</div>
-          <h1 style={titleStyle}>{title}</h1>
-          <p style={subtitleStyle}>{subtitle}</p>
-        </div>
-        {sidebar ? <aside>{sidebar}</aside> : null}
-      </header>
-      <main style={mainStyle}>{children}</main>
+    <div className={cn("dark min-h-screen bg-background text-foreground", className)}>
+      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-8 py-10">
+        <header className="flex items-end justify-between gap-6">
+          <div className="grid gap-3">
+            <div className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
+              {eyebrow}
+            </div>
+            <h1 className="font-serif text-5xl leading-none font-light tracking-[-0.05em]">
+              {title}
+            </h1>
+            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{subtitle}</p>
+          </div>
+          {sidebar ? <aside>{sidebar}</aside> : null}
+        </header>
+        <main className="grid gap-5">{children}</main>
+      </div>
     </div>
   );
 }
-
-const shellStyle = {
-  minHeight: "100vh",
-  padding: "40px 32px 56px",
-};
-
-const headerStyle = {
-  display: "flex",
-  alignItems: "flex-end",
-  justifyContent: "space-between",
-  gap: "24px",
-  marginBottom: "28px",
-};
-
-const eyebrowStyle = {
-  color: "rgba(248, 241, 223, 0.72)",
-  fontSize: "0.84rem",
-  letterSpacing: "0.12em",
-  textTransform: "uppercase" as const,
-  marginBottom: "14px",
-};
-
-const titleStyle = {
-  margin: 0,
-  fontFamily: "var(--pg-font-serif)",
-  fontSize: "clamp(2.3rem, 5vw, 4.4rem)",
-  lineHeight: 0.94,
-  fontWeight: 300,
-};
-
-const subtitleStyle = {
-  margin: "18px 0 0",
-  maxWidth: "760px",
-  color: "rgba(248, 241, 223, 0.72)",
-  fontSize: "1.06rem",
-  lineHeight: 1.6,
-};
-
-const mainStyle = {
-  display: "grid",
-  gap: "20px",
-};

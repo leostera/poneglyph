@@ -11,7 +11,7 @@ const meta = {
     description: "The current consolidated view for this entity and the facts that shaped it.",
   },
   render: (args) => (
-    <div style={{ width: 360 }}>
+    <div className="w-[360px]">
       <SectionTitle {...args} />
     </div>
   ),

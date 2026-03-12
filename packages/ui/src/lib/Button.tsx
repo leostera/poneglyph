@@ -1,50 +1,45 @@
-import { Slot } from "@radix-ui/react-slot";
-import { type VariantProps, cva } from "class-variance-authority";
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
+import { Button as PrimitiveButton } from "../components/ui/button";
 import { cn } from "./utils";
 
-const buttonVariants = cva("pg-button", {
-  variants: {
-    tone: {
-      default: "pg-button--default",
-      secondary: "pg-button--secondary",
-      accent: "pg-button--accent",
-      ghost: "pg-button--ghost",
-    },
-    size: {
-      sm: "pg-button--sm",
-      md: "pg-button--md",
-      lg: "pg-button--lg",
-    },
-  },
-  defaultVariants: {
-    tone: "default",
-    size: "md",
-  },
-});
-
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-    label?: string;
-  };
+type ButtonProps = Omit<ComponentProps<typeof PrimitiveButton>, "size" | "variant"> & {
+  label?: ReactNode;
+  tone?: "default" | "secondary" | "accent" | "ghost";
+  size?: "sm" | "md" | "lg";
+};
 
 export function Button({
-  asChild,
   children,
   className,
   label,
-  size,
-  tone,
-  type = "button",
+  size = "md",
+  tone = "default",
   ...props
 }: ButtonProps) {
-  const Comp = asChild ? Slot : "button";
+  const variant =
+    tone === "accent"
+      ? "default"
+      : tone === "secondary"
+        ? "outline"
+        : tone === "ghost"
+          ? "ghost"
+          : "secondary";
+
+  const nextSize = size === "sm" ? "sm" : size === "lg" ? "lg" : "default";
 
   return (
-    <Comp className={cn(buttonVariants({ tone, size }), className)} type={type} {...props}>
+    <PrimitiveButton
+      className={cn(
+        "text-xs font-medium",
+        tone === "accent" ? "bg-emerald-400 text-black hover:bg-emerald-300" : "",
+        className,
+      )}
+      size={nextSize}
+      variant={variant}
+      {...props}
+    >
       {children ?? label}
-    </Comp>
+    </PrimitiveButton>
   );
 }

@@ -6,7 +6,7 @@ const meta = {
   title: "Primitives/Kbd",
   component: Kbd,
   args: {
-    children: "⌘K",
+    children: "Cmd+K",
   },
 } satisfies Meta<typeof Kbd>;
 

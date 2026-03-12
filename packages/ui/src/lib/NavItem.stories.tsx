@@ -11,7 +11,7 @@ const meta = {
     meta: "124",
   },
   render: (args) => (
-    <div style={{ width: 240 }}>
+    <div className="w-60">
       <NavItem {...args} />
     </div>
   ),

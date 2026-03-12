@@ -1,37 +1,29 @@
-import { type VariantProps, cva } from "class-variance-authority";
-import type { HTMLAttributes, PropsWithChildren } from "react";
+import type { ComponentProps } from "react";
 
+import { Card as PrimitiveCard } from "../components/ui/card";
 import { cn } from "./utils";
 
-const cardVariants = cva("pg-card", {
-  variants: {
-    tone: {
-      default: "pg-card--default",
-      accent: "pg-card--accent",
-    },
-    density: {
-      compact: "pg-card--compact",
-      comfortable: "pg-card--comfortable",
-    },
-  },
-  defaultVariants: {
-    tone: "default",
-    density: "comfortable",
-  },
-});
+type CardProps = ComponentProps<typeof PrimitiveCard> & {
+  density?: "compact" | "comfortable";
+  tone?: "default" | "accent";
+};
 
-type CardProps = PropsWithChildren<
-  HTMLAttributes<HTMLElement> &
-    VariantProps<typeof cardVariants> & {
-      as?: "section" | "div" | "article";
-    }
->;
-
-export function Card({ as = "section", children, className, density, tone, ...props }: CardProps) {
-  const Comp = as;
+export function Card({
+  className,
+  density = "comfortable",
+  tone = "default",
+  ...props
+}: CardProps) {
   return (
-    <Comp className={cn(cardVariants({ tone, density }), className)} {...props}>
-      {children}
-    </Comp>
+    <PrimitiveCard
+      className={cn(
+        "rounded-[28px] border border-border/80 bg-card/80 shadow-none",
+        density === "compact" ? "gap-4 py-4" : "gap-5 py-5",
+        tone === "accent" ? "bg-card/90 ring-1 ring-white/5" : "",
+        className,
+      )}
+      size={density === "compact" ? "sm" : "default"}
+      {...props}
+    />
   );
 }

@@ -8,7 +8,13 @@ export function ThemeRoot({
   ...props
 }: PropsWithChildren<HTMLAttributes<HTMLDivElement>>) {
   return (
-    <div className={cn("pg-theme", className)} {...props}>
+    <div
+      className={cn(
+        "dark min-h-full bg-background font-sans text-foreground antialiased",
+        className,
+      )}
+      {...props}
+    >
       {children}
     </div>
   );

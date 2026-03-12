@@ -7,8 +7,8 @@ const preview: Preview = {
     backgrounds: {
       default: "graphite",
       values: [
-        { name: "graphite", value: "#110e0c" },
-        { name: "paper", value: "#f5efe2" },
+        { name: "graphite", value: "#050505" },
+        { name: "paper", value: "#f5f5f2" },
       ],
     },
   },

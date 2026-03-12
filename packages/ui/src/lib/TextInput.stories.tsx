@@ -10,7 +10,7 @@ const meta = {
     placeholder: "Search entities, fields, and facts",
   },
   render: (args) => (
-    <div style={{ width: 320 }}>
+    <div className="w-80">
       <TextInput {...args} />
     </div>
   ),

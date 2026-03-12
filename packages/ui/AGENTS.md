@@ -6,12 +6,17 @@ These instructions apply to `packages/ui/`.
 
 ## Purpose
 
-- `packages/ui` is the shared component layer for Poneglyph frontend surfaces.
-- It should provide design-system primitives and composable building blocks, not application feature logic.
+- `packages/ui` is the shared design system for the desktop app.
+- It owns reusable primitives, shell-level composition pieces, tokens, and Storybook coverage.
+
+## Boundaries
+
+- Reusable components and visual language belong here.
+- App-specific screens, mocked datasets, and Electron behavior do not belong here.
+- Keep compatibility exports stable while `app/` is still iterating quickly.
 
 ## Working rules
 
-- Prefer small, readable primitives over large kitchen-sink components.
-- Keep styling intentional and distinctive; do not drift into generic default component-library aesthetics.
-- Avoid importing Electron APIs or app runtime concerns into this package.
-- When a component API grows app-specific branches, move that feature logic back into the app layer.
+- Prefer dense defaults and consistent rhythm over large decorative components.
+- Add or update Storybook stories when you change exported primitives.
+- Keep `src/index.ts` and `src/styles.css` as the stable public surface consumed by `app/`.

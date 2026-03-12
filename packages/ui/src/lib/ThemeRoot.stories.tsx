@@ -11,11 +11,11 @@ const meta = {
     layout: "fullscreen",
   },
   render: () => (
-    <ThemeRoot style={{ minHeight: "100vh", padding: 24 }}>
+    <ThemeRoot className="min-h-screen p-6">
       <Card>
-        <div style={{ display: "grid", gap: 12 }}>
+        <div className="grid gap-3">
           <Badge tone="accent">dense interface</Badge>
-          <p style={{ margin: 0 }}>
+          <p className="m-0 text-sm leading-6 text-muted-foreground">
             The theme root carries tokens for surface contrast, typography, and accent states.
           </p>
         </div>
