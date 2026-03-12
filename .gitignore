@@ -4,6 +4,7 @@ node_modules
 # output
 out
 dist
+app/dist
 *.tgz
 
 # code coverage
@@ -32,3 +33,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+3rdparty
+target
