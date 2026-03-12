@@ -5,6 +5,7 @@ export { Card } from "./lib/Card";
 export { CommandDialog, CommandItem } from "./lib/CommandDialog";
 export { Kbd } from "./lib/Kbd";
 export { NavItem } from "./lib/NavItem";
+export { PoneglyphLogo3D } from "./lib/PoneglyphLogo3D";
 export { SectionTitle } from "./lib/SectionTitle";
 export { StatusDot } from "./lib/StatusDot";
 export { TextInput } from "./lib/TextInput";
