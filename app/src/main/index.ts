@@ -1,9 +1,11 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BrowserWindow, Menu, type NativeImage, Tray, app, nativeImage } from "electron";
+import { BrowserWindow, Menu, type NativeImage, Tray, app, nativeImage, shell } from "electron";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const isDev = process.env.NODE_ENV !== "production";
+const rendererUrl = process.env.ELECTRON_RENDERER_URL;
+const isDev = Boolean(rendererUrl);
+
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
@@ -23,12 +25,19 @@ function createWindow() {
     titleBarStyle: "hiddenInset",
     backgroundColor: "#0d0b09",
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, "../preload/index.mjs"),
     },
   });
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: "deny" };
   });
 
   mainWindow.on("close", (event) => {
@@ -42,13 +51,13 @@ function createWindow() {
     mainWindow = null;
   });
 
-  if (isDev) {
-    void mainWindow.loadURL("http://127.0.0.1:3000");
+  if (rendererUrl) {
+    void mainWindow.loadURL(rendererUrl);
     mainWindow.webContents.openDevTools({ mode: "detach" });
-    return mainWindow;
+  } else {
+    void mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
-  void mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   return mainWindow;
 }
 
@@ -135,3 +144,7 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
+
+if (!isDev) {
+  app.commandLine.appendSwitch("disable-renderer-backgrounding");
+}

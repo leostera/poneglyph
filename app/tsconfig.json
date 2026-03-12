@@ -2,13 +2,8 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["bun", "node"],
+    "types": ["node"],
     "jsx": "react-jsx"
   },
-  "include": [
-    "src",
-    "electron",
-    "scripts",
-    "vite.config.ts"
-  ]
+  "include": ["src", "electron.vite.config.ts"]
 }
