@@ -28,7 +28,7 @@ export function NavItem({
       type={type}
       {...props}
     >
-      <span>{children}</span>
+      <span className="flex min-w-0 items-center justify-start text-left">{children}</span>
       {meta ? (
         <span className="text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
           {meta}
