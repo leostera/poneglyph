@@ -9,15 +9,9 @@ import {
   ThemeRoot,
 } from "@poneglyph/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { HashRouter, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 
 type SectionId = "entities" | "facts" | "settings";
-
-type RouteState = {
-  section: SectionId;
-  entityId?: string;
-  factId?: string;
-  settingsId?: string;
-};
 
 const entities = [
   {
@@ -254,89 +248,50 @@ const searchEntries = [
   },
 ];
 
-function isSectionId(value: string | null): value is SectionId {
-  return value === "entities" || value === "facts" || value === "settings";
+const defaultEntityId = entities[0]?.id ?? "";
+const defaultFactId = factBatches[0]?.id ?? "";
+const defaultSettingsId = settingsModules[0]?.id ?? "";
+
+function entityPath(entityId: string) {
+  return `/entities/${encodeURIComponent(entityId)}`;
 }
 
-function getDefaultRouteState(): RouteState {
-  return {
-    section: "entities",
-    entityId: entities[0]?.id,
-    factId: factBatches[0]?.id,
-    settingsId: settingsModules[0]?.id,
-  };
+function factPath(factId: string) {
+  return `/facts/${encodeURIComponent(factId)}`;
 }
 
-function readRouteState(): RouteState {
-  const fallback = getDefaultRouteState();
-  const hash = window.location.hash.replace(/^#/, "");
-
-  if (!hash) {
-    return fallback;
-  }
-
-  const [rawPath, rawQuery = ""] = hash.split("?");
-  const normalizedPath = rawPath.replace(/^\/+/, "");
-  const section = isSectionId(normalizedPath) ? normalizedPath : fallback.section;
-  const params = new URLSearchParams(rawQuery);
-
-  return {
-    section,
-    entityId: params.get("entity") ?? fallback.entityId,
-    factId: params.get("fact") ?? fallback.factId,
-    settingsId: params.get("settings") ?? fallback.settingsId,
-  };
-}
-
-function buildRouteHash(route: RouteState) {
-  const params = new URLSearchParams();
-
-  if (route.section === "entities" && route.entityId) {
-    params.set("entity", route.entityId);
-  }
-
-  if (route.section === "facts" && route.factId) {
-    params.set("fact", route.factId);
-  }
-
-  if (route.section === "settings" && route.settingsId) {
-    params.set("settings", route.settingsId);
-  }
-
-  const query = params.toString();
-  return `#/${route.section}${query ? `?${query}` : ""}`;
+function settingsPath(settingsId: string) {
+  return `/settings/${encodeURIComponent(settingsId)}`;
 }
 
 export function App() {
-  const initialRoute = typeof window === "undefined" ? getDefaultRouteState() : readRouteState();
-  const [activeSection, setActiveSection] = useState<SectionId>(initialRoute.section);
-  const [selectedEntityId, setSelectedEntityId] = useState(
-    initialRoute.entityId ?? entities[0]?.id ?? "",
+  return (
+    <ThemeRoot>
+      <HashRouter>
+        <Routes>
+          <Route element={<Navigate replace to={entityPath(defaultEntityId)} />} path="/" />
+          <Route element={<Navigate replace to={entityPath(defaultEntityId)} />} path="/entities" />
+          <Route element={<SectionScreen section="entities" />} path="/entities/:entityId" />
+          <Route element={<Navigate replace to={factPath(defaultFactId)} />} path="/facts" />
+          <Route element={<SectionScreen section="facts" />} path="/facts/:factId" />
+          <Route
+            element={<Navigate replace to={settingsPath(defaultSettingsId)} />}
+            path="/settings"
+          />
+          <Route element={<SectionScreen section="settings" />} path="/settings/:settingsId" />
+          <Route element={<Navigate replace to={entityPath(defaultEntityId)} />} path="*" />
+        </Routes>
+      </HashRouter>
+    </ThemeRoot>
   );
-  const [selectedFactId, setSelectedFactId] = useState(
-    initialRoute.factId ?? factBatches[0]?.id ?? "",
-  );
-  const [selectedSettingsId, setSelectedSettingsId] = useState(
-    initialRoute.settingsId ?? settingsModules[0]?.id ?? "",
-  );
+}
+
+function SectionScreen({ section }: { section: SectionId }) {
+  const navigate = useNavigate();
+  const params = useParams();
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    function syncFromLocation() {
-      const route = readRouteState();
-      setActiveSection(route.section);
-      setSelectedEntityId(route.entityId ?? entities[0]?.id ?? "");
-      setSelectedFactId(route.factId ?? factBatches[0]?.id ?? "");
-      setSelectedSettingsId(route.settingsId ?? settingsModules[0]?.id ?? "");
-    }
-
-    window.addEventListener("hashchange", syncFromLocation);
-    return () => {
-      window.removeEventListener("hashchange", syncFromLocation);
-    };
-  }, []);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -377,432 +332,425 @@ export function App() {
     });
   }, [query]);
 
-  const selectedEntity = entities.find((entity) => entity.id === selectedEntityId) ?? entities[0];
-  const selectedFact = factBatches.find((fact) => fact.id === selectedFactId) ?? factBatches[0];
+  const selectedEntity =
+    entities.find((entity) => entity.id === params.entityId) ??
+    entities.find((entity) => entity.id === defaultEntityId) ??
+    entities[0];
+  const selectedFact =
+    factBatches.find((fact) => fact.id === params.factId) ??
+    factBatches.find((fact) => fact.id === defaultFactId) ??
+    factBatches[0];
   const selectedSettings =
-    settingsModules.find((module) => module.id === selectedSettingsId) ?? settingsModules[0];
-
-  useEffect(() => {
-    const nextHash = buildRouteHash({
-      section: activeSection,
-      entityId: selectedEntityId,
-      factId: selectedFactId,
-      settingsId: selectedSettingsId,
-    });
-
-    if (window.location.hash !== nextHash) {
-      window.history.replaceState(null, "", nextHash);
-    }
-  }, [activeSection, selectedEntityId, selectedFactId, selectedSettingsId]);
+    settingsModules.find((module) => module.id === params.settingsId) ??
+    settingsModules.find((module) => module.id === defaultSettingsId) ??
+    settingsModules[0];
 
   return (
-    <ThemeRoot>
-      <div className="desktop-frame">
-        <div className="workspace-shell">
-          <aside className="left-rail">
-            <div className="workspace-switcher">
-              <div className="workspace-wordmark">Poneglyph.</div>
-              <Button
-                className="search-launch"
-                onClick={() => setSearchOpen(true)}
-                size="sm"
-                tone="secondary"
+    <div className="desktop-frame">
+      <div className="workspace-shell">
+        <aside className="left-rail">
+          <div className="workspace-switcher">
+            <div className="workspace-wordmark">Poneglyph.</div>
+            <Button
+              className="search-launch"
+              onClick={() => setSearchOpen(true)}
+              size="sm"
+              tone="secondary"
+            >
+              <Kbd className="search-launch__kbd">⌘ K</Kbd>
+            </Button>
+          </div>
+
+          <div className="rail-section">
+            <div className="rail-section__label">Workspace</div>
+            <div className="rail-nav">
+              <NavItem
+                active={section === "entities"}
+                onClick={() => navigate(entityPath(defaultEntityId))}
               >
-                <Kbd className="search-launch__kbd">⌘ K</Kbd>
-              </Button>
+                <span className="nav-entry">
+                  <span className="nav-entry__icon">
+                    <EntitiesIcon />
+                  </span>
+                  <span className="nav-entry__label">Entities</span>
+                </span>
+              </NavItem>
+              <NavItem
+                active={section === "facts"}
+                onClick={() => navigate(factPath(defaultFactId))}
+              >
+                <span className="nav-entry">
+                  <span className="nav-entry__icon">
+                    <FactsIcon />
+                  </span>
+                  <span className="nav-entry__label">Facts</span>
+                </span>
+              </NavItem>
+              <NavItem
+                active={section === "settings"}
+                onClick={() => navigate(settingsPath(defaultSettingsId))}
+              >
+                <span className="nav-entry">
+                  <span className="nav-entry__icon">
+                    <SettingsIcon />
+                  </span>
+                  <span className="nav-entry__label">Settings</span>
+                </span>
+              </NavItem>
             </div>
+          </div>
+        </aside>
 
-            <div className="rail-section">
-              <div className="rail-section__label">Workspace</div>
-              <div className="rail-nav">
-                <NavItem
-                  active={activeSection === "entities"}
-                  onClick={() => setActiveSection("entities")}
-                >
-                  <span className="nav-entry">
-                    <span className="nav-entry__icon">
-                      <EntitiesIcon />
-                    </span>
-                    <span className="nav-entry__label">Entities</span>
-                  </span>
-                </NavItem>
-                <NavItem
-                  active={activeSection === "facts"}
-                  onClick={() => setActiveSection("facts")}
-                >
-                  <span className="nav-entry">
-                    <span className="nav-entry__icon">
-                      <FactsIcon />
-                    </span>
-                    <span className="nav-entry__label">Facts</span>
-                  </span>
-                </NavItem>
-                <NavItem
-                  active={activeSection === "settings"}
-                  onClick={() => setActiveSection("settings")}
-                >
-                  <span className="nav-entry">
-                    <span className="nav-entry__icon">
-                      <SettingsIcon />
-                    </span>
-                    <span className="nav-entry__label">Settings</span>
-                  </span>
-                </NavItem>
+        <section className="browser-pane">
+          <header className="pane-header">
+            <div>
+              <div className="pane-eyebrow">
+                {section === "entities"
+                  ? "Entity explorer"
+                  : section === "facts"
+                    ? "Fact log"
+                    : "Configuration"}
               </div>
+              <h2 className="pane-title">
+                {section === "entities"
+                  ? "Entities"
+                  : section === "facts"
+                    ? "Transactions"
+                    : "Settings"}
+              </h2>
             </div>
-          </aside>
+            <div className="pane-header__actions">
+              <button aria-label="Filter" className="rail-icon-button" type="button">
+                <FilterIcon />
+              </button>
+              <button aria-label="Tune" className="rail-icon-button" type="button">
+                <TuneIcon />
+              </button>
+            </div>
+          </header>
 
-          <section className="browser-pane">
-            <header className="pane-header">
-              <div>
-                <div className="pane-eyebrow">
-                  {activeSection === "entities"
-                    ? "Entity explorer"
-                    : activeSection === "facts"
-                      ? "Fact log"
-                      : "Configuration"}
-                </div>
-                <h2 className="pane-title">
-                  {activeSection === "entities"
-                    ? "Entities"
-                    : activeSection === "facts"
-                      ? "Transactions"
-                      : "Settings"}
-                </h2>
-              </div>
-              <div className="pane-header__actions">
-                <button className="rail-icon-button" type="button" aria-label="Filter">
-                  <FilterIcon />
-                </button>
-                <button className="rail-icon-button" type="button" aria-label="Tune">
-                  <TuneIcon />
-                </button>
-              </div>
-            </header>
-
-            <div className="browser-list">
-              {activeSection === "entities"
-                ? entities.map((entity) => (
+          <div className="browser-list">
+            {section === "entities"
+              ? entities.map((entity) => (
+                  <button
+                    className={
+                      entity.id === selectedEntity?.id
+                        ? "browser-item browser-item--active"
+                        : "browser-item"
+                    }
+                    key={entity.id}
+                    onClick={() => navigate(entityPath(entity.id))}
+                    type="button"
+                  >
+                    <div className="browser-item__header">
+                      <span className="browser-item__title">{entity.title}</span>
+                      <StatusDot tone={entity.status} />
+                    </div>
+                    <div className="browser-item__meta">
+                      <Badge>{entity.kind}</Badge>
+                      <span>{entity.updatedAt}</span>
+                    </div>
+                    <p className="browser-item__summary">{entity.summary}</p>
+                    <span className="browser-item__uri">{entity.id}</span>
+                  </button>
+                ))
+              : section === "facts"
+                ? factBatches.map((fact) => (
                     <button
                       className={
-                        entity.id === selectedEntityId
+                        fact.id === selectedFact?.id
                           ? "browser-item browser-item--active"
                           : "browser-item"
                       }
-                      key={entity.id}
-                      onClick={() => setSelectedEntityId(entity.id)}
+                      key={fact.id}
+                      onClick={() => navigate(factPath(fact.id))}
                       type="button"
                     >
                       <div className="browser-item__header">
-                        <span className="browser-item__title">{entity.title}</span>
-                        <StatusDot tone={entity.status} />
+                        <span className="browser-item__title">{fact.title}</span>
+                        <StatusDot tone={fact.status} />
                       </div>
                       <div className="browser-item__meta">
-                        <Badge>{entity.kind}</Badge>
-                        <span>{entity.updatedAt}</span>
+                        <span>{fact.statedAt}</span>
+                        <span>{fact.statedBy}</span>
                       </div>
-                      <p className="browser-item__summary">{entity.summary}</p>
-                      <span className="browser-item__uri">{entity.id}</span>
+                      <p className="browser-item__summary">{fact.entity}</p>
+                      <span className="browser-item__uri">{fact.id}</span>
                     </button>
                   ))
-                : activeSection === "facts"
-                  ? factBatches.map((fact) => (
-                      <button
-                        className={
-                          fact.id === selectedFactId
-                            ? "browser-item browser-item--active"
-                            : "browser-item"
-                        }
-                        key={fact.id}
-                        onClick={() => setSelectedFactId(fact.id)}
-                        type="button"
-                      >
-                        <div className="browser-item__header">
-                          <span className="browser-item__title">{fact.title}</span>
-                          <StatusDot tone={fact.status} />
-                        </div>
-                        <div className="browser-item__meta">
-                          <span>{fact.statedAt}</span>
-                          <span>{fact.statedBy}</span>
-                        </div>
-                        <p className="browser-item__summary">{fact.entity}</p>
-                        <span className="browser-item__uri">{fact.id}</span>
-                      </button>
-                    ))
-                  : settingsModules.map((module) => (
-                      <button
-                        className={
-                          module.id === selectedSettingsId
-                            ? "browser-item browser-item--active"
-                            : "browser-item"
-                        }
-                        key={module.id}
-                        onClick={() => setSelectedSettingsId(module.id)}
-                        type="button"
-                      >
-                        <div className="browser-item__header">
-                          <span className="browser-item__title">{module.title}</span>
-                          <StatusDot tone={module.status} />
-                        </div>
-                        <div className="browser-item__meta">
-                          <span>{module.groups.length} modules</span>
-                          <span>operator surface</span>
-                        </div>
-                        <p className="browser-item__summary">{module.summary}</p>
-                        <span className="browser-item__uri">{module.id}</span>
-                      </button>
-                    ))}
-            </div>
-          </section>
+                : settingsModules.map((module) => (
+                    <button
+                      className={
+                        module.id === selectedSettings?.id
+                          ? "browser-item browser-item--active"
+                          : "browser-item"
+                      }
+                      key={module.id}
+                      onClick={() => navigate(settingsPath(module.id))}
+                      type="button"
+                    >
+                      <div className="browser-item__header">
+                        <span className="browser-item__title">{module.title}</span>
+                        <StatusDot tone={module.status} />
+                      </div>
+                      <div className="browser-item__meta">
+                        <span>{module.groups.length} modules</span>
+                        <span>operator surface</span>
+                      </div>
+                      <p className="browser-item__summary">{module.summary}</p>
+                      <span className="browser-item__uri">{module.id}</span>
+                    </button>
+                  ))}
+          </div>
+        </section>
 
-          <section className="detail-pane">
-            {activeSection === "entities" && selectedEntity ? (
-              <>
-                <header className="detail-header">
-                  <div className="detail-header__title">
-                    <div className="detail-header__eyebrow">Entity</div>
-                    <h1>{selectedEntity.title}</h1>
-                    <p>{selectedEntity.id}</p>
-                  </div>
-                  <div className="detail-header__actions">
-                    <Button tone="ghost">Replay</Button>
-                    <Button tone="accent">State fact</Button>
-                  </div>
-                </header>
-
-                <div className="detail-body">
-                  <section className="detail-hero">
-                    <div className="detail-hero__copy">
-                      <Badge>{selectedEntity.namespace}</Badge>
-                      <p>{selectedEntity.summary}</p>
-                    </div>
-                    <dl className="detail-stats">
-                      <div>
-                        <dt>Namespace</dt>
-                        <dd>{selectedEntity.namespace}</dd>
-                      </div>
-                      <div>
-                        <dt>Kind</dt>
-                        <dd>{selectedEntity.kind}</dd>
-                      </div>
-                      <div>
-                        <dt>Updated</dt>
-                        <dd>{selectedEntity.updatedAt}</dd>
-                      </div>
-                    </dl>
-                  </section>
-
-                  <div className="detail-grid">
-                    <section className="detail-card">
-                      <div className="detail-card__header">
-                        <span>Consolidated fields</span>
-                        <span>new fact wins</span>
-                      </div>
-                      <div className="field-table">
-                        {selectedEntity.fields.map(([field, value]) => (
-                          <div className="field-row" key={field}>
-                            <dt>{field}</dt>
-                            <dd>{value}</dd>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-
-                    <section className="detail-card">
-                      <div className="detail-card__header">
-                        <span>Entity graph</span>
-                        <span>focused neighborhood</span>
-                      </div>
-                      <div className="graph-panel">
-                        <svg
-                          aria-label="Focused entity graph neighborhood"
-                          className="graph-panel__svg"
-                          role="img"
-                          viewBox="0 0 420 220"
-                        >
-                          <title>Focused entity graph neighborhood</title>
-                          <line className="graph-line" x1="210" x2="94" y1="76" y2="154" />
-                          <line className="graph-line" x1="210" x2="326" y1="76" y2="154" />
-                          <line className="graph-line" x1="210" x2="210" y1="76" y2="170" />
-                          <circle
-                            className="graph-node graph-node--primary"
-                            cx="210"
-                            cy="76"
-                            r="34"
-                          />
-                          <circle className="graph-node" cx="94" cy="154" r="26" />
-                          <circle className="graph-node" cx="326" cy="154" r="26" />
-                          <circle className="graph-node" cx="210" cy="170" r="24" />
-                          <text className="graph-text" textAnchor="middle" x="210" y="81">
-                            {selectedEntity.title}
-                          </text>
-                          <text className="graph-text" textAnchor="middle" x="94" y="159">
-                            Rush
-                          </text>
-                          <text className="graph-text" textAnchor="middle" x="326" y="159">
-                            Search
-                          </text>
-                          <text className="graph-text" textAnchor="middle" x="210" y="175">
-                            MCP
-                          </text>
-                        </svg>
-                      </div>
-                      <div className="relation-list">
-                        {selectedEntity.relations.map((relation) => (
-                          <div className="relation-pill" key={relation.label}>
-                            <span>{relation.label}</span>
-                            <strong>{relation.value}</strong>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  </div>
+        <section className="detail-pane">
+          {section === "entities" && selectedEntity ? (
+            <>
+              <header className="detail-header">
+                <div className="detail-header__title">
+                  <div className="detail-header__eyebrow">Entity</div>
+                  <h1>{selectedEntity.title}</h1>
+                  <p>{selectedEntity.id}</p>
                 </div>
-              </>
-            ) : activeSection === "facts" && selectedFact ? (
-              <>
-                <header className="detail-header">
-                  <div className="detail-header__title">
-                    <div className="detail-header__eyebrow">Transaction</div>
-                    <h1>{selectedFact.title}</h1>
-                    <p>{selectedFact.id}</p>
-                  </div>
-                  <div className="detail-header__actions">
-                    <Button tone="ghost">Filter stream</Button>
-                    <Button tone="accent">Append facts</Button>
-                  </div>
-                </header>
-
-                <div className="detail-body">
-                  <section className="detail-hero">
-                    <div className="detail-hero__copy">
-                      <Badge>append-only</Badge>
-                      <p>
-                        Facts are the durable record. Entity consolidation and projections lag
-                        behind on purpose, but reads over the fact log remain immediate.
-                      </p>
-                    </div>
-                    <dl className="detail-stats">
-                      <div>
-                        <dt>Entity</dt>
-                        <dd>{selectedFact.entity}</dd>
-                      </div>
-                      <div>
-                        <dt>Stated by</dt>
-                        <dd>{selectedFact.statedBy}</dd>
-                      </div>
-                      <div>
-                        <dt>Time</dt>
-                        <dd>{selectedFact.statedAt}</dd>
-                      </div>
-                    </dl>
-                  </section>
-
-                  <div className="detail-grid detail-grid--single">
-                    <section className="detail-card">
-                      <div className="detail-card__header">
-                        <span>Facts in transaction</span>
-                        <span>{selectedFact.facts.length} atomic writes</span>
-                      </div>
-                      <div className="field-table">
-                        {selectedFact.facts.map(([field, value]) => (
-                          <div className="field-row" key={field}>
-                            <dt>{field}</dt>
-                            <dd>{value}</dd>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  </div>
+                <div className="detail-header__actions">
+                  <Button tone="ghost">Replay</Button>
+                  <Button tone="accent">State fact</Button>
                 </div>
-              </>
-            ) : activeSection === "settings" && selectedSettings ? (
-              <>
-                <header className="detail-header">
-                  <div className="detail-header__title">
-                    <div className="detail-header__eyebrow">Settings module</div>
-                    <h1>{selectedSettings.title}</h1>
-                    <p>{selectedSettings.summary}</p>
-                  </div>
-                  <div className="detail-header__actions">
-                    <Button tone="ghost">Reset</Button>
-                    <Button tone="accent">Apply changes</Button>
-                  </div>
-                </header>
+              </header>
 
-                <div className="detail-body">
-                  <section className="detail-hero">
-                    <div className="detail-hero__copy">
-                      <Badge>modular settings</Badge>
-                      <p>
-                        Configure this local Poneglyph instance by capability: identity, storage,
-                        projections, and agent access each live in their own module.
-                      </p>
+              <div className="detail-body">
+                <section className="detail-hero">
+                  <div className="detail-hero__copy">
+                    <Badge>{selectedEntity.namespace}</Badge>
+                    <p>{selectedEntity.summary}</p>
+                  </div>
+                  <dl className="detail-stats">
+                    <div>
+                      <dt>Namespace</dt>
+                      <dd>{selectedEntity.namespace}</dd>
                     </div>
-                    <dl className="detail-stats">
-                      <div>
-                        <dt>Module</dt>
-                        <dd>{selectedSettings.title}</dd>
-                      </div>
-                      <div>
-                        <dt>Status</dt>
-                        <dd>{selectedSettings.status}</dd>
-                      </div>
-                      <div>
-                        <dt>Cards</dt>
-                        <dd>{selectedSettings.groups.length}</dd>
-                      </div>
-                    </dl>
+                    <div>
+                      <dt>Kind</dt>
+                      <dd>{selectedEntity.kind}</dd>
+                    </div>
+                    <div>
+                      <dt>Updated</dt>
+                      <dd>{selectedEntity.updatedAt}</dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <div className="detail-grid">
+                  <section className="detail-card">
+                    <div className="detail-card__header">
+                      <span>Consolidated fields</span>
+                      <span>new fact wins</span>
+                    </div>
+                    <div className="field-table">
+                      {selectedEntity.fields.map(([field, value]) => (
+                        <div className="field-row" key={field}>
+                          <dt>{field}</dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ))}
+                    </div>
                   </section>
 
-                  <div className="settings-grid">
-                    {selectedSettings.groups.map((group) => (
-                      <section className="detail-card settings-card" key={group.title}>
-                        <div className="detail-card__header">
-                          <span>{group.title}</span>
-                          <span>{group.rows.length} controls</span>
+                  <section className="detail-card">
+                    <div className="detail-card__header">
+                      <span>Entity graph</span>
+                      <span>focused neighborhood</span>
+                    </div>
+                    <div className="graph-panel">
+                      <svg
+                        aria-label="Focused entity graph neighborhood"
+                        className="graph-panel__svg"
+                        role="img"
+                        viewBox="0 0 420 220"
+                      >
+                        <title>Focused entity graph neighborhood</title>
+                        <line className="graph-line" x1="210" x2="94" y1="76" y2="154" />
+                        <line className="graph-line" x1="210" x2="326" y1="76" y2="154" />
+                        <line className="graph-line" x1="210" x2="210" y1="76" y2="170" />
+                        <circle
+                          className="graph-node graph-node--primary"
+                          cx="210"
+                          cy="76"
+                          r="34"
+                        />
+                        <circle className="graph-node" cx="94" cy="154" r="26" />
+                        <circle className="graph-node" cx="326" cy="154" r="26" />
+                        <circle className="graph-node" cx="210" cy="170" r="24" />
+                        <text className="graph-text" textAnchor="middle" x="210" y="81">
+                          {selectedEntity.title}
+                        </text>
+                        <text className="graph-text" textAnchor="middle" x="94" y="159">
+                          Rush
+                        </text>
+                        <text className="graph-text" textAnchor="middle" x="326" y="159">
+                          Search
+                        </text>
+                        <text className="graph-text" textAnchor="middle" x="210" y="175">
+                          MCP
+                        </text>
+                      </svg>
+                    </div>
+                    <div className="relation-list">
+                      {selectedEntity.relations.map((relation) => (
+                        <div className="relation-pill" key={relation.label}>
+                          <span>{relation.label}</span>
+                          <strong>{relation.value}</strong>
                         </div>
-                        <p className="settings-card__description">{group.description}</p>
-                        <div className="settings-rows">
-                          {group.rows.map((row) => (
-                            <div className="settings-row" key={row.label}>
-                              <div className="settings-row__info">
-                                <strong>{row.label}</strong>
-                                <p>{row.hint}</p>
-                              </div>
-                              <div className="settings-row__value">{row.value}</div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </>
+          ) : section === "facts" && selectedFact ? (
+            <>
+              <header className="detail-header">
+                <div className="detail-header__title">
+                  <div className="detail-header__eyebrow">Transaction</div>
+                  <h1>{selectedFact.title}</h1>
+                  <p>{selectedFact.id}</p>
+                </div>
+                <div className="detail-header__actions">
+                  <Button tone="ghost">Filter stream</Button>
+                  <Button tone="accent">Append facts</Button>
+                </div>
+              </header>
+
+              <div className="detail-body">
+                <section className="detail-hero">
+                  <div className="detail-hero__copy">
+                    <Badge>append-only</Badge>
+                    <p>
+                      Facts are the durable record. Entity consolidation and projections lag behind
+                      on purpose, but reads over the fact log remain immediate.
+                    </p>
+                  </div>
+                  <dl className="detail-stats">
+                    <div>
+                      <dt>Entity</dt>
+                      <dd>{selectedFact.entity}</dd>
+                    </div>
+                    <div>
+                      <dt>Stated by</dt>
+                      <dd>{selectedFact.statedBy}</dd>
+                    </div>
+                    <div>
+                      <dt>Time</dt>
+                      <dd>{selectedFact.statedAt}</dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <div className="detail-grid detail-grid--single">
+                  <section className="detail-card">
+                    <div className="detail-card__header">
+                      <span>Facts in transaction</span>
+                      <span>{selectedFact.facts.length} atomic writes</span>
+                    </div>
+                    <div className="field-table">
+                      {selectedFact.facts.map(([field, value]) => (
+                        <div className="field-row" key={field}>
+                          <dt>{field}</dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </>
+          ) : section === "settings" && selectedSettings ? (
+            <>
+              <header className="detail-header">
+                <div className="detail-header__title">
+                  <div className="detail-header__eyebrow">Settings module</div>
+                  <h1>{selectedSettings.title}</h1>
+                  <p>{selectedSettings.summary}</p>
+                </div>
+                <div className="detail-header__actions">
+                  <Button tone="ghost">Reset</Button>
+                  <Button tone="accent">Apply changes</Button>
+                </div>
+              </header>
+
+              <div className="detail-body">
+                <section className="detail-hero">
+                  <div className="detail-hero__copy">
+                    <Badge>modular settings</Badge>
+                    <p>
+                      Configure this local Poneglyph instance by capability: identity, storage,
+                      projections, and agent access each live in their own module.
+                    </p>
+                  </div>
+                  <dl className="detail-stats">
+                    <div>
+                      <dt>Module</dt>
+                      <dd>{selectedSettings.title}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{selectedSettings.status}</dd>
+                    </div>
+                    <div>
+                      <dt>Cards</dt>
+                      <dd>{selectedSettings.groups.length}</dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <div className="settings-grid">
+                  {selectedSettings.groups.map((group) => (
+                    <section className="detail-card settings-card" key={group.title}>
+                      <div className="detail-card__header">
+                        <span>{group.title}</span>
+                        <span>{group.rows.length} controls</span>
+                      </div>
+                      <p className="settings-card__description">{group.description}</p>
+                      <div className="settings-rows">
+                        {group.rows.map((row) => (
+                          <div className="settings-row" key={row.label}>
+                            <div className="settings-row__info">
+                              <strong>{row.label}</strong>
+                              <p>{row.hint}</p>
                             </div>
-                          ))}
-                        </div>
-                      </section>
-                    ))}
-                  </div>
+                            <div className="settings-row__value">{row.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
                 </div>
-              </>
-            ) : null}
-          </section>
-        </div>
-
-        <CommandDialog
-          closeLabel={<Kbd>Esc</Kbd>}
-          inputRef={searchInputRef}
-          onOpenChange={setSearchOpen}
-          onQueryChange={setQuery}
-          open={searchOpen}
-          placeholder="Search entities, tx ids, fields, or commands"
-          query={query}
-        >
-          {filteredEntries.map((entry) => (
-            <CommandItem
-              key={entry.meta}
-              meta={entry.meta}
-              title={entry.title}
-              trailing={entry.kind}
-            />
-          ))}
-        </CommandDialog>
+              </div>
+            </>
+          ) : null}
+        </section>
       </div>
-    </ThemeRoot>
+
+      <CommandDialog
+        closeLabel={<Kbd>Esc</Kbd>}
+        inputRef={searchInputRef}
+        onOpenChange={setSearchOpen}
+        onQueryChange={setQuery}
+        open={searchOpen}
+        placeholder="Search entities, tx ids, fields, or commands"
+        query={query}
+      >
+        {filteredEntries.map((entry) => (
+          <CommandItem
+            key={entry.meta}
+            meta={entry.meta}
+            title={entry.title}
+            trailing={entry.kind}
+          />
+        ))}
+      </CommandDialog>
+    </div>
   );
 }
 

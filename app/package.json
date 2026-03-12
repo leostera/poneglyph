@@ -12,7 +12,8 @@
     "@poneglyph/ui": "workspace:*",
     "electron": "^37.2.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
