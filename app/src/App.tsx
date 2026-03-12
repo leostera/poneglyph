@@ -12,6 +12,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type SectionId = "entities" | "facts" | "settings";
 
+type RouteState = {
+  section: SectionId;
+  entityId?: string;
+  factId?: string;
+  settingsId?: string;
+};
+
 const entities = [
   {
     id: "spotify:album:1xndb8d9an",
@@ -247,14 +254,89 @@ const searchEntries = [
   },
 ];
 
+function isSectionId(value: string | null): value is SectionId {
+  return value === "entities" || value === "facts" || value === "settings";
+}
+
+function getDefaultRouteState(): RouteState {
+  return {
+    section: "entities",
+    entityId: entities[0]?.id,
+    factId: factBatches[0]?.id,
+    settingsId: settingsModules[0]?.id,
+  };
+}
+
+function readRouteState(): RouteState {
+  const fallback = getDefaultRouteState();
+  const hash = window.location.hash.replace(/^#/, "");
+
+  if (!hash) {
+    return fallback;
+  }
+
+  const [rawPath, rawQuery = ""] = hash.split("?");
+  const normalizedPath = rawPath.replace(/^\/+/, "");
+  const section = isSectionId(normalizedPath) ? normalizedPath : fallback.section;
+  const params = new URLSearchParams(rawQuery);
+
+  return {
+    section,
+    entityId: params.get("entity") ?? fallback.entityId,
+    factId: params.get("fact") ?? fallback.factId,
+    settingsId: params.get("settings") ?? fallback.settingsId,
+  };
+}
+
+function buildRouteHash(route: RouteState) {
+  const params = new URLSearchParams();
+
+  if (route.section === "entities" && route.entityId) {
+    params.set("entity", route.entityId);
+  }
+
+  if (route.section === "facts" && route.factId) {
+    params.set("fact", route.factId);
+  }
+
+  if (route.section === "settings" && route.settingsId) {
+    params.set("settings", route.settingsId);
+  }
+
+  const query = params.toString();
+  return `#/${route.section}${query ? `?${query}` : ""}`;
+}
+
 export function App() {
-  const [activeSection, setActiveSection] = useState<SectionId>("entities");
-  const [selectedEntityId, setSelectedEntityId] = useState(entities[0]?.id ?? "");
-  const [selectedFactId, setSelectedFactId] = useState(factBatches[0]?.id ?? "");
-  const [selectedSettingsId, setSelectedSettingsId] = useState(settingsModules[0]?.id ?? "");
+  const initialRoute = typeof window === "undefined" ? getDefaultRouteState() : readRouteState();
+  const [activeSection, setActiveSection] = useState<SectionId>(initialRoute.section);
+  const [selectedEntityId, setSelectedEntityId] = useState(
+    initialRoute.entityId ?? entities[0]?.id ?? "",
+  );
+  const [selectedFactId, setSelectedFactId] = useState(
+    initialRoute.factId ?? factBatches[0]?.id ?? "",
+  );
+  const [selectedSettingsId, setSelectedSettingsId] = useState(
+    initialRoute.settingsId ?? settingsModules[0]?.id ?? "",
+  );
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function syncFromLocation() {
+      const route = readRouteState();
+      setActiveSection(route.section);
+      setSelectedEntityId(route.entityId ?? entities[0]?.id ?? "");
+      setSelectedFactId(route.factId ?? factBatches[0]?.id ?? "");
+      setSelectedSettingsId(route.settingsId ?? settingsModules[0]?.id ?? "");
+    }
+
+    window.addEventListener("hashchange", syncFromLocation);
+    return () => {
+      window.removeEventListener("hashchange", syncFromLocation);
+    };
+  }, []);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -299,6 +381,19 @@ export function App() {
   const selectedFact = factBatches.find((fact) => fact.id === selectedFactId) ?? factBatches[0];
   const selectedSettings =
     settingsModules.find((module) => module.id === selectedSettingsId) ?? settingsModules[0];
+
+  useEffect(() => {
+    const nextHash = buildRouteHash({
+      section: activeSection,
+      entityId: selectedEntityId,
+      factId: selectedFactId,
+      settingsId: selectedSettingsId,
+    });
+
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, "", nextHash);
+    }
+  }, [activeSection, selectedEntityId, selectedFactId, selectedSettingsId]);
 
   return (
     <ThemeRoot>
