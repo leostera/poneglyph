@@ -5,7 +5,7 @@
   "workspaces": ["app", "www", "packages/*"],
   "scripts": {
     "prepare": "husky",
-    "dev": "bun run scripts/dev.ts",
+    "dev": "bash scripts/dev-all.sh",
     "dev:www": "bun run --cwd www dev",
     "dev:ui": "bun run --cwd packages/ui dev",
     "build": "bun run --cwd app build",
@@ -13,7 +13,6 @@
     "typecheck": "bun run --cwd app typecheck",
     "typecheck:www": "bun run --cwd www astro check",
     "typecheck:fast": "tsgo --project app/tsconfig.json",
-    "typecheck:strict": "bun run typecheck",
     "format": "biome format --write .",
     "format:check": "biome format . --diagnostic-level=error",
     "lint": "biome lint . --diagnostic-level=error",
