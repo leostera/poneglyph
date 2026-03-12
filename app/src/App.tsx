@@ -10,7 +10,7 @@ import {
 } from "@poneglyph/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type SectionId = "entities" | "facts";
+type SectionId = "entities" | "facts" | "settings";
 
 const entities = [
   {
@@ -138,6 +138,117 @@ const runtimeHealth = [
   { label: "mcp", status: "offline" as const, detail: "No clients attached" },
 ];
 
+const settingsModules = [
+  {
+    id: "general",
+    title: "General",
+    summary: "Identity, startup behavior, and local instance defaults.",
+    status: "healthy" as const,
+    groups: [
+      {
+        title: "Instance identity",
+        description: "How this local node presents itself to projections and connected agents.",
+        rows: [
+          { label: "Display name", value: "Leo's Poneglyph", hint: "Shown in local tooling" },
+          { label: "Node URI", value: "poneglyph://leo-macbook", hint: "Stable local instance id" },
+          {
+            label: "Launch at login",
+            value: "Enabled",
+            hint: "Menu bar runtime starts automatically",
+          },
+        ],
+      },
+      {
+        title: "Defaults",
+        description: "Base behavior for fact entry and background services.",
+        rows: [
+          { label: "Default namespace", value: "spotify", hint: "Preselected in fact composer" },
+          { label: "Fact ordering", value: "UUID v7", hint: "Total order over time" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "storage",
+    title: "Storage",
+    summary: "Paths, retention, and replay-safe on-disk data for the local graph.",
+    status: "healthy" as const,
+    groups: [
+      {
+        title: "Fact store",
+        description: "Primary durable storage for append-only facts and transaction metadata.",
+        rows: [
+          {
+            label: "Root path",
+            value: "~/Library/Application Support/Poneglyph",
+            hint: "Managed by the desktop app",
+          },
+          { label: "Fact log", value: "facts.sqlite", hint: "Append-only SQLite store" },
+          { label: "Compaction", value: "None", hint: "Facts are never rewritten" },
+        ],
+      },
+      {
+        title: "Backups",
+        description: "Recovery and export configuration for local durability.",
+        rows: [
+          { label: "Snapshots", value: "Daily", hint: "Retain 14 rolling snapshots" },
+          { label: "Exports", value: "Disabled", hint: "No external sync target yet" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "projections",
+    title: "Projections",
+    summary: "Manage replay, isolation, and health for async downstream systems.",
+    status: "warn" as const,
+    groups: [
+      {
+        title: "Search",
+        description: "Tantivy-backed full text and field-aware lookup derived from entities.",
+        rows: [
+          { label: "Index location", value: "search/", hint: "Lives beside the fact store" },
+          { label: "Replay mode", value: "Idempotent", hint: "Safe to rebuild from tx 0" },
+          { label: "Current lag", value: "12 entities", hint: "Within expected window" },
+        ],
+      },
+      {
+        title: "Enrichers",
+        description: "External workers that observe graph facts and feed new facts back in.",
+        rows: [
+          { label: "imdb-rater", value: "Paused", hint: "API token missing" },
+          { label: "spotify-importer", value: "Healthy", hint: "Polling every 10m" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "mcp",
+    title: "MCP access",
+    summary: "Expose this local memory node to agents through a controlled MCP surface.",
+    status: "offline" as const,
+    groups: [
+      {
+        title: "Server endpoints",
+        description: "Transport configuration for local agents and tools.",
+        rows: [
+          { label: "stdio", value: "Enabled", hint: "Default local transport" },
+          { label: "Unix socket", value: "Disabled", hint: "Not yet configured" },
+          { label: "localhost HTTP", value: "Disabled", hint: "Reserved for later" },
+        ],
+      },
+      {
+        title: "Permissions",
+        description: "Local access policy until per-agent auth is implemented.",
+        rows: [
+          { label: "Write access", value: "Open", hint: "Any local agent may state facts" },
+          { label: "Authority rules", value: "Planned", hint: "Not enforced yet" },
+        ],
+      },
+    ],
+  },
+];
+
 const searchEntries = [
   {
     title: "2112",
@@ -165,6 +276,7 @@ export function App() {
   const [activeSection, setActiveSection] = useState<SectionId>("entities");
   const [selectedEntityId, setSelectedEntityId] = useState(entities[0]?.id ?? "");
   const [selectedFactId, setSelectedFactId] = useState(factBatches[0]?.id ?? "");
+  const [selectedSettingsId, setSelectedSettingsId] = useState(settingsModules[0]?.id ?? "");
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -210,6 +322,8 @@ export function App() {
 
   const selectedEntity = entities.find((entity) => entity.id === selectedEntityId) ?? entities[0];
   const selectedFact = factBatches.find((fact) => fact.id === selectedFactId) ?? factBatches[0];
+  const selectedSettings =
+    settingsModules.find((module) => module.id === selectedSettingsId) ?? settingsModules[0];
 
   return (
     <ThemeRoot>
@@ -267,6 +381,13 @@ export function App() {
                 >
                   Facts
                 </NavItem>
+                <NavItem
+                  active={activeSection === "settings"}
+                  meta="config"
+                  onClick={() => setActiveSection("settings")}
+                >
+                  Settings
+                </NavItem>
               </div>
             </div>
 
@@ -303,10 +424,18 @@ export function App() {
             <header className="pane-header">
               <div>
                 <div className="pane-eyebrow">
-                  {activeSection === "entities" ? "Entity explorer" : "Fact log"}
+                  {activeSection === "entities"
+                    ? "Entity explorer"
+                    : activeSection === "facts"
+                      ? "Fact log"
+                      : "Configuration"}
                 </div>
                 <h2 className="pane-title">
-                  {activeSection === "entities" ? "Entities" : "Transactions"}
+                  {activeSection === "entities"
+                    ? "Entities"
+                    : activeSection === "facts"
+                      ? "Transactions"
+                      : "Settings"}
                 </h2>
               </div>
               <div className="pane-header__actions">
@@ -344,29 +473,53 @@ export function App() {
                       <span className="browser-item__uri">{entity.id}</span>
                     </button>
                   ))
-                : factBatches.map((fact) => (
-                    <button
-                      className={
-                        fact.id === selectedFactId
-                          ? "browser-item browser-item--active"
-                          : "browser-item"
-                      }
-                      key={fact.id}
-                      onClick={() => setSelectedFactId(fact.id)}
-                      type="button"
-                    >
-                      <div className="browser-item__header">
-                        <span className="browser-item__title">{fact.title}</span>
-                        <StatusDot tone={fact.status} />
-                      </div>
-                      <div className="browser-item__meta">
-                        <span>{fact.statedAt}</span>
-                        <span>{fact.statedBy}</span>
-                      </div>
-                      <p className="browser-item__summary">{fact.entity}</p>
-                      <span className="browser-item__uri">{fact.id}</span>
-                    </button>
-                  ))}
+                : activeSection === "facts"
+                  ? factBatches.map((fact) => (
+                      <button
+                        className={
+                          fact.id === selectedFactId
+                            ? "browser-item browser-item--active"
+                            : "browser-item"
+                        }
+                        key={fact.id}
+                        onClick={() => setSelectedFactId(fact.id)}
+                        type="button"
+                      >
+                        <div className="browser-item__header">
+                          <span className="browser-item__title">{fact.title}</span>
+                          <StatusDot tone={fact.status} />
+                        </div>
+                        <div className="browser-item__meta">
+                          <span>{fact.statedAt}</span>
+                          <span>{fact.statedBy}</span>
+                        </div>
+                        <p className="browser-item__summary">{fact.entity}</p>
+                        <span className="browser-item__uri">{fact.id}</span>
+                      </button>
+                    ))
+                  : settingsModules.map((module) => (
+                      <button
+                        className={
+                          module.id === selectedSettingsId
+                            ? "browser-item browser-item--active"
+                            : "browser-item"
+                        }
+                        key={module.id}
+                        onClick={() => setSelectedSettingsId(module.id)}
+                        type="button"
+                      >
+                        <div className="browser-item__header">
+                          <span className="browser-item__title">{module.title}</span>
+                          <StatusDot tone={module.status} />
+                        </div>
+                        <div className="browser-item__meta">
+                          <span>{module.groups.length} modules</span>
+                          <span>operator surface</span>
+                        </div>
+                        <p className="browser-item__summary">{module.summary}</p>
+                        <span className="browser-item__uri">{module.id}</span>
+                      </button>
+                    ))}
             </div>
           </section>
 
@@ -474,7 +627,7 @@ export function App() {
                   </div>
                 </div>
               </>
-            ) : selectedFact ? (
+            ) : activeSection === "facts" && selectedFact ? (
               <>
                 <header className="detail-header">
                   <div className="detail-header__title">
@@ -528,6 +681,69 @@ export function App() {
                         ))}
                       </div>
                     </section>
+                  </div>
+                </div>
+              </>
+            ) : activeSection === "settings" && selectedSettings ? (
+              <>
+                <header className="detail-header">
+                  <div className="detail-header__title">
+                    <div className="detail-header__eyebrow">Settings module</div>
+                    <h1>{selectedSettings.title}</h1>
+                    <p>{selectedSettings.summary}</p>
+                  </div>
+                  <div className="detail-header__actions">
+                    <Button tone="ghost">Reset</Button>
+                    <Button tone="accent">Apply changes</Button>
+                  </div>
+                </header>
+
+                <div className="detail-body">
+                  <section className="detail-hero">
+                    <div className="detail-hero__copy">
+                      <Badge>modular settings</Badge>
+                      <p>
+                        Configure this local Poneglyph instance by capability: identity, storage,
+                        projections, and agent access each live in their own module.
+                      </p>
+                    </div>
+                    <dl className="detail-stats">
+                      <div>
+                        <dt>Module</dt>
+                        <dd>{selectedSettings.title}</dd>
+                      </div>
+                      <div>
+                        <dt>Status</dt>
+                        <dd>{selectedSettings.status}</dd>
+                      </div>
+                      <div>
+                        <dt>Cards</dt>
+                        <dd>{selectedSettings.groups.length}</dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <div className="settings-grid">
+                    {selectedSettings.groups.map((group) => (
+                      <section className="detail-card settings-card" key={group.title}>
+                        <div className="detail-card__header">
+                          <span>{group.title}</span>
+                          <span>{group.rows.length} controls</span>
+                        </div>
+                        <p className="settings-card__description">{group.description}</p>
+                        <div className="settings-rows">
+                          {group.rows.map((row) => (
+                            <div className="settings-row" key={row.label}>
+                              <div className="settings-row__info">
+                                <strong>{row.label}</strong>
+                                <p>{row.hint}</p>
+                              </div>
+                              <div className="settings-row__value">{row.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    ))}
                   </div>
                 </div>
               </>
