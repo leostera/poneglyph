@@ -1,12 +1,18 @@
 {
   "name": "poneglyph",
-  "module": "index.ts",
   "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "workspaces": [
+    "app",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --cwd app dev",
+    "build": "bun run --cwd app build",
+    "typecheck": "bun run --cwd app typecheck"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
   }
 }

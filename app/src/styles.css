@@ -1,0 +1,107 @@
+:root {
+  color-scheme: dark;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  background:
+    radial-gradient(circle at top, rgba(212, 181, 127, 0.18), transparent 34%),
+    linear-gradient(180deg, #120f0b 0%, #0d0b09 100%);
+  color: #f8f1df;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(204, 145, 63, 0.18), transparent 28%),
+    radial-gradient(circle at right, rgba(95, 53, 22, 0.2), transparent 24%),
+    #0d0b09;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.hero-grid,
+.content-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.hero-grid {
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+}
+
+.content-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.stats {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.stat-label {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(248, 241, 223, 0.68);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.projection-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.projection-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(248, 241, 223, 0.08);
+}
+
+.projection-row p {
+  margin: 6px 0 0;
+  color: rgba(248, 241, 223, 0.66);
+}
+
+.checklist {
+  margin: 22px 0 0;
+  padding-left: 22px;
+  color: rgba(248, 241, 223, 0.85);
+}
+
+.checklist li + li {
+  margin-top: 12px;
+}
+
+@media (max-width: 960px) {
+  .hero-grid,
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}

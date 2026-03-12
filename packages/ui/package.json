@@ -1,0 +1,15 @@
+{
+  "name": "@poneglyph/ui",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.12",
+    "react": "^19.1.1"
+  },
+  "peerDependencies": {
+    "react": "^19.1.1"
+  }
+}
