@@ -145,11 +145,6 @@ button {
   gap: 8px;
 }
 
-.rail-section--grow {
-  flex: 1;
-  align-content: start;
-}
-
 .rail-section__label,
 .pane-eyebrow,
 .detail-header__eyebrow,
@@ -169,64 +164,14 @@ button {
 .detail-header__eyebrow,
 .detail-card__header span:last-child,
 .detail-stats dt,
-.metric-tile__label,
 .browser-item__meta,
 .browser-item__uri {
   color: rgba(245, 245, 242, 0.42);
 }
 
-.rail-nav,
-.rail-metrics,
-.health-list {
+.rail-nav {
   display: grid;
   gap: 6px;
-}
-
-.metric-tile {
-  padding: 11px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.metric-tile__value {
-  color: rgba(245, 245, 242, 0.96);
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 600;
-}
-
-.metric-tile__label {
-  margin-top: 8px;
-}
-
-.metric-tile__meta {
-  margin-top: 4px;
-  font-size: 12px;
-}
-
-.health-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.health-row__left {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  color: rgba(245, 245, 242, 0.88);
-  font-size: 13px;
-}
-
-.health-row__detail {
-  font-size: 12px;
-  white-space: nowrap;
 }
 
 .browser-pane {

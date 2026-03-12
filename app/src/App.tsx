@@ -113,31 +113,6 @@ const factBatches = [
   },
 ];
 
-const runtimeCards = [
-  {
-    label: "Facts",
-    value: "16,428",
-    meta: "strongly consistent",
-  },
-  {
-    label: "Entities",
-    value: "2,031",
-    meta: "eventual views",
-  },
-  {
-    label: "Projections",
-    value: "4",
-    meta: "idempotent replay",
-  },
-];
-
-const runtimeHealth = [
-  { label: "consolidator", status: "healthy" as const, detail: "Lag 2 entities" },
-  { label: "search", status: "healthy" as const, detail: "Tantivy current" },
-  { label: "imdb-rater", status: "warn" as const, detail: "34 queued fetches" },
-  { label: "mcp", status: "offline" as const, detail: "No clients attached" },
-];
-
 const settingsModules = [
   {
     id: "general",
@@ -369,34 +344,6 @@ export function App() {
                 >
                   Settings
                 </NavItem>
-              </div>
-            </div>
-
-            <div className="rail-section">
-              <div className="rail-section__label">Runtime</div>
-              <div className="rail-metrics">
-                {runtimeCards.map((card) => (
-                  <article className="metric-tile" key={card.label}>
-                    <div className="metric-tile__value">{card.value}</div>
-                    <div className="metric-tile__label">{card.label}</div>
-                    <div className="metric-tile__meta">{card.meta}</div>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <div className="rail-section rail-section--grow">
-              <div className="rail-section__label">Projection health</div>
-              <div className="health-list">
-                {runtimeHealth.map((item) => (
-                  <article className="health-row" key={item.label}>
-                    <div className="health-row__left">
-                      <StatusDot tone={item.status} />
-                      <span>{item.label}</span>
-                    </div>
-                    <span className="health-row__detail">{item.detail}</span>
-                  </article>
-                ))}
               </div>
             </div>
           </aside>
