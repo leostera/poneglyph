@@ -1,0 +1,17 @@
+mod memory;
+mod sqlite;
+
+use async_trait::async_trait;
+
+use crate::{Entity, PoneResult, Uri};
+
+pub use memory::InMemoryEntityStore;
+pub use sqlite::SqliteEntityStore;
+
+#[async_trait]
+pub trait EntityStore: Send + Sync {
+    async fn put_entity(&self, entity: Entity, last_processed_tx_id: Option<Uri>)
+    -> PoneResult<()>;
+    async fn delete_entity(&self, entity_uri: &Uri) -> PoneResult<()>;
+    async fn get_entity(&self, entity_uri: &Uri) -> PoneResult<Option<Entity>>;
+}

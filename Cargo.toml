@@ -1,17 +1,23 @@
 [workspace]
 members = [
-    "crates/poneglyph-consolidation",
-    "crates/poneglyph-core",
-    "crates/poneglyph-facts",
+    "crates/poneglyph",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-anyhow = "1.0.98"
-chrono = { version = "0.4.42", features = ["serde"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "chrono", "uuid"] }
-tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread", "sync"] }
-url = { version = "2.5.4", features = ["serde"] }
-uuid = { version = "1.17.0", features = ["serde", "v7"] }
+anyhow = "1"
+async-trait = "0"
+chrono = { version = "0", features = ["serde"] }
+derive_builder = "0"
+futures-util = "0"
+proptest = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0", features = ["runtime-tokio", "sqlite", "chrono", "uuid"] }
+tantivy = "0"
+tempfile = "3"
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
+toml = { version = "1" }
+url = { version = "2", features = ["serde"] }
+uuid = { version = "1", features = ["serde", "v7"] }

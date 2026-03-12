@@ -1,0 +1,23 @@
+[package]
+name = "poneglyph"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait.workspace = true
+chrono.workspace = true
+derive_builder.workspace = true
+futures-util.workspace = true
+proptest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tantivy.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+toml.workspace = true
+url.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
