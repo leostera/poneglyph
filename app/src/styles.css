@@ -250,7 +250,8 @@ button {
 
 .status-list,
 .fact-list,
-.queue-list {
+.queue-list,
+.fact-feed {
   display: grid;
   gap: 10px;
 }
@@ -397,6 +398,26 @@ button {
 .queue-row {
   padding: 14px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fact-feed-row {
+  display: grid;
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fact-field,
+.fact-origin {
+  color: rgba(245, 245, 242, 0.52);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+
+.fact-arrow {
+  display: inline-block;
+  margin: 0 8px;
+  color: rgba(245, 245, 242, 0.32);
 }
 
 .fact-row {
