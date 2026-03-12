@@ -1,13 +1,6 @@
-import {
-  app,
-  BrowserWindow,
-  Menu,
-  Tray,
-  nativeImage,
-  type NativeImage,
-} from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { BrowserWindow, Menu, type NativeImage, Tray, app, nativeImage } from "electron";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV !== "production";

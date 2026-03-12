@@ -2,17 +2,30 @@
   "name": "poneglyph",
   "type": "module",
   "private": true,
-  "workspaces": [
-    "app",
-    "packages/*"
-  ],
+  "workspaces": ["app", "www", "packages/*"],
   "scripts": {
-    "dev": "bun run --cwd app dev",
+    "prepare": "husky",
+    "dev": "bun run scripts/dev.ts",
+    "dev:www": "bun run --cwd www dev",
+    "dev:ui": "bun run --cwd packages/ui dev",
     "build": "bun run --cwd app build",
-    "typecheck": "bun run --cwd app typecheck"
+    "build:www": "bun run --cwd www build",
+    "typecheck": "bun run --cwd app typecheck",
+    "typecheck:www": "bun run --cwd www astro check",
+    "typecheck:fast": "tsgo --project app/tsconfig.json",
+    "typecheck:strict": "bun run typecheck",
+    "format": "biome format --write .",
+    "format:check": "biome format . --diagnostic-level=error",
+    "lint": "biome lint . --diagnostic-level=error",
+    "check": "biome check . --diagnostic-level=error"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@typescript/native-preview": "^7.0.0-dev.20250921.1",
     "@types/bun": "latest",
+    "husky": "^9.1.7",
     "typescript": "^5.9.2"
   }
 }

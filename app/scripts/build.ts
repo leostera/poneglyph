@@ -1,5 +1,5 @@
 const renderer = Bun.spawn(["bun", "x", "vite", "build"], {
-  cwd: import.meta.dir + "/..",
+  cwd: `${import.meta.dir}/..`,
   stdio: ["inherit", "inherit", "inherit"],
 });
 

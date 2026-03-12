@@ -4,6 +4,20 @@
 
 These instructions apply to the whole repository unless a deeper `AGENTS.md` overrides them.
 
+## Routing
+
+- Use this file as the top-level router.
+- When work is limited to one subsystem, read only the next relevant `AGENTS.md` instead of loading instructions for unrelated areas.
+- Relevant deeper guides currently live in:
+  `app/`,
+  `packages/`,
+  `packages/ui/`,
+  `packages/i18n/`,
+  `www/`,
+  `crates/`,
+  `docs/`,
+  and `docs/rfds/`.
+
 ## Project shape
 
 - Poneglyph is a local-first graph database built around append-only facts.

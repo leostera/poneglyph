@@ -1,5 +1,5 @@
 const renderer = Bun.spawn(["bun", "x", "vite"], {
-  cwd: import.meta.dir + "/..",
+  cwd: `${import.meta.dir}/..`,
   stdio: ["inherit", "inherit", "inherit"],
   env: {
     ...process.env,
@@ -41,7 +41,7 @@ try {
   }
 
   const electron = Bun.spawn(["bun", "x", "electron", "./dist/electron/main.js"], {
-    cwd: import.meta.dir + "/..",
+    cwd: `${import.meta.dir}/..`,
     stdio: ["inherit", "inherit", "inherit"],
     env: {
       ...process.env,

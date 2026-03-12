@@ -18,10 +18,9 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "baseUrl": ".",
     "paths": {
-      "@poneglyph/ui": ["packages/ui/src/index.ts"],
-      "@poneglyph/i18n": ["packages/i18n/src/index.ts"]
+      "@poneglyph/ui": ["./packages/ui/src/index.ts"],
+      "@poneglyph/i18n": ["./packages/i18n/src/index.ts"]
     }
   }
 }

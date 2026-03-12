@@ -2,12 +2,20 @@
   "name": "@poneglyph/ui",
   "private": true,
   "type": "module",
+  "scripts": {
+    "dev": "storybook dev -p 6006 --host 127.0.0.1 --ci",
+    "build": "storybook build"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
   "devDependencies": {
+    "@storybook/react-vite": "^9.1.7",
+    "@types/react-dom": "^19.1.9",
     "@types/react": "^19.1.12",
-    "react": "^19.1.1"
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "storybook": "^9.1.7"
   },
   "peerDependencies": {
     "react": "^19.1.1"
