@@ -63,6 +63,7 @@ const health = [
 export function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [activeSection, setActiveSection] = useState<"entities" | "facts">("entities");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -108,83 +109,105 @@ export function App() {
     <>
       <div className="app-shell">
         <aside className="sidebar">
-          <div className="sidebar-brand">
-            <span className="sidebar-eyebrow">Poneglyph.app</span>
-            <h1>Absolute memory.</h1>
-            <p>Fact-first memory with emergent entities, projections, and a local agent runtime.</p>
+          <div className="sidebar-topbar">
+            <div className="sidebar-wordmark">Poneglyph.</div>
+            <button className="omnisearch-launch" type="button" onClick={() => setSearchOpen(true)}>
+              <span className="omnisearch-shortcut">⌘K</span>
+            </button>
           </div>
 
-          <button className="omnisearch-launch" type="button" onClick={() => setSearchOpen(true)}>
-            <span className="omnisearch-copy">Search entities, facts, or runtime state</span>
-            <span className="omnisearch-shortcut">⌘K</span>
-          </button>
+          <nav className="sidebar-nav" aria-label="Workspace navigation">
+            <div className="sidebar-section-label">Workspace</div>
+            <button
+              className={activeSection === "entities" ? "nav-item nav-item--active" : "nav-item"}
+              onClick={() => setActiveSection("entities")}
+              type="button"
+            >
+              <span>Entities</span>
+              <span className="nav-meta">Graph</span>
+            </button>
+            <button
+              className={activeSection === "facts" ? "nav-item nav-item--active" : "nav-item"}
+              onClick={() => setActiveSection("facts")}
+              type="button"
+            >
+              <span>Facts</span>
+              <span className="nav-meta">Log</span>
+            </button>
+          </nav>
 
-          <section className="sidebar-panel">
-            <div className="panel-heading">
-              <span>Entity explorer</span>
-              <button className="panel-link" type="button">
-                Open graph
-              </button>
-            </div>
+          {activeSection === "entities" ? (
+            <section className="sidebar-panel">
+              <div className="panel-heading">
+                <span>Entity explorer</span>
+                <button className="panel-link" type="button">
+                  Open graph
+                </button>
+              </div>
 
-            <div className="graph-frame" role="img" aria-label="Entity graph explorer">
-              <svg aria-labelledby="entity-graph-title" className="graph-svg" viewBox="0 0 336 320">
-                <title id="entity-graph-title">Entity graph explorer</title>
-                {graphEdges.map(([from, to]) => {
-                  const source = graphNodes.find((node) => node.id === from);
-                  const target = graphNodes.find((node) => node.id === to);
-                  if (!source || !target) {
-                    return null;
-                  }
-                  return (
-                    <line
-                      key={`${from}-${to}`}
-                      x1={source.x}
-                      x2={target.x}
-                      y1={source.y}
-                      y2={target.y}
-                      className="graph-edge"
-                    />
-                  );
-                })}
+              <div className="graph-frame" role="img" aria-label="Entity graph explorer">
+                <svg
+                  aria-labelledby="entity-graph-title"
+                  className="graph-svg"
+                  viewBox="0 0 336 320"
+                >
+                  <title id="entity-graph-title">Entity graph explorer</title>
+                  {graphEdges.map(([from, to]) => {
+                    const source = graphNodes.find((node) => node.id === from);
+                    const target = graphNodes.find((node) => node.id === to);
+                    if (!source || !target) {
+                      return null;
+                    }
+                    return (
+                      <line
+                        key={`${from}-${to}`}
+                        x1={source.x}
+                        x2={target.x}
+                        y1={source.y}
+                        y2={target.y}
+                        className="graph-edge"
+                      />
+                    );
+                  })}
 
-                {graphNodes.map((node) => (
-                  <g key={node.id}>
-                    <circle
-                      className={node.active ? "graph-node graph-node--active" : "graph-node"}
-                      cx={node.x}
-                      cy={node.y}
-                      r={node.active ? 34 : 26}
-                    />
-                    <text className="graph-label" textAnchor="middle" x={node.x} y={node.y + 5}>
-                      {node.label}
-                    </text>
-                  </g>
+                  {graphNodes.map((node) => (
+                    <g key={node.id}>
+                      <circle
+                        className={node.active ? "graph-node graph-node--active" : "graph-node"}
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.active ? 34 : 26}
+                      />
+                      <text className="graph-label" textAnchor="middle" x={node.x} y={node.y + 5}>
+                        {node.label}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+
+              <div className="graph-caption">
+                <strong>Focused entity</strong>
+                <p>`spotify:album:1xndb8d9an` connected to artist, search, and MCP surfaces.</p>
+              </div>
+            </section>
+          ) : (
+            <section className="sidebar-panel sidebar-panel--compact">
+              <div className="panel-heading">
+                <span>Runtime health</span>
+              </div>
+
+              <div className="status-list">
+                {health.map((item) => (
+                  <div className="status-row" key={item.label}>
+                    <span className={`status-dot status-dot--${item.status}`} />
+                    <span>{item.label}</span>
+                    <span className="status-text">{item.status}</span>
+                  </div>
                 ))}
-              </svg>
-            </div>
-
-            <div className="graph-caption">
-              <strong>Focused entity</strong>
-              <p>`spotify:album:1xndb8d9an` connected to artist, search, and MCP surfaces.</p>
-            </div>
-          </section>
-
-          <section className="sidebar-panel sidebar-panel--compact">
-            <div className="panel-heading">
-              <span>Runtime health</span>
-            </div>
-
-            <div className="status-list">
-              {health.map((item) => (
-                <div className="status-row" key={item.label}>
-                  <span className={`status-dot status-dot--${item.status}`} />
-                  <span>{item.label}</span>
-                  <span className="status-text">{item.status}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+              </div>
+            </section>
+          )}
         </aside>
 
         <main className="main-pane">
