@@ -1,13 +1,17 @@
 import type { PropsWithChildren, ReactNode } from "react";
 
+import { cn } from "./utils";
+
 type AppShellProps = PropsWithChildren<{
   eyebrow: string;
   title: string;
   subtitle: string;
   sidebar?: ReactNode;
+  className?: string;
 }>;
 
 export function AppShell({
+  className,
   eyebrow,
   title,
   subtitle,
@@ -15,7 +19,7 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <div style={shellStyle}>
+    <div className={cn("pg-theme", className)} style={shellStyle}>
       <header style={headerStyle}>
         <div>
           <div style={eyebrowStyle}>{eyebrow}</div>
@@ -52,9 +56,10 @@ const eyebrowStyle = {
 
 const titleStyle = {
   margin: 0,
-  fontSize: "clamp(3rem, 7vw, 5.6rem)",
+  fontFamily: "var(--pg-font-serif)",
+  fontSize: "clamp(2.3rem, 5vw, 4.4rem)",
   lineHeight: 0.94,
-  fontWeight: 600,
+  fontWeight: 300,
 };
 
 const subtitleStyle = {

@@ -1,29 +1,37 @@
-import type { CSSProperties, PropsWithChildren } from "react";
+import { type VariantProps, cva } from "class-variance-authority";
+import type { HTMLAttributes, PropsWithChildren } from "react";
 
-type CardProps = PropsWithChildren<{
-  tone?: "default" | "accent";
-}>;
+import { cn } from "./utils";
 
-export function Card({ tone = "default", children }: CardProps) {
-  const style = tone === "accent" ? accentStyle : cardStyle;
-  return <section style={style}>{children}</section>;
+const cardVariants = cva("pg-card", {
+  variants: {
+    tone: {
+      default: "pg-card--default",
+      accent: "pg-card--accent",
+    },
+    density: {
+      compact: "pg-card--compact",
+      comfortable: "pg-card--comfortable",
+    },
+  },
+  defaultVariants: {
+    tone: "default",
+    density: "comfortable",
+  },
+});
+
+type CardProps = PropsWithChildren<
+  HTMLAttributes<HTMLElement> &
+    VariantProps<typeof cardVariants> & {
+      as?: "section" | "div" | "article";
+    }
+>;
+
+export function Card({ as = "section", children, className, density, tone, ...props }: CardProps) {
+  const Comp = as;
+  return (
+    <Comp className={cn(cardVariants({ tone, density }), className)} {...props}>
+      {children}
+    </Comp>
+  );
 }
-
-const sharedStyle: CSSProperties = {
-  borderRadius: "28px",
-  padding: "24px",
-  border: "1px solid rgba(248, 241, 223, 0.08)",
-  boxShadow: "0 24px 64px rgba(0, 0, 0, 0.22)",
-  backdropFilter: "blur(12px)",
-};
-
-const cardStyle: CSSProperties = {
-  ...sharedStyle,
-  background: "rgba(18, 15, 11, 0.78)",
-};
-
-const accentStyle: CSSProperties = {
-  ...sharedStyle,
-  background:
-    "linear-gradient(180deg, rgba(130, 80, 30, 0.34), rgba(18, 15, 11, 0.88))",
-};

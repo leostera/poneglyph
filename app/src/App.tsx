@@ -1,3 +1,14 @@
+import {
+  Badge,
+  Button,
+  Card,
+  CommandDialog,
+  CommandItem,
+  Kbd,
+  NavItem,
+  StatusDot,
+  ThemeRoot,
+} from "@poneglyph/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const searchEntries = [
@@ -128,349 +139,340 @@ export function App() {
 
   return (
     <>
-      <div className="app-shell">
-        <aside className="sidebar">
-          <div className="sidebar-topbar">
-            <div className="sidebar-wordmark">Poneglyph.</div>
-            <button className="omnisearch-launch" type="button" onClick={() => setSearchOpen(true)}>
-              <span className="omnisearch-shortcut">⌘K</span>
-            </button>
-          </div>
+      <ThemeRoot className="app-shell-root">
+        <div className="app-shell">
+          <aside className="sidebar">
+            <div className="sidebar-topbar">
+              <div className="sidebar-wordmark">Poneglyph.</div>
+              <Button
+                className="omnisearch-launch"
+                onClick={() => setSearchOpen(true)}
+                size="lg"
+                tone="secondary"
+              >
+                <Kbd>⌘K</Kbd>
+              </Button>
+            </div>
 
-          <nav className="sidebar-nav" aria-label="Workspace navigation">
-            <div className="sidebar-section-label">Workspace</div>
-            <button
-              className={activeSection === "entities" ? "nav-item nav-item--active" : "nav-item"}
-              onClick={() => setActiveSection("entities")}
-              type="button"
-            >
-              <span>Entities</span>
-              <span className="nav-meta">Graph</span>
-            </button>
-            <button
-              className={activeSection === "facts" ? "nav-item nav-item--active" : "nav-item"}
-              onClick={() => setActiveSection("facts")}
-              type="button"
-            >
-              <span>Facts</span>
-              <span className="nav-meta">Log</span>
-            </button>
-          </nav>
+            <nav className="sidebar-nav" aria-label="Workspace navigation">
+              <div className="sidebar-section-label">Workspace</div>
+              <NavItem
+                active={activeSection === "entities"}
+                onClick={() => setActiveSection("entities")}
+                meta="Graph"
+              >
+                Entities
+              </NavItem>
+              <NavItem
+                active={activeSection === "facts"}
+                onClick={() => setActiveSection("facts")}
+                meta="Log"
+              >
+                Facts
+              </NavItem>
+            </nav>
 
-          {activeSection === "entities" ? (
-            <section className="sidebar-panel">
-              <div className="panel-heading">
-                <span>Entity explorer</span>
-                <button className="panel-link" type="button">
-                  Open graph
-                </button>
-              </div>
+            {activeSection === "entities" ? (
+              <Card className="sidebar-panel" density="compact">
+                <div className="panel-heading">
+                  <span>Entity explorer</span>
+                  <Button size="sm" tone="ghost">
+                    Open graph
+                  </Button>
+                </div>
 
-              <div className="graph-frame" role="img" aria-label="Entity graph explorer">
-                <svg
-                  aria-labelledby="entity-graph-title"
-                  className="graph-svg"
-                  viewBox="0 0 336 320"
-                >
-                  <title id="entity-graph-title">Entity graph explorer</title>
-                  {graphEdges.map(([from, to]) => {
-                    const source = graphNodes.find((node) => node.id === from);
-                    const target = graphNodes.find((node) => node.id === to);
-                    if (!source || !target) {
-                      return null;
-                    }
-                    return (
-                      <line
-                        key={`${from}-${to}`}
-                        x1={source.x}
-                        x2={target.x}
-                        y1={source.y}
-                        y2={target.y}
-                        className="graph-edge"
+                <div className="graph-frame" role="img" aria-label="Entity graph explorer">
+                  <svg
+                    aria-labelledby="entity-graph-title"
+                    className="graph-svg"
+                    viewBox="0 0 336 320"
+                  >
+                    <title id="entity-graph-title">Entity graph explorer</title>
+                    {graphEdges.map(([from, to]) => {
+                      const source = graphNodes.find((node) => node.id === from);
+                      const target = graphNodes.find((node) => node.id === to);
+                      if (!source || !target) {
+                        return null;
+                      }
+                      return (
+                        <line
+                          key={`${from}-${to}`}
+                          x1={source.x}
+                          x2={target.x}
+                          y1={source.y}
+                          y2={target.y}
+                          className="graph-edge"
+                        />
+                      );
+                    })}
+
+                    {graphNodes.map((node) => (
+                      <g key={node.id}>
+                        <circle
+                          className={node.active ? "graph-node graph-node--active" : "graph-node"}
+                          cx={node.x}
+                          cy={node.y}
+                          r={node.active ? 34 : 26}
+                        />
+                        <text className="graph-label" textAnchor="middle" x={node.x} y={node.y + 5}>
+                          {node.label}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+
+                <div className="graph-caption">
+                  <strong>Focused entity</strong>
+                  <p>`spotify:album:1xndb8d9an` connected to artist, search, and MCP surfaces.</p>
+                </div>
+              </Card>
+            ) : (
+              <Card className="sidebar-panel sidebar-panel--compact" density="compact">
+                <div className="panel-heading">
+                  <span>Runtime health</span>
+                </div>
+
+                <div className="status-list">
+                  {health.map((item) => (
+                    <div className="status-row" key={item.label}>
+                      <StatusDot
+                        tone={
+                          item.status === "healthy"
+                            ? "healthy"
+                            : item.status === "indexing"
+                              ? "warn"
+                              : "offline"
+                        }
                       />
-                    );
-                  })}
-
-                  {graphNodes.map((node) => (
-                    <g key={node.id}>
-                      <circle
-                        className={node.active ? "graph-node graph-node--active" : "graph-node"}
-                        cx={node.x}
-                        cy={node.y}
-                        r={node.active ? 34 : 26}
-                      />
-                      <text className="graph-label" textAnchor="middle" x={node.x} y={node.y + 5}>
-                        {node.label}
-                      </text>
-                    </g>
+                      <span>{item.label}</span>
+                      <span className="status-text">{item.status}</span>
+                    </div>
                   ))}
-                </svg>
-              </div>
-
-              <div className="graph-caption">
-                <strong>Focused entity</strong>
-                <p>`spotify:album:1xndb8d9an` connected to artist, search, and MCP surfaces.</p>
-              </div>
-            </section>
-          ) : (
-            <section className="sidebar-panel sidebar-panel--compact">
-              <div className="panel-heading">
-                <span>Runtime health</span>
-              </div>
-
-              <div className="status-list">
-                {health.map((item) => (
-                  <div className="status-row" key={item.label}>
-                    <span className={`status-dot status-dot--${item.status}`} />
-                    <span>{item.label}</span>
-                    <span className="status-text">{item.status}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </aside>
-
-        <main className="main-pane">
-          {activeSection === "entities" ? (
-            <>
-              <header className="main-header">
-                <div>
-                  <span className="main-overline">Current entity</span>
-                  <h2>spotify:album:1xndb8d9an</h2>
                 </div>
+              </Card>
+            )}
+          </aside>
 
-                <div className="main-actions">
-                  <button className="action-button action-button--ghost" type="button">
-                    Replay projection
-                  </button>
-                  <button className="action-button" type="button">
-                    State fact
-                  </button>
-                </div>
-              </header>
-
-              <section className="hero-card">
-                <div className="hero-copy">
-                  <span className="entity-chip">album</span>
-                  <h3>2112</h3>
-                  <p>
-                    Consolidated from append-only facts. Strongly consistent fact reads, eventual
-                    entity projections, and a graph layer waiting behind the daemon.
-                  </p>
-                </div>
-
-                <dl className="hero-metrics">
+          <main className="main-pane">
+            {activeSection === "entities" ? (
+              <>
+                <header className="main-header">
                   <div>
-                    <dt>Namespace</dt>
-                    <dd>spotify</dd>
-                  </div>
-                  <div>
-                    <dt>Last tx</dt>
-                    <dd>0195f7ee…</dd>
-                  </div>
-                  <div>
-                    <dt>Aliases</dt>
-                    <dd>3 sameAs links</dd>
-                  </div>
-                </dl>
-              </section>
-
-              <div className="content-columns">
-                <section className="content-card">
-                  <div className="panel-heading">
-                    <span>Fact stream</span>
-                    <span className="panel-meta">Newest wins in consolidation</span>
+                    <span className="main-overline">Current entity</span>
+                    <h2>spotify:album:1xndb8d9an</h2>
                   </div>
 
-                  <div className="fact-list">
-                    {facts.map((fact) => (
-                      <article className="fact-row" key={`${fact.field}-${fact.tx}`}>
+                  <div className="main-actions">
+                    <Button className="action-button" tone="ghost">
+                      Replay projection
+                    </Button>
+                    <Button className="action-button" tone="accent">
+                      State fact
+                    </Button>
+                  </div>
+                </header>
+
+                <Card className="hero-card" density="comfortable">
+                  <div className="hero-copy">
+                    <Badge className="entity-chip">album</Badge>
+                    <h3>2112</h3>
+                    <p>
+                      Consolidated from append-only facts. Strongly consistent fact reads, eventual
+                      entity projections, and a graph layer waiting behind the daemon.
+                    </p>
+                  </div>
+
+                  <dl className="hero-metrics">
+                    <div>
+                      <dt>Namespace</dt>
+                      <dd>spotify</dd>
+                    </div>
+                    <div>
+                      <dt>Last tx</dt>
+                      <dd>0195f7ee…</dd>
+                    </div>
+                    <div>
+                      <dt>Aliases</dt>
+                      <dd>3 sameAs links</dd>
+                    </div>
+                  </dl>
+                </Card>
+
+                <div className="content-columns">
+                  <Card className="content-card" density="compact">
+                    <div className="panel-heading">
+                      <span>Fact stream</span>
+                      <span className="panel-meta">Newest wins in consolidation</span>
+                    </div>
+
+                    <div className="fact-list">
+                      {facts.map((fact) => (
+                        <article className="fact-row" key={`${fact.field}-${fact.tx}`}>
+                          <div>
+                            <strong>{fact.field}</strong>
+                            <p>{fact.value}</p>
+                          </div>
+                          <span className="fact-tx">{fact.tx.slice(0, 12)}…</span>
+                        </article>
+                      ))}
+                    </div>
+                  </Card>
+
+                  <Card className="content-card" density="compact">
+                    <div className="panel-heading">
+                      <span>Work queue</span>
+                      <span className="panel-meta">Eventual read models</span>
+                    </div>
+
+                    <div className="queue-list">
+                      <article className="queue-row">
+                        <StatusDot tone="healthy" />
                         <div>
-                          <strong>{fact.field}</strong>
-                          <p>{fact.value}</p>
+                          <strong>search projection</strong>
+                          <p>Indexing this entity into Tantivy with keyword and URI facets.</p>
                         </div>
-                        <span className="fact-tx">{fact.tx.slice(0, 12)}…</span>
                       </article>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="content-card">
-                  <div className="panel-heading">
-                    <span>Work queue</span>
-                    <span className="panel-meta">Eventual read models</span>
-                  </div>
-
-                  <div className="queue-list">
-                    <article className="queue-row">
-                      <span className="status-dot status-dot--healthy" />
-                      <div>
-                        <strong>search projection</strong>
-                        <p>Indexing this entity into Tantivy with keyword and URI facets.</p>
-                      </div>
-                    </article>
-                    <article className="queue-row">
-                      <span className="status-dot status-dot--indexing" />
-                      <div>
-                        <strong>identity merge</strong>
-                        <p>Reconciling `sameAs` aliases into one emergent object.</p>
-                      </div>
-                    </article>
-                    <article className="queue-row">
-                      <span className="status-dot status-dot--offline" />
-                      <div>
-                        <strong>mcp surface</strong>
-                        <p>Will expose memory tools once the daemon bridge exists.</p>
-                      </div>
-                    </article>
-                  </div>
-                </section>
-              </div>
-            </>
-          ) : (
-            <>
-              <header className="main-header">
-                <div>
-                  <span className="main-overline">Fact log</span>
-                  <h2>Append-only facts</h2>
-                </div>
-
-                <div className="main-actions">
-                  <button className="action-button action-button--ghost" type="button">
-                    Filter stream
-                  </button>
-                  <button className="action-button" type="button">
-                    New statement
-                  </button>
-                </div>
-              </header>
-
-              <section className="hero-card">
-                <div className="hero-copy">
-                  <span className="entity-chip">transactional writes</span>
-                  <h3>Everything starts as a fact.</h3>
-                  <p>
-                    This view is about raw evidence, provenance, and transaction order. Reads here
-                    stay strongly consistent even while entities and projections lag behind.
-                  </p>
-                </div>
-
-                <dl className="hero-metrics">
-                  <div>
-                    <dt>Last tx</dt>
-                    <dd>0195f7ee…</dd>
-                  </div>
-                  <div>
-                    <dt>Open replays</dt>
-                    <dd>2 projections</dd>
-                  </div>
-                  <div>
-                    <dt>Retractions</dt>
-                    <dd>append-only</dd>
-                  </div>
-                </dl>
-              </section>
-
-              <div className="content-columns">
-                <section className="content-card">
-                  <div className="panel-heading">
-                    <span>Recent writes</span>
-                    <span className="panel-meta">tx ordered</span>
-                  </div>
-
-                  <div className="fact-feed">
-                    {factFeed.map((fact) => (
-                      <article className="fact-feed-row" key={`${fact.entity}-${fact.field}`}>
-                        <strong>{fact.entity}</strong>
-                        <p>
-                          <span className="fact-field">{fact.field}</span>
-                          <span className="fact-arrow">→</span>
-                          {fact.value}
-                        </p>
-                        <span className="fact-origin">{fact.statedBy}</span>
+                      <article className="queue-row">
+                        <StatusDot tone="warn" />
+                        <div>
+                          <strong>identity merge</strong>
+                          <p>Reconciling `sameAs` aliases into one emergent object.</p>
+                        </div>
                       </article>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="content-card">
-                  <div className="panel-heading">
-                    <span>Read guarantees</span>
-                    <span className="panel-meta">operational model</span>
-                  </div>
-
-                  <div className="queue-list">
-                    <article className="queue-row">
-                      <span className="status-dot status-dot--healthy" />
-                      <div>
-                        <strong>facts</strong>
-                        <p>Read-after-write consistent immediately after `state_facts` commits.</p>
-                      </div>
-                    </article>
-                    <article className="queue-row">
-                      <span className="status-dot status-dot--indexing" />
-                      <div>
-                        <strong>entities</strong>
-                        <p>Consolidated asynchronously with deterministic merge rules.</p>
-                      </div>
-                    </article>
-                    <article className="queue-row">
-                      <span className="status-dot status-dot--offline" />
-                      <div>
-                        <strong>projections</strong>
-                        <p>Replayable and idempotent, but intentionally eventual.</p>
-                      </div>
-                    </article>
-                  </div>
-                </section>
-              </div>
-            </>
-          )}
-        </main>
-      </div>
-
-      {searchOpen ? (
-        <div className="search-overlay">
-          <button
-            aria-label="Close omnisearch"
-            className="search-overlay-dismiss"
-            onClick={() => setSearchOpen(false)}
-            type="button"
-          />
-          <dialog
-            aria-label="Omnisearch"
-            className="search-dialog"
-            onMouseDown={(event) => event.stopPropagation()}
-            open
-          >
-            <div className="search-input-row">
-              <input
-                className="search-input"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search entities, fields, tx ids, or projections"
-                ref={searchInputRef}
-                value={query}
-              />
-              <button className="search-close" type="button" onClick={() => setSearchOpen(false)}>
-                esc
-              </button>
-            </div>
-
-            <div className="search-results">
-              {filteredEntries.map((entry) => (
-                <button className="search-result" key={entry.meta} type="button">
+                      <article className="queue-row">
+                        <StatusDot tone="offline" />
+                        <div>
+                          <strong>mcp surface</strong>
+                          <p>Will expose memory tools once the daemon bridge exists.</p>
+                        </div>
+                      </article>
+                    </div>
+                  </Card>
+                </div>
+              </>
+            ) : (
+              <>
+                <header className="main-header">
                   <div>
-                    <strong>{entry.title}</strong>
-                    <p>{entry.meta}</p>
+                    <span className="main-overline">Fact log</span>
+                    <h2>Append-only facts</h2>
                   </div>
-                  <span>{entry.kind}</span>
-                </button>
-              ))}
-            </div>
-          </dialog>
+
+                  <div className="main-actions">
+                    <Button className="action-button" tone="ghost">
+                      Filter stream
+                    </Button>
+                    <Button className="action-button" tone="accent">
+                      New statement
+                    </Button>
+                  </div>
+                </header>
+
+                <Card className="hero-card" density="comfortable">
+                  <div className="hero-copy">
+                    <Badge className="entity-chip">transactional writes</Badge>
+                    <h3>Everything starts as a fact.</h3>
+                    <p>
+                      This view is about raw evidence, provenance, and transaction order. Reads here
+                      stay strongly consistent even while entities and projections lag behind.
+                    </p>
+                  </div>
+
+                  <dl className="hero-metrics">
+                    <div>
+                      <dt>Last tx</dt>
+                      <dd>0195f7ee…</dd>
+                    </div>
+                    <div>
+                      <dt>Open replays</dt>
+                      <dd>2 projections</dd>
+                    </div>
+                    <div>
+                      <dt>Retractions</dt>
+                      <dd>append-only</dd>
+                    </div>
+                  </dl>
+                </Card>
+
+                <div className="content-columns">
+                  <Card className="content-card" density="compact">
+                    <div className="panel-heading">
+                      <span>Recent writes</span>
+                      <span className="panel-meta">tx ordered</span>
+                    </div>
+
+                    <div className="fact-feed">
+                      {factFeed.map((fact) => (
+                        <article className="fact-feed-row" key={`${fact.entity}-${fact.field}`}>
+                          <strong>{fact.entity}</strong>
+                          <p>
+                            <span className="fact-field">{fact.field}</span>
+                            <span className="fact-arrow">→</span>
+                            {fact.value}
+                          </p>
+                          <span className="fact-origin">{fact.statedBy}</span>
+                        </article>
+                      ))}
+                    </div>
+                  </Card>
+
+                  <Card className="content-card" density="compact">
+                    <div className="panel-heading">
+                      <span>Read guarantees</span>
+                      <span className="panel-meta">operational model</span>
+                    </div>
+
+                    <div className="queue-list">
+                      <article className="queue-row">
+                        <StatusDot tone="healthy" />
+                        <div>
+                          <strong>facts</strong>
+                          <p>
+                            Read-after-write consistent immediately after `state_facts` commits.
+                          </p>
+                        </div>
+                      </article>
+                      <article className="queue-row">
+                        <StatusDot tone="warn" />
+                        <div>
+                          <strong>entities</strong>
+                          <p>Consolidated asynchronously with deterministic merge rules.</p>
+                        </div>
+                      </article>
+                      <article className="queue-row">
+                        <StatusDot tone="offline" />
+                        <div>
+                          <strong>projections</strong>
+                          <p>Replayable and idempotent, but intentionally eventual.</p>
+                        </div>
+                      </article>
+                    </div>
+                  </Card>
+                </div>
+              </>
+            )}
+          </main>
         </div>
-      ) : null}
+        <CommandDialog
+          closeLabel={<Kbd>esc</Kbd>}
+          inputRef={searchInputRef}
+          onOpenChange={setSearchOpen}
+          onQueryChange={setQuery}
+          open={searchOpen}
+          placeholder="Search entities, fields, tx ids, or projections"
+          query={query}
+        >
+          {filteredEntries.map((entry) => (
+            <CommandItem
+              key={entry.meta}
+              meta={entry.meta}
+              title={entry.title}
+              trailing={entry.kind}
+            />
+          ))}
+        </CommandDialog>
+      </ThemeRoot>
     </>
   );
 }

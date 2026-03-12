@@ -1,34 +1,50 @@
-type ButtonProps = {
-  label: string;
-  tone?: "primary" | "secondary";
-};
+import { Slot } from "@radix-ui/react-slot";
+import { type VariantProps, cva } from "class-variance-authority";
+import type { ButtonHTMLAttributes } from "react";
 
-export function Button({ label, tone = "primary" }: ButtonProps) {
+import { cn } from "./utils";
+
+const buttonVariants = cva("pg-button", {
+  variants: {
+    tone: {
+      default: "pg-button--default",
+      secondary: "pg-button--secondary",
+      accent: "pg-button--accent",
+      ghost: "pg-button--ghost",
+    },
+    size: {
+      sm: "pg-button--sm",
+      md: "pg-button--md",
+      lg: "pg-button--lg",
+    },
+  },
+  defaultVariants: {
+    tone: "default",
+    size: "md",
+  },
+});
+
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+    label?: string;
+  };
+
+export function Button({
+  asChild,
+  children,
+  className,
+  label,
+  size,
+  tone,
+  type = "button",
+  ...props
+}: ButtonProps) {
+  const Comp = asChild ? Slot : "button";
+
   return (
-    <button style={tone === "primary" ? primaryStyle : secondaryStyle} type="button">
-      {label}
-    </button>
+    <Comp className={cn(buttonVariants({ tone, size }), className)} type={type} {...props}>
+      {children ?? label}
+    </Comp>
   );
 }
-
-const baseStyle = {
-  appearance: "none" as const,
-  borderRadius: "999px",
-  padding: "13px 20px",
-  border: "1px solid transparent",
-  cursor: "pointer",
-  transition: "transform 120ms ease, opacity 120ms ease",
-};
-
-const primaryStyle = {
-  ...baseStyle,
-  background: "#e3a24d",
-  color: "#1c1308",
-};
-
-const secondaryStyle = {
-  ...baseStyle,
-  background: "rgba(248, 241, 223, 0.05)",
-  color: "#f8f1df",
-  border: "1px solid rgba(248, 241, 223, 0.12)",
-};
