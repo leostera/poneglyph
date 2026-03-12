@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "crates/poneglyph-consolidation",
     "crates/poneglyph-core",
     "crates/poneglyph-facts",
 ]

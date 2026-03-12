@@ -15,7 +15,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(16))]
 
     #[test]
-    fn property_any_stated_facts_are_readable_immediately_after_commit(
+    fn sqlite_property_any_stated_facts_are_readable_immediately_after_commit(
         facts in prop::collection::vec(any::<Fact>(), 1..20)
     ) {
         properties::any_stated_facts_are_readable_immediately_after_commit(
@@ -28,7 +28,7 @@ proptest! {
     }
 
     #[test]
-    fn property_retracting_any_prefix_hides_only_that_prefix_from_active_reads(
+    fn sqlite_property_retracting_any_prefix_hides_only_that_prefix_from_active_reads(
         facts in prop::collection::vec(any::<Fact>(), 1..16),
         retract_count in 0usize..16,
     ) {

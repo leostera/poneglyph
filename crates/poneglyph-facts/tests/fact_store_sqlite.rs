@@ -19,61 +19,61 @@ async fn make_store() -> (TempDir, SqliteFactStore) {
 }
 
 #[tokio::test]
-async fn state_facts_persists_a_batch_with_one_tx_id() {
+async fn sqlite_state_facts_persists_a_batch_with_one_tx_id() {
     let (_dir, store) = make_store().await;
     assert_common_store_behavior(&store).await;
 }
 
 #[tokio::test]
-async fn retractions_are_appended_and_do_not_mutate_prior_rows() {
+async fn sqlite_retractions_are_appended_and_do_not_mutate_prior_rows() {
     let (_dir, store) = make_store().await;
     assert_retractions_are_append_only(&store).await;
 }
 
 #[tokio::test]
-async fn get_facts_can_expose_active_and_full_log_views() {
+async fn sqlite_get_facts_can_expose_active_and_full_log_views() {
     let (_dir, store) = make_store().await;
     assert_active_and_full_log_views(&store).await;
 }
 
 #[tokio::test]
-async fn retracting_unknown_fact_fails_the_batch() {
+async fn sqlite_retracting_unknown_fact_fails_the_batch() {
     let (_dir, store) = make_store().await;
     assert_invalid_retractions_fail_cleanly(&store).await;
 }
 
 #[tokio::test]
-async fn mixed_batch_rolls_back_if_any_write_is_invalid() {
+async fn sqlite_mixed_batch_rolls_back_if_any_write_is_invalid() {
     let (_dir, store) = make_store().await;
     assert_mixed_batch_rolls_back(&store).await;
 }
 
 #[tokio::test]
-async fn get_facts_returns_all_records_in_deterministic_order() {
+async fn sqlite_get_facts_returns_all_records_in_deterministic_order() {
     let (_dir, store) = make_store().await;
     assert_get_facts_returns_all_records_in_deterministic_order(&store).await;
 }
 
 #[tokio::test]
-async fn get_fact_returns_none_for_unknown_id() {
+async fn sqlite_get_fact_returns_none_for_unknown_id() {
     let (_dir, store) = make_store().await;
     assert_missing_fact_returns_none(&store).await;
 }
 
 #[tokio::test]
-async fn tx_ids_are_unique_per_batch() {
+async fn sqlite_tx_ids_are_unique_per_batch() {
     let (_dir, store) = make_store().await;
     assert_tx_ids_are_unique_per_batch(&store).await;
 }
 
 #[tokio::test]
-async fn retracting_an_already_retracted_fact_is_a_noop() {
+async fn sqlite_retracting_an_already_retracted_fact_is_a_noop() {
     let (_dir, store) = make_store().await;
     assert_retracting_an_already_retracted_fact_is_a_noop(&store).await;
 }
 
 #[tokio::test]
-async fn retract_then_assert_in_same_batch_keeps_new_fact_active() {
+async fn sqlite_retract_then_assert_in_same_batch_keeps_new_fact_active() {
     let (_dir, store) = make_store().await;
     assert_retract_then_assert_in_same_batch_keeps_new_fact_active(&store).await;
 }

@@ -23,6 +23,20 @@ impl Fact {
     }
 }
 
+#[macro_export]
+macro_rules! fact {
+    ($source:expr, $entity:expr, $field:expr, $value:expr) => {{
+        $crate::Fact::builder()
+            .source($source)
+            .entity($entity)
+            .field($field)
+            .value($value)
+            .build()
+            .expect("invalid fact")
+    }};
+    ($entity:expr, $field:expr, $value:expr) => {{ $crate::fact!($crate::uri!("poneglyph:internal"), $entity, $field, $value) }};
+}
+
 /// Supported read filters for fact stores.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Filter {

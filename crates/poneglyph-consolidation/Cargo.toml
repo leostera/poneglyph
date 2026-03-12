@@ -1,0 +1,10 @@
+[package]
+name = "poneglyph-consolidation"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+poneglyph-core = { path = "../poneglyph-core" }
+serde_json.workspace = true

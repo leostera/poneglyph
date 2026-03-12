@@ -12,6 +12,8 @@ pub enum Error {
     InvalidUriMissingScheme { value: String },
     #[error("namespace and kind must be present")]
     MissingUriParts,
+    #[error("uri `{value}` is missing a kind segment")]
+    MissingUriKind { value: String },
     #[error("fact builder requires a source")]
     MissingFactSource,
     #[error("fact builder requires an entity")]

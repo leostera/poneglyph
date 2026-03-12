@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{Fact, Uri, Value, uri};
+    use crate::{Fact, Uri, Value, fact, uri};
 
     #[test]
     fn uri_from_parts_uses_namespace_kind_and_given_id() {
@@ -30,6 +30,13 @@ mod tests {
     fn uri_macro_builds_uri_from_three_parts() {
         let uri = uri!("spotify", "album", "2112");
         assert_eq!(uri.as_str(), "spotify:album:2112");
+    }
+
+    #[test]
+    fn uri_exposes_namespace_and_kind() {
+        let uri = uri!("spotify:album:2112");
+        assert_eq!(uri.namespace(), "spotify");
+        assert_eq!(uri.kind().expect("kind"), "album");
     }
 
     #[test]
@@ -74,5 +81,28 @@ mod tests {
             .expect("fact");
 
         assert!(fact.retraction);
+    }
+
+    #[test]
+    fn fact_macro_uses_explicit_source() {
+        let fact = fact!(
+            uri!("agent:codex:local"),
+            uri!("spotify:album:2112"),
+            uri!("spotify:displayName"),
+            Value::text("2112")
+        );
+
+        assert_eq!(fact.source, uri!("agent:codex:local"));
+    }
+
+    #[test]
+    fn fact_macro_defaults_source_to_internal() {
+        let fact = fact!(
+            uri!("spotify:album:2112"),
+            uri!("spotify:displayName"),
+            Value::text("2112")
+        );
+
+        assert_eq!(fact.source, uri!("poneglyph:internal"));
     }
 }
