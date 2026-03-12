@@ -306,10 +306,7 @@ export function App() {
         <div className="workspace-shell">
           <aside className="left-rail">
             <div className="workspace-switcher">
-              <div>
-                <div className="workspace-wordmark">Poneglyph.</div>
-                <div className="workspace-subtitle">Absolute local memory</div>
-              </div>
+              <div className="workspace-wordmark">Poneglyph.</div>
               <Button
                 className="search-launch"
                 onClick={() => setSearchOpen(true)}

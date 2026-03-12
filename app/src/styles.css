@@ -117,7 +117,6 @@ button {
   line-height: 0.92;
 }
 
-.workspace-subtitle,
 .browser-item__summary,
 .browser-item__uri,
 .detail-header p,
@@ -127,13 +126,6 @@ button {
 .health-row__detail,
 .relation-pill span {
   color: rgba(245, 245, 242, 0.54);
-}
-
-.workspace-subtitle {
-  margin-top: 5px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .search-launch {
