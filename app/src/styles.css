@@ -37,18 +37,15 @@ button {
 
 .desktop-frame {
   min-height: 100vh;
-  padding: 18px;
+  padding: 0;
 }
 
 .workspace-shell {
   display: grid;
   grid-template-columns: 252px 336px minmax(0, 1fr);
-  min-height: calc(100vh - 36px);
+  min-height: 100vh;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  background: rgba(10, 10, 10, 0.96);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
+  background: #0a0a0a;
 }
 
 .left-rail,
@@ -61,7 +58,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 34px 14px 16px;
+  padding: 34px 14px 16px 16px;
   border-right: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(255, 255, 255, 0.02);
 }
