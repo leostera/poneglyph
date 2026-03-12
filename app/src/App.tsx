@@ -313,7 +313,7 @@ export function App() {
                 size="sm"
                 tone="secondary"
               >
-                <Kbd>Cmd K</Kbd>
+                <Kbd className="search-launch__kbd">⌘ K</Kbd>
               </Button>
             </div>
 
