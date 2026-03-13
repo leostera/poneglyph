@@ -1,25 +1,29 @@
 use std::sync::Arc;
 
 use derive_builder::Builder;
-use poneglyph::{Entity, Fact, Poneglyph, Query, SearchHit, Uri};
+use poneglyph::{Entity, Fact, Poneglyph, Query, SearchHit, Uri, Value as PoneglyphValue};
+use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tokio::sync::mpsc;
 use tracing::{debug, instrument};
 
+use crate::config::default_bind_addr;
 use crate::error::{Error, Result};
-use crate::rmcp_stdio::RmcpServer;
+use crate::rmcp_http::RmcpServer;
 use crate::tool::{CallToolResult, Tool, ToolCall};
 
-const TOOL_STATE_FACTS: &str = "Poneglyph-stateFacts";
-const TOOL_QUERY: &str = "Poneglyph-query";
-const TOOL_GET_ENTITY: &str = "Poneglyph-getEntity";
-const TOOL_SEARCH: &str = "Poneglyph-search";
+const TOOL_STATE_FACTS: &str = "stateFacts";
+const TOOL_QUERY: &str = "query";
+const TOOL_GET_ENTITY: &str = "getEntity";
+const TOOL_SEARCH: &str = "search";
 
 #[derive(Clone, Builder)]
 #[builder(pattern = "owned", build_fn(private, name = "fallible_build"))]
 pub struct PoneglyphMcpServer {
     poneglyph: Arc<Poneglyph>,
+    #[builder(default = "default_bind_addr()")]
+    bind_addr: String,
 }
 
 impl PoneglyphMcpServer {
@@ -31,52 +35,31 @@ impl PoneglyphMcpServer {
         RmcpServer::new(self).run().await
     }
 
+    pub fn bind_addr(&self) -> &str {
+        &self.bind_addr
+    }
+
     pub fn list_tools(&self) -> Vec<Tool> {
         vec![
             tool(
                 TOOL_STATE_FACTS,
                 "Append one atomic batch of facts.",
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "facts": { "type": "array" }
-                    },
-                    "required": ["facts"]
-                }),
+                json_schema_for::<StateFactsInput>(),
             ),
             tool(
                 TOOL_QUERY,
                 "Run a Datalog query over the active graph.",
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "query": { "type": "string" }
-                    },
-                    "required": ["query"]
-                }),
+                json_schema_for::<QueryInput>(),
             ),
             tool(
                 TOOL_GET_ENTITY,
                 "Fetch a consolidated entity by URI.",
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "entityUri": { "type": "string" }
-                    },
-                    "required": ["entityUri"]
-                }),
+                json_schema_for::<GetEntityInput>(),
             ),
             tool(
                 TOOL_SEARCH,
                 "Search the projected entity index.",
-                json!({
-                    "type": "object",
-                    "properties": {
-                        "query": { "type": "string" },
-                        "limit": { "type": "integer" }
-                    },
-                    "required": ["query"]
-                }),
+                json_schema_for::<SearchInput>(),
             ),
         ]
     }
@@ -98,7 +81,12 @@ impl PoneglyphMcpServer {
                 tool: TOOL_STATE_FACTS,
                 source,
             })?;
-        let tx_id = self.poneglyph.state_facts(fact_stream(input.facts)).await?;
+        let facts = input
+            .facts
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<poneglyph::PoneResult<Vec<_>>>()?;
+        let tx_id = self.poneglyph.state_facts(fact_stream(facts)).await?;
         debug!(%tx_id, "mcp state_facts succeeded");
         Ok(CallToolResult {
             content: json!({ "txId": tx_id }),
@@ -170,19 +158,53 @@ impl PoneglyphMcpServerBuilder {
         self.poneglyph(poneglyph)
     }
 
+    pub fn with_bind_addr(self, bind_addr: impl Into<String>) -> Self {
+        self.bind_addr(bind_addr.into())
+    }
+
     pub fn build(self) -> Result<PoneglyphMcpServer> {
         self.fallible_build()
             .map_err(|_| Error::MissingServerPoneglyph)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 struct StateFactsInput {
-    facts: Vec<Fact>,
+    #[schemars(length(min = 1))]
+    facts: Vec<McpFactInput>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct McpFactInput {
+    source: Option<String>,
+    entity: String,
+    field: String,
+    value: McpValueInput,
+    #[serde(default)]
+    retraction: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "type", content = "value", rename_all = "snake_case")]
+enum McpValueInput {
+    Null,
+    Text(String),
+    Number(String),
+    Boolean(bool),
+    Bytes(Vec<u8>),
+    Reference(String),
+    Date(#[schemars(with = "String")] chrono::NaiveDate),
+    DateTime(#[schemars(with = "String")] chrono::DateTime<chrono::Utc>),
+    List(Vec<McpValueInput>),
+    Map(std::collections::BTreeMap<String, McpValueInput>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 struct QueryInput {
+    #[schemars(length(min = 1))]
     query: String,
 }
 
@@ -191,9 +213,11 @@ struct QueryOutput {
     substitutions: Vec<datafox::Substitution>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 struct GetEntityInput {
     #[serde(rename = "entityUri")]
+    #[schemars(rename = "entityUri", length(min = 1))]
     entity_uri: String,
 }
 
@@ -202,9 +226,12 @@ struct GetEntityOutput {
     entity: Option<Entity>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 struct SearchInput {
+    #[schemars(length(min = 1))]
     query: String,
+    #[schemars(range(min = 1))]
     limit: Option<usize>,
 }
 
@@ -236,6 +263,61 @@ fn tool(name: &str, description: &str, input_schema: Value) -> Tool {
     }
 }
 
+fn json_schema_for<T: JsonSchema>() -> Value {
+    serde_json::to_value(schema_for!(T)).expect("json schema")
+}
+
+impl TryFrom<McpFactInput> for Fact {
+    type Error = poneglyph::Error;
+
+    fn try_from(input: McpFactInput) -> std::result::Result<Self, Self::Error> {
+        let source = match input.source {
+            Some(source) => Uri::parse(source)?,
+            None => poneglyph::uri!("poneglyph:internal"),
+        };
+        let builder = Fact::builder()
+            .source(source)
+            .entity(Uri::parse(input.entity)?)
+            .field(Uri::parse(input.field)?)
+            .value(input.value.try_into()?);
+        let builder = if input.retraction {
+            builder.retract()
+        } else {
+            builder.assert()
+        };
+        builder.build()
+    }
+}
+
+impl TryFrom<McpValueInput> for PoneglyphValue {
+    type Error = poneglyph::Error;
+
+    fn try_from(value: McpValueInput) -> std::result::Result<Self, Self::Error> {
+        Ok(match value {
+            McpValueInput::Null => PoneglyphValue::Null,
+            McpValueInput::Text(value) => PoneglyphValue::Text(value),
+            McpValueInput::Number(value) => PoneglyphValue::Number(value),
+            McpValueInput::Boolean(value) => PoneglyphValue::Boolean(value),
+            McpValueInput::Bytes(value) => PoneglyphValue::Bytes(value),
+            McpValueInput::Reference(value) => PoneglyphValue::Reference(Uri::parse(value)?),
+            McpValueInput::Date(value) => PoneglyphValue::Date(value),
+            McpValueInput::DateTime(value) => PoneglyphValue::DateTime(value),
+            McpValueInput::List(values) => PoneglyphValue::List(
+                values
+                    .into_iter()
+                    .map(TryInto::try_into)
+                    .collect::<std::result::Result<Vec<_>, _>>()?,
+            ),
+            McpValueInput::Map(values) => PoneglyphValue::Map(
+                values
+                    .into_iter()
+                    .map(|(key, value)| value.try_into().map(|value| (key, value)))
+                    .collect::<std::result::Result<_, _>>()?,
+            ),
+        })
+    }
+}
+
 fn fact_stream(facts: Vec<Fact>) -> mpsc::Receiver<Fact> {
     let (tx, rx) = mpsc::channel(facts.len().max(1));
     tokio::spawn(async move {
@@ -261,7 +343,7 @@ mod tests {
     use super::{
         PoneglyphMcpServer, TOOL_GET_ENTITY, TOOL_QUERY, TOOL_SEARCH, TOOL_STATE_FACTS, ToolCall,
     };
-    use poneglyph::{Poneglyph, Value, Workspace, fact, uri};
+    use poneglyph::{Poneglyph, Workspace};
 
     struct TestServer {
         _tempdir: TempDir,
@@ -339,6 +421,17 @@ mod tests {
         .expect("search eventually finds hit")
     }
 
+    fn text_fact(entity: &str, field: &str, value: &str) -> serde_json::Value {
+        json!({
+            "entity": entity,
+            "field": field,
+            "value": {
+                "type": "text",
+                "value": value,
+            }
+        })
+    }
+
     #[tokio::test]
     async fn server_lists_expected_tools() {
         let test_server = build_server().await.expect("server");
@@ -357,6 +450,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn server_state_facts_tool_schema_uses_wire_fact_shape() {
+        let test_server = build_server().await.expect("server");
+        let tool = test_server
+            .server
+            .list_tools()
+            .into_iter()
+            .find(|tool| tool.name == TOOL_STATE_FACTS)
+            .expect("state facts tool");
+
+        let item_ref = tool.input_schema["properties"]["facts"]["items"]["$ref"]
+            .as_str()
+            .expect("fact schema ref");
+        let definition_name = item_ref.strip_prefix("#/$defs/").expect("defs ref");
+        let item_properties = &tool.input_schema["$defs"][definition_name]["properties"];
+
+        assert!(item_properties.get("fact_id").is_none());
+        assert!(item_properties.get("stated_at").is_none());
+        assert!(item_properties.get("tx_id").is_none());
+        assert!(item_properties.get("entity").is_some());
+        assert!(item_properties.get("field").is_some());
+        assert!(item_properties.get("value").is_some());
+    }
+
+    #[tokio::test]
     async fn server_state_facts_tool_returns_tx_id() {
         let test_server = build_server().await.expect("server");
         let server = &test_server.server;
@@ -366,11 +483,7 @@ mod tests {
                 name: TOOL_STATE_FACTS.to_string(),
                 arguments: json!({
                     "facts": [
-                        fact!(
-                            uri!("spotify:album:2112"),
-                            uri!("spotify:displayName"),
-                            Value::text("2112")
-                        )
+                        text_fact("spotify:album:2112", "spotify:displayName", "2112")
                     ]
                 }),
             })
@@ -390,11 +503,7 @@ mod tests {
                 name: TOOL_STATE_FACTS.to_string(),
                 arguments: json!({
                     "facts": [
-                        fact!(
-                            uri!("spotify:album:2112"),
-                            uri!("spotify:displayName"),
-                            Value::text("2112")
-                        )
+                        text_fact("spotify:album:2112", "spotify:displayName", "2112")
                     ]
                 }),
             })
@@ -428,11 +537,7 @@ mod tests {
                 name: TOOL_STATE_FACTS.to_string(),
                 arguments: json!({
                     "facts": [
-                        fact!(
-                            uri!(entity_uri),
-                            uri!("spotify:displayName"),
-                            Value::text("Signals")
-                        )
+                        text_fact(entity_uri, "spotify:displayName", "Signals")
                     ]
                 }),
             })
@@ -461,10 +566,10 @@ mod tests {
                 name: TOOL_STATE_FACTS.to_string(),
                 arguments: json!({
                     "facts": [
-                        fact!(
-                            uri!("spotify:album:grace-under-pressure"),
-                            uri!("spotify:displayName"),
-                            Value::text("Grace Under Pressure")
+                        text_fact(
+                            "spotify:album:grace-under-pressure",
+                            "spotify:displayName",
+                            "Grace Under Pressure"
                         )
                     ]
                 }),

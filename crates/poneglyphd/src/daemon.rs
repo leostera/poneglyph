@@ -2,13 +2,16 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use poneglyph::{Poneglyph, PoneglyphConfig, Workspace};
+use poneglyph::{Poneglyph, Workspace};
 use poneglyph_mcp::PoneglyphMcpServer;
 use tracing::{debug, info, instrument};
+
+use crate::config::PoneglyphDaemonConfig;
 
 /// Long-lived daemon host for a configured [`Poneglyph`] runtime.
 pub struct Daemon {
     poneglyph: Arc<Poneglyph>,
+    mcp: PoneglyphMcpServer,
 }
 
 impl Daemon {
@@ -25,9 +28,7 @@ impl Daemon {
     pub async fn run(self) -> Result<()> {
         info!("daemon supervising runtime and MCP server");
         let poneglyph = self.poneglyph.clone();
-        let mcp = PoneglyphMcpServer::builder()
-            .with_poneglyph_arc(self.poneglyph)
-            .build()?;
+        let mcp = self.mcp;
 
         tokio::try_join!(
             async move { poneglyph.run().await.map_err(anyhow::Error::from) },
@@ -40,7 +41,7 @@ impl Daemon {
 #[derive(Default)]
 pub struct DaemonBuilder {
     workspace: Option<Workspace>,
-    config: Option<PoneglyphConfig>,
+    config: Option<PoneglyphDaemonConfig>,
 }
 
 impl DaemonBuilder {
@@ -57,7 +58,7 @@ impl DaemonBuilder {
         self
     }
 
-    pub fn with_config(mut self, config: PoneglyphConfig) -> Self {
+    pub fn with_config(mut self, config: PoneglyphDaemonConfig) -> Self {
         self.config = Some(config);
         self
     }
@@ -70,30 +71,39 @@ impl DaemonBuilder {
         };
         let config = match self.config {
             Some(config) => config,
-            None => PoneglyphConfig::load_from(&workspace).await?,
+            None => PoneglyphDaemonConfig::load_from(&workspace).await?,
         };
         debug!(
             workspace = %workspace.root().display(),
-            log_level = ?config.log_level,
+            log_level = ?config.poneglyph.log_level,
+            mcp_bind_addr = %config.mcp.bind_addr,
             "opening daemon runtime"
         );
+        let mcp_http_bind = config.mcp.bind_addr.clone();
 
         let poneglyph = Arc::new(
             Poneglyph::builder()
                 .with_workspace(workspace)
-                .with_config(config)
+                .with_config(config.poneglyph.clone())
                 .build()
                 .await?,
         );
+        let mcp = PoneglyphMcpServer::builder()
+            .with_poneglyph_arc(poneglyph.clone())
+            .with_bind_addr(mcp_http_bind)
+            .build()?;
         info!("daemon runtime opened");
-        Ok(Daemon { poneglyph })
+        Ok(Daemon { poneglyph, mcp })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use poneglyph::{PoneglyphConfig, Workspace};
+    use poneglyph_mcp::PoneglyphMcpConfig;
     use tempfile::tempdir;
+
+    use crate::config::PoneglyphDaemonConfig;
 
     use super::Daemon;
 
@@ -115,8 +125,19 @@ mod tests {
     async fn daemon_builder_accepts_workspace_and_config_overrides() {
         let tempdir = tempdir().expect("tempdir");
         let workspace = Workspace::at(tempdir.path());
-        let config = PoneglyphConfig::builder()
-            .log_level(Some("trace".to_string()))
+        let config = PoneglyphDaemonConfig::builder()
+            .poneglyph(
+                PoneglyphConfig::builder()
+                    .log_level(Some("trace".to_string()))
+                    .build()
+                    .expect("poneglyph config"),
+            )
+            .mcp(
+                PoneglyphMcpConfig::builder()
+                    .bind_addr("127.0.0.1:9002".to_string())
+                    .build()
+                    .expect("mcp config"),
+            )
             .build()
             .expect("config");
 

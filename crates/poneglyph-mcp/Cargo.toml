@@ -4,10 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+axum.workspace = true
+chrono.workspace = true
+config = "0.15.21"
 datafox.workspace = true
 derive_builder.workspace = true
 poneglyph.workspace = true
-rmcp = { version = "1.2.0", features = ["client", "transport-io"] }
+rmcp = { version = "1.2.0", features = ["client", "transport-io", "transport-streamable-http-server"] }
+schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -15,4 +19,5 @@ tokio.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 tempfile.workspace = true

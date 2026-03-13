@@ -33,6 +33,11 @@ impl Workspace {
         self.root.join("config.toml")
     }
 
+    /// Returns the daemon log file path.
+    pub fn server_log_path(&self) -> PathBuf {
+        self.root.join("server.log")
+    }
+
     /// Returns the shared data store directory.
     pub fn store_dir(&self) -> PathBuf {
         self.root.join("store")
@@ -80,6 +85,10 @@ mod tests {
 
         assert_eq!(workspace.root(), tempdir.path());
         assert_eq!(workspace.config_path(), tempdir.path().join("config.toml"));
+        assert_eq!(
+            workspace.server_log_path(),
+            tempdir.path().join("server.log")
+        );
         assert_eq!(workspace.store_dir(), tempdir.path().join("store"));
         assert_eq!(
             workspace.facts_db_path(),

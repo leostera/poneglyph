@@ -6,10 +6,14 @@ edition = "2024"
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+config = "0.15.21"
+derive_builder.workspace = true
 poneglyph.workspace = true
 poneglyph-mcp.workspace = true
+serde.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+tracing-appender.workspace = true
 tracing-subscriber.workspace = true
 
 [dev-dependencies]
