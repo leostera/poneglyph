@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use crate::{
-    EntityStore, FactService, PoneResult, PoneglyphConfig, QueryEngine, SearchProjection,
-    SqliteEntityStore, SqliteFactStore, Store, Workspace,
+    Entity, EntityStore, Fact, FactService, PoneResult, PoneglyphConfig, Query, QueryEngine,
+    QueryResult, SearchHit, SearchProjection, SqliteEntityStore, SqliteFactStore, Store, Uri,
+    Workspace,
 };
+use tokio::sync::mpsc;
 
 /// Assembled Poneglyph runtime dependencies.
 pub struct Poneglyph {
@@ -50,6 +52,26 @@ impl Poneglyph {
 
     pub fn query_engine(&self) -> &QueryEngine {
         &self.query_engine
+    }
+
+    pub async fn state_facts(&self, facts: mpsc::Receiver<Fact>) -> PoneResult<Uri> {
+        self.fact_service.state_facts(facts).await
+    }
+
+    pub async fn query(&self, query: Query) -> PoneResult<QueryResult> {
+        self.query_engine.query(query).await
+    }
+
+    pub async fn query_str(&self, source: &str) -> PoneResult<QueryResult> {
+        self.query_engine.query_str(source).await
+    }
+
+    pub async fn get_entity(&self, entity_uri: &Uri) -> PoneResult<Option<Entity>> {
+        self.entity_store.get_entity(entity_uri).await
+    }
+
+    pub fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>> {
+        self.search_projection.search(query, limit)
     }
 }
 
@@ -152,14 +174,28 @@ impl PoneglyphBuilder {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
     use std::sync::Arc;
 
     use tempfile::tempdir;
+    use tokio::sync::mpsc;
 
     use crate::{
-        InMemoryEntityStore, InMemoryFactStore, Poneglyph, PoneglyphConfig, SearchProjection,
-        Workspace,
+        Entity, InMemoryEntityStore, InMemoryFactStore, Poneglyph, PoneglyphConfig, Projection,
+        ProjectionBatch, SearchProjection, Value, Workspace, fact, uri,
     };
+
+    fn fact_stream(facts: Vec<crate::Fact>) -> mpsc::Receiver<crate::Fact> {
+        let (tx, rx) = mpsc::channel(facts.len().max(1));
+        tokio::spawn(async move {
+            for fact in facts {
+                if tx.send(fact).await.is_err() {
+                    break;
+                }
+            }
+        });
+        rx
+    }
 
     #[tokio::test]
     async fn runtime_builder_assembles_workspace_backed_defaults() {
@@ -213,5 +249,120 @@ mod tests {
             &poneglyph.search_projection(),
             &search_projection
         ));
+    }
+
+    #[tokio::test]
+    async fn runtime_state_facts_and_query_delegate_to_fact_services() {
+        let fact_service = crate::FactService::builder()
+            .with_store(InMemoryFactStore::new())
+            .build()
+            .expect("fact service");
+
+        let poneglyph = Poneglyph::builder()
+            .with_fact_service(fact_service)
+            .with_entity_store(InMemoryEntityStore::new())
+            .with_search_projection(
+                SearchProjection::create_in_memory().expect("search projection"),
+            )
+            .build()
+            .await
+            .expect("runtime");
+
+        let album = uri!("spotify:album:2112");
+        poneglyph
+            .state_facts(fact_stream(vec![fact!(
+                album.clone(),
+                uri!("spotify:displayName"),
+                Value::text("2112")
+            )]))
+            .await
+            .expect("state facts");
+
+        let result = poneglyph
+            .query_str(r#"spotify:displayName(Album, "2112")"#)
+            .await
+            .expect("query");
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result.substitutions()[0].lookup("Album"),
+            Some(&datafox::Value::from(album.to_string()))
+        );
+    }
+
+    #[tokio::test]
+    async fn runtime_get_entity_delegates_to_entity_store() {
+        let entity_store: Arc<dyn crate::EntityStore> = Arc::new(InMemoryEntityStore::new());
+        let entity = Entity {
+            uri: uri!("spotify:album:grace-under-pressure"),
+            namespace: "spotify".to_string(),
+            kind: "album".to_string(),
+            fields: BTreeMap::from([(
+                uri!("spotify:displayName"),
+                Value::text("Grace Under Pressure"),
+            )]),
+        };
+        entity_store
+            .put_entity(entity.clone(), None)
+            .await
+            .expect("put entity");
+
+        let poneglyph = Poneglyph::builder()
+            .with_fact_service(
+                crate::FactService::builder()
+                    .with_store(InMemoryFactStore::new())
+                    .build()
+                    .expect("fact service"),
+            )
+            .with_entity_store_arc(entity_store)
+            .with_search_projection(
+                SearchProjection::create_in_memory().expect("search projection"),
+            )
+            .build()
+            .await
+            .expect("runtime");
+
+        let stored = poneglyph
+            .get_entity(&entity.uri)
+            .await
+            .expect("get entity")
+            .expect("entity");
+
+        assert_eq!(stored, entity);
+    }
+
+    #[tokio::test]
+    async fn runtime_search_delegates_to_search_projection() {
+        let search_projection = Arc::new(SearchProjection::create_in_memory().expect("projection"));
+        let entity = Entity {
+            uri: uri!("spotify:album:counterparts"),
+            namespace: "spotify".to_string(),
+            kind: "album".to_string(),
+            fields: BTreeMap::from([(uri!("spotify:displayName"), Value::text("Counterparts"))]),
+        };
+        search_projection
+            .handle_events(ProjectionBatch {
+                entities: vec![entity.clone()],
+            })
+            .await
+            .expect("handle events");
+
+        let poneglyph = Poneglyph::builder()
+            .with_fact_service(
+                crate::FactService::builder()
+                    .with_store(InMemoryFactStore::new())
+                    .build()
+                    .expect("fact service"),
+            )
+            .with_entity_store(InMemoryEntityStore::new())
+            .with_search_projection_arc(search_projection)
+            .build()
+            .await
+            .expect("runtime");
+
+        let hits = poneglyph.search("Counterparts", 10).expect("search");
+
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].entity_uri, entity.uri);
     }
 }
