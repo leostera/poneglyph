@@ -78,6 +78,8 @@ pub enum Error {
         source: std::io::Error,
     },
     #[error(transparent)]
+    Datafox(#[from] datafox::Error),
+    #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
     #[error(transparent)]
     SerdeJson(#[from] serde_json::Error),

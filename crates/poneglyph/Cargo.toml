@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 async-trait.workspace = true
 chrono.workspace = true
-datafrog = "2.0.1"
+datafox.workspace = true
 derive_builder.workspace = true
 futures-util.workspace = true
 proptest.workspace = true

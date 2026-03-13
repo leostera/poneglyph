@@ -8,7 +8,7 @@
 //! - [`FactService`] and the fact stores for durable fact access.
 //! - [`Consolidator`] and entity stores for materialized entity views.
 //! - [`Projection`] and [`ProjectionRunner`] for replayable derived workers.
-//! - [`Clause`], [`Query`], [`QueryEngine`] and [`QueryResult`] for queries over the active graph.
+//! - [`Query`], [`QueryEngine`] and [`QueryResult`] for queries over the active graph.
 //! - [`Workspace`] and [`Config`] for filesystem layout and runtime configuration.
 //! - [`Error`] and [`PoneResult`] for typed backend errors.
 
@@ -40,7 +40,7 @@ pub use projections::{
     Projection, ProjectionBatch, ProjectionRunner, ProjectionRunnerBuilder, SearchHit,
     SearchProjection,
 };
-pub use query::{Clause, Query, QueryEngine, QueryResult};
+pub use query::{Query, QueryEngine, QueryResult};
 pub use uri::Uri;
 pub use value::Value;
 pub use workspace::Workspace;

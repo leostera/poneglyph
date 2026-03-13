@@ -1,51 +1,64 @@
 use std::sync::Arc;
 
-use datafrog::{Iteration, Relation};
+use datafox::{Evaluator, InMemoryStorage, Query as DatafoxQuery, Substitution, Universe};
 
-use crate::{ActiveFact, ActiveFilter, FactService, PoneResult, Uri, Value};
-
-/// One exact field/value constraint in a query.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Clause {
-    pub field: Uri,
-    pub value: Value,
-}
-
-impl Clause {
-    pub fn new(field: Uri, value: Value) -> Self {
-        Self { field, value }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum QueryPlan {
-    MatchEntities { clauses: Vec<Clause> },
-    ReachableFrom { field: Uri, source: Uri },
-}
+use crate::{ActiveFact, ActiveFilter, FactService, PoneResult, Value};
 
 /// Opaque query wrapper compiled by the current query engine implementation.
 ///
-/// This intentionally wraps a private internal plan rather than exposing
-/// `datafrog` types directly so the execution engine can change later.
+/// This intentionally wraps the concrete engine query type so the execution
+/// engine can change later without changing the public surface.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Query(QueryPlan);
+pub struct Query(DatafoxQuery);
 
 impl Query {
-    pub fn match_entities(clauses: impl IntoIterator<Item = Clause>) -> Self {
-        Self(QueryPlan::MatchEntities {
-            clauses: clauses.into_iter().collect(),
-        })
+    pub fn parse(source: &str) -> PoneResult<Self> {
+        Ok(Self(datafox::parse_query(source)?))
     }
 
-    pub fn reachable_from(field: Uri, source: Uri) -> Self {
-        Self(QueryPlan::ReachableFrom { field, source })
+    pub fn as_inner(&self) -> &DatafoxQuery {
+        &self.0
+    }
+}
+
+impl std::str::FromStr for Query {
+    type Err = crate::Error;
+
+    fn from_str(source: &str) -> Result<Self, Self::Err> {
+        Self::parse(source)
+    }
+}
+
+impl From<DatafoxQuery> for Query {
+    fn from(query: DatafoxQuery) -> Self {
+        Self(query)
     }
 }
 
 /// Query results produced by the current engine.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum QueryResult {
-    Entities(Vec<Uri>),
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct QueryResult(Vec<Substitution>);
+
+impl QueryResult {
+    pub fn new(substitutions: Vec<Substitution>) -> Self {
+        Self(substitutions)
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn substitutions(&self) -> &[Substitution] {
+        &self.0
+    }
+
+    pub fn into_substitutions(self) -> Vec<Substitution> {
+        self.0
+    }
 }
 
 /// Query facade over the active graph exposed by [`FactService`].
@@ -60,84 +73,33 @@ impl QueryEngine {
     }
 
     pub async fn query(&self, query: Query) -> PoneResult<QueryResult> {
-        match query.0 {
-            QueryPlan::MatchEntities { clauses } => self
-                .match_entities(clauses)
-                .await
-                .map(QueryResult::Entities),
-            QueryPlan::ReachableFrom { field, source } => self
-                .reachable_from(field, source)
-                .await
-                .map(QueryResult::Entities),
-        }
+        let storage = self.snapshot_active_graph().await?;
+        let universe = Universe::new(storage);
+        let substitutions = Evaluator::evaluate(&universe, query.as_inner())?
+            .collect::<datafox::Result<Vec<_>>>()?;
+
+        Ok(QueryResult::new(substitutions))
     }
 
-    async fn match_entities(&self, clauses: Vec<Clause>) -> PoneResult<Vec<Uri>> {
-        if clauses.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let mut entity_sets = Vec::with_capacity(clauses.len());
-        for clause in clauses {
-            let active_facts = collect_active_facts(
-                &self.facts,
-                ActiveFilter::ByFieldValue {
-                    field: clause.field,
-                    value: clause.value,
-                },
-            )
-            .await?;
-
-            entity_sets.push(Relation::from_iter(
-                active_facts.into_iter().map(|fact| (fact.entity, ())),
-            ));
-        }
-
-        let mut matches = entity_sets.remove(0);
-        for entity_set in entity_sets {
-            matches =
-                Relation::from_join(&matches, &entity_set, |entity, _, _| (entity.clone(), ()));
-        }
-
-        Ok(matches
-            .elements
-            .into_iter()
-            .map(|(entity, ())| entity)
-            .collect())
+    pub async fn query_str(&self, source: &str) -> PoneResult<QueryResult> {
+        self.query(Query::parse(source)?).await
     }
 
-    async fn reachable_from(&self, field: Uri, source: Uri) -> PoneResult<Vec<Uri>> {
-        let active_facts = collect_active_facts(&self.facts, ActiveFilter::ByField(field)).await?;
-        let edges = active_reference_edges(active_facts);
+    async fn snapshot_active_graph(&self) -> PoneResult<InMemoryStorage> {
+        let active_facts = collect_active_facts(&self.facts, ActiveFilter::All).await?;
+        let mut storage = InMemoryStorage::new();
 
-        let mut iteration = Iteration::new();
-        let reachable = iteration.variable::<(Uri, Uri)>("reachable");
-        let reachable_by_intermediate =
-            iteration.variable::<(Uri, Uri)>("reachable_by_intermediate");
-
-        reachable.insert(edges.clone());
-
-        while iteration.changed() {
-            reachable_by_intermediate.from_map(&reachable, |(ancestor, descendant)| {
-                (descendant.clone(), ancestor.clone())
-            });
-            reachable.from_join(
-                &reachable_by_intermediate,
-                &edges,
-                |_, ancestor, descendant| (ancestor.clone(), descendant.clone()),
+        for fact in active_facts {
+            storage.insert(
+                fact.field.to_string(),
+                vec![
+                    entity_to_query_value(&fact),
+                    value_to_query_value(&fact.value)?,
+                ],
             );
         }
 
-        let reachable = reachable.complete();
-        let matches = Relation::from_map(&reachable, |(ancestor, descendant)| {
-            if ancestor == &source {
-                Some(descendant.clone())
-            } else {
-                None
-            }
-        });
-
-        Ok(matches.elements.into_iter().flatten().collect())
+        Ok(storage)
     }
 }
 
@@ -155,24 +117,36 @@ async fn collect_active_facts(
     Ok(active_facts)
 }
 
-fn active_reference_edges(active_facts: Vec<ActiveFact>) -> Relation<(Uri, Uri)> {
-    Relation::from_iter(
-        active_facts
-            .into_iter()
-            .filter_map(|fact| match fact.value {
-                Value::Reference(target) => Some((fact.entity, target)),
-                _ => None,
-            }),
-    )
+fn entity_to_query_value(fact: &ActiveFact) -> datafox::Value {
+    datafox::Value::from(fact.entity.to_string())
+}
+
+fn value_to_query_value(value: &Value) -> PoneResult<datafox::Value> {
+    match value {
+        Value::Null => Ok(datafox::Value::from("null")),
+        Value::Text(value) => Ok(datafox::Value::from(value.clone())),
+        Value::Number(value) => match value.parse::<i64>() {
+            Ok(value) => Ok(datafox::Value::integer(value)),
+            Err(_) => Ok(datafox::Value::from(value.clone())),
+        },
+        Value::Boolean(value) => Ok(datafox::Value::from(value.to_string())),
+        Value::Bytes(value) => Ok(datafox::Value::from(serde_json::to_string(value)?)),
+        Value::Reference(value) => Ok(datafox::Value::from(value.to_string())),
+        Value::Date(value) => Ok(datafox::Value::from(value.to_string())),
+        Value::DateTime(value) => Ok(datafox::Value::from(value.to_rfc3339())),
+        Value::List(values) => Ok(datafox::Value::from(serde_json::to_string(values)?)),
+        Value::Map(values) => Ok(datafox::Value::from(serde_json::to_string(values)?)),
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Clause, Query, QueryEngine, QueryResult};
-    use crate::{FactService, InMemoryFactStore, PoneResult, Value, fact, retraction, uri};
-
     use std::sync::Arc;
+
     use tokio::sync::mpsc;
+
+    use super::{Query, QueryEngine};
+    use crate::{FactService, InMemoryFactStore, PoneResult, Value, fact, retraction, uri};
 
     fn fact_stream(facts: Vec<crate::Fact>) -> mpsc::Receiver<crate::Fact> {
         let (tx, rx) = mpsc::channel(facts.len().max(1));
@@ -197,76 +171,70 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_engine_matches_entities_from_active_graph() -> PoneResult<()> {
+    async fn query_engine_parses_and_executes_single_goal_queries() -> PoneResult<()> {
         let (facts, query_engine) = query_engine()?;
         let display_name = uri!("spotify:displayName");
-        let by_artist = uri!("spotify:byArtist");
         let album_2112 = uri!("spotify:album:2112");
-        let album_signals = uri!("spotify:album:signals");
+
+        facts
+            .state_facts(fact_stream(vec![fact!(
+                album_2112.clone(),
+                display_name,
+                Value::text("2112")
+            )]))
+            .await?;
+
+        let result = query_engine
+            .query_str(r#"spotify:displayName(Album, "2112")"#)
+            .await?;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result.substitutions()[0].lookup("Album"),
+            Some(&datafox::Value::from(album_2112.to_string()))
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn query_engine_parses_and_executes_multi_goal_queries() -> PoneResult<()> {
+        let (facts, query_engine) = query_engine()?;
+        let by_artist = uri!("spotify:byArtist");
+        let display_name = uri!("spotify:displayName");
+        let album_2112 = uri!("spotify:album:2112");
+        let artist_rush = uri!("spotify:artist:rush");
 
         facts
             .state_facts(fact_stream(vec![
                 fact!(
                     album_2112.clone(),
-                    display_name.clone(),
-                    Value::text("2112")
+                    by_artist,
+                    Value::reference(artist_rush.clone())
                 ),
-                fact!(album_2112.clone(), by_artist.clone(), Value::text("Rush")),
-                fact!(album_signals.clone(), display_name, Value::text("Signals")),
-                fact!(album_signals.clone(), by_artist, Value::text("Rush")),
+                fact!(artist_rush.clone(), display_name, Value::text("Rush")),
             ]))
             .await?;
 
         let result = query_engine
-            .query(Query::match_entities([
-                Clause::new(uri!("spotify:displayName"), Value::text("2112")),
-                Clause::new(uri!("spotify:byArtist"), Value::text("Rush")),
-            ]))
+            .query(Query::parse(
+                r#"spotify:byArtist(Album, Artist), spotify:displayName(Artist, "Rush")"#,
+            )?)
             .await?;
 
-        assert_eq!(result, QueryResult::Entities(vec![album_2112]));
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result.substitutions()[0].lookup("Album"),
+            Some(&datafox::Value::from(album_2112.to_string()))
+        );
+        assert_eq!(
+            result.substitutions()[0].lookup("Artist"),
+            Some(&datafox::Value::from(artist_rush.to_string()))
+        );
         Ok(())
     }
 
     #[tokio::test]
-    async fn query_engine_reaches_entities_over_reference_edges() -> PoneResult<()> {
-        let (facts, query_engine) = query_engine()?;
-        let master_of = uri!("jedi:masterOf");
-        let quigon = uri!("jedi:quigon");
-        let obiwan = uri!("jedi:obiwan");
-        let anakin = uri!("jedi:anakin");
-        let ahsoka = uri!("jedi:ahsoka");
-
-        facts
-            .state_facts(fact_stream(vec![
-                fact!(
-                    quigon.clone(),
-                    master_of.clone(),
-                    Value::reference(obiwan.clone())
-                ),
-                fact!(
-                    obiwan.clone(),
-                    master_of.clone(),
-                    Value::reference(anakin.clone())
-                ),
-                fact!(
-                    anakin.clone(),
-                    master_of.clone(),
-                    Value::reference(ahsoka.clone())
-                ),
-            ]))
-            .await?;
-
-        let result = query_engine
-            .query(Query::reachable_from(master_of, quigon))
-            .await?;
-
-        assert_eq!(result, QueryResult::Entities(vec![ahsoka, anakin, obiwan]));
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn query_engine_excludes_retracted_facts_from_matches() -> PoneResult<()> {
+    async fn query_engine_respects_retractions_in_the_active_graph() -> PoneResult<()> {
         let (facts, query_engine) = query_engine()?;
         let display_name = uri!("spotify:displayName");
         let album_2112 = uri!("spotify:album:2112");
@@ -283,13 +251,10 @@ mod tests {
             .await?;
 
         let result = query_engine
-            .query(Query::match_entities([Clause::new(
-                uri!("spotify:displayName"),
-                Value::text("2112"),
-            )]))
+            .query_str(r#"spotify:displayName(Album, "2112")"#)
             .await?;
 
-        assert_eq!(result, QueryResult::Entities(vec![]));
+        assert!(result.is_empty());
         Ok(())
     }
 }
