@@ -58,7 +58,7 @@ impl FactService {
     }
 
     pub async fn get_schema(&self) -> PoneResult<SchemaDefinition> {
-        crate::schema::get_schema(self).await
+        self.store.get_schema().await
     }
 }
 

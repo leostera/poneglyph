@@ -4,7 +4,9 @@ mod sqlite;
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
-use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri, uri};
+use crate::{
+    ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, SchemaDefinition, Uri, uri,
+};
 
 pub use memory::InMemoryFactStore;
 pub use sqlite::SqliteFactStore;
@@ -17,6 +19,7 @@ pub trait Store: Send + Sync {
         &self,
         filter: ActiveFilter,
     ) -> PoneResult<mpsc::Receiver<PoneResult<ActiveFact>>>;
+    async fn get_schema(&self) -> PoneResult<SchemaDefinition>;
 }
 
 pub(crate) fn new_tx_id() -> Uri {

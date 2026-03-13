@@ -6,12 +6,14 @@ use crate::active_graph::ActiveGraph;
 use crate::facts::store::{
     Store, current_fact_state, new_tx_id, sort_facts, validate_pending_fact,
 };
-use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri};
+use crate::schema::SchemaSnapshot;
+use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, SchemaDefinition, Uri};
 
 #[derive(Default)]
 struct MemoryState {
     facts: Vec<Fact>,
     active_graph: ActiveGraph,
+    schema: SchemaSnapshot,
 }
 
 #[derive(Default)]
@@ -64,6 +66,9 @@ impl Store for InMemoryFactStore {
         state.facts.extend(persisted.clone());
         sort_facts(&mut state.facts);
         state.active_graph.apply_facts(persisted.clone())?;
+        for fact in &persisted {
+            state.schema.apply_fact(fact);
+        }
 
         Ok((tx_id, persisted))
     }
@@ -121,5 +126,15 @@ impl Store for InMemoryFactStore {
         });
 
         Ok(rx)
+    }
+
+    async fn get_schema(&self) -> PoneResult<SchemaDefinition> {
+        Ok(self
+            .state
+            .lock()
+            .expect("memory store lock")
+            .schema
+            .clone()
+            .into_definition())
     }
 }

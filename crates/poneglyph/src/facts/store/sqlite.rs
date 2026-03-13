@@ -8,7 +8,13 @@ use sqlx::{Row, SqlitePool};
 use tokio::sync::mpsc;
 
 use crate::facts::store::{Store, new_tx_id, validate_pending_fact};
-use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri};
+use crate::schema::{
+    PartialSchemaEntry, SCHEMA_DOC, SCHEMA_FIELD_CARDINALITY, SCHEMA_FIELD_DEPRECATED,
+    SCHEMA_FIELD_DOMAIN, SCHEMA_FIELD_IDENTITY, SCHEMA_FIELD_RANGE, SCHEMA_FIELD_VALUE_TYPE,
+    SCHEMA_NAME, SCHEMA_SAME_AS, SCHEMA_TYPE, SchemaDefinition, SchemaSnapshot, namespace_uri_for,
+    observed_kind_uri_for,
+};
+use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri, Value};
 
 const FACTS_DB_FILE: &str = "facts.db";
 
@@ -79,12 +85,41 @@ impl SqliteFactStore {
         .execute(&self.pool)
         .await?;
 
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS schema_entries (
+                uri TEXT PRIMARY KEY,
+                schema_type TEXT,
+                name TEXT,
+                doc TEXT,
+                same_as TEXT,
+                domain_uri TEXT,
+                range_uri TEXT,
+                value_type TEXT,
+                cardinality TEXT,
+                deprecated INTEGER,
+                identity INTEGER
+            )
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        for table in ["schema_namespaces", "schema_kinds", "schema_fields"] {
+            sqlx::query(&format!(
+                "CREATE TABLE IF NOT EXISTS {table} (uri TEXT PRIMARY KEY)"
+            ))
+            .execute(&self.pool)
+            .await?;
+        }
+
         for statement in [
             "CREATE INDEX IF NOT EXISTS idx_facts_tx_id ON facts(tx_id)",
             "CREATE INDEX IF NOT EXISTS idx_facts_tuple ON facts(source, entity, field, value_json, stated_at DESC, fact_id DESC)",
             "CREATE INDEX IF NOT EXISTS idx_active_facts_entity ON active_facts(entity)",
             "CREATE INDEX IF NOT EXISTS idx_active_facts_field ON active_facts(field)",
             "CREATE INDEX IF NOT EXISTS idx_active_facts_field_value ON active_facts(field, value_json)",
+            "CREATE INDEX IF NOT EXISTS idx_schema_entries_type ON schema_entries(schema_type)",
         ] {
             sqlx::query(statement).execute(&self.pool).await?;
         }
@@ -118,6 +153,7 @@ impl Store for SqliteFactStore {
             fact.tx_id = Some(tx_id.clone());
             insert_fact(&mut tx, &fact).await?;
             update_active_graph(&mut tx, &fact).await?;
+            update_schema_snapshot(&mut tx, &fact).await?;
             persisted.push(fact);
         }
 
@@ -196,6 +232,67 @@ impl Store for SqliteFactStore {
         });
 
         Ok(rx)
+    }
+
+    async fn get_schema(&self) -> PoneResult<SchemaDefinition> {
+        let mut snapshot = SchemaSnapshot::default();
+
+        let mut rows = sqlx::query(
+            r#"
+            SELECT
+                uri, schema_type, name, doc, same_as, domain_uri, range_uri,
+                value_type, cardinality, deprecated, identity
+            FROM schema_entries
+            ORDER BY uri ASC
+            "#,
+        )
+        .fetch(&self.pool);
+
+        while let Some(row) = rows.next().await {
+            let row = row?;
+            let uri = Uri::parse(row.try_get::<String, _>("uri")?)?;
+            let entry = PartialSchemaEntry {
+                schema_type: row
+                    .try_get::<Option<String>, _>("schema_type")?
+                    .map(Uri::parse)
+                    .transpose()?,
+                name: row.try_get("name")?,
+                doc: row.try_get("doc")?,
+                same_as: row
+                    .try_get::<Option<String>, _>("same_as")?
+                    .map(Uri::parse)
+                    .transpose()?,
+                domain: row
+                    .try_get::<Option<String>, _>("domain_uri")?
+                    .map(Uri::parse)
+                    .transpose()?,
+                range: row
+                    .try_get::<Option<String>, _>("range_uri")?
+                    .map(Uri::parse)
+                    .transpose()?,
+                value_type: row.try_get("value_type")?,
+                cardinality: row.try_get("cardinality")?,
+                deprecated: row
+                    .try_get::<Option<i64>, _>("deprecated")?
+                    .map(|value| value != 0),
+                identity: row
+                    .try_get::<Option<i64>, _>("identity")?
+                    .map(|value| value != 0),
+            };
+            snapshot.insert_entry(uri, entry);
+        }
+
+        load_observed_uris(&self.pool, "schema_namespaces", |uri| {
+            snapshot.observe_namespace(uri)
+        })
+        .await?;
+        load_observed_uris(&self.pool, "schema_kinds", |uri| snapshot.observe_kind(uri)).await?;
+        load_observed_uris(&self.pool, "schema_fields", |uri| {
+            snapshot.observe_field(uri)
+        })
+        .await?;
+
+        Ok(snapshot.into_definition())
     }
 }
 
@@ -354,6 +451,147 @@ async fn update_active_graph(
         .await?;
     }
 
+    Ok(())
+}
+
+async fn update_schema_snapshot(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    fact: &Fact,
+) -> PoneResult<()> {
+    if fact.retraction {
+        return Ok(());
+    }
+
+    if let Some(namespace_uri) = namespace_uri_for(&fact.entity) {
+        insert_observed_uri(tx, "schema_namespaces", &namespace_uri).await?;
+    }
+    if let Some(namespace_uri) = namespace_uri_for(&fact.field) {
+        insert_observed_uri(tx, "schema_namespaces", &namespace_uri).await?;
+    }
+    if let Value::Reference(reference) = &fact.value
+        && let Some(namespace_uri) = namespace_uri_for(reference)
+    {
+        insert_observed_uri(tx, "schema_namespaces", &namespace_uri).await?;
+    }
+
+    insert_observed_uri(tx, "schema_fields", &fact.field).await?;
+
+    if let Some(kind_uri) = observed_kind_uri_for(&fact.entity) {
+        insert_observed_uri(tx, "schema_kinds", &kind_uri).await?;
+    }
+
+    if fact.field.as_str() == SCHEMA_TYPE
+        && let Value::Reference(kind_uri) = &fact.value
+        && kind_uri.as_str() != "schema:namespace"
+        && kind_uri.as_str() != "schema:kind"
+        && kind_uri.as_str() != "schema:field"
+    {
+        insert_observed_uri(tx, "schema_kinds", kind_uri).await?;
+    }
+
+    match (fact.field.as_str(), &fact.value) {
+        (SCHEMA_TYPE, Value::Reference(value)) => {
+            upsert_schema_entry_column(tx, &fact.entity, "schema_type", Some(value.as_str()))
+                .await?;
+        }
+        (SCHEMA_NAME, Value::Text(value)) => {
+            upsert_schema_entry_column(tx, &fact.entity, "name", Some(value.as_str())).await?;
+        }
+        (SCHEMA_DOC, Value::Text(value)) => {
+            upsert_schema_entry_column(tx, &fact.entity, "doc", Some(value.as_str())).await?;
+        }
+        (SCHEMA_SAME_AS, Value::Reference(value)) => {
+            upsert_schema_entry_column(tx, &fact.entity, "same_as", Some(value.as_str())).await?;
+        }
+        (SCHEMA_FIELD_DOMAIN, Value::Reference(value)) => {
+            upsert_schema_entry_column(tx, &fact.entity, "domain_uri", Some(value.as_str()))
+                .await?;
+        }
+        (SCHEMA_FIELD_RANGE, Value::Reference(value)) => {
+            upsert_schema_entry_column(tx, &fact.entity, "range_uri", Some(value.as_str())).await?;
+        }
+        (SCHEMA_FIELD_VALUE_TYPE, Value::Text(value)) => {
+            upsert_schema_entry_column(tx, &fact.entity, "value_type", Some(value.as_str()))
+                .await?;
+        }
+        (SCHEMA_FIELD_CARDINALITY, Value::Text(value)) => {
+            upsert_schema_entry_column(tx, &fact.entity, "cardinality", Some(value.as_str()))
+                .await?;
+        }
+        (SCHEMA_FIELD_DEPRECATED, Value::Boolean(value)) => {
+            upsert_schema_entry_bool(tx, &fact.entity, "deprecated", *value).await?;
+        }
+        (SCHEMA_FIELD_IDENTITY, Value::Boolean(value)) => {
+            upsert_schema_entry_bool(tx, &fact.entity, "identity", *value).await?;
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+async fn insert_observed_uri(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    table: &str,
+    uri: &Uri,
+) -> PoneResult<()> {
+    sqlx::query(&format!("INSERT OR IGNORE INTO {table} (uri) VALUES (?1)"))
+        .bind(uri.as_str())
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+}
+
+async fn upsert_schema_entry_column(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    uri: &Uri,
+    column: &str,
+    value: Option<&str>,
+) -> PoneResult<()> {
+    sqlx::query(&format!(
+        r#"
+        INSERT INTO schema_entries (uri, {column})
+        VALUES (?1, ?2)
+        ON CONFLICT(uri) DO UPDATE SET {column} = excluded.{column}
+        "#
+    ))
+    .bind(uri.as_str())
+    .bind(value)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+async fn upsert_schema_entry_bool(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    uri: &Uri,
+    column: &str,
+    value: bool,
+) -> PoneResult<()> {
+    sqlx::query(&format!(
+        r#"
+        INSERT INTO schema_entries (uri, {column})
+        VALUES (?1, ?2)
+        ON CONFLICT(uri) DO UPDATE SET {column} = excluded.{column}
+        "#
+    ))
+    .bind(uri.as_str())
+    .bind(i64::from(value))
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+async fn load_observed_uris<F>(pool: &SqlitePool, table: &str, mut observe: F) -> PoneResult<()>
+where
+    F: FnMut(Uri),
+{
+    let sql = format!("SELECT uri FROM {table} ORDER BY uri ASC");
+    let mut rows = sqlx::query(&sql).fetch(pool);
+    while let Some(row) = rows.next().await {
+        let row = row?;
+        observe(Uri::parse(row.try_get::<String, _>("uri")?)?);
+    }
     Ok(())
 }
 
