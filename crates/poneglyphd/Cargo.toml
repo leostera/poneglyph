@@ -7,6 +7,7 @@ edition = "2024"
 anyhow.workspace = true
 clap.workspace = true
 poneglyph.workspace = true
+poneglyph-mcp.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true

@@ -1,7 +1,8 @@
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use anyhow::Result;
 use poneglyph::{Poneglyph, PoneglyphConfig, Workspace};
+use poneglyph_mcp::{PoneglyphMcpServer, RmcpServer};
 use tracing::{debug, info, instrument};
 use tracing_subscriber::EnvFilter;
 
@@ -9,7 +10,7 @@ use crate::cli::RunArgs;
 
 /// Long-lived daemon host for a configured [`Poneglyph`] runtime.
 pub struct Daemon {
-    _poneglyph: Poneglyph,
+    poneglyph: Arc<Poneglyph>,
 }
 
 impl Daemon {
@@ -23,20 +24,20 @@ impl Daemon {
         init_tracing(config.log_level.as_deref());
         debug!(workspace = %workspace.root().display(), log_level = ?config.log_level, "opening daemon runtime");
 
-        let poneglyph = Poneglyph::builder()
-            .with_workspace(workspace)
-            .with_config(config)
-            .build()
-            .await?;
+        let poneglyph = Arc::new(
+            Poneglyph::builder()
+                .with_workspace(workspace)
+                .with_config(config)
+                .build()
+                .await?,
+        );
         info!("daemon runtime opened");
-        Ok(Self {
-            _poneglyph: poneglyph,
-        })
+        Ok(Self { poneglyph })
     }
 
     #[cfg(test)]
     pub fn poneglyph(&self) -> &Poneglyph {
-        &self._poneglyph
+        &self.poneglyph
     }
 
     #[instrument(skip(self), fields(component = "poneglyphd"))]
@@ -44,6 +45,16 @@ impl Daemon {
         info!("daemon running; waiting for shutdown signal");
         tokio::signal::ctrl_c().await?;
         info!("shutdown signal received");
+        Ok(())
+    }
+
+    #[instrument(skip(self), fields(component = "poneglyphd"))]
+    pub async fn serve_mcp(self) -> Result<()> {
+        info!("starting MCP stdio server");
+        let server = PoneglyphMcpServer::builder()
+            .with_poneglyph_arc(self.poneglyph)
+            .build()?;
+        RmcpServer::new(server).serve_stdio().await?;
         Ok(())
     }
 }

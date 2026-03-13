@@ -18,8 +18,16 @@ pub enum Error {
         #[source]
         source: serde_json::Error,
     },
+    #[error("tool schema for `{tool}` must be a JSON object")]
+    InvalidToolSchema { tool: String },
+    #[error(transparent)]
+    RmcpServerInitialize(#[from] rmcp::service::ServerInitializeError),
+    #[error(transparent)]
+    RmcpJoin(#[from] tokio::task::JoinError),
     #[error(transparent)]
     Poneglyph(#[from] poneglyph::Error),
+    #[error(transparent)]
+    RmcpService(#[from] rmcp::ServiceError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

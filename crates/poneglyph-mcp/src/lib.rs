@@ -1,14 +1,14 @@
 //! MCP adapter surface for the Poneglyph runtime.
 //!
-//! This crate is intentionally transport-neutral for now. It defines a small
-//! server surface for listing tools and dispatching tool calls against a
-//! [`poneglyph::Poneglyph`] runtime. A later slice can add stdio / JSON-RPC
-//! transport on top of these types without changing tool semantics.
+//! This crate keeps tool semantics transport-neutral via [`PoneglyphMcpServer`]
+//! and also provides an rmcp-backed stdio host via [`RmcpServer`].
 
 mod error;
+mod rmcp_stdio;
 mod server;
 mod tool;
 
 pub use error::{Error, Result};
+pub use rmcp_stdio::RmcpServer;
 pub use server::{PoneglyphMcpServer, PoneglyphMcpServerBuilder};
 pub use tool::{CallToolResult, Tool, ToolCall};

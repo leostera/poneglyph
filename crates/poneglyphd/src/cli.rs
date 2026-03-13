@@ -18,10 +18,19 @@ pub struct Cli {
 enum Command {
     /// Start the daemon runtime and wait for shutdown.
     Run(RunArgs),
+    /// Start an MCP stdio server over the daemon runtime.
+    Mcp(McpArgs),
 }
 
 #[derive(Debug, Clone, Args)]
 pub struct RunArgs {
+    /// Override the workspace root. Defaults to ~/.poneglyph.
+    #[arg(long)]
+    pub workspace: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct McpArgs {
     /// Override the workspace root. Defaults to ~/.poneglyph.
     #[arg(long)]
     pub workspace: Option<PathBuf>,
@@ -34,6 +43,18 @@ impl Cli {
                 info!(command = "run", "dispatching daemon command");
                 Daemon::open(args).await?.run().await
             }
+            Command::Mcp(args) => {
+                info!(command = "mcp", "dispatching daemon command");
+                Daemon::open(args.into()).await?.serve_mcp().await
+            }
+        }
+    }
+}
+
+impl From<McpArgs> for RunArgs {
+    fn from(args: McpArgs) -> Self {
+        Self {
+            workspace: args.workspace,
         }
     }
 }
@@ -61,5 +82,14 @@ mod tests {
         let rendered = format!("{cli:?}");
         assert!(rendered.contains("Run"));
         assert!(rendered.contains("/tmp/poneglyph"));
+    }
+
+    #[test]
+    fn cli_parses_mcp_command() {
+        let cli = Cli::try_parse_from(["poneglyphd", "mcp"]).expect("cli");
+
+        let rendered = format!("{cli:?}");
+        assert!(rendered.contains("Mcp"));
+        assert!(rendered.contains("workspace: None"));
     }
 }

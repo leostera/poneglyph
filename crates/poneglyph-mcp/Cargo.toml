@@ -7,6 +7,7 @@ edition = "2024"
 datafox.workspace = true
 derive_builder.workspace = true
 poneglyph.workspace = true
+rmcp = { version = "1.2.0", features = ["client", "transport-io"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
