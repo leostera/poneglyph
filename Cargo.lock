@@ -388,9 +388,11 @@ dependencies = [
 name = "datafox"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "proptest",
  "serde",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]

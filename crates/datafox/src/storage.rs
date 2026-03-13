@@ -1,17 +1,23 @@
 use std::collections::BTreeMap;
 
+use async_trait::async_trait;
+use tokio::sync::mpsc;
+
 use crate::{Result, Value};
 
 pub type FactTuple = Vec<Value>;
-pub type TupleStream<'a> = Box<dyn Iterator<Item = Result<FactTuple>> + 'a>;
+pub type TupleStream = mpsc::Receiver<Result<FactTuple>>;
+
+const DEFAULT_STREAM_BUFFER: usize = 64;
 
 /// Snapshot-oriented read-only storage interface for Datalog queries.
+#[async_trait]
 pub trait Storage {
-    fn get_facts_matching<'a>(
-        &'a self,
+    async fn get_facts_matching(
+        &self,
         predicate: &str,
         pattern: Vec<Option<Value>>,
-    ) -> Result<TupleStream<'a>>;
+    ) -> Result<TupleStream>;
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -35,12 +41,13 @@ impl InMemoryStorage {
     }
 }
 
+#[async_trait]
 impl Storage for InMemoryStorage {
-    fn get_facts_matching<'a>(
-        &'a self,
+    async fn get_facts_matching(
+        &self,
         predicate: &str,
         pattern: Vec<Option<Value>>,
-    ) -> Result<TupleStream<'a>> {
+    ) -> Result<TupleStream> {
         let tuples = self
             .facts
             .get(predicate)
@@ -48,9 +55,19 @@ impl Storage for InMemoryStorage {
             .flatten()
             .filter(move |tuple| matches_pattern(&pattern, tuple))
             .cloned()
-            .map(Ok);
+            .map(Ok)
+            .collect::<Vec<_>>();
 
-        Ok(Box::new(tuples))
+        let (tx, rx) = mpsc::channel(tuples.len().max(DEFAULT_STREAM_BUFFER));
+        tokio::spawn(async move {
+            for tuple in tuples {
+                if tx.send(tuple).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        Ok(rx)
     }
 }
 
@@ -67,6 +84,8 @@ pub fn matches_pattern(pattern: &[Option<Value>], tuple: &[Value]) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use tokio::runtime::Runtime;
+
     use crate::{InMemoryStorage, Storage, Value, matches_pattern};
 
     #[test]
@@ -91,11 +110,18 @@ mod tests {
             ],
         )]);
 
-        let tuples = storage
-            .get_facts_matching("edge", vec![Some(Value::integer(1)), None])
-            .expect("tuples")
-            .collect::<Result<Vec<_>, _>>()
-            .expect("tuple results");
+        let runtime = Runtime::new().expect("runtime");
+        let tuples = runtime.block_on(async {
+            let mut tuples = storage
+                .get_facts_matching("edge", vec![Some(Value::integer(1)), None])
+                .await
+                .expect("tuples");
+            let mut results = Vec::new();
+            while let Some(tuple) = tuples.recv().await {
+                results.push(tuple.expect("tuple result"));
+            }
+            results
+        });
 
         assert_eq!(tuples, vec![vec![Value::integer(1), Value::integer(2)]]);
     }
