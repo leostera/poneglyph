@@ -245,8 +245,11 @@ fn fact_stream(facts: Vec<Fact>) -> mpsc::Receiver<Fact> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use serde_json::json;
     use tempfile::{TempDir, tempdir};
+    use tokio::task::JoinHandle;
     use tokio::task::yield_now;
     use tokio::time::{Duration, timeout};
 
@@ -258,23 +261,34 @@ mod tests {
     struct TestServer {
         _tempdir: TempDir,
         server: PoneglyphMcpServer,
+        runtime_task: JoinHandle<poneglyph::PoneResult<()>>,
     }
 
     async fn build_server() -> poneglyph::PoneResult<TestServer> {
         let tempdir = tempdir().expect("tempdir");
         let workspace = Workspace::at(tempdir.path());
-        let runtime = Poneglyph::builder()
-            .with_workspace(workspace)
-            .build()
-            .await?;
+        let runtime = Arc::new(
+            Poneglyph::builder()
+                .with_workspace(workspace)
+                .build()
+                .await?,
+        );
+        let runtime_task = tokio::spawn(runtime.clone().run());
         let server = PoneglyphMcpServer::builder()
-            .with_poneglyph(runtime)
+            .with_poneglyph_arc(runtime)
             .build()
             .expect("server");
         Ok(TestServer {
             _tempdir: tempdir,
             server,
+            runtime_task,
         })
+    }
+
+    impl Drop for TestServer {
+        fn drop(&mut self) {
+            self.runtime_task.abort();
+        }
     }
 
     async fn wait_for_entity(server: &PoneglyphMcpServer, entity_uri: &str) -> serde_json::Value {

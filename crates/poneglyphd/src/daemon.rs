@@ -42,9 +42,21 @@ impl Daemon {
 
     #[instrument(skip(self), fields(component = "poneglyphd"))]
     pub async fn run(self) -> Result<()> {
-        info!("daemon running; waiting for shutdown signal");
-        tokio::signal::ctrl_c().await?;
-        info!("shutdown signal received");
+        info!("daemon supervising runtime and MCP server");
+        let poneglyph = self.poneglyph.clone();
+        let mcp = PoneglyphMcpServer::builder()
+            .with_poneglyph_arc(self.poneglyph)
+            .build()?;
+
+        tokio::try_join!(
+            async move { poneglyph.run().await.map_err(anyhow::Error::from) },
+            async move {
+                RmcpServer::new(mcp)
+                    .run()
+                    .await
+                    .map_err(anyhow::Error::from)
+            },
+        )?;
         Ok(())
     }
 

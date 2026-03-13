@@ -17,7 +17,6 @@ pub struct Poneglyph {
     entity_store: Arc<dyn EntityStore>,
     search_projection: Arc<SearchProjection>,
     query_engine: QueryEngine,
-    worker_handles: Vec<JoinHandle<PoneResult<()>>>,
 }
 
 impl Poneglyph {
@@ -78,13 +77,16 @@ impl Poneglyph {
     pub fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>> {
         self.search_projection.search(query, limit)
     }
-}
 
-impl Drop for Poneglyph {
-    fn drop(&mut self) {
-        for handle in &self.worker_handles {
-            handle.abort();
-        }
+    #[instrument(skip(self), fields(component = "runtime"))]
+    pub async fn run(self: Arc<Self>) -> PoneResult<()> {
+        let (consolidator_handle, projection_runner_handle) = self.spawn_background_workers()?;
+        info!("poneglyph runtime workers started");
+        tokio::try_join!(
+            await_worker(consolidator_handle),
+            await_worker(projection_runner_handle),
+        )?;
+        Ok(())
     }
 }
 
@@ -94,7 +96,6 @@ pub struct PoneglyphBuilder {
     fact_service: Option<Arc<FactService>>,
     entity_store: Option<Arc<dyn EntityStore>>,
     search_projection: Option<Arc<SearchProjection>>,
-    start_background_workers: bool,
 }
 
 impl Default for PoneglyphBuilder {
@@ -105,7 +106,6 @@ impl Default for PoneglyphBuilder {
             fact_service: None,
             entity_store: None,
             search_projection: None,
-            start_background_workers: true,
         }
     }
 }
@@ -154,11 +154,6 @@ impl PoneglyphBuilder {
         self
     }
 
-    pub fn without_background_workers(mut self) -> Self {
-        self.start_background_workers = false;
-        self
-    }
-
     #[instrument(skip(self), fields(component = "runtime"))]
     pub async fn build(self) -> PoneResult<Poneglyph> {
         let workspace = match self.workspace {
@@ -194,24 +189,7 @@ impl PoneglyphBuilder {
         };
 
         let query_engine = QueryEngine::new(fact_service.clone());
-        let worker_handles = if self.start_background_workers {
-            let consolidator = Consolidator::builder()
-                .with_entity_store_arc(entity_store.clone())
-                .with_fact_subscription(fact_service.subscribe())
-                .build()?;
-            let projection_runner = ProjectionRunner::builder()
-                .with_entity_subscription(consolidator.subscribe())
-                .add_projection_arc(search_projection.clone() as Arc<dyn Projection>)
-                .build()?;
-
-            vec![consolidator.spawn(), projection_runner.spawn()]
-        } else {
-            Vec::new()
-        };
-        info!(
-            worker_count = worker_handles.len(),
-            "poneglyph runtime assembled"
-        );
+        info!("poneglyph runtime assembled");
 
         Ok(Poneglyph {
             workspace,
@@ -220,9 +198,31 @@ impl PoneglyphBuilder {
             entity_store,
             search_projection,
             query_engine,
-            worker_handles,
         })
     }
+}
+
+impl Poneglyph {
+    fn spawn_background_workers(
+        &self,
+    ) -> PoneResult<(JoinHandle<PoneResult<()>>, JoinHandle<PoneResult<()>>)> {
+        let consolidator = Consolidator::builder()
+            .with_entity_store_arc(self.entity_store.clone())
+            .with_fact_subscription(self.fact_service.subscribe())
+            .build()?;
+        let projection_runner = ProjectionRunner::builder()
+            .with_entity_subscription(consolidator.subscribe())
+            .add_projection_arc(self.search_projection.clone() as Arc<dyn Projection>)
+            .build()?;
+
+        Ok((consolidator.spawn(), projection_runner.spawn()))
+    }
+}
+
+async fn await_worker(handle: JoinHandle<PoneResult<()>>) -> PoneResult<()> {
+    handle
+        .await
+        .map_err(|source| crate::Error::RuntimeWorkerJoin { source })?
 }
 
 #[cfg(test)]
@@ -320,7 +320,6 @@ mod tests {
             .with_search_projection(
                 SearchProjection::create_in_memory().expect("search projection"),
             )
-            .without_background_workers()
             .build()
             .await
             .expect("runtime");
@@ -375,7 +374,6 @@ mod tests {
             .with_search_projection(
                 SearchProjection::create_in_memory().expect("search projection"),
             )
-            .without_background_workers()
             .build()
             .await
             .expect("runtime");
@@ -414,7 +412,6 @@ mod tests {
             )
             .with_entity_store(InMemoryEntityStore::new())
             .with_search_projection_arc(search_projection)
-            .without_background_workers()
             .build()
             .await
             .expect("runtime");
@@ -427,20 +424,23 @@ mod tests {
 
     #[tokio::test]
     async fn runtime_starts_background_workers_for_entity_and_search_updates() {
-        let poneglyph = Poneglyph::builder()
-            .with_fact_service(
-                crate::FactService::builder()
-                    .with_store(InMemoryFactStore::new())
-                    .build()
-                    .expect("fact service"),
-            )
-            .with_entity_store(InMemoryEntityStore::new())
-            .with_search_projection(
-                SearchProjection::create_in_memory().expect("search projection"),
-            )
-            .build()
-            .await
-            .expect("runtime");
+        let poneglyph = Arc::new(
+            Poneglyph::builder()
+                .with_fact_service(
+                    crate::FactService::builder()
+                        .with_store(InMemoryFactStore::new())
+                        .build()
+                        .expect("fact service"),
+                )
+                .with_entity_store(InMemoryEntityStore::new())
+                .with_search_projection(
+                    SearchProjection::create_in_memory().expect("search projection"),
+                )
+                .build()
+                .await
+                .expect("runtime"),
+        );
+        let runtime_task = tokio::spawn(poneglyph.clone().run());
 
         let album = uri!("spotify:album:hold-your-fire");
         poneglyph
@@ -478,5 +478,7 @@ mod tests {
         })
         .await
         .expect("search index updates");
+
+        runtime_task.abort();
     }
 }

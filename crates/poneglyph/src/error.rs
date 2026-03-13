@@ -77,6 +77,11 @@ pub enum Error {
         #[source]
         source: std::io::Error,
     },
+    #[error("runtime worker task failed")]
+    RuntimeWorkerJoin {
+        #[source]
+        source: tokio::task::JoinError,
+    },
     #[error(transparent)]
     Datafox(#[from] datafox::Error),
     #[error(transparent)]

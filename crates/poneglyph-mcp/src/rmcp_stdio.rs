@@ -28,6 +28,11 @@ impl RmcpServer {
     }
 
     #[instrument(skip(self), fields(component = "poneglyph_mcp"))]
+    pub async fn run(self) -> Result<()> {
+        self.serve_stdio().await
+    }
+
+    #[instrument(skip(self), fields(component = "poneglyph_mcp"))]
     pub async fn serve_stdio(self) -> Result<()> {
         debug!("starting RMCP stdio server");
         let server = self.serve(transport::stdio()).await?;
