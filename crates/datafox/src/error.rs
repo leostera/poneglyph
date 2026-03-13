@@ -12,6 +12,12 @@ pub enum Error {
     EmptyQuery,
     #[error("single-goal queries require exactly one positive atom")]
     InvalidSingleQueryShape,
+    #[error("multi-goal queries are not implemented yet")]
+    UnsupportedMultiQuery,
+    #[error("negated clauses are not implemented yet")]
+    UnsupportedNegation,
+    #[error("builtin clauses are not implemented yet")]
+    UnsupportedBuiltin,
     #[error("arity mismatch for predicate `{predicate}`: expected {expected}, found {found}")]
     ArityMismatch {
         predicate: String,

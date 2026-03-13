@@ -6,25 +6,32 @@
 //! - [`Atom`], [`Clause`], and [`Query`] for query syntax trees.
 //! - [`Diagnostic`] and [`parse_query`] for query parsing with context.
 //! - [`Substitution`] and [`Unifier`] for binding and matching query variables.
+//! - [`Storage`], [`Universe`], and [`Evaluator`] for snapshot-based query execution.
 //! - [`Error`] and [`Result`] for typed failures.
 //! - [`atom!`], [`var!`], [`lit!`], and [`subst!`] for test and call-site ergonomics.
 
 mod ast;
 mod diagnostic;
 pub mod error;
+mod evaluator;
 mod parser;
+mod storage;
 mod substitution;
 mod term;
 mod unify;
+mod universe;
 mod value;
 
 pub use ast::{Atom, Clause, Query};
 pub use diagnostic::{Diagnostic, Span};
 pub use error::{Error, Result};
+pub use evaluator::{Evaluator, SubstitutionStream};
 pub use parser::parse_query;
+pub use storage::{FactTuple, InMemoryStorage, Storage, TupleStream, matches_pattern};
 pub use substitution::Substitution;
 pub use term::Term;
 pub use unify::Unifier;
+pub use universe::Universe;
 pub use value::Value;
 
 #[macro_export]
@@ -53,7 +60,7 @@ macro_rules! subst {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Atom, Substitution, Term, Value, atom};
+    use crate::{Atom, Substitution, Term, Value};
 
     #[test]
     fn convenience_macros_build_terms_atoms_and_substitutions() {
