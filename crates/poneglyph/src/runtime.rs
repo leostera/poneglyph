@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
 use crate::{
-    Entity, EntityStore, Fact, FactService, PoneResult, PoneglyphConfig, Query, QueryEngine,
-    QueryResult, SearchHit, SearchProjection, SqliteEntityStore, SqliteFactStore, Store, Uri,
-    Workspace,
+    Consolidator, Entity, EntityStore, Fact, FactService, PoneResult, PoneglyphConfig, Projection,
+    ProjectionRunner, Query, QueryEngine, QueryResult, SearchHit, SearchProjection,
+    SqliteEntityStore, SqliteFactStore, Store, Uri, Workspace,
 };
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 
 /// Assembled Poneglyph runtime dependencies.
 pub struct Poneglyph {
@@ -15,6 +16,7 @@ pub struct Poneglyph {
     entity_store: Arc<dyn EntityStore>,
     search_projection: Arc<SearchProjection>,
     query_engine: QueryEngine,
+    worker_handles: Vec<JoinHandle<PoneResult<()>>>,
 }
 
 impl Poneglyph {
@@ -75,13 +77,34 @@ impl Poneglyph {
     }
 }
 
-#[derive(Default)]
+impl Drop for Poneglyph {
+    fn drop(&mut self) {
+        for handle in &self.worker_handles {
+            handle.abort();
+        }
+    }
+}
+
 pub struct PoneglyphBuilder {
     workspace: Option<Workspace>,
     config: Option<PoneglyphConfig>,
     fact_service: Option<Arc<FactService>>,
     entity_store: Option<Arc<dyn EntityStore>>,
     search_projection: Option<Arc<SearchProjection>>,
+    start_background_workers: bool,
+}
+
+impl Default for PoneglyphBuilder {
+    fn default() -> Self {
+        Self {
+            workspace: None,
+            config: None,
+            fact_service: None,
+            entity_store: None,
+            search_projection: None,
+            start_background_workers: true,
+        }
+    }
 }
 
 impl PoneglyphBuilder {
@@ -128,6 +151,11 @@ impl PoneglyphBuilder {
         self
     }
 
+    pub fn without_background_workers(mut self) -> Self {
+        self.start_background_workers = false;
+        self
+    }
+
     pub async fn build(self) -> PoneResult<Poneglyph> {
         let workspace = match self.workspace {
             Some(workspace) => workspace,
@@ -160,6 +188,20 @@ impl PoneglyphBuilder {
         };
 
         let query_engine = QueryEngine::new(fact_service.clone());
+        let worker_handles = if self.start_background_workers {
+            let consolidator = Consolidator::builder()
+                .with_entity_store_arc(entity_store.clone())
+                .with_fact_subscription(fact_service.subscribe())
+                .build()?;
+            let projection_runner = ProjectionRunner::builder()
+                .with_entity_subscription(consolidator.subscribe())
+                .add_projection_arc(search_projection.clone() as Arc<dyn Projection>)
+                .build()?;
+
+            vec![consolidator.spawn(), projection_runner.spawn()]
+        } else {
+            Vec::new()
+        };
 
         Ok(Poneglyph {
             workspace,
@@ -168,6 +210,7 @@ impl PoneglyphBuilder {
             entity_store,
             search_projection,
             query_engine,
+            worker_handles,
         })
     }
 }
@@ -176,9 +219,12 @@ impl PoneglyphBuilder {
 mod tests {
     use std::collections::BTreeMap;
     use std::sync::Arc;
+    use std::time::Duration;
 
     use tempfile::tempdir;
     use tokio::sync::mpsc;
+    use tokio::task::yield_now;
+    use tokio::time::timeout;
 
     use crate::{
         Entity, InMemoryEntityStore, InMemoryFactStore, Poneglyph, PoneglyphConfig, Projection,
@@ -264,6 +310,7 @@ mod tests {
             .with_search_projection(
                 SearchProjection::create_in_memory().expect("search projection"),
             )
+            .without_background_workers()
             .build()
             .await
             .expect("runtime");
@@ -318,6 +365,7 @@ mod tests {
             .with_search_projection(
                 SearchProjection::create_in_memory().expect("search projection"),
             )
+            .without_background_workers()
             .build()
             .await
             .expect("runtime");
@@ -356,6 +404,7 @@ mod tests {
             )
             .with_entity_store(InMemoryEntityStore::new())
             .with_search_projection_arc(search_projection)
+            .without_background_workers()
             .build()
             .await
             .expect("runtime");
@@ -364,5 +413,60 @@ mod tests {
 
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].entity_uri, entity.uri);
+    }
+
+    #[tokio::test]
+    async fn runtime_starts_background_workers_for_entity_and_search_updates() {
+        let poneglyph = Poneglyph::builder()
+            .with_fact_service(
+                crate::FactService::builder()
+                    .with_store(InMemoryFactStore::new())
+                    .build()
+                    .expect("fact service"),
+            )
+            .with_entity_store(InMemoryEntityStore::new())
+            .with_search_projection(
+                SearchProjection::create_in_memory().expect("search projection"),
+            )
+            .build()
+            .await
+            .expect("runtime");
+
+        let album = uri!("spotify:album:hold-your-fire");
+        poneglyph
+            .state_facts(fact_stream(vec![fact!(
+                album.clone(),
+                uri!("spotify:displayName"),
+                Value::text("Hold Your Fire")
+            )]))
+            .await
+            .expect("state facts");
+
+        let entity = timeout(Duration::from_secs(1), async {
+            loop {
+                if let Some(entity) = poneglyph.get_entity(&album).await.expect("get entity") {
+                    break entity;
+                }
+                yield_now().await;
+            }
+        })
+        .await
+        .expect("entity materializes");
+        assert_eq!(
+            entity.fields.get(&uri!("spotify:displayName")),
+            Some(&Value::text("Hold Your Fire"))
+        );
+
+        timeout(Duration::from_secs(1), async {
+            loop {
+                let hits = poneglyph.search("Hold Your Fire", 10).expect("search");
+                if hits.iter().any(|hit| hit.entity_uri == album) {
+                    break;
+                }
+                yield_now().await;
+            }
+        })
+        .await
+        .expect("search index updates");
     }
 }
