@@ -5,6 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
+use tracing::{debug, info, instrument, warn};
 
 use crate::{Entity, Error, PoneResult};
 
@@ -31,12 +32,23 @@ impl ProjectionRunner {
         ProjectionRunnerBuilder::default()
     }
 
+    #[instrument(skip_all, fields(component = "projection_runner"))]
     pub async fn start(mut self) -> PoneResult<()> {
+        info!(
+            projection_count = self.projections.len(),
+            "projection runner started"
+        );
         loop {
             let entity = match self.entity_subscription.recv().await {
                 Ok(entity) => entity,
-                Err(broadcast::error::RecvError::Closed) => return Ok(()),
-                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => {
+                    info!("entity subscription closed; stopping projection runner");
+                    return Ok(());
+                }
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    warn!(skipped, "projection runner lagged behind entity broadcast");
+                    continue;
+                }
             };
 
             let mut entities = vec![entity];
@@ -44,8 +56,13 @@ impl ProjectionRunner {
                 entities.push(entity);
             }
             let batch = ProjectionBatch { entities };
+            debug!(
+                entity_count = batch.entities.len(),
+                "dispatching projection batch"
+            );
 
             for projection in &self.projections {
+                debug!(projection = projection.name(), "running projection");
                 projection.handle_events(batch.clone()).await?;
             }
         }

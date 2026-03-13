@@ -1,4 +1,5 @@
 use tokio::sync::mpsc;
+use tracing::{debug, instrument};
 
 use crate::{Atom, Clause, Error, Query, Result, Storage, Substitution, Unifier, Universe, Value};
 
@@ -10,6 +11,7 @@ const DEFAULT_STREAM_BUFFER: usize = 64;
 pub struct Evaluator;
 
 impl Evaluator {
+    #[instrument(skip(universe, atom), fields(component = "datafox", predicate = %atom.predicate))]
     pub async fn query<S>(universe: &Universe<S>, atom: &Atom) -> Result<SubstitutionStream>
     where
         S: Storage + Clone + Send + Sync + 'static,
@@ -17,6 +19,7 @@ impl Evaluator {
         Self::evaluate_query(universe.clone(), Query::single(atom.clone())).await
     }
 
+    #[instrument(skip(universe, query), fields(component = "datafox"))]
     pub async fn evaluate<S>(universe: &Universe<S>, query: &Query) -> Result<SubstitutionStream>
     where
         S: Storage + Clone + Send + Sync + 'static,
@@ -34,6 +37,7 @@ impl Evaluator {
 
         let (tx, rx) = mpsc::channel(DEFAULT_STREAM_BUFFER);
         tokio::spawn(async move {
+            debug!("starting query evaluation task");
             let result = match query {
                 Query::Single(atom) => {
                     Self::evaluate_positive_clauses(&universe, vec![Clause::atom(atom)]).await
@@ -65,6 +69,7 @@ impl Evaluator {
     where
         S: Storage + Clone + Send + Sync + 'static,
     {
+        debug!(clause_count = clauses.len(), "evaluating positive clauses");
         let mut seeds = vec![Substitution::new()];
 
         for clause in clauses {
@@ -79,12 +84,14 @@ impl Evaluator {
                 let mut matches = Self::query_atom_matches(universe, &atom, &seed).await?;
                 next_seeds.append(&mut matches);
             }
+            debug!(seed_count = next_seeds.len(), predicate = %atom.predicate, "advanced clause evaluation");
             seeds = next_seeds;
         }
 
         Ok(seeds)
     }
 
+    #[instrument(skip(universe, atom, seed), fields(component = "datafox", predicate = %atom.predicate))]
     async fn query_atom_matches<S>(
         universe: &Universe<S>,
         atom: &Atom,
@@ -106,6 +113,10 @@ impl Evaluator {
             }
         }
 
+        debug!(
+            match_count = substitutions.len(),
+            "matched atom against storage"
+        );
         Ok(substitutions)
     }
 }

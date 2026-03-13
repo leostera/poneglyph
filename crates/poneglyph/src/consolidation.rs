@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
+use tracing::{debug, info, instrument, warn};
 
 use crate::{Entity, EntityStore, Error, Fact, PoneResult, Uri};
 
@@ -29,12 +30,20 @@ impl Consolidator {
         self.entity_broadcaster.subscribe()
     }
 
+    #[instrument(skip_all, fields(component = "consolidator"))]
     pub async fn start(mut self) -> PoneResult<()> {
+        info!("consolidator started");
         loop {
             let fact = match self.fact_subscription.recv().await {
                 Ok(fact) => fact,
-                Err(broadcast::error::RecvError::Closed) => return Ok(()),
-                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => {
+                    info!("fact subscription closed; stopping consolidator");
+                    return Ok(());
+                }
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    warn!(skipped, "consolidator lagged behind fact broadcast");
+                    continue;
+                }
             };
 
             let mut facts_by_entity = BTreeMap::<Uri, Vec<Fact>>::new();
@@ -51,16 +60,24 @@ impl Consolidator {
             }
 
             for (entity_uri, facts) in facts_by_entity {
+                let fact_count = facts.len();
+                debug!(%entity_uri, fact_count, "consolidating entity update batch");
                 let current = self.entity_store.get_entity(&entity_uri).await?;
                 let consolidation = consolidate_entity_over(current, &entity_uri, facts)?;
                 if consolidation.entity.fields.is_empty() {
                     self.entity_store.delete_entity(&entity_uri).await?;
+                    debug!(%entity_uri, "deleted empty entity after consolidation");
                 } else {
                     let entity = consolidation.entity;
                     self.entity_store
                         .put_entity(entity.clone(), consolidation.last_processed_tx_id)
                         .await?;
-                    let _ = self.entity_broadcaster.send(entity);
+                    let entity_uri = entity.uri.clone();
+                    if self.entity_broadcaster.send(entity).is_err() {
+                        warn!(%entity_uri, "entity updated without active projection subscribers");
+                    } else {
+                        debug!(%entity_uri, "broadcast consolidated entity");
+                    }
                 }
             }
         }
@@ -129,6 +146,7 @@ fn new_entity_broadcaster() -> broadcast::Sender<Entity> {
     broadcast::channel(DEFAULT_ENTITY_BROADCAST_BUFFER).0
 }
 
+#[instrument(skip(current, facts), fields(component = "consolidator", %entity_uri))]
 pub(crate) fn consolidate_entity_over(
     current: Option<Entity>,
     entity_uri: &Uri,
@@ -162,6 +180,12 @@ pub(crate) fn consolidate_entity_over(
         .filter_map(|fact| fact.tx_id.as_ref())
         .max()
         .cloned();
+
+    debug!(
+        field_count = entity.fields.len(),
+        has_checkpoint = last_processed_tx_id.is_some(),
+        "consolidated entity state"
+    );
 
     Ok(Consolidation {
         entity,

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
+use tracing::info;
 
 use crate::daemon::Daemon;
 
@@ -29,7 +30,10 @@ pub struct RunArgs {
 impl Cli {
     pub async fn run(self) -> Result<()> {
         match self.command {
-            Command::Run(args) => Daemon::open(args).await?.run().await,
+            Command::Run(args) => {
+                info!(command = "run", "dispatching daemon command");
+                Daemon::open(args).await?.run().await
+            }
         }
     }
 }

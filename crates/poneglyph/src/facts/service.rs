@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use derive_builder::Builder;
 use tokio::sync::{broadcast, mpsc};
+use tracing::{debug, instrument, warn};
 
 use crate::facts::store::Store;
 use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri};
@@ -21,18 +22,25 @@ impl FactService {
         FactServiceBuilder::default()
     }
 
+    #[instrument(skip_all, fields(component = "fact_service"))]
     pub async fn state_facts(&self, facts: mpsc::Receiver<Fact>) -> PoneResult<Uri> {
         let (tx_id, committed_facts) = self.store.state_facts(facts).await?;
+        let fact_count = committed_facts.len();
+        debug!(%tx_id, fact_count, "stored fact batch");
         for fact in committed_facts {
-            let _ = self.broadcaster.send(fact);
+            if self.broadcaster.send(fact).is_err() {
+                warn!("fact batch committed without active subscribers");
+            }
         }
         Ok(tx_id)
     }
 
+    #[instrument(skip(self), fields(component = "fact_service", ?filter))]
     pub async fn get_facts(&self, filter: Filter) -> PoneResult<mpsc::Receiver<PoneResult<Fact>>> {
         self.store.get_facts(filter).await
     }
 
+    #[instrument(skip(self), fields(component = "fact_service", ?filter))]
     pub async fn get_active_facts(
         &self,
         filter: ActiveFilter,
@@ -41,6 +49,7 @@ impl FactService {
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<Fact> {
+        debug!(component = "fact_service", "new fact subscriber");
         self.broadcaster.subscribe()
     }
 

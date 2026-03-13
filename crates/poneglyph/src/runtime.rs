@@ -7,6 +7,7 @@ use crate::{
 };
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
+use tracing::{debug, info, instrument};
 
 /// Assembled Poneglyph runtime dependencies.
 pub struct Poneglyph {
@@ -24,10 +25,12 @@ impl Poneglyph {
         PoneglyphBuilder::default()
     }
 
+    #[instrument(skip_all, fields(component = "runtime"))]
     pub async fn open() -> PoneResult<Self> {
         Self::builder().build().await
     }
 
+    #[instrument(skip(config), fields(component = "runtime"))]
     pub async fn from_config(config: PoneglyphConfig) -> PoneResult<Self> {
         Self::builder().with_config(config).build().await
     }
@@ -156,17 +159,20 @@ impl PoneglyphBuilder {
         self
     }
 
+    #[instrument(skip(self), fields(component = "runtime"))]
     pub async fn build(self) -> PoneResult<Poneglyph> {
         let workspace = match self.workspace {
             Some(workspace) => workspace,
             None => Workspace::new()?,
         };
         workspace.ensure()?;
+        debug!(workspace = %workspace.root().display(), "workspace ensured");
 
         let config = match self.config {
             Some(config) => config,
             None => PoneglyphConfig::load_from(&workspace).await?,
         };
+        debug!(log_level = ?config.log_level, "runtime config loaded");
 
         let fact_service = match self.fact_service {
             Some(fact_service) => fact_service,
@@ -202,6 +208,10 @@ impl PoneglyphBuilder {
         } else {
             Vec::new()
         };
+        info!(
+            worker_count = worker_handles.len(),
+            "poneglyph runtime assembled"
+        );
 
         Ok(Poneglyph {
             workspace,

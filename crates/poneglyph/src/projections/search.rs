@@ -7,6 +7,7 @@ use tantivy::directory::MmapDirectory;
 use tantivy::query::QueryParser;
 use tantivy::schema::{STORED, STRING, Schema, TEXT, TantivyDocument, Value as _};
 use tantivy::{Index, IndexReader, IndexWriter, Term, doc};
+use tracing::{debug, instrument};
 
 use crate::projections::{Projection, ProjectionBatch};
 use crate::{Entity, Error, PoneResult, Uri, Value};
@@ -48,6 +49,7 @@ impl SearchProjection {
         Self::open_index(index, fields)
     }
 
+    #[instrument(skip(self), fields(component = "search_projection", query, limit))]
     pub fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>> {
         let searcher = self.reader.searcher();
         let parser = QueryParser::for_index(
@@ -57,7 +59,8 @@ impl SearchProjection {
         let query = parser.parse_query(query)?;
         let hits = searcher.search(&query, &TopDocs::with_limit(limit))?;
 
-        hits.into_iter()
+        let hits = hits
+            .into_iter()
             .map(|(score, address)| {
                 let retrieved = searcher.doc::<TantivyDocument>(address)?;
                 let uri = retrieved
@@ -69,7 +72,9 @@ impl SearchProjection {
                     score,
                 })
             })
-            .collect()
+            .collect::<PoneResult<Vec<_>>>()?;
+        debug!(hit_count = hits.len(), "search query evaluated");
+        Ok(hits)
     }
 
     fn open_index(index: Index, fields: SearchFields) -> PoneResult<Self> {
@@ -91,9 +96,15 @@ impl Projection for SearchProjection {
     }
 
     async fn handle_events(&self, batch: ProjectionBatch) -> PoneResult<()> {
+        let entity_count = batch.entities.len();
+        debug!(
+            component = "search_projection",
+            entity_count, "applying search projection batch"
+        );
         let mut writer = self.writer.lock().expect("search writer");
 
         for entity in batch.entities {
+            debug!(entity_uri = %entity.uri, field_count = entity.fields.len(), "indexing entity");
             writer.delete_term(Term::from_field_text(
                 self.fields.entity_uri,
                 entity.uri.as_str(),

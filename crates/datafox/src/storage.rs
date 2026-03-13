@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 use tokio::sync::mpsc;
+use tracing::{debug, instrument};
 
 use crate::{Result, Value};
 
@@ -43,6 +44,7 @@ impl InMemoryStorage {
 
 #[async_trait]
 impl Storage for InMemoryStorage {
+    #[instrument(skip(self, pattern), fields(component = "datafox", predicate, arity = pattern.len()))]
     async fn get_facts_matching(
         &self,
         predicate: &str,
@@ -57,6 +59,7 @@ impl Storage for InMemoryStorage {
             .cloned()
             .map(Ok)
             .collect::<Vec<_>>();
+        debug!(match_count = tuples.len(), "filtered in-memory tuples");
 
         let (tx, rx) = mpsc::channel(tuples.len().max(DEFAULT_STREAM_BUFFER));
         tokio::spawn(async move {
