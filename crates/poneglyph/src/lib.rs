@@ -1,15 +1,18 @@
 //! Poneglyph backend library.
 //!
 //! Public API:
-//! - [`Fact`], [`Builder`], [`fact!`] and [`Filter`] for the append-only fact model.
+//! - [`Fact`], [`Builder`], [`fact!`], [`retraction!`] and [`Filter`] for the append-only fact model.
+//! - [`ActiveFact`] and [`ActiveFilter`] for the synchronous active graph view.
 //! - [`Uri`] and [`Value`] for shared identifiers and payloads.
 //! - [`Entity`] for consolidated materialized views.
 //! - [`FactService`] and the fact stores for durable fact access.
 //! - [`Consolidator`] and entity stores for materialized entity views.
 //! - [`Projection`] and [`ProjectionRunner`] for replayable derived workers.
+//! - [`Clause`], [`Query`], [`QueryEngine`] and [`QueryResult`] for queries over the active graph.
 //! - [`Workspace`] and [`Config`] for filesystem layout and runtime configuration.
 //! - [`Error`] and [`PoneResult`] for typed backend errors.
 
+mod active_graph;
 mod config;
 mod consolidation;
 mod entities;
@@ -18,12 +21,14 @@ pub mod error;
 mod fact;
 mod facts;
 mod projections;
+mod query;
 #[cfg(test)]
 mod tests;
 mod uri;
 mod value;
 mod workspace;
 
+pub use active_graph::{ActiveFact, ActiveFilter};
 pub use config::Config;
 pub use consolidation::{Consolidation, Consolidator, ConsolidatorBuilder};
 pub use entities::{EntityStore, InMemoryEntityStore, SqliteEntityStore};
@@ -35,6 +40,7 @@ pub use projections::{
     Projection, ProjectionBatch, ProjectionRunner, ProjectionRunnerBuilder, SearchHit,
     SearchProjection,
 };
+pub use query::{Clause, Query, QueryEngine, QueryResult};
 pub use uri::Uri;
 pub use value::Value;
 pub use workspace::Workspace;

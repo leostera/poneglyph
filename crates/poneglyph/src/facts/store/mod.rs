@@ -4,7 +4,7 @@ mod sqlite;
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 
-use crate::{Error, Fact, Filter, PoneResult, Uri, uri};
+use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri, uri};
 
 pub use memory::InMemoryFactStore;
 pub use sqlite::SqliteFactStore;
@@ -13,6 +13,10 @@ pub use sqlite::SqliteFactStore;
 pub trait Store: Send + Sync {
     async fn state_facts(&self, fact_stream: mpsc::Receiver<Fact>) -> PoneResult<(Uri, Vec<Fact>)>;
     async fn get_facts(&self, filter: Filter) -> PoneResult<mpsc::Receiver<PoneResult<Fact>>>;
+    async fn get_active_facts(
+        &self,
+        filter: ActiveFilter,
+    ) -> PoneResult<mpsc::Receiver<PoneResult<ActiveFact>>>;
 }
 
 pub(crate) fn new_tx_id() -> Uri {

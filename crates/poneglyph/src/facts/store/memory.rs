@@ -2,14 +2,16 @@ use async_trait::async_trait;
 use std::sync::Mutex;
 use tokio::sync::mpsc;
 
+use crate::active_graph::ActiveGraph;
 use crate::facts::store::{
     Store, current_fact_state, new_tx_id, sort_facts, validate_pending_fact,
 };
-use crate::{Error, Fact, Filter, PoneResult, Uri};
+use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri};
 
 #[derive(Default)]
 struct MemoryState {
     facts: Vec<Fact>,
+    active_graph: ActiveGraph,
 }
 
 #[derive(Default)]
@@ -61,6 +63,7 @@ impl Store for InMemoryFactStore {
 
         state.facts.extend(persisted.clone());
         sort_facts(&mut state.facts);
+        state.active_graph.apply_facts(persisted.clone())?;
 
         Ok((tx_id, persisted))
     }
@@ -87,6 +90,29 @@ impl Store for InMemoryFactStore {
         let (tx, rx) = mpsc::channel(filtered.len().max(1));
         tokio::spawn(async move {
             for fact in filtered {
+                if tx.send(Ok(fact)).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        Ok(rx)
+    }
+
+    async fn get_active_facts(
+        &self,
+        filter: ActiveFilter,
+    ) -> PoneResult<mpsc::Receiver<PoneResult<ActiveFact>>> {
+        let active_facts = self
+            .state
+            .lock()
+            .expect("memory store lock")
+            .active_graph
+            .active_facts_matching(&filter);
+
+        let (tx, rx) = mpsc::channel(active_facts.len().max(1));
+        tokio::spawn(async move {
+            for fact in active_facts {
                 if tx.send(Ok(fact)).await.is_err() {
                     break;
                 }

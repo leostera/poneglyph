@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{Fact, Uri, Value, fact, uri};
+    use crate::{Fact, Uri, Value, fact, retraction, uri};
 
     #[test]
     fn uri_from_parts_uses_namespace_kind_and_given_id() {
@@ -104,5 +104,17 @@ mod tests {
         );
 
         assert_eq!(fact.source, uri!("poneglyph:internal"));
+    }
+
+    #[test]
+    fn retraction_macro_marks_facts_as_retractions() {
+        let fact = retraction!(
+            uri!("spotify:album:2112"),
+            uri!("spotify:displayName"),
+            Value::text("2112")
+        );
+
+        assert_eq!(fact.source, uri!("poneglyph:internal"));
+        assert!(fact.retraction);
     }
 }

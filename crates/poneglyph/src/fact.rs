@@ -37,6 +37,21 @@ macro_rules! fact {
     ($entity:expr, $field:expr, $value:expr) => {{ $crate::fact!($crate::uri!("poneglyph:internal"), $entity, $field, $value) }};
 }
 
+#[macro_export]
+macro_rules! retraction {
+    ($source:expr, $entity:expr, $field:expr, $value:expr) => {{
+        $crate::Fact::builder()
+            .source($source)
+            .entity($entity)
+            .field($field)
+            .value($value)
+            .retract()
+            .build()
+            .expect("invalid retraction")
+    }};
+    ($entity:expr, $field:expr, $value:expr) => {{ $crate::retraction!($crate::uri!("poneglyph:internal"), $entity, $field, $value) }};
+}
+
 /// Supported read filters for fact stores.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Filter {

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::Uri;
 
 /// Typed payload carried by a [`crate::Fact`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(tag = "type", content = "value", rename_all = "snake_case")]
 pub enum Value {
     Null,

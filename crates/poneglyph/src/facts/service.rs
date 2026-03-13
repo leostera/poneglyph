@@ -4,7 +4,7 @@ use derive_builder::Builder;
 use tokio::sync::{broadcast, mpsc};
 
 use crate::facts::store::Store;
-use crate::{Error, Fact, Filter, PoneResult, Uri};
+use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri};
 
 const DEFAULT_BROADCAST_BUFFER: usize = 1024;
 
@@ -31,6 +31,13 @@ impl FactService {
 
     pub async fn get_facts(&self, filter: Filter) -> PoneResult<mpsc::Receiver<PoneResult<Fact>>> {
         self.store.get_facts(filter).await
+    }
+
+    pub async fn get_active_facts(
+        &self,
+        filter: ActiveFilter,
+    ) -> PoneResult<mpsc::Receiver<PoneResult<ActiveFact>>> {
+        self.store.get_active_facts(filter).await
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<Fact> {
