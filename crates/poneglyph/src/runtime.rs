@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use crate::{
     Consolidator, Entity, EntityStore, Fact, FactService, PoneResult, PoneglyphConfig, Projection,
-    ProjectionRunner, Query, QueryEngine, QueryResult, SearchHit, SearchProjection,
-    SqliteEntityStore, SqliteFactStore, Store, Uri, Workspace,
+    ProjectionRunner, Query, QueryEngine, QueryResult, SchemaDefinition, SearchHit,
+    SearchProjection, SqliteEntityStore, SqliteFactStore, Store, Uri, Workspace,
 };
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -76,6 +76,10 @@ impl Poneglyph {
 
     pub fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>> {
         self.search_projection.search(query, limit)
+    }
+
+    pub async fn get_schema(&self) -> PoneResult<SchemaDefinition> {
+        self.fact_service.get_schema().await
     }
 
     #[instrument(skip(self), fields(component = "runtime"))]
@@ -189,6 +193,7 @@ impl PoneglyphBuilder {
         };
 
         let query_engine = QueryEngine::new(fact_service.clone());
+        crate::schema::ensure_base_schema(&fact_service).await?;
         info!("poneglyph runtime assembled");
 
         Ok(Poneglyph {
@@ -480,5 +485,33 @@ mod tests {
         .expect("search index updates");
 
         runtime_task.abort();
+    }
+
+    #[tokio::test]
+    async fn runtime_get_schema_exposes_base_schema_in_a_fresh_workspace() {
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+
+        let poneglyph = Poneglyph::builder()
+            .with_workspace(workspace)
+            .build()
+            .await
+            .expect("runtime");
+
+        let schema = poneglyph.get_schema().await.expect("schema");
+
+        assert!(
+            schema
+                .base
+                .kinds
+                .iter()
+                .any(|kind| kind.uri.as_str() == "schema:field")
+        );
+        assert!(
+            schema
+                .fields
+                .iter()
+                .any(|field| field.uri.as_str() == "schema:type")
+        );
     }
 }

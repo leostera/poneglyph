@@ -135,17 +135,26 @@ impl Store for SqliteFactStore {
 
         tokio::spawn(async move {
             let (sql, bind_value) = match filter {
-                Filter::ById(fact_id) => {
-                    (fact_query_sql("WHERE f.fact_id = ?1"), fact_id.to_string())
-                }
-                Filter::ByTx(tx_id) => (fact_query_sql("WHERE f.tx_id = ?1"), tx_id.to_string()),
+                Filter::All => (fact_query_sql(""), None),
+                Filter::ById(fact_id) => (
+                    fact_query_sql("WHERE f.fact_id = ?1"),
+                    Some(fact_id.to_string()),
+                ),
+                Filter::ByTx(tx_id) => (
+                    fact_query_sql("WHERE f.tx_id = ?1"),
+                    Some(tx_id.to_string()),
+                ),
                 Filter::ByEntityUri(entity_uri) => (
                     fact_query_sql("WHERE f.entity = ?1"),
-                    entity_uri.to_string(),
+                    Some(entity_uri.to_string()),
                 ),
             };
 
-            let mut rows = sqlx::query(&sql).bind(bind_value).fetch(&pool);
+            let mut query = sqlx::query(&sql);
+            if let Some(bind_value) = bind_value {
+                query = query.bind(bind_value);
+            }
+            let mut rows = query.fetch(&pool);
             while let Some(row) = rows.next().await {
                 let fact = match row {
                     Ok(row) => decode_row(row),

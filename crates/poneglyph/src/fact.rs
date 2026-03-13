@@ -55,6 +55,7 @@ macro_rules! retraction {
 /// Supported read filters for fact stores.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Filter {
+    All,
     ById(Uri),
     ByTx(Uri),
     ByEntityUri(Uri),

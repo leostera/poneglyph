@@ -5,7 +5,7 @@ use tokio::sync::{broadcast, mpsc};
 use tracing::{debug, instrument, warn};
 
 use crate::facts::store::Store;
-use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri};
+use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, SchemaDefinition, Uri};
 
 const DEFAULT_BROADCAST_BUFFER: usize = 1024;
 
@@ -55,6 +55,10 @@ impl FactService {
 
     pub fn store(&self) -> Arc<dyn Store> {
         self.store.clone()
+    }
+
+    pub async fn get_schema(&self) -> PoneResult<SchemaDefinition> {
+        crate::schema::get_schema(self).await
     }
 }
 

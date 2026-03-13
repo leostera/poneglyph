@@ -23,6 +23,7 @@ mod facts;
 mod projections;
 mod query;
 mod runtime;
+mod schema;
 #[cfg(test)]
 mod tests;
 mod uri;
@@ -43,6 +44,7 @@ pub use projections::{
 };
 pub use query::{Query, QueryEngine, QueryResult};
 pub use runtime::{Poneglyph, PoneglyphBuilder};
+pub use schema::{BaseSchema, FieldSchema, KindSchema, NamespaceSchema, SchemaDefinition};
 pub use uri::Uri;
 pub use value::Value;
 pub use workspace::Workspace;

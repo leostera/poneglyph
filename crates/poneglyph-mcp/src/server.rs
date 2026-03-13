@@ -15,6 +15,7 @@ use crate::tool::{CallToolResult, Tool, ToolCall};
 
 const TOOL_STATE_FACTS: &str = "stateFacts";
 const TOOL_QUERY: &str = "query";
+const TOOL_GET_SCHEMA: &str = "getSchema";
 const TOOL_GET_ENTITY: &str = "getEntity";
 const TOOL_SEARCH: &str = "search";
 
@@ -52,6 +53,11 @@ impl PoneglyphMcpServer {
                 json_schema_for::<QueryInput>(),
             ),
             tool(
+                TOOL_GET_SCHEMA,
+                "Fetch the effective schema definition built from ordinary schema facts.",
+                json_schema_for::<GetSchemaInput>(),
+            ),
+            tool(
                 TOOL_GET_ENTITY,
                 "Fetch a consolidated entity by URI.",
                 json_schema_for::<GetEntityInput>(),
@@ -69,6 +75,7 @@ impl PoneglyphMcpServer {
         match call.name.as_str() {
             TOOL_STATE_FACTS => self.handle_state_facts(call.arguments).await,
             TOOL_QUERY => self.handle_query(call.arguments).await,
+            TOOL_GET_SCHEMA => self.handle_get_schema(call.arguments).await,
             TOOL_GET_ENTITY => self.handle_get_entity(call.arguments).await,
             TOOL_SEARCH => self.handle_search(call.arguments).await,
             _ => Err(Error::UnknownTool { name: call.name }),
@@ -106,6 +113,22 @@ impl PoneglyphMcpServer {
         .map_err(|source| Error::InvalidToolOutput {
             tool: TOOL_QUERY,
             source,
+        })?;
+        Ok(CallToolResult { content })
+    }
+
+    async fn handle_get_schema(&self, arguments: Value) -> Result<CallToolResult> {
+        let _: GetSchemaInput =
+            serde_json::from_value(arguments).map_err(|source| Error::InvalidToolInput {
+                tool: TOOL_GET_SCHEMA,
+                source,
+            })?;
+        let schema = self.poneglyph.get_schema().await?;
+        let content = serde_json::to_value(GetSchemaOutput { schema }).map_err(|source| {
+            Error::InvalidToolOutput {
+                tool: TOOL_GET_SCHEMA,
+                source,
+            }
         })?;
         Ok(CallToolResult { content })
     }
@@ -211,6 +234,15 @@ struct QueryInput {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct QueryOutput {
     substitutions: Vec<datafox::Substitution>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
+#[serde(deny_unknown_fields)]
+struct GetSchemaInput {}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct GetSchemaOutput {
+    schema: poneglyph::SchemaDefinition,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -341,7 +373,8 @@ mod tests {
     use tokio::time::{Duration, timeout};
 
     use super::{
-        PoneglyphMcpServer, TOOL_GET_ENTITY, TOOL_QUERY, TOOL_SEARCH, TOOL_STATE_FACTS, ToolCall,
+        PoneglyphMcpServer, TOOL_GET_ENTITY, TOOL_GET_SCHEMA, TOOL_QUERY, TOOL_SEARCH,
+        TOOL_STATE_FACTS, ToolCall,
     };
     use poneglyph::{Poneglyph, Workspace};
 
@@ -445,8 +478,29 @@ mod tests {
 
         assert!(names.contains(&TOOL_STATE_FACTS));
         assert!(names.contains(&TOOL_QUERY));
+        assert!(names.contains(&TOOL_GET_SCHEMA));
         assert!(names.contains(&TOOL_GET_ENTITY));
         assert!(names.contains(&TOOL_SEARCH));
+    }
+
+    #[tokio::test]
+    async fn server_get_schema_tool_returns_bootstrapped_schema() {
+        let test_server = build_server().await.expect("server");
+        let server = &test_server.server;
+
+        let result = server
+            .call_tool(ToolCall {
+                name: TOOL_GET_SCHEMA.to_string(),
+                arguments: json!({}),
+            })
+            .await
+            .expect("get schema");
+
+        assert!(
+            result.content["schema"]["base"]["kinds"]
+                .as_array()
+                .is_some_and(|kinds| kinds.iter().any(|kind| kind["uri"] == "schema:field"))
+        );
     }
 
     #[tokio::test]

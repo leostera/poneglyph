@@ -73,6 +73,7 @@ impl Store for InMemoryFactStore {
         sort_facts(&mut facts);
 
         let filtered = match filter {
+            Filter::All => facts,
             Filter::ById(fact_id) => facts
                 .into_iter()
                 .filter(|fact| fact.fact_id == fact_id)
