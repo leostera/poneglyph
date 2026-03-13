@@ -1,0 +1,13 @@
+[package]
+name = "poneglyphd"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+poneglyph.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

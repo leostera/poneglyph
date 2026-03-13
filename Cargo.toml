@@ -2,6 +2,7 @@
 members = [
     "crates/datafox",
     "crates/poneglyph",
+    "crates/poneglyphd",
 ]
 resolver = "2"
 
@@ -9,9 +10,11 @@ resolver = "2"
 anyhow = "1"
 async-trait = "0"
 chrono = { version = "0", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
 datafox = { path = "crates/datafox" }
 derive_builder = "0"
 futures-util = "0"
+poneglyph = { path = "crates/poneglyph" }
 proptest = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -19,7 +22,7 @@ sqlx = { version = "0", features = ["runtime-tokio", "sqlite", "chrono", "uuid"]
 tantivy = "0"
 tempfile = "3"
 thiserror = "2"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync"] }
 toml = { version = "1" }
 url = { version = "2", features = ["serde"] }
 uuid = { version = "1", features = ["serde", "v7"] }
