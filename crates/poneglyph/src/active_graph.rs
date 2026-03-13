@@ -18,7 +18,19 @@ pub enum ActiveFilter {
     All,
     ByEntity(Uri),
     ByField(Uri),
-    ByFieldValue { field: Uri, value: Value },
+    ByFieldEntity {
+        field: Uri,
+        entity: Uri,
+    },
+    ByFieldValue {
+        field: Uri,
+        value: Value,
+    },
+    ByFieldEntityValue {
+        field: Uri,
+        entity: Uri,
+        value: Value,
+    },
 }
 
 #[derive(Debug, Default, Clone, PartialEq)]
@@ -68,8 +80,20 @@ impl ActiveGraph {
                     ActiveFilter::All => true,
                     ActiveFilter::ByEntity(entity) => &active_fact.entity == entity,
                     ActiveFilter::ByField(field) => &active_fact.field == field,
+                    ActiveFilter::ByFieldEntity { field, entity } => {
+                        &active_fact.field == field && &active_fact.entity == entity
+                    }
                     ActiveFilter::ByFieldValue { field, value } => {
                         &active_fact.field == field && &active_fact.value == value
+                    }
+                    ActiveFilter::ByFieldEntityValue {
+                        field,
+                        entity,
+                        value,
+                    } => {
+                        &active_fact.field == field
+                            && &active_fact.entity == entity
+                            && &active_fact.value == value
                     }
                 };
 
@@ -180,5 +204,61 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn active_graph_can_filter_by_field_and_entity() {
+        let mut graph = ActiveGraph::default();
+        graph
+            .apply_facts(vec![
+                timed_fact("1", "1", "spotify:displayName", Value::text("2112"), false),
+                {
+                    let mut fact = timed_fact(
+                        "2",
+                        "2",
+                        "spotify:displayName",
+                        Value::text("Signals"),
+                        false,
+                    );
+                    fact.entity = uri!("spotify:album:signals");
+                    fact
+                },
+            ])
+            .expect("apply facts");
+
+        let facts = graph.active_facts_matching(&ActiveFilter::ByFieldEntity {
+            field: uri!("spotify:displayName"),
+            entity: uri!("spotify:album:signals"),
+        });
+
+        assert_eq!(facts.len(), 1);
+        assert_eq!(facts[0].entity, uri!("spotify:album:signals"));
+        assert_eq!(facts[0].value, Value::text("Signals"));
+    }
+
+    #[test]
+    fn active_graph_can_filter_by_field_entity_and_value() {
+        let mut graph = ActiveGraph::default();
+        graph
+            .apply_facts(vec![
+                timed_fact("1", "1", "spotify:displayName", Value::text("2112"), false),
+                timed_fact(
+                    "2",
+                    "2",
+                    "spotify:displayName",
+                    Value::text("2112 (Deluxe)"),
+                    false,
+                ),
+            ])
+            .expect("apply facts");
+
+        let facts = graph.active_facts_matching(&ActiveFilter::ByFieldEntityValue {
+            field: uri!("spotify:displayName"),
+            entity: uri!("spotify:album:2112"),
+            value: Value::text("2112 (Deluxe)"),
+        });
+
+        assert_eq!(facts.len(), 1);
+        assert_eq!(facts[0].value, Value::text("2112 (Deluxe)"));
     }
 }

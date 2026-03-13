@@ -10,8 +10,8 @@ use tokio::task::yield_now;
 use tokio::time::timeout;
 
 use poneglyph::{
-    Consolidator, Entity, EntityStore, Fact, FactService, Filter, PoneResult, Store, Uri, Value,
-    fact, uri,
+    ActiveFact, ActiveFilter, Consolidator, Entity, EntityStore, Fact, FactService, Filter,
+    PoneResult, Store, Uri, Value, fact, uri,
 };
 
 pub fn actor() -> Uri {
@@ -223,6 +223,16 @@ pub async fn get_facts_by_entity_uri(
             .await?,
     )
     .await
+}
+
+pub async fn collect_active_facts(
+    mut receiver: mpsc::Receiver<PoneResult<ActiveFact>>,
+) -> PoneResult<Vec<ActiveFact>> {
+    let mut facts = Vec::new();
+    while let Some(fact) = receiver.recv().await {
+        facts.push(fact?);
+    }
+    Ok(facts)
 }
 
 pub fn assertion(value: Value) -> Fact {
@@ -476,4 +486,61 @@ pub async fn assert_retract_then_assert_in_same_batch_keeps_new_fact_active(stor
         .await
         .expect("query");
     assert!(latest.is_some());
+}
+
+pub async fn assert_active_facts_can_be_narrowed_by_field_and_entity(store: &impl Store) {
+    let display_name = field();
+    let album_2112 = entity();
+    let album_signals = uri!("spotify:album:signals");
+
+    store
+        .state_facts(fact_channel(vec![
+            Fact::builder()
+                .source(actor())
+                .entity(album_2112.clone())
+                .field(display_name.clone())
+                .value(Value::text("2112"))
+                .build()
+                .expect("fact"),
+            Fact::builder()
+                .source(actor())
+                .entity(album_signals.clone())
+                .field(display_name.clone())
+                .value(Value::text("Signals"))
+                .build()
+                .expect("fact"),
+        ]))
+        .await
+        .expect("state_facts");
+
+    let by_field_and_entity = collect_active_facts(
+        store
+            .get_active_facts(ActiveFilter::ByFieldEntity {
+                field: display_name.clone(),
+                entity: album_signals.clone(),
+            })
+            .await
+            .expect("active facts"),
+    )
+    .await
+    .expect("collect active facts");
+    assert_eq!(by_field_and_entity.len(), 1);
+    assert_eq!(by_field_and_entity[0].entity, album_signals);
+    assert_eq!(by_field_and_entity[0].value, Value::text("Signals"));
+
+    let by_field_entity_value = collect_active_facts(
+        store
+            .get_active_facts(ActiveFilter::ByFieldEntityValue {
+                field: display_name,
+                entity: album_2112.clone(),
+                value: Value::text("2112"),
+            })
+            .await
+            .expect("active facts"),
+    )
+    .await
+    .expect("collect active facts");
+    assert_eq!(by_field_entity_value.len(), 1);
+    assert_eq!(by_field_entity_value[0].entity, album_2112);
+    assert_eq!(by_field_entity_value[0].value, Value::text("2112"));
 }

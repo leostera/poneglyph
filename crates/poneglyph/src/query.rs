@@ -117,10 +117,11 @@ impl datafox::Storage for FactServiceStorage {
                 return Ok(rx);
             }
         };
+        let filter = active_filter_for_pattern(field, &pattern);
 
         let mut active_facts = self
             .facts
-            .get_active_facts(ActiveFilter::ByField(field))
+            .get_active_facts(filter)
             .await
             .map_err(datafox_store_error)?;
         let (tx, rx) = mpsc::channel(64);
@@ -155,6 +156,28 @@ impl datafox::Storage for FactServiceStorage {
     }
 }
 
+fn active_filter_for_pattern(field: Uri, pattern: &[Option<datafox::Value>]) -> ActiveFilter {
+    if pattern.len() != 2 {
+        return ActiveFilter::ByField(field);
+    }
+
+    let entity = pattern[0].as_ref().and_then(query_value_to_uri);
+    let value = pattern[1]
+        .as_ref()
+        .and_then(|value| query_value_to_value(value).ok());
+
+    match (entity, value) {
+        (Some(entity), Some(value)) => ActiveFilter::ByFieldEntityValue {
+            field,
+            entity,
+            value,
+        },
+        (Some(entity), None) => ActiveFilter::ByFieldEntity { field, entity },
+        (None, Some(value)) => ActiveFilter::ByFieldValue { field, value },
+        (None, None) => ActiveFilter::ByField(field),
+    }
+}
+
 fn active_fact_to_tuple(fact: ActiveFact) -> PoneResult<Vec<datafox::Value>> {
     Ok(vec![
         datafox::Value::from(fact.entity.to_string()),
@@ -177,6 +200,31 @@ fn value_to_query_value(value: &Value) -> PoneResult<datafox::Value> {
         Value::DateTime(value) => Ok(datafox::Value::from(value.to_rfc3339())),
         Value::List(values) => Ok(datafox::Value::from(serde_json::to_string(values)?)),
         Value::Map(values) => Ok(datafox::Value::from(serde_json::to_string(values)?)),
+    }
+}
+
+fn query_value_to_uri(value: &datafox::Value) -> Option<Uri> {
+    match value {
+        datafox::Value::String(value) => Uri::parse(value.clone()).ok(),
+        datafox::Value::Integer(_) => None,
+    }
+}
+
+fn query_value_to_value(value: &datafox::Value) -> PoneResult<Value> {
+    match value {
+        datafox::Value::Integer(value) => Ok(Value::integer(*value)),
+        datafox::Value::String(value) => {
+            if value == "null" {
+                return Ok(Value::null());
+            }
+            if value == "true" || value == "false" {
+                return Ok(Value::boolean(value == "true"));
+            }
+            if let Ok(uri) = Uri::parse(value.clone()) {
+                return Ok(Value::reference(uri));
+            }
+            Ok(Value::text(value.clone()))
+        }
     }
 }
 

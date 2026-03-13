@@ -4,8 +4,8 @@ use poneglyph::SqliteFactStore;
 use tempfile::TempDir;
 
 use common::{
-    assert_active_and_full_log_views, assert_common_store_behavior,
-    assert_get_facts_by_entity_uri_returns_entity_facts,
+    assert_active_and_full_log_views, assert_active_facts_can_be_narrowed_by_field_and_entity,
+    assert_common_store_behavior, assert_get_facts_by_entity_uri_returns_entity_facts,
     assert_get_facts_returns_all_records_in_deterministic_order,
     assert_invalid_retractions_fail_cleanly, assert_missing_fact_returns_none,
     assert_mixed_batch_rolls_back, assert_retract_then_assert_in_same_batch_keeps_new_fact_active,
@@ -83,4 +83,10 @@ async fn sqlite_retracting_an_already_retracted_fact_is_a_noop() {
 async fn sqlite_retract_then_assert_in_same_batch_keeps_new_fact_active() {
     let (_dir, store) = make_store().await;
     assert_retract_then_assert_in_same_batch_keeps_new_fact_active(&store).await;
+}
+
+#[tokio::test]
+async fn sqlite_active_facts_can_be_narrowed_by_field_and_entity() {
+    let (_dir, store) = make_store().await;
+    assert_active_facts_can_be_narrowed_by_field_and_entity(&store).await;
 }

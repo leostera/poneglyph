@@ -211,10 +211,26 @@ fn active_fact_query(filter: ActiveFilter) -> (String, Vec<String>) {
         ActiveFilter::ByField(field) => {
             ("WHERE af.field = ?1".to_string(), vec![field.to_string()])
         }
+        ActiveFilter::ByFieldEntity { field, entity } => (
+            "WHERE af.field = ?1 AND af.entity = ?2".to_string(),
+            vec![field.to_string(), entity.to_string()],
+        ),
         ActiveFilter::ByFieldValue { field, value } => (
             "WHERE af.field = ?1 AND af.value_json = ?2".to_string(),
             vec![
                 field.to_string(),
+                serde_json::to_string(&value).expect("serialize filter value"),
+            ],
+        ),
+        ActiveFilter::ByFieldEntityValue {
+            field,
+            entity,
+            value,
+        } => (
+            "WHERE af.field = ?1 AND af.entity = ?2 AND af.value_json = ?3".to_string(),
+            vec![
+                field.to_string(),
+                entity.to_string(),
                 serde_json::to_string(&value).expect("serialize filter value"),
             ],
         ),
