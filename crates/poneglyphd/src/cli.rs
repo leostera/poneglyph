@@ -1,8 +1,11 @@
 use std::path::PathBuf;
+use std::sync::OnceLock;
 
 use anyhow::Result;
-use clap::{Args, Parser, Subcommand};
+use clap::Parser;
+use poneglyph::{PoneglyphConfig, Workspace, default_workspace_path};
 use tracing::info;
+use tracing_subscriber::EnvFilter;
 
 use crate::daemon::Daemon;
 
@@ -10,86 +13,58 @@ use crate::daemon::Daemon;
 #[command(name = "poneglyphd")]
 #[command(about = "Run the Poneglyph daemon")]
 pub struct Cli {
-    #[command(subcommand)]
-    command: Command,
-}
-
-#[derive(Debug, Subcommand)]
-enum Command {
-    /// Start the daemon runtime and wait for shutdown.
-    Run(RunArgs),
-    /// Start an MCP stdio server over the daemon runtime.
-    Mcp(McpArgs),
-}
-
-#[derive(Debug, Clone, Args)]
-pub struct RunArgs {
     /// Override the workspace root. Defaults to ~/.poneglyph.
-    #[arg(long)]
-    pub workspace: Option<PathBuf>,
-}
-
-#[derive(Debug, Clone, Args)]
-pub struct McpArgs {
-    /// Override the workspace root. Defaults to ~/.poneglyph.
-    #[arg(long)]
-    pub workspace: Option<PathBuf>,
+    #[arg(long, default_value_os_t = default_workspace_path())]
+    pub workspace: PathBuf,
 }
 
 impl Cli {
     pub async fn run(self) -> Result<()> {
-        match self.command {
-            Command::Run(args) => {
-                info!(command = "run", "dispatching daemon command");
-                Daemon::open(args).await?.run().await
-            }
-            Command::Mcp(args) => {
-                info!(command = "mcp", "dispatching daemon command");
-                Daemon::open(args.into()).await?.serve_mcp().await
-            }
-        }
+        let workspace = Workspace::at(self.workspace.clone());
+        let config = PoneglyphConfig::load_from(&workspace).await?;
+        init_tracing(config.log_level.as_deref());
+        info!("dispatching daemon command");
+        Daemon::builder()
+            .at_workspace(self.workspace)
+            .build()
+            .await?
+            .run()
+            .await
     }
 }
 
-impl From<McpArgs> for RunArgs {
-    fn from(args: McpArgs) -> Self {
-        Self {
-            workspace: args.workspace,
-        }
+fn init_tracing(log_level: Option<&str>) {
+    static TRACING_INIT: OnceLock<()> = OnceLock::new();
+
+    if TRACING_INIT.set(()).is_ok() {
+        let filter = EnvFilter::try_new(log_level.unwrap_or("info"))
+            .unwrap_or_else(|_| EnvFilter::new("info"));
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_target(true)
+            .try_init();
     }
 }
 
 #[cfg(test)]
 mod tests {
     use clap::Parser;
+    use poneglyph::default_workspace_path;
 
     use super::Cli;
 
     #[test]
-    fn cli_parses_run_command() {
-        let cli = Cli::try_parse_from(["poneglyphd", "run"]).expect("cli");
+    fn cli_parses_default_invocation() {
+        let cli = Cli::try_parse_from(["poneglyphd"]).expect("cli");
 
-        let rendered = format!("{cli:?}");
-        assert!(rendered.contains("Run"));
-        assert!(rendered.contains("workspace: None"));
+        assert_eq!(cli.workspace, default_workspace_path());
     }
 
     #[test]
-    fn cli_parses_run_workspace_override() {
-        let cli = Cli::try_parse_from(["poneglyphd", "run", "--workspace", "/tmp/poneglyph"])
-            .expect("cli");
+    fn cli_parses_workspace_override() {
+        let cli =
+            Cli::try_parse_from(["poneglyphd", "--workspace", "/tmp/poneglyph"]).expect("cli");
 
-        let rendered = format!("{cli:?}");
-        assert!(rendered.contains("Run"));
-        assert!(rendered.contains("/tmp/poneglyph"));
-    }
-
-    #[test]
-    fn cli_parses_mcp_command() {
-        let cli = Cli::try_parse_from(["poneglyphd", "mcp"]).expect("cli");
-
-        let rendered = format!("{cli:?}");
-        assert!(rendered.contains("Mcp"));
-        assert!(rendered.contains("workspace: None"));
+        assert_eq!(cli.workspace, std::path::Path::new("/tmp/poneglyph"));
     }
 }

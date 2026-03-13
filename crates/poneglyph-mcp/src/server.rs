@@ -8,6 +8,7 @@ use tokio::sync::mpsc;
 use tracing::{debug, instrument};
 
 use crate::error::{Error, Result};
+use crate::rmcp_stdio::RmcpServer;
 use crate::tool::{CallToolResult, Tool, ToolCall};
 
 const TOOL_STATE_FACTS: &str = "Poneglyph-stateFacts";
@@ -24,6 +25,10 @@ pub struct PoneglyphMcpServer {
 impl PoneglyphMcpServer {
     pub fn builder() -> PoneglyphMcpServerBuilder {
         PoneglyphMcpServerBuilder::default()
+    }
+
+    pub async fn run(self) -> Result<()> {
+        RmcpServer::new(self).run().await
     }
 
     pub fn list_tools(&self) -> Vec<Tool> {

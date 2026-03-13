@@ -30,7 +30,7 @@ mod value;
 mod workspace;
 
 pub use active_graph::{ActiveFact, ActiveFilter};
-pub use config::{Config, PoneglyphConfig, PoneglyphConfigBuilder};
+pub use config::{Config, PoneglyphConfig, PoneglyphConfigBuilder, default_workspace_path};
 pub use consolidation::{Consolidation, Consolidator, ConsolidatorBuilder};
 pub use entities::{EntityStore, InMemoryEntityStore, SqliteEntityStore};
 pub use entity::Entity;

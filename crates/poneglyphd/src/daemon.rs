@@ -1,12 +1,10 @@
-use std::sync::{Arc, OnceLock};
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use poneglyph::{Poneglyph, PoneglyphConfig, Workspace};
-use poneglyph_mcp::{PoneglyphMcpServer, RmcpServer};
+use poneglyph_mcp::PoneglyphMcpServer;
 use tracing::{debug, info, instrument};
-use tracing_subscriber::EnvFilter;
-
-use crate::cli::RunArgs;
 
 /// Long-lived daemon host for a configured [`Poneglyph`] runtime.
 pub struct Daemon {
@@ -14,25 +12,8 @@ pub struct Daemon {
 }
 
 impl Daemon {
-    #[instrument(skip(args), fields(component = "poneglyphd"))]
-    pub async fn open(args: RunArgs) -> Result<Self> {
-        let workspace = match args.workspace {
-            Some(workspace) => Workspace::at(workspace),
-            None => Workspace::new()?,
-        };
-        let config = PoneglyphConfig::load_from(&workspace).await?;
-        init_tracing(config.log_level.as_deref());
-        debug!(workspace = %workspace.root().display(), log_level = ?config.log_level, "opening daemon runtime");
-
-        let poneglyph = Arc::new(
-            Poneglyph::builder()
-                .with_workspace(workspace)
-                .with_config(config)
-                .build()
-                .await?,
-        );
-        info!("daemon runtime opened");
-        Ok(Self { poneglyph })
+    pub fn builder() -> DaemonBuilder {
+        DaemonBuilder::default()
     }
 
     #[cfg(test)]
@@ -50,57 +31,102 @@ impl Daemon {
 
         tokio::try_join!(
             async move { poneglyph.run().await.map_err(anyhow::Error::from) },
-            async move {
-                RmcpServer::new(mcp)
-                    .run()
-                    .await
-                    .map_err(anyhow::Error::from)
-            },
+            async move { mcp.run().await.map_err(anyhow::Error::from) },
         )?;
-        Ok(())
-    }
-
-    #[instrument(skip(self), fields(component = "poneglyphd"))]
-    pub async fn serve_mcp(self) -> Result<()> {
-        info!("starting MCP stdio server");
-        let server = PoneglyphMcpServer::builder()
-            .with_poneglyph_arc(self.poneglyph)
-            .build()?;
-        RmcpServer::new(server).serve_stdio().await?;
         Ok(())
     }
 }
 
-fn init_tracing(log_level: Option<&str>) {
-    static TRACING_INIT: OnceLock<()> = OnceLock::new();
+#[derive(Default)]
+pub struct DaemonBuilder {
+    workspace: Option<Workspace>,
+    config: Option<PoneglyphConfig>,
+}
 
-    if TRACING_INIT.set(()).is_ok() {
-        let filter = EnvFilter::try_new(log_level.unwrap_or("info"))
-            .unwrap_or_else(|_| EnvFilter::new("info"));
-        let _ = tracing_subscriber::fmt()
-            .with_env_filter(filter)
-            .with_target(true)
-            .try_init();
+impl DaemonBuilder {
+    pub fn at_workspace<P>(mut self, workspace: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.workspace = Some(Workspace::at(workspace.into()));
+        self
+    }
+
+    pub fn with_workspace(mut self, workspace: Workspace) -> Self {
+        self.workspace = Some(workspace);
+        self
+    }
+
+    pub fn with_config(mut self, config: PoneglyphConfig) -> Self {
+        self.config = Some(config);
+        self
+    }
+
+    #[instrument(skip(self), fields(component = "poneglyphd"))]
+    pub async fn build(self) -> Result<Daemon> {
+        let workspace = match self.workspace {
+            Some(workspace) => workspace,
+            None => Workspace::new()?,
+        };
+        let config = match self.config {
+            Some(config) => config,
+            None => PoneglyphConfig::load_from(&workspace).await?,
+        };
+        debug!(
+            workspace = %workspace.root().display(),
+            log_level = ?config.log_level,
+            "opening daemon runtime"
+        );
+
+        let poneglyph = Arc::new(
+            Poneglyph::builder()
+                .with_workspace(workspace)
+                .with_config(config)
+                .build()
+                .await?,
+        );
+        info!("daemon runtime opened");
+        Ok(Daemon { poneglyph })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use poneglyph::{PoneglyphConfig, Workspace};
     use tempfile::tempdir;
 
     use super::Daemon;
-    use crate::cli::RunArgs;
 
     #[tokio::test]
-    async fn daemon_open_uses_custom_workspace() {
+    async fn daemon_builder_uses_custom_workspace() {
         let tempdir = tempdir().expect("tempdir");
-        let args = RunArgs {
-            workspace: Some(tempdir.path().to_path_buf()),
-        };
 
-        let daemon = Daemon::open(args).await.expect("daemon");
+        let daemon = Daemon::builder()
+            .at_workspace(tempdir.path())
+            .build()
+            .await
+            .expect("daemon");
 
         assert_eq!(daemon.poneglyph().workspace().root(), tempdir.path());
         assert!(daemon.poneglyph().workspace().store_dir().exists());
+    }
+
+    #[tokio::test]
+    async fn daemon_builder_accepts_workspace_and_config_overrides() {
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+        let config = PoneglyphConfig::builder()
+            .log_level(Some("trace".to_string()))
+            .build()
+            .expect("config");
+
+        let daemon = Daemon::builder()
+            .with_workspace(workspace.clone())
+            .with_config(config)
+            .build()
+            .await
+            .expect("daemon");
+
+        assert_eq!(daemon.poneglyph().workspace().root(), workspace.root());
     }
 }

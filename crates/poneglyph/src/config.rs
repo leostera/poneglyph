@@ -1,5 +1,6 @@
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 use crate::{Error, PoneResult, Workspace};
 
@@ -14,6 +15,14 @@ pub struct PoneglyphConfig {
 
 /// Backward-compatible alias for the top-level runtime configuration.
 pub type Config = PoneglyphConfig;
+
+/// Default root directory for a Poneglyph workspace.
+pub fn default_workspace_path() -> PathBuf {
+    std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .map(|home| home.join(".poneglyph"))
+        .unwrap_or_else(|| PathBuf::from(".poneglyph"))
+}
 
 impl PoneglyphConfig {
     pub fn builder() -> PoneglyphConfigBuilder {
@@ -62,7 +71,7 @@ impl PoneglyphConfig {
 mod tests {
     use tempfile::tempdir;
 
-    use super::PoneglyphConfig;
+    use super::{PoneglyphConfig, default_workspace_path};
     use crate::Workspace;
 
     #[tokio::test]
@@ -92,5 +101,11 @@ mod tests {
             .expect("load config");
 
         assert_eq!(loaded, config);
+    }
+
+    #[test]
+    fn default_workspace_path_prefers_home_directory() {
+        let path = default_workspace_path();
+        assert!(path.ends_with(".poneglyph"));
     }
 }
