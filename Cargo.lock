@@ -1866,6 +1866,7 @@ dependencies = [
  "derive_builder",
  "futures-util",
  "proptest",
+ "schemars",
  "serde",
  "serde_json",
  "sqlx",

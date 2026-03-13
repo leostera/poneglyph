@@ -44,17 +44,17 @@ impl PoneglyphMcpServer {
         vec![
             tool(
                 TOOL_STATE_FACTS,
-                "Append one atomic batch of facts.",
+                "Append one atomic batch of facts. Use getSchema first when you need to discover or extend the graph vocabulary.",
                 json_schema_for::<StateFactsInput>(),
             ),
             tool(
                 TOOL_QUERY,
-                "Run a Datalog query over the active graph.",
+                "Run a Datalog query over the active graph. Call getSchema first to discover namespaces, kinds, and fields.",
                 json_schema_for::<QueryInput>(),
             ),
             tool(
                 TOOL_GET_SCHEMA,
-                "Fetch the effective schema definition built from ordinary schema facts.",
+                "Fetch the effective schema definition built from ordinary schema facts and observed data. Call this before querying or writing new schema.",
                 json_schema_for::<GetSchemaInput>(),
             ),
             tool(
@@ -240,7 +240,7 @@ struct QueryOutput {
 #[serde(deny_unknown_fields)]
 struct GetSchemaInput {}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 struct GetSchemaOutput {
     schema: poneglyph::SchemaDefinition,
 }
@@ -373,8 +373,8 @@ mod tests {
     use tokio::time::{Duration, timeout};
 
     use super::{
-        PoneglyphMcpServer, TOOL_GET_ENTITY, TOOL_GET_SCHEMA, TOOL_QUERY, TOOL_SEARCH,
-        TOOL_STATE_FACTS, ToolCall,
+        GetSchemaOutput, PoneglyphMcpServer, TOOL_GET_ENTITY, TOOL_GET_SCHEMA, TOOL_QUERY,
+        TOOL_SEARCH, TOOL_STATE_FACTS, ToolCall, json_schema_for,
     };
     use poneglyph::{Poneglyph, Workspace};
 
@@ -504,6 +504,45 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn server_get_schema_tool_infers_observed_schema_from_data() {
+        let test_server = build_server().await.expect("server");
+        let server = &test_server.server;
+
+        server
+            .call_tool(ToolCall {
+                name: TOOL_STATE_FACTS.to_string(),
+                arguments: json!({
+                    "facts": [
+                        text_fact("spotify:artist:rush", "spotify:displayName", "Rush")
+                    ]
+                }),
+            })
+            .await
+            .expect("state facts");
+
+        let result = server
+            .call_tool(ToolCall {
+                name: TOOL_GET_SCHEMA.to_string(),
+                arguments: json!({}),
+            })
+            .await
+            .expect("get schema");
+
+        assert!(
+            result.content["schema"]["kinds"]
+                .as_array()
+                .is_some_and(|kinds| kinds.iter().any(|kind| kind["uri"] == "spotify:artist"))
+        );
+        assert!(
+            result.content["schema"]["fields"]
+                .as_array()
+                .is_some_and(|fields| fields
+                    .iter()
+                    .any(|field| field["uri"] == "spotify:displayName"))
+        );
+    }
+
+    #[tokio::test]
     async fn server_state_facts_tool_schema_uses_wire_fact_shape() {
         let test_server = build_server().await.expect("server");
         let tool = test_server
@@ -525,6 +564,16 @@ mod tests {
         assert!(item_properties.get("entity").is_some());
         assert!(item_properties.get("field").is_some());
         assert!(item_properties.get("value").is_some());
+    }
+
+    #[test]
+    fn server_get_schema_output_schema_exposes_structured_shape() {
+        let schema = json_schema_for::<GetSchemaOutput>();
+
+        assert_eq!(schema["type"], "object");
+        assert!(schema["properties"]["schema"].is_object());
+        assert!(schema["$defs"]["SchemaDefinition"]["properties"]["base"].is_object());
+        assert!(schema["$defs"]["SchemaDefinition"]["properties"]["fields"].is_object());
     }
 
     #[tokio::test]

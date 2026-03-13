@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -20,27 +21,33 @@ pub const SCHEMA_FIELD_CARDINALITY: &str = "schema:field:cardinality";
 pub const SCHEMA_FIELD_DEPRECATED: &str = "schema:field:deprecated";
 pub const SCHEMA_FIELD_IDENTITY: &str = "schema:field:identity";
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct NamespaceSchema {
+    #[schemars(with = "String")]
     pub uri: Uri,
     pub name: Option<String>,
     pub doc: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct KindSchema {
+    #[schemars(with = "String")]
     pub uri: Uri,
     pub name: Option<String>,
     pub doc: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct FieldSchema {
+    #[schemars(with = "String")]
     pub uri: Uri,
     pub name: Option<String>,
     pub doc: Option<String>,
+    #[schemars(with = "Option<String>")]
     pub same_as: Option<Uri>,
+    #[schemars(with = "Option<String>")]
     pub domain: Option<Uri>,
+    #[schemars(with = "Option<String>")]
     pub range: Option<Uri>,
     pub value_type: Option<String>,
     pub cardinality: Option<String>,
@@ -48,14 +55,14 @@ pub struct FieldSchema {
     pub identity: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
 pub struct BaseSchema {
     pub namespaces: Vec<NamespaceSchema>,
     pub kinds: Vec<KindSchema>,
     pub fields: Vec<FieldSchema>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
 pub struct SchemaDefinition {
     pub base: BaseSchema,
     pub namespaces: Vec<NamespaceSchema>,
@@ -82,9 +89,10 @@ impl SchemaDefinition {
     where
         I: IntoIterator<Item = Fact>,
     {
+        let facts = facts.into_iter().collect::<Vec<_>>();
         let mut entries = BTreeMap::<Uri, PartialSchemaEntry>::new();
 
-        for fact in facts {
+        for fact in &facts {
             if fact.retraction {
                 continue;
             }
@@ -92,70 +100,70 @@ impl SchemaDefinition {
             match (fact.field.as_str(), &fact.value) {
                 (SCHEMA_TYPE, Value::Reference(kind)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .schema_type
                         .get_or_insert_with(|| kind.clone());
                 }
                 (SCHEMA_NAME, Value::Text(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .name
                         .get_or_insert_with(|| value.clone());
                 }
                 (SCHEMA_DOC, Value::Text(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .doc
                         .get_or_insert_with(|| value.clone());
                 }
                 (SCHEMA_SAME_AS, Value::Reference(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .same_as
                         .get_or_insert_with(|| value.clone());
                 }
                 (SCHEMA_FIELD_DOMAIN, Value::Reference(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .domain
                         .get_or_insert_with(|| value.clone());
                 }
                 (SCHEMA_FIELD_RANGE, Value::Reference(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .range
                         .get_or_insert_with(|| value.clone());
                 }
                 (SCHEMA_FIELD_VALUE_TYPE, Value::Text(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .value_type
                         .get_or_insert_with(|| value.clone());
                 }
                 (SCHEMA_FIELD_CARDINALITY, Value::Text(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .cardinality
                         .get_or_insert_with(|| value.clone());
                 }
                 (SCHEMA_FIELD_DEPRECATED, Value::Boolean(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .deprecated
                         .get_or_insert(*value);
                 }
                 (SCHEMA_FIELD_IDENTITY, Value::Boolean(value)) => {
                     entries
-                        .entry(fact.entity)
+                        .entry(fact.entity.clone())
                         .or_default()
                         .identity
                         .get_or_insert(*value);
@@ -180,6 +188,39 @@ impl SchemaDefinition {
                     fields.insert(uri, entry);
                 }
                 _ => {}
+            }
+        }
+
+        for fact in facts {
+            if fact.retraction {
+                continue;
+            }
+
+            if let Some(namespace_uri) = namespace_uri_for(&fact.entity) {
+                namespaces.entry(namespace_uri).or_default();
+            }
+            if let Some(namespace_uri) = namespace_uri_for(&fact.field) {
+                namespaces.entry(namespace_uri).or_default();
+            }
+            if let Value::Reference(reference) = &fact.value
+                && let Some(namespace_uri) = namespace_uri_for(reference)
+            {
+                namespaces.entry(namespace_uri).or_default();
+            }
+
+            fields.entry(fact.field.clone()).or_default();
+
+            if let Some(kind_uri) = observed_kind_uri_for(&fact.entity) {
+                kinds.entry(kind_uri).or_default();
+            }
+
+            if fact.field.as_str() == SCHEMA_TYPE
+                && let Value::Reference(kind_uri) = &fact.value
+                && kind_uri.as_str() != SCHEMA_KIND_NAMESPACE
+                && kind_uri.as_str() != SCHEMA_KIND_KIND
+                && kind_uri.as_str() != SCHEMA_KIND_FIELD
+            {
+                kinds.entry(kind_uri.clone()).or_default();
             }
         }
 
@@ -255,6 +296,18 @@ impl SchemaDefinition {
             base,
         }
     }
+}
+
+fn namespace_uri_for(uri: &Uri) -> Option<Uri> {
+    Uri::parse(format!("{}:namespace", uri.namespace())).ok()
+}
+
+fn observed_kind_uri_for(uri: &Uri) -> Option<Uri> {
+    let mut parts = uri.as_str().splitn(3, ':');
+    let _namespace = parts.next()?;
+    let _kind = parts.next()?;
+    let _id = parts.next()?;
+    Uri::parse(format!("{}:{}", uri.namespace(), uri.kind().ok()?)).ok()
 }
 
 pub async fn get_schema(fact_service: &FactService) -> PoneResult<SchemaDefinition> {
@@ -477,6 +530,8 @@ pub async fn ensure_base_schema(fact_service: &FactService) -> PoneResult<()> {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
+
     use crate::{FactService, InMemoryFactStore, PoneResult, fact};
 
     use super::*;
@@ -531,10 +586,51 @@ mod tests {
             ),
         ]);
 
-        assert_eq!(schema.namespaces.len(), 1);
-        assert_eq!(schema.kinds.len(), 1);
-        assert_eq!(schema.fields.len(), 1);
-        assert_eq!(schema.fields[0].value_type.as_deref(), Some("text"));
+        assert!(
+            schema
+                .namespaces
+                .iter()
+                .any(|namespace| namespace.uri.as_str() == "spotify:namespace")
+        );
+        assert!(
+            schema
+                .kinds
+                .iter()
+                .any(|kind| kind.uri.as_str() == "spotify:artist")
+        );
+        assert!(schema.fields.iter().any(|field| {
+            field.uri.as_str() == "spotify:field:displayName"
+                && field.value_type.as_deref() == Some("text")
+        }));
+    }
+
+    #[test]
+    fn schema_definition_infers_observed_schema_from_data_facts() {
+        let schema = SchemaDefinition::from_facts(vec![fact!(
+            uri!("agent:test:writer"),
+            uri!("spotify:artist:rush"),
+            uri!("spotify:displayName"),
+            Value::text("Rush")
+        )]);
+
+        assert!(
+            schema
+                .namespaces
+                .iter()
+                .any(|namespace| namespace.uri.as_str() == "spotify:namespace")
+        );
+        assert!(
+            schema
+                .kinds
+                .iter()
+                .any(|kind| kind.uri.as_str() == "spotify:artist")
+        );
+        assert!(
+            schema
+                .fields
+                .iter()
+                .any(|field| field.uri.as_str() == "spotify:displayName")
+        );
     }
 
     #[tokio::test]
@@ -562,5 +658,111 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(32))]
+
+        #[test]
+        fn property_repeating_schema_facts_does_not_duplicate_schema_entries_long(
+            namespace_repeats in 1usize..8,
+            kind_repeats in 1usize..8,
+            field_repeats in 1usize..8,
+        ) {
+            let namespace_fact = fact!(
+                uri!("spotify:namespace"),
+                uri!(SCHEMA_TYPE),
+                Value::reference(uri!(SCHEMA_KIND_NAMESPACE))
+            );
+            let kind_fact = fact!(
+                uri!("spotify:artist"),
+                uri!(SCHEMA_TYPE),
+                Value::reference(uri!(SCHEMA_KIND_KIND))
+            );
+            let field_fact = fact!(
+                uri!("spotify:field:displayName"),
+                uri!(SCHEMA_TYPE),
+                Value::reference(uri!(SCHEMA_KIND_FIELD))
+            );
+
+            let mut facts = Vec::new();
+            facts.extend(std::iter::repeat_n(namespace_fact, namespace_repeats));
+            facts.extend(std::iter::repeat_n(kind_fact, kind_repeats));
+            facts.extend(std::iter::repeat_n(field_fact, field_repeats));
+
+            let schema = SchemaDefinition::from_facts(facts);
+
+            prop_assert_eq!(
+                schema
+                    .namespaces
+                    .iter()
+                    .filter(|namespace| namespace.uri.as_str() == "spotify:namespace")
+                    .count(),
+                1
+            );
+            prop_assert_eq!(
+                schema
+                    .kinds
+                    .iter()
+                    .filter(|kind| kind.uri.as_str() == "spotify:artist")
+                    .count(),
+                1
+            );
+            prop_assert_eq!(
+                schema
+                    .fields
+                    .iter()
+                    .filter(|field| field.uri.as_str() == "spotify:field:displayName")
+                    .count(),
+                1
+            );
+        }
+
+        #[test]
+        fn property_retracting_data_does_not_remove_schema_entries_long(
+            values in prop::collection::vec(any::<Value>(), 1..8),
+        ) {
+            let schema_facts = vec![
+                fact!(
+                    uri!("spotify:namespace"),
+                    uri!(SCHEMA_TYPE),
+                    Value::reference(uri!(SCHEMA_KIND_NAMESPACE))
+                ),
+                fact!(
+                    uri!("spotify:artist"),
+                    uri!(SCHEMA_TYPE),
+                    Value::reference(uri!(SCHEMA_KIND_KIND))
+                ),
+                fact!(
+                    uri!("spotify:field:displayName"),
+                    uri!(SCHEMA_TYPE),
+                    Value::reference(uri!(SCHEMA_KIND_FIELD))
+                ),
+            ];
+
+            let mut expected_facts = schema_facts.clone();
+            let mut facts = schema_facts;
+
+            for (index, value) in values.into_iter().enumerate() {
+                let entity_id = index.to_string();
+                let entity = Uri::from_parts("local", "entity", Some(&entity_id))
+                    .expect("entity");
+                let assertion = fact!(
+                    uri!("agent:prop:data"),
+                    entity,
+                    uri!("local:field:data"),
+                    value
+                );
+                let mut retraction = assertion.clone();
+                retraction.retraction = true;
+                expected_facts.push(assertion.clone());
+                facts.push(assertion);
+                facts.push(retraction);
+            }
+
+            let expected = SchemaDefinition::from_facts(expected_facts);
+            let schema = SchemaDefinition::from_facts(facts);
+            prop_assert_eq!(schema, expected);
+        }
     }
 }
