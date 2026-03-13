@@ -1,0 +1,17 @@
+[package]
+name = "poneglyph-mcp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+datafox.workspace = true
+derive_builder.workspace = true
+poneglyph.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

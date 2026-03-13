@@ -7,6 +7,7 @@ These instructions apply to `crates/` unless a deeper `AGENTS.md` overrides them
 ## Routing
 
 - When work is scoped to `crates/poneglyph`, read `crates/poneglyph/AGENTS.md`.
+- When work is scoped to `crates/poneglyph-mcp`, read `crates/poneglyph-mcp/AGENTS.md`.
 - When work is scoped to `crates/datafox`, read `crates/datafox/AGENTS.md`.
 - When work is scoped to `crates/poneglyph-core`, read `crates/poneglyph-core/AGENTS.md`.
 - When work is scoped to `crates/poneglyph-consolidation`, read `crates/poneglyph-consolidation/AGENTS.md`.

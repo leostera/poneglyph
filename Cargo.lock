@@ -1455,6 +1455,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "poneglyph-mcp"
+version = "0.1.0"
+dependencies = [
+ "datafox",
+ "derive_builder",
+ "poneglyph",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "poneglyphd"
 version = "0.1.0"
 dependencies = [
