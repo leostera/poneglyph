@@ -9,7 +9,7 @@
 //! - [`Consolidator`] and entity stores for materialized entity views.
 //! - [`Projection`] and [`ProjectionRunner`] for replayable derived workers.
 //! - [`Query`], [`QueryEngine`] and [`QueryResult`] for queries over the active graph.
-//! - [`Workspace`] and [`Config`] for filesystem layout and runtime configuration.
+//! - [`Workspace`], [`PoneglyphConfig`], and [`Config`] for filesystem layout and runtime configuration.
 //! - [`Error`] and [`PoneResult`] for typed backend errors.
 
 mod active_graph;
@@ -29,7 +29,7 @@ mod value;
 mod workspace;
 
 pub use active_graph::{ActiveFact, ActiveFilter};
-pub use config::Config;
+pub use config::{Config, PoneglyphConfig, PoneglyphConfigBuilder};
 pub use consolidation::{Consolidation, Consolidator, ConsolidatorBuilder};
 pub use entities::{EntityStore, InMemoryEntityStore, SqliteEntityStore};
 pub use entity::Entity;

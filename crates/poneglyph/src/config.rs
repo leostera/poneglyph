@@ -1,20 +1,36 @@
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::{Error, PoneResult, Workspace};
 
 /// Runtime configuration loaded from `config.toml`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
-pub struct Config {
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
+#[builder(pattern = "owned")]
+pub struct PoneglyphConfig {
     #[serde(default)]
+    #[builder(default)]
     pub log_level: Option<String>,
 }
 
-impl Config {
-    /// Loads `config.toml` from the workspace root. Missing config files return
-    /// the default configuration.
-    pub fn load(workspace: &Workspace) -> PoneResult<Self> {
+/// Backward-compatible alias for the top-level runtime configuration.
+pub type Config = PoneglyphConfig;
+
+impl PoneglyphConfig {
+    pub fn builder() -> PoneglyphConfigBuilder {
+        PoneglyphConfigBuilder::default()
+    }
+
+    /// Loads `config.toml` from the default workspace root.
+    pub async fn load() -> PoneResult<Self> {
+        let workspace = Workspace::new()?;
+        Self::load_from(&workspace).await
+    }
+
+    /// Loads `config.toml` from the provided workspace root. Missing config
+    /// files return the default configuration.
+    pub async fn load_from(workspace: &Workspace) -> PoneResult<Self> {
         let config_path = workspace.config_path();
-        match std::fs::read_to_string(&config_path) {
+        match tokio::fs::read_to_string(&config_path).await {
             Ok(contents) => {
                 toml::from_str(&contents).map_err(|source| Error::ConfigTomlDeserialize { source })
             }
@@ -23,13 +39,20 @@ impl Config {
         }
     }
 
-    /// Writes `config.toml` to the workspace root, creating the workspace
-    /// directory layout first.
-    pub fn save(&self, workspace: &Workspace) -> PoneResult<()> {
+    /// Writes `config.toml` to the default workspace root.
+    pub async fn save(&self) -> PoneResult<()> {
+        let workspace = Workspace::new()?;
+        self.save_to(&workspace).await
+    }
+
+    /// Writes `config.toml` to the provided workspace root, creating the
+    /// workspace directory layout first.
+    pub async fn save_to(&self, workspace: &Workspace) -> PoneResult<()> {
         workspace.ensure()?;
         let contents =
             toml::to_string_pretty(self).map_err(|source| Error::ConfigTomlSerialize { source })?;
-        std::fs::write(workspace.config_path(), contents)
+        tokio::fs::write(workspace.config_path(), contents)
+            .await
             .map_err(|source| Error::ConfigIo { source })?;
         Ok(())
     }
@@ -39,29 +62,34 @@ impl Config {
 mod tests {
     use tempfile::tempdir;
 
-    use super::Config;
+    use super::PoneglyphConfig;
     use crate::Workspace;
 
-    #[test]
-    fn config_load_returns_default_when_missing() {
+    #[tokio::test]
+    async fn config_load_returns_default_when_missing() {
         let tempdir = tempdir().expect("tempdir");
         let workspace = Workspace::at(tempdir.path());
 
-        let config = Config::load(&workspace).expect("default config");
+        let config = PoneglyphConfig::load_from(&workspace)
+            .await
+            .expect("default config");
 
-        assert_eq!(config, Config::default());
+        assert_eq!(config, PoneglyphConfig::default());
     }
 
-    #[test]
-    fn config_round_trips_through_workspace_file() {
+    #[tokio::test]
+    async fn config_round_trips_through_workspace_file() {
         let tempdir = tempdir().expect("tempdir");
         let workspace = Workspace::at(tempdir.path());
-        let config = Config {
-            log_level: Some("debug".to_string()),
-        };
+        let config = PoneglyphConfig::builder()
+            .log_level(Some("debug".to_string()))
+            .build()
+            .expect("config");
 
-        config.save(&workspace).expect("save config");
-        let loaded = Config::load(&workspace).expect("load config");
+        config.save_to(&workspace).await.expect("save config");
+        let loaded = PoneglyphConfig::load_from(&workspace)
+            .await
+            .expect("load config");
 
         assert_eq!(loaded, config);
     }
