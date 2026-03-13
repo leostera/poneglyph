@@ -9,7 +9,7 @@
 //! - [`Consolidator`] and entity stores for materialized entity views.
 //! - [`Projection`] and [`ProjectionRunner`] for replayable derived workers.
 //! - [`Query`], [`QueryEngine`] and [`QueryResult`] for queries over the active graph.
-//! - [`Workspace`], [`PoneglyphConfig`], and [`Config`] for filesystem layout and runtime configuration.
+//! - [`Workspace`], [`PoneglyphConfig`], [`Config`], and [`Poneglyph`] for runtime configuration and assembly.
 //! - [`Error`] and [`PoneResult`] for typed backend errors.
 
 mod active_graph;
@@ -22,6 +22,7 @@ mod fact;
 mod facts;
 mod projections;
 mod query;
+mod runtime;
 #[cfg(test)]
 mod tests;
 mod uri;
@@ -41,6 +42,7 @@ pub use projections::{
     SearchProjection,
 };
 pub use query::{Query, QueryEngine, QueryResult};
+pub use runtime::{Poneglyph, PoneglyphBuilder};
 pub use uri::Uri;
 pub use value::Value;
 pub use workspace::Workspace;
