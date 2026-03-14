@@ -13,10 +13,11 @@
     "typecheck": "bun run --cwd app typecheck",
     "typecheck:www": "bun run --cwd www astro check",
     "typecheck:fast": "tsgo --project app/tsconfig.json",
-    "format": "biome format --write .",
+    "format": "biome format --write ./app ./packages",
     "format:check": "biome format . --diagnostic-level=error",
     "lint": "biome lint . --diagnostic-level=error",
-    "check": "biome check . --diagnostic-level=error"
+    "check": "biome check . --diagnostic-level=error",
+    "fix": "biome check --formatter-enabled=true --linter-enabled=true --write ./app ./packages ./www"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

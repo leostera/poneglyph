@@ -1,15 +1,7 @@
 # poneglyph
 
-To install dependencies:
+`poneglyph` is a local-first semantic graph database for your AI agents.
 
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.3.9. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+It gives an agent the tools to state facts about the world, consolidate them
+with custom logic, project them onto different systems, and search them using a
+graph query language and full text search.
