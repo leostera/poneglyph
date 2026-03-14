@@ -14,4 +14,5 @@ tracing.workspace = true
 
 [dev-dependencies]
 axum.workspace = true
+dotenvy.workspace = true
 serde_json.workspace = true

@@ -17,6 +17,7 @@ clap = { version = "4", features = ["derive"] }
 config = "0.15"
 datafox = { path = "crates/datafox" }
 derive_builder = "0"
+dotenvy = "0.15"
 futures-util = "0"
 poneglyph = { path = "crates/poneglyph" }
 poneglyph-ctl = { path = "crates/poneglyph-ctl" }

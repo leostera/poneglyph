@@ -375,6 +375,37 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires a real Plex container; reserved for future smoke coverage"]
-    async fn plex_connector_container_smoke_long() {}
+    #[ignore = "requires a real Plex server"]
+    async fn plex_connector_live_server_smoke_long() {
+        let _ = dotenvy::dotenv();
+        let base_url =
+            std::env::var("PONEGLYPH_PLEX_BASE_URL").expect("PONEGLYPH_PLEX_BASE_URL is set");
+        let token = std::env::var("PONEGLYPH_PLEX_TOKEN").expect("PONEGLYPH_PLEX_TOKEN is set");
+
+        let connector = PlexConnector::init(PlexConfig {
+            enabled: true,
+            base_url: Some(base_url),
+            token: Some(token),
+            libraries: vec![
+                "Movies".to_string(),
+                "Anime".to_string(),
+                "Series".to_string(),
+            ],
+        })
+        .expect("connector");
+
+        let sections = connector
+            .client
+            .fetch_library_sections()
+            .await
+            .expect("sections");
+
+        let titles: Vec<&str> = sections
+            .iter()
+            .map(|section| section.title.as_str())
+            .collect();
+        assert!(titles.contains(&"Movies"));
+        assert!(titles.contains(&"Anime"));
+        assert!(titles.contains(&"Series"));
+    }
 }
