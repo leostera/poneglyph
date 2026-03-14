@@ -98,7 +98,7 @@ impl DaemonBuilder {
             .with_bind_addr(mcp_http_bind)
             .build()?;
         let connectors = {
-            let mut builder = ConnectorRuntime::builder();
+            let mut builder = ConnectorRuntime::builder().with_poneglyph_arc(poneglyph.clone());
             if let Some(plex) = config.ctl.plex.clone() {
                 builder = builder.add_connector(PlexConnector::init(plex)?);
             }

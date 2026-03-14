@@ -294,18 +294,6 @@ mod tests {
         rx
     }
 
-    fn plain_fact_stream(facts: Vec<Fact>) -> mpsc::Receiver<Fact> {
-        let (tx, rx) = mpsc::channel(facts.len().max(1));
-        tokio::spawn(async move {
-            for fact in facts {
-                if tx.send(fact).await.is_err() {
-                    break;
-                }
-            }
-        });
-        rx
-    }
-
     async fn wait_for_entity(
         store: &impl EntityStore,
         entity_uri: &Uri,
@@ -589,12 +577,12 @@ mod tests {
 
         let entity_uri = uri!("spotify:album:2112");
         fact_service
-            .state_facts(plain_fact_stream(vec![fact!(
+            .state_facts(vec![fact!(
                 uri!("agent:codex:local"),
                 entity_uri.clone(),
                 uri!("spotify:displayName"),
                 Value::text("2112")
-            )]))
+            )])
             .await
             .expect("state_facts");
 

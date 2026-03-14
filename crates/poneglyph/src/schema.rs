@@ -1,10 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::{Fact, FactService, Filter, PoneResult, Uri, Value, fact, uri};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
-
-use crate::{Fact, FactService, Filter, PoneResult, Uri, Value, fact, uri};
 
 pub const SCHEMA_KIND_NAMESPACE: &str = "schema:namespace";
 pub const SCHEMA_KIND_KIND: &str = "schema:kind";
@@ -531,16 +529,7 @@ pub async fn ensure_base_schema(fact_service: &FactService) -> PoneResult<()> {
         return Ok(());
     }
 
-    let facts = base_schema_facts();
-    let (tx, rx) = mpsc::channel(facts.len().max(1));
-    tokio::spawn(async move {
-        for fact in facts {
-            if tx.send(fact).await.is_err() {
-                break;
-            }
-        }
-    });
-    fact_service.state_facts(rx).await?;
+    fact_service.state_facts(base_schema_facts()).await?;
     Ok(())
 }
 

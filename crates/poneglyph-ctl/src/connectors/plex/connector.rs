@@ -1,13 +1,14 @@
 use derive_builder::Builder;
 use poneglyph::Fact;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
 use tokio::time::{Duration, sleep};
-use tracing::{debug, info, instrument};
+use tracing::{debug, info, instrument, warn};
 
 use crate::{CtlError, CtlResult};
 
 use super::client::PlexClient;
-use super::ingestor::{library_facts, select_sections};
+use super::ingestor::{item_facts, library_facts, select_sections};
 use super::schema::schema_facts;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
@@ -27,7 +28,7 @@ pub struct PlexConfig {
     pub libraries: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PlexConnector {
     config: PlexConfig,
     client: PlexClient,
@@ -56,16 +57,23 @@ impl PlexConnector {
         "plex"
     }
 
-    #[instrument(skip(self), fields(component = "poneglyph-ctl", connector = "plex"))]
-    pub async fn run(self) -> CtlResult<Vec<Fact>> {
+    pub fn schema_facts(&self) -> Vec<Fact> {
+        schema_facts()
+    }
+
+    #[instrument(
+        skip(self, fact_tx),
+        fields(component = "poneglyph-ctl", connector = "plex")
+    )]
+    pub async fn run(self, fact_tx: mpsc::Sender<Vec<Fact>>) -> CtlResult<()> {
         if !self.config.enabled {
             info!("plex connector disabled, skipping");
-            return Ok(vec![]);
+            return Ok(());
         }
 
         let sections = self.client.fetch_library_sections().await?;
         let selected_sections = select_sections(&self.config.libraries, sections);
-        let libraries_url = self.client.library_sections_url()?;
+        let libraries_url = self.client.redacted_library_sections_url()?;
         let base_url = self
             .client
             .base_url()
@@ -74,6 +82,7 @@ impl PlexConnector {
         info!(
             base_url = %base_url,
             libraries_url = %libraries_url,
+            configured_library_count = self.config.libraries.len(),
             selected_library_count = selected_sections.len(),
             "plex connector initialized"
         );
@@ -81,12 +90,43 @@ impl PlexConnector {
         if !self.config.libraries.is_empty() {
             debug!(libraries = ?self.config.libraries, "plex connector configured libraries");
         }
+        if selected_sections.is_empty() {
+            warn!("plex connector selected no libraries");
+        } else {
+            let library_titles = selected_sections
+                .iter()
+                .map(|section| section.title.as_str())
+                .collect::<Vec<_>>();
+            info!(libraries = ?library_titles, "plex connector selected libraries");
+        }
 
         sleep(Duration::from_millis(10)).await;
-        Ok(schema_facts()
-            .into_iter()
-            .chain(library_facts(&selected_sections))
-            .collect())
+        let mut facts = library_facts(&selected_sections);
+
+        for section in &selected_sections {
+            let items = self
+                .client
+                .fetch_library_items(section.key.as_str())
+                .await?;
+            debug!(
+                library = %section.title,
+                section_key = %section.key,
+                item_count = items.len(),
+                "plex connector fetched library items"
+            );
+            facts.extend(item_facts(section, &items));
+        }
+
+        info!(
+            fact_count = facts.len(),
+            "plex connector emitting fact batch"
+        );
+        fact_tx
+            .send(facts)
+            .await
+            .map_err(|error| CtlError::PlexRequest(error.to_string()))?;
+        debug!("plex connector fact batch sent");
+        Ok(())
     }
 }
 
@@ -100,10 +140,13 @@ mod tests {
         http::HeaderMap as AxumHeaderMap,
         routing::get,
     };
-    use poneglyph::Value;
+    use poneglyph::{Fact, Value};
     use reqwest::header::ACCEPT;
     use serde_json::json;
-    use tokio::{net::TcpListener, sync::Mutex};
+    use tokio::{
+        net::TcpListener,
+        sync::{Mutex, mpsc},
+    };
 
     use super::{PlexConfig, PlexConnector};
 
@@ -160,9 +203,31 @@ mod tests {
             }))
         }
 
+        async fn library_items() -> Json<serde_json::Value> {
+            Json(json!({
+                "MediaContainer": {
+                    "Metadata": [
+                        {
+                            "ratingKey": "101",
+                            "key": "/library/metadata/101",
+                            "guid": "plex://movie/abc",
+                            "type": "movie",
+                            "title": "Dune",
+                            "summary": "Spice.",
+                            "year": 2021,
+                            "addedAt": 1710000000,
+                            "updatedAt": 1710000100
+                        }
+                    ]
+                }
+            }))
+        }
+
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("listener");
         let addr = listener.local_addr().expect("addr");
-        let app = Router::new().route("/library/sections/all", get(library_sections));
+        let app = Router::new()
+            .route("/library/sections/all", get(library_sections))
+            .route("/library/sections/1/all", get(library_items));
         let server = tokio::spawn(async move {
             axum::serve(listener, app).await.expect("serve");
         });
@@ -175,10 +240,15 @@ mod tests {
         })
         .expect("connector");
 
-        let facts = connector.run().await.expect("run");
+        let (fact_tx, mut fact_stream) = mpsc::channel(1);
+        connector.run(fact_tx).await.expect("run");
+        let facts: Vec<Fact> = fact_stream.recv().await.expect("facts");
 
         assert!(facts.iter().any(|fact| {
             fact.field.as_str() == "plex:title" && fact.value == Value::text("Movies")
+        }));
+        assert!(facts.iter().any(|fact| {
+            fact.field.as_str() == "plex:title" && fact.value == Value::text("Dune")
         }));
         assert!(!facts.iter().any(|fact| {
             fact.field.as_str() == "plex:title" && fact.value == Value::text("Shows")
@@ -207,7 +277,9 @@ mod tests {
         })
         .expect("connector");
 
-        let facts = connector.run().await.expect("facts");
+        let (fact_tx, mut fact_stream) = mpsc::channel(1);
+        connector.run(fact_tx).await.expect("run");
+        let facts: Vec<Fact> = fact_stream.recv().await.expect("facts");
         assert!(facts.iter().any(|fact| {
             fact.field.as_str() == "plex:title" && fact.value == Value::text("Movies")
         }));
@@ -254,11 +326,27 @@ mod tests {
             }))
         }
 
+        async fn library_items() -> Json<serde_json::Value> {
+            Json(json!({
+                "MediaContainer": {
+                    "Metadata": [
+                        {
+                            "ratingKey": "101",
+                            "type": "movie",
+                            "title": "Dune"
+                        }
+                    ]
+                }
+            }))
+        }
+
         let state = AppState::default();
         let listener = TcpListener::bind("127.0.0.1:0").await.expect("listener");
         let addr = listener.local_addr().expect("addr");
         let app = Router::new()
             .route("/library/sections/all", get(library_sections))
+            .route("/library/sections/1/all", get(library_items))
+            .route("/library/sections/2/all", get(library_items))
             .with_state(state.clone());
         let server = tokio::spawn(async move {
             axum::serve(listener, app).await.expect("serve");
@@ -272,7 +360,9 @@ mod tests {
         })
         .expect("connector");
 
-        let facts = connector.run().await.expect("facts");
+        let (fact_tx, mut fact_stream) = mpsc::channel(1);
+        connector.run(fact_tx).await.expect("run");
+        let facts: Vec<Fact> = fact_stream.recv().await.expect("facts");
         assert!(!facts.is_empty());
 
         let recorded = state

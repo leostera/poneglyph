@@ -67,7 +67,7 @@ proptest! {
                     value
                 );
                 fact_service
-                    .state_facts(common::fact_channel(vec![fact]))
+                    .state_facts(vec![fact])
                     .await
                     .expect("state_facts");
             }

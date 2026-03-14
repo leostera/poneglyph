@@ -226,22 +226,8 @@ fn datafox_store_error(error: crate::Error) -> datafox::Error {
 mod tests {
     use std::sync::Arc;
 
-    use tokio::sync::mpsc;
-
     use super::{Query, QueryEngine};
     use crate::{FactService, InMemoryFactStore, PoneResult, Value, fact, retraction, uri};
-
-    fn fact_stream(facts: Vec<crate::Fact>) -> mpsc::Receiver<crate::Fact> {
-        let (tx, rx) = mpsc::channel(facts.len().max(1));
-        tokio::spawn(async move {
-            for fact in facts {
-                if tx.send(fact).await.is_err() {
-                    break;
-                }
-            }
-        });
-        rx
-    }
 
     fn query_engine() -> PoneResult<(Arc<FactService>, QueryEngine)> {
         let facts = Arc::new(
@@ -260,11 +246,11 @@ mod tests {
         let album_2112 = uri!("spotify:album:2112");
 
         facts
-            .state_facts(fact_stream(vec![fact!(
+            .state_facts(vec![fact!(
                 album_2112.clone(),
                 display_name,
                 Value::text("2112")
-            )]))
+            )])
             .await?;
 
         let result = query_engine
@@ -288,14 +274,14 @@ mod tests {
         let artist_rush = uri!("spotify:artist:rush");
 
         facts
-            .state_facts(fact_stream(vec![
+            .state_facts(vec![
                 fact!(
                     album_2112.clone(),
                     by_artist,
                     Value::reference(artist_rush.clone())
                 ),
                 fact!(artist_rush.clone(), display_name, Value::text("Rush")),
-            ]))
+            ])
             .await?;
 
         let result = query_engine
@@ -323,14 +309,14 @@ mod tests {
         let album_2112 = uri!("spotify:album:2112");
 
         facts
-            .state_facts(fact_stream(vec![
+            .state_facts(vec![
                 fact!(
                     album_2112.clone(),
                     display_name.clone(),
                     Value::text("2112")
                 ),
                 retraction!(album_2112, display_name, Value::text("2112")),
-            ]))
+            ])
             .await?;
 
         let result = query_engine
@@ -348,7 +334,7 @@ mod tests {
         let user = uri!("dev:user:leo");
 
         facts
-            .state_facts(fact_stream(vec![fact!(
+            .state_facts(vec![fact!(
                 user.clone(),
                 has_nicknames,
                 Value::list(vec![
@@ -356,7 +342,7 @@ mod tests {
                     Value::text("le"),
                     Value::text("leandro"),
                 ])
-            )]))
+            )])
             .await?;
 
         let result = query_engine

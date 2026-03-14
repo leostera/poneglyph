@@ -5,7 +5,9 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use poneglyph::{Workspace, default_workspace_path};
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{
+    EnvFilter, filter::Directive, fmt, layer::SubscriberExt, util::SubscriberInitExt,
+};
 
 use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
@@ -73,8 +75,7 @@ fn init_tracing(workspace: &Workspace, config: &PoneglyphDaemonConfig) -> Result
         let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
         let _ = FILE_GUARD.set(guard);
 
-        let filter = EnvFilter::try_new(config.poneglyph.log_level.as_deref().unwrap_or("info"))
-            .unwrap_or_else(|_| EnvFilter::new("info"));
+        let filter = tracing_filter(config.poneglyph.log_level.as_deref().unwrap_or("info"));
         let stderr_layer = fmt::layer().with_target(true);
         let file_layer = fmt::layer().with_target(true).with_writer(file_writer);
         let _ = tracing_subscriber::registry()
@@ -86,12 +87,59 @@ fn init_tracing(workspace: &Workspace, config: &PoneglyphDaemonConfig) -> Result
     Ok(())
 }
 
+fn tracing_filter(level: &str) -> EnvFilter {
+    let filter = EnvFilter::new("warn");
+    let app_level = level.parse::<Directive>().unwrap_or_else(|_| {
+        "info"
+            .parse::<Directive>()
+            .expect("default log level directive")
+    });
+    filter
+        .add_directive(app_level)
+        .add_directive(
+            format!("poneglyph={level}")
+                .parse::<Directive>()
+                .expect("valid poneglyph directive"),
+        )
+        .add_directive(
+            format!("poneglyph_ctl={level}")
+                .parse::<Directive>()
+                .expect("valid poneglyph_ctl directive"),
+        )
+        .add_directive(
+            format!("poneglyph_mcp={level}")
+                .parse::<Directive>()
+                .expect("valid poneglyph_mcp directive"),
+        )
+        .add_directive(
+            format!("datafox={level}")
+                .parse::<Directive>()
+                .expect("valid datafox directive"),
+        )
+        .add_directive(
+            "sqlx=warn"
+                .parse::<Directive>()
+                .expect("valid sqlx directive"),
+        )
+        .add_directive(
+            "sqlx::query=warn"
+                .parse::<Directive>()
+                .expect("valid sqlx::query directive"),
+        )
+        .add_directive(
+            "tantivy=warn"
+                .parse::<Directive>()
+                .expect("valid tantivy directive"),
+        )
+}
+
 #[cfg(test)]
 mod tests {
     use clap::Parser;
     use poneglyph::default_workspace_path;
+    use tracing_subscriber::EnvFilter;
 
-    use super::Cli;
+    use super::{Cli, tracing_filter};
 
     #[test]
     fn cli_parses_default_invocation() {
@@ -106,5 +154,20 @@ mod tests {
             Cli::try_parse_from(["poneglyphd", "--workspace", "/tmp/poneglyph"]).expect("cli");
 
         assert_eq!(cli.workspace, std::path::Path::new("/tmp/poneglyph"));
+    }
+
+    #[test]
+    fn tracing_filter_suppresses_sqlx_debug_by_default() {
+        let filter: EnvFilter = tracing_filter("debug");
+        let rendered = filter.to_string();
+
+        assert!(rendered.contains("warn"));
+        assert!(rendered.contains("poneglyph=debug"));
+        assert!(rendered.contains("poneglyph_ctl=debug"));
+        assert!(rendered.contains("poneglyph_mcp=debug"));
+        assert!(rendered.contains("datafox=debug"));
+        assert!(rendered.contains("sqlx=warn"));
+        assert!(rendered.contains("sqlx::query=warn"));
+        assert!(rendered.contains("tantivy=warn"));
     }
 }

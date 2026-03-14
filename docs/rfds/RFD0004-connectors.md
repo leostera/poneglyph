@@ -239,7 +239,7 @@ Rejected for now because they are too abstract and force product-specific logic 
 
 ### Treat connectors as just projections
 
-Rejected because projections in Poneglyph are downstream derived workers over local graph state, while connectors are upstream integrations that grant access to external resources and introduce new data into the graph.
+Rejected because projections in sPoneglyph are downstream derived workers over local graph state, while connectors are upstream integrations that grant access to external resources and introduce new data into the graph.
 
 ### Put connector logic directly into `poneglyph`
 

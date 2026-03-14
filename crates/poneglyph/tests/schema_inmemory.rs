@@ -1,6 +1,4 @@
 mod common;
-
-use common::fact_channel;
 use poneglyph::{
     Fact, FactService, InMemoryEntityStore, InMemoryFactStore, PoneResult, Poneglyph, Value,
     Workspace, fact, uri,
@@ -88,7 +86,7 @@ async fn build_inmemory_runtime() -> PoneResult<(TempDir, Poneglyph)> {
 async fn inmemory_get_schema_reflects_new_schema_facts_immediately() -> PoneResult<()> {
     let (_tempdir, poneglyph) = build_inmemory_runtime().await?;
 
-    poneglyph.state_facts(fact_channel(schema_facts())).await?;
+    poneglyph.state_facts(schema_facts()).await?;
 
     let schema = poneglyph.get_schema().await?;
     assert!(
@@ -114,16 +112,12 @@ async fn inmemory_get_schema_reflects_new_schema_facts_immediately() -> PoneResu
 #[tokio::test]
 async fn inmemory_get_schema_is_invariant_under_batch_shapes() -> PoneResult<()> {
     let (_tempdir_one_batch, poneglyph_one_batch) = build_inmemory_runtime().await?;
-    poneglyph_one_batch
-        .state_facts(fact_channel(schema_facts()))
-        .await?;
+    poneglyph_one_batch.state_facts(schema_facts()).await?;
     let schema_one_batch = poneglyph_one_batch.get_schema().await?;
 
     let (_tempdir_many_batches, poneglyph_many_batches) = build_inmemory_runtime().await?;
     for fact in schema_facts() {
-        poneglyph_many_batches
-            .state_facts(fact_channel(vec![fact]))
-            .await?;
+        poneglyph_many_batches.state_facts(vec![fact]).await?;
     }
     let schema_many_batches = poneglyph_many_batches.get_schema().await?;
 
@@ -134,7 +128,7 @@ async fn inmemory_get_schema_is_invariant_under_batch_shapes() -> PoneResult<()>
 #[tokio::test]
 async fn inmemory_retracting_data_does_not_remove_schema_entries() -> PoneResult<()> {
     let (_tempdir, poneglyph) = build_inmemory_runtime().await?;
-    poneglyph.state_facts(fact_channel(schema_facts())).await?;
+    poneglyph.state_facts(schema_facts()).await?;
 
     let assertion = fact!(
         uri!("agent:test:writer"),
@@ -142,9 +136,7 @@ async fn inmemory_retracting_data_does_not_remove_schema_entries() -> PoneResult
         uri!("spotify:field:displayName"),
         Value::text("Rush")
     );
-    poneglyph
-        .state_facts(fact_channel(vec![assertion.clone()]))
-        .await?;
+    poneglyph.state_facts(vec![assertion.clone()]).await?;
     let schema_after_assertion = poneglyph.get_schema().await?;
 
     let retraction = poneglyph::Fact::builder()
@@ -155,9 +147,7 @@ async fn inmemory_retracting_data_does_not_remove_schema_entries() -> PoneResult
         .retract()
         .build()?;
 
-    poneglyph
-        .state_facts(fact_channel(vec![retraction]))
-        .await?;
+    poneglyph.state_facts(vec![retraction]).await?;
 
     let schema_after = poneglyph.get_schema().await?;
     assert_eq!(schema_after, schema_after_assertion);

@@ -10,6 +10,8 @@ pub(super) struct PlexMediaContainer {
 pub(super) struct PlexLibrarySections {
     #[serde(rename = "Directory")]
     pub(super) directory: Option<Vec<PlexLibrarySection>>,
+    #[serde(rename = "Metadata")]
+    pub(super) metadata: Option<Vec<PlexMetadataItem>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -25,4 +27,21 @@ pub(super) struct PlexLibrarySection {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub(super) struct PlexLocation {
     pub(super) path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub(super) struct PlexMetadataItem {
+    #[serde(rename = "ratingKey")]
+    pub(super) rating_key: String,
+    pub(super) key: Option<String>,
+    pub(super) guid: Option<String>,
+    #[serde(rename = "type")]
+    pub(super) item_type: String,
+    pub(super) title: String,
+    pub(super) summary: Option<String>,
+    pub(super) year: Option<i64>,
+    #[serde(rename = "addedAt")]
+    pub(super) added_at: Option<i64>,
+    #[serde(rename = "updatedAt")]
+    pub(super) updated_at: Option<i64>,
 }

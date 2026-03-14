@@ -127,11 +127,11 @@ pub async fn assert_entity_pipeline_materializes_latest_values(
 
     for (field_uri, value) in assertions.clone() {
         fact_service
-            .state_facts(fact_channel(vec![end_to_end_assertion(
+            .state_facts(vec![end_to_end_assertion(
                 entity_uri.clone(),
                 field_uri,
                 value,
-            )]))
+            )])
             .await
             .expect("state_facts");
     }
@@ -162,11 +162,11 @@ pub async fn assert_entity_pipeline_deletes_retracted_entity(
         .spawn();
 
     fact_service
-        .state_facts(fact_channel(vec![end_to_end_assertion(
+        .state_facts(vec![end_to_end_assertion(
             entity_uri.clone(),
             field_uri.clone(),
             value.clone(),
-        )]))
+        )])
         .await
         .expect("assert");
     wait_for_entity(entity_store.as_ref(), entity_uri)
@@ -175,11 +175,11 @@ pub async fn assert_entity_pipeline_deletes_retracted_entity(
         .expect("entity");
 
     fact_service
-        .state_facts(fact_channel(vec![end_to_end_retraction(
+        .state_facts(vec![end_to_end_retraction(
             entity_uri.clone(),
             field_uri.clone(),
             value,
-        )]))
+        )])
         .await
         .expect("retract");
 

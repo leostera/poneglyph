@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use poneglyph::{Fact, Value, fact, uri};
 
-use super::types::PlexLibrarySection;
+use super::types::{PlexLibrarySection, PlexMetadataItem};
 
 pub(super) fn select_sections(
     configured_libraries: &[String],
@@ -69,10 +69,114 @@ pub(super) fn library_facts(sections: &[PlexLibrarySection]) -> Vec<Fact> {
     facts
 }
 
+pub(super) fn item_facts(section: &PlexLibrarySection, items: &[PlexMetadataItem]) -> Vec<Fact> {
+    let source = uri!("plex:connector:local");
+    let library = uri!("plex", "library", section.key.as_str());
+    let mut facts = Vec::new();
+
+    for item in items {
+        let entity = uri!("plex", "item", item.rating_key.as_str());
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("schema:type"),
+            Value::reference(uri!("plex:item"))
+        ));
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("schema:name"),
+            Value::text(item.title.clone())
+        ));
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("plex:title"),
+            Value::text(item.title.clone())
+        ));
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("plex:ratingKey"),
+            Value::text(item.rating_key.clone())
+        ));
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("plex:itemType"),
+            Value::text(item.item_type.clone())
+        ));
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("plex:library"),
+            Value::reference(library.clone())
+        ));
+
+        if let Some(key) = &item.key {
+            facts.push(fact!(
+                source.clone(),
+                entity.clone(),
+                uri!("plex:itemKey"),
+                Value::text(key.clone())
+            ));
+        }
+
+        if let Some(guid) = &item.guid {
+            facts.push(fact!(
+                source.clone(),
+                entity.clone(),
+                uri!("plex:guid"),
+                Value::text(guid.clone())
+            ));
+        }
+
+        if let Some(summary) = &item.summary {
+            if !summary.is_empty() {
+                facts.push(fact!(
+                    source.clone(),
+                    entity.clone(),
+                    uri!("plex:summary"),
+                    Value::text(summary.clone())
+                ));
+            }
+        }
+
+        if let Some(year) = item.year {
+            facts.push(fact!(
+                source.clone(),
+                entity.clone(),
+                uri!("plex:year"),
+                Value::integer(year)
+            ));
+        }
+
+        if let Some(added_at) = item.added_at {
+            facts.push(fact!(
+                source.clone(),
+                entity.clone(),
+                uri!("plex:addedAt"),
+                Value::integer(added_at)
+            ));
+        }
+
+        if let Some(updated_at) = item.updated_at {
+            facts.push(fact!(
+                source.clone(),
+                entity.clone(),
+                uri!("plex:updatedAt"),
+                Value::integer(updated_at)
+            ));
+        }
+    }
+
+    facts
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{library_facts, select_sections};
-    use crate::connectors::plex::types::{PlexLibrarySection, PlexLocation};
+    use super::{item_facts, library_facts, select_sections};
+    use crate::connectors::plex::types::{PlexLibrarySection, PlexLocation, PlexMetadataItem};
 
     fn section(key: &str, title: &str, section_type: &str) -> PlexLibrarySection {
         PlexLibrarySection {
@@ -110,5 +214,44 @@ mod tests {
                 .any(|fact| fact.field.as_str() == "plex:libraryType")
         );
         assert!(facts.iter().any(|fact| fact.field.as_str() == "plex:path"));
+    }
+
+    #[test]
+    fn item_facts_emit_item_metadata_and_library_reference() {
+        let section = section("5", "Movies", "movie");
+        let items = vec![PlexMetadataItem {
+            rating_key: "101".to_string(),
+            key: Some("/library/metadata/101".to_string()),
+            guid: Some("plex://movie/abc".to_string()),
+            item_type: "movie".to_string(),
+            title: "Dune".to_string(),
+            summary: Some("Spice.".to_string()),
+            year: Some(2021),
+            added_at: Some(1_710_000_000),
+            updated_at: Some(1_710_000_100),
+        }];
+
+        let facts = item_facts(&section, &items);
+
+        assert!(
+            facts
+                .iter()
+                .any(|fact| fact.field.as_str() == "plex:ratingKey")
+        );
+        assert!(
+            facts
+                .iter()
+                .any(|fact| fact.field.as_str() == "plex:itemType")
+        );
+        assert!(
+            facts
+                .iter()
+                .any(|fact| fact.field.as_str() == "plex:library")
+        );
+        assert!(
+            facts
+                .iter()
+                .any(|fact| fact.field.as_str() == "plex:summary")
+        );
     }
 }

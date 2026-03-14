@@ -123,13 +123,12 @@ mod tests {
     use std::time::Duration;
 
     use async_trait::async_trait;
-    use tokio::sync::mpsc;
     use tokio::task::yield_now;
     use tokio::time::timeout;
 
     use crate::{
-        Consolidator, EntityStore, Fact, FactService, InMemoryEntityStore, InMemoryFactStore,
-        PoneResult, Value, fact, uri,
+        Consolidator, EntityStore, FactService, InMemoryEntityStore, InMemoryFactStore, PoneResult,
+        Value, fact, uri,
     };
 
     use super::{Projection, ProjectionBatch, ProjectionRunner};
@@ -155,18 +154,6 @@ mod tests {
             self.batches.lock().expect("projection batches").push(batch);
             Ok(())
         }
-    }
-
-    fn fact_channel(facts: Vec<Fact>) -> mpsc::Receiver<Fact> {
-        let (tx, rx) = mpsc::channel(facts.len().max(1));
-        tokio::spawn(async move {
-            for fact in facts {
-                if tx.send(fact).await.is_err() {
-                    break;
-                }
-            }
-        });
-        rx
     }
 
     async fn wait_for_batches(
@@ -210,7 +197,7 @@ mod tests {
         let consolidator_worker = consolidator.spawn();
 
         fact_service
-            .state_facts(fact_channel(vec![
+            .state_facts(vec![
                 fact!(
                     uri!("agent:codex:local"),
                     uri!("spotify:album:hemispheres"),
@@ -223,7 +210,7 @@ mod tests {
                     uri!("spotify:releaseYear"),
                     Value::integer(1978)
                 ),
-            ]))
+            ])
             .await
             .expect("state_facts");
 
@@ -269,21 +256,21 @@ mod tests {
         let consolidator_worker = consolidator.spawn();
 
         fact_service
-            .state_facts(fact_channel(vec![fact!(
+            .state_facts(vec![fact!(
                 uri!("agent:codex:local"),
                 uri!("spotify:album:farewell-to-kings"),
                 uri!("spotify:displayName"),
                 Value::text("A Farewell to Kings")
-            )]))
+            )])
             .await
             .expect("first");
         fact_service
-            .state_facts(fact_channel(vec![fact!(
+            .state_facts(vec![fact!(
                 uri!("agent:codex:local"),
                 uri!("spotify:album:moving-pictures"),
                 uri!("spotify:displayName"),
                 Value::text("Moving Pictures")
-            )]))
+            )])
             .await
             .expect("second");
 

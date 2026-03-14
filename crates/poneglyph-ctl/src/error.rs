@@ -10,14 +10,14 @@ pub enum CtlError {
     InvalidPlexBaseUrl(String),
     #[error("plex connector is disabled")]
     ConnectorDisabled,
-    #[error("connector runtime requires a poneglyph instance to ingest facts")]
-    MissingPoneglyphRuntime,
     #[error("plex request failed: {0}")]
     PlexRequest(String),
     #[error("plex returned unexpected status: {0}")]
     PlexUnexpectedStatus(u16),
     #[error("plex response decode failed: {0}")]
     PlexResponseDecode(String),
+    #[error("connector task join failed: {0}")]
+    ConnectorTaskJoin(String),
 }
 
 pub type CtlResult<T> = std::result::Result<T, CtlError>;

@@ -58,8 +58,12 @@ impl Poneglyph {
         &self.query_engine
     }
 
-    pub async fn state_facts(&self, facts: mpsc::Receiver<Fact>) -> PoneResult<Uri> {
+    pub async fn state_facts(&self, facts: Vec<Fact>) -> PoneResult<Uri> {
         self.fact_service.state_facts(facts).await
+    }
+
+    pub async fn stream_facts(&self, facts: mpsc::Receiver<Fact>) -> PoneResult<Uri> {
+        self.fact_service.stream_facts(facts).await
     }
 
     pub async fn query(&self, query: Query) -> PoneResult<QueryResult> {
@@ -242,7 +246,6 @@ mod tests {
     use std::time::Duration;
 
     use tempfile::tempdir;
-    use tokio::sync::mpsc;
     use tokio::task::yield_now;
     use tokio::time::timeout;
 
@@ -250,18 +253,6 @@ mod tests {
         Entity, InMemoryEntityStore, InMemoryFactStore, Poneglyph, PoneglyphConfig, Projection,
         ProjectionBatch, SearchProjection, Value, Workspace, fact, uri,
     };
-
-    fn fact_stream(facts: Vec<crate::Fact>) -> mpsc::Receiver<crate::Fact> {
-        let (tx, rx) = mpsc::channel(facts.len().max(1));
-        tokio::spawn(async move {
-            for fact in facts {
-                if tx.send(fact).await.is_err() {
-                    break;
-                }
-            }
-        });
-        rx
-    }
 
     #[tokio::test]
     async fn runtime_builder_assembles_workspace_backed_defaults() {
@@ -336,11 +327,11 @@ mod tests {
 
         let album = uri!("spotify:album:2112");
         poneglyph
-            .state_facts(fact_stream(vec![fact!(
+            .state_facts(vec![fact!(
                 album.clone(),
                 uri!("spotify:displayName"),
                 Value::text("2112")
-            )]))
+            )])
             .await
             .expect("state facts");
 
@@ -454,11 +445,11 @@ mod tests {
 
         let album = uri!("spotify:album:hold-your-fire");
         poneglyph
-            .state_facts(fact_stream(vec![fact!(
+            .state_facts(vec![fact!(
                 album.clone(),
                 uri!("spotify:displayName"),
                 Value::text("Hold Your Fire")
-            )]))
+            )])
             .await
             .expect("state facts");
 

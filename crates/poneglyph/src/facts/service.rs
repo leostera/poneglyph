@@ -23,7 +23,12 @@ impl FactService {
     }
 
     #[instrument(skip_all, fields(component = "fact_service"))]
-    pub async fn state_facts(&self, facts: mpsc::Receiver<Fact>) -> PoneResult<Uri> {
+    pub async fn state_facts(&self, facts: Vec<Fact>) -> PoneResult<Uri> {
+        self.stream_facts(fact_stream(facts)).await
+    }
+
+    #[instrument(skip_all, fields(component = "fact_service"))]
+    pub async fn stream_facts(&self, facts: mpsc::Receiver<Fact>) -> PoneResult<Uri> {
         let (tx_id, committed_facts) = self.store.state_facts(facts).await?;
         let fact_count = committed_facts.len();
         debug!(%tx_id, fact_count, "stored fact batch");
@@ -60,6 +65,18 @@ impl FactService {
     pub async fn get_schema(&self) -> PoneResult<SchemaDefinition> {
         self.store.get_schema().await
     }
+}
+
+fn fact_stream(facts: Vec<Fact>) -> mpsc::Receiver<Fact> {
+    let (tx, rx) = mpsc::channel(facts.len().max(1));
+    tokio::spawn(async move {
+        for fact in facts {
+            if tx.send(fact).await.is_err() {
+                break;
+            }
+        }
+    });
+    rx
 }
 
 impl FactServiceBuilder {

@@ -8,7 +8,6 @@ use poneglyph::{
 use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use tokio::sync::mpsc;
 use tracing::{debug, instrument};
 
 use crate::config::default_bind_addr;
@@ -184,7 +183,7 @@ impl PoneglyphMcpServer {
                 poneglyph::Value::text(input.name)
             ),
         ];
-        let tx_id = self.poneglyph.state_facts(fact_stream(facts)).await?;
+        let tx_id = self.poneglyph.state_facts(facts).await?;
         debug!(%tx_id, "mcp state_facts succeeded");
         Ok(CreateEntityOutput { tx_id, entity_uri })
     }
@@ -214,7 +213,7 @@ impl PoneglyphMcpServer {
             }
         }
 
-        let tx_id = self.poneglyph.state_facts(fact_stream(facts)).await?;
+        let tx_id = self.poneglyph.state_facts(facts).await?;
         debug!(%tx_id, "mcp state_facts succeeded");
         Ok(CallToolResult {
             content: json!({ "txId": tx_id }),
@@ -490,18 +489,6 @@ impl TryFrom<McpValueInput> for PoneglyphValue {
             ),
         })
     }
-}
-
-fn fact_stream(facts: Vec<Fact>) -> mpsc::Receiver<Fact> {
-    let (tx, rx) = mpsc::channel(facts.len().max(1));
-    tokio::spawn(async move {
-        for fact in facts {
-            if tx.send(fact).await.is_err() {
-                break;
-            }
-        }
-    });
-    rx
 }
 
 #[cfg(test)]

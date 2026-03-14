@@ -39,6 +39,24 @@ pub(super) fn schema_facts() -> Vec<Fact> {
             uri!("schema:doc"),
             Value::text("A Plex library section such as Movies, Anime, or Series.")
         ),
+        fact!(
+            source.clone(),
+            uri!("plex:item"),
+            uri!("schema:type"),
+            Value::reference(uri!("schema:kind"))
+        ),
+        fact!(
+            source.clone(),
+            uri!("plex:item"),
+            uri!("schema:name"),
+            Value::text("Item")
+        ),
+        fact!(
+            source.clone(),
+            uri!("plex:item"),
+            uri!("schema:doc"),
+            Value::text("A Plex media item such as a movie or show.")
+        ),
     ];
 
     facts.extend(field_schema_facts(
@@ -75,6 +93,87 @@ pub(super) fn schema_facts() -> Vec<Fact> {
         "A filesystem path backing the Plex library.",
         Some(uri!("plex:library")),
         Some("text"),
+        false,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:ratingKey"),
+        "Rating Key",
+        "The Plex item rating key.",
+        Some(uri!("plex:item")),
+        Some("text"),
+        true,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:itemType"),
+        "Item Type",
+        "The Plex item media type, for example movie or show.",
+        Some(uri!("plex:item")),
+        Some("text"),
+        false,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:summary"),
+        "Summary",
+        "The Plex item summary.",
+        Some(uri!("plex:item")),
+        Some("text"),
+        false,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:year"),
+        "Year",
+        "The release year of the Plex item.",
+        Some(uri!("plex:item")),
+        Some("number"),
+        false,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:guid"),
+        "Guid",
+        "The Plex item guid.",
+        Some(uri!("plex:item")),
+        Some("text"),
+        false,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:itemKey"),
+        "Item Key",
+        "The Plex item key path.",
+        Some(uri!("plex:item")),
+        Some("text"),
+        false,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:addedAt"),
+        "Added At",
+        "The Unix timestamp when the Plex item was added.",
+        Some(uri!("plex:item")),
+        Some("number"),
+        false,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:updatedAt"),
+        "Updated At",
+        "The Unix timestamp when the Plex item was last updated.",
+        Some(uri!("plex:item")),
+        Some("number"),
+        false,
+    ));
+    facts.extend(field_schema_facts(
+        &source,
+        uri!("plex:library"),
+        "Library",
+        "The Plex library containing the item.",
+        Some(uri!("plex:item")),
+        Some("reference"),
         false,
     ));
 
