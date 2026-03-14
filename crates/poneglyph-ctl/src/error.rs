@@ -10,6 +10,8 @@ pub enum CtlError {
     InvalidPlexBaseUrl(String),
     #[error("plex connector is disabled")]
     ConnectorDisabled,
+    #[error("connector runtime requires a poneglyph instance to ingest facts")]
+    MissingPoneglyphRuntime,
     #[error("plex request failed: {0}")]
     PlexRequest(String),
     #[error("plex returned unexpected status: {0}")]

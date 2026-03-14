@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 derive_builder.workspace = true
+poneglyph.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 thiserror.workspace = true
@@ -16,3 +17,4 @@ tracing.workspace = true
 axum.workspace = true
 dotenvy.workspace = true
 serde_json.workspace = true
+tempfile.workspace = true
