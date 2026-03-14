@@ -1,6 +1,6 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
 import { PoneglyphLogo3D } from "@poneglyph/ui";
+import BaseLayout from "../layouts/BaseLayout.astro";
 
 const title = "Poneglyph";
 const description =
@@ -15,18 +15,15 @@ const quickstart = `npx -g i poneglyph
 const featureHighlights = [
   {
     title: "Built for builders",
-    body:
-      "Poneglyph is designed for teams building with agents, where project knowledge and prior decisions need to survive beyond a single session.",
+    body: "Poneglyph is designed for teams building with agents, where project knowledge and prior decisions need to survive beyond a single session.",
   },
   {
     title: "Private by default",
-    body:
-      "Memory stays local to your machine, which keeps recall fast and keeps sensitive context out of a hosted black box.",
+    body: "Memory stays local to your machine, which keeps recall fast and keeps sensitive context out of a hosted black box.",
   },
   {
     title: "Structured to scale",
-    body:
-      "Facts, entities, and relationships beat markdown folders once your projects, systems, packages, and people become deeply connected.",
+    body: "Facts, entities, and relationships beat markdown folders once your projects, systems, packages, and people become deeply connected.",
   },
 ];
 
@@ -34,20 +31,17 @@ const sections = [
   {
     eyebrow: "Absolute memory",
     title: "Your agents stop forgetting the shape of your projects.",
-    body:
-      "Poneglyph gives agents durable memory across sessions, projects, and time. Less repetition, less context loss, less restating architecture by hand.",
+    body: "Poneglyph gives agents durable memory across sessions, projects, and time. Less repetition, less context loss, less restating architecture by hand.",
   },
   {
     eyebrow: "Existing agent stack",
     title: "Works with the tools you already use.",
-    body:
-      "Start with OpenClaw out of the box. Extend the same memory layer to Codex, Claude-based agents, and other MCP clients.",
+    body: "Start with OpenClaw out of the box. Extend the same memory layer to Codex, Claude-based agents, and other MCP clients.",
   },
   {
     eyebrow: "Project knowledge",
     title: "A memory model built for systems, packages, and decisions.",
-    body:
-      "Poneglyph models concepts, systems, packages, people, and project knowledge directly, so builders can recover how a project fits together.",
+    body: "Poneglyph models concepts, systems, packages, people, and project knowledge directly, so builders can recover how a project fits together.",
   },
 ];
 
@@ -55,20 +49,17 @@ const comparisonRows = [
   {
     without:
       "Your agent forgets project decisions, package boundaries, and prior work between sessions.",
-    with:
-      "Poneglyph gives it durable recall across time, so project context compounds instead of resetting.",
+    with: "Poneglyph gives it durable recall across time, so project context compounds instead of resetting.",
   },
   {
     without:
       "You keep restating the same architecture, constraints, and preferences every time an agent wakes up.",
-    with:
-      "Poneglyph turns repeated explanation into accumulated memory your agent can recover later.",
+    with: "Poneglyph turns repeated explanation into accumulated memory your agent can recover later.",
   },
   {
     without:
       "Team knowledge lives in notes, logs, issues, and chat fragments that never form one coherent memory.",
-    with:
-      "Poneglyph links project knowledge into a graph your agents can query instead of guess at.",
+    with: "Poneglyph links project knowledge into a graph your agents can query instead of guess at.",
   },
 ];
 
@@ -76,14 +67,12 @@ const objections = [
   {
     eyebrow: "Why not markdown",
     title: "Markdown memory is elegant until it stops scaling.",
-    body:
-      "Files are simple, but project memory eventually becomes deeply connected. Systems refer to packages, packages refer to concepts, decisions refer to tradeoffs, and agents need more than a folder tree to recover that shape reliably.",
+    body: "Files are simple, but project memory eventually becomes deeply connected. Systems refer to packages, packages refer to concepts, decisions refer to tradeoffs, and agents need more than a folder tree to recover that shape reliably.",
   },
   {
     eyebrow: "Why not SQL",
     title: "SQL stores records well. Memory is a different problem.",
-    body:
-      "Application tables are optimized around current state. Agent memory needs durable history, provenance, relationships, and replayable derived views. That is why Poneglyph uses an immutable graph model under the hood.",
+    body: "Application tables are optimized around current state. Agent memory needs durable history, provenance, relationships, and replayable derived views. That is why Poneglyph uses an immutable graph model under the hood.",
   },
 ];
 

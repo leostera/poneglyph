@@ -23,6 +23,16 @@
     }
   },
   "files": {
-    "ignore": [".husky/_", "3rdparty", "design", "www/.astro", "app/dist", "dist", "node_modules"]
+    "ignore": [
+      ".husky/_",
+      "3rdparty",
+      "design",
+      "www/.astro",
+      "app/dist",
+      "packages/ui/storybook-static",
+      "target",
+      "dist",
+      "node_modules"
+    ]
   }
 }
