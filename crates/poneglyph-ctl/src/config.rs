@@ -1,11 +1,15 @@
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
+use crate::connectors::gcal::GcalConfig;
 use crate::connectors::plex::PlexConfig;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
 #[builder(pattern = "owned")]
 pub struct PoneglyphCtlConfig {
+    #[serde(default)]
+    #[builder(default)]
+    pub gcal: Option<GcalConfig>,
     #[serde(default)]
     #[builder(default)]
     pub plex: Option<PlexConfig>,
@@ -14,16 +18,18 @@ pub struct PoneglyphCtlConfig {
 #[cfg(test)]
 mod tests {
     use super::PoneglyphCtlConfig;
-    use crate::PlexConfig;
+    use crate::{GcalConfig, PlexConfig};
 
     #[test]
     fn ctl_config_defaults_to_no_connectors() {
+        assert_eq!(PoneglyphCtlConfig::default().gcal, None);
         assert_eq!(PoneglyphCtlConfig::default().plex, None);
     }
 
     #[test]
-    fn plex_connector_config_round_trips_through_toml() {
+    fn connector_configs_round_trip_through_toml() {
         let config = PoneglyphCtlConfig {
+            gcal: Some(GcalConfig { enabled: true }),
             plex: Some(PlexConfig {
                 enabled: true,
                 base_url: Some("http://127.0.0.1:32400".to_string()),

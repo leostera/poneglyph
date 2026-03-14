@@ -4,8 +4,8 @@ use anyhow::Result;
 use config::{Config, File, FileFormat};
 use derive_builder::Builder;
 use poneglyph::{PoneglyphConfig, Workspace};
+use poneglyph_api::PoneglyphApiConfig;
 use poneglyph_ctl::PoneglyphCtlConfig;
-use poneglyph_mcp::PoneglyphMcpConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
@@ -27,7 +27,7 @@ pub struct PoneglyphDaemonConfig {
     pub ctl: PoneglyphCtlConfig,
     #[serde(default)]
     #[builder(default)]
-    pub mcp: PoneglyphMcpConfig,
+    pub api: PoneglyphApiConfig,
     #[serde(default)]
     #[builder(default)]
     pub logging: PoneglyphDaemonLoggingConfig,
@@ -92,7 +92,7 @@ base_url = "http://127.0.0.1:32400"
 token = "secret"
 libraries = ["Movies", "Shows"]
 
-[mcp]
+[api]
 bind_addr = "127.0.0.1:9001"
 
 [logging]
@@ -119,7 +119,7 @@ server_log_path = "custom.log"
                 .and_then(|plex| plex.base_url.as_deref()),
             Some("http://127.0.0.1:32400")
         );
-        assert_eq!(config.mcp.bind_addr, "127.0.0.1:9001");
+        assert_eq!(config.api.bind_addr, "127.0.0.1:9001");
         assert_eq!(
             config.logging.server_log_path.as_deref(),
             Some(std::path::Path::new("custom.log"))

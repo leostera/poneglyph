@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/datafox",
+    "crates/poneglyph-api",
     "crates/poneglyph-ctl",
     "crates/poneglyph-mcp",
     "crates/poneglyph",
@@ -19,7 +20,9 @@ datafox = { path = "crates/datafox" }
 derive_builder = "0"
 dotenvy = "0.15"
 futures-util = "0"
+oauth2 = { version = "5", default-features = false, features = ["reqwest", "rustls-tls"] }
 poneglyph = { path = "crates/poneglyph" }
+poneglyph-api = { path = "crates/poneglyph-api" }
 poneglyph-ctl = { path = "crates/poneglyph-ctl" }
 poneglyph-mcp = { path = "crates/poneglyph-mcp" }
 proptest = "1"
@@ -33,6 +36,7 @@ tempfile = "3"
 thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync"] }
 toml = { version = "1" }
+tower-http = { version = "0.6", features = ["trace"] }
 tracing = "0"
 tracing-appender = "0"
 tracing-subscriber = { version = "0", features = ["env-filter", "fmt"] }

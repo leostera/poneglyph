@@ -6,10 +6,11 @@ use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 use tracing::{debug, info, instrument, warn};
 
-use crate::{CtlError, CtlResult, PlexConnector};
+use crate::{CtlError, CtlResult, GcalConnector, PlexConnector};
 
 #[derive(Debug)]
 enum ConnectorProcess {
+    Gcal(GcalConnector),
     Plex(PlexConnector),
 }
 
@@ -39,6 +40,11 @@ impl ConnectorRuntime {
 
         for connector in self.connectors {
             match connector {
+                ConnectorProcess::Gcal(connector) => {
+                    debug!(connector = connector.name(), "running connector");
+                    let fact_tx = fact_tx.clone();
+                    tasks.spawn(async move { connector.run(fact_tx).await });
+                }
                 ConnectorProcess::Plex(connector) => {
                     debug!(connector = connector.name(), "running connector");
                     let fact_tx = fact_tx.clone();
@@ -89,6 +95,46 @@ async fn ensure_connector_schema(
     connector: &ConnectorProcess,
 ) -> CtlResult<()> {
     match connector {
+        ConnectorProcess::Gcal(connector) => {
+            let schema = poneglyph
+                .get_schema()
+                .await
+                .map_err(|error| CtlError::PlexRequest(error.to_string()))?;
+            let namespace_uri = uri!("gcal:namespace");
+            if schema
+                .namespaces
+                .iter()
+                .any(|namespace| namespace.uri == namespace_uri)
+            {
+                debug!(
+                    connector = connector.name(),
+                    "connector schema already present"
+                );
+                return Ok(());
+            }
+
+            let schema_facts = connector.schema_facts();
+            if schema_facts.is_empty() {
+                debug!(
+                    connector = connector.name(),
+                    "connector has no schema facts yet"
+                );
+                return Ok(());
+            }
+
+            let fact_count = schema_facts.len();
+            let tx_id = poneglyph
+                .state_facts(schema_facts)
+                .await
+                .map_err(|error| CtlError::PlexRequest(error.to_string()))?;
+            info!(
+                connector = connector.name(),
+                %tx_id,
+                fact_count,
+                "connector schema bootstrapped"
+            );
+            Ok(())
+        }
         ConnectorProcess::Plex(connector) => {
             let schema = poneglyph
                 .get_schema()
@@ -135,7 +181,14 @@ impl ConnectorRuntimeBuilder {
         self
     }
 
-    pub fn add_connector(mut self, connector: PlexConnector) -> Self {
+    pub fn add_gcal_connector(mut self, connector: GcalConnector) -> Self {
+        self.connectors
+            .get_or_insert_with(Vec::new)
+            .push(ConnectorProcess::Gcal(connector));
+        self
+    }
+
+    pub fn add_plex_connector(mut self, connector: PlexConnector) -> Self {
         self.connectors
             .get_or_insert_with(Vec::new)
             .push(ConnectorProcess::Plex(connector));
@@ -149,7 +202,7 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use crate::{ConnectorRuntime, PlexConfig, PlexConnector};
+    use crate::{ConnectorRuntime, GcalConfig, GcalConnector, PlexConfig, PlexConnector};
     use poneglyph::{Poneglyph, Query, QueryResult, Workspace};
 
     async fn test_poneglyph() -> Arc<Poneglyph> {
@@ -183,7 +236,22 @@ mod tests {
 
         ConnectorRuntime::builder()
             .with_poneglyph_arc(poneglyph)
-            .add_connector(plex)
+            .add_plex_connector(plex)
+            .build()
+            .expect("runtime")
+            .run()
+            .await
+            .expect("run");
+    }
+
+    #[tokio::test]
+    async fn runtime_runs_disabled_gcal_connector() {
+        let poneglyph = test_poneglyph().await;
+        let gcal = GcalConnector::init(GcalConfig::default()).expect("gcal");
+
+        ConnectorRuntime::builder()
+            .with_poneglyph_arc(poneglyph)
+            .add_gcal_connector(gcal)
             .build()
             .expect("runtime")
             .run()
@@ -251,7 +319,7 @@ mod tests {
 
         ConnectorRuntime::builder()
             .with_poneglyph_arc(poneglyph.clone())
-            .add_connector(plex)
+            .add_plex_connector(plex)
             .build()
             .expect("runtime")
             .run()

@@ -21,14 +21,8 @@ pub enum Error {
     },
     #[error("tool schema for `{tool}` must be a JSON object")]
     InvalidToolSchema { tool: String },
-    #[error("invalid MCP bind address")]
-    McpBindAddress(#[from] std::net::AddrParseError),
     #[error("mcp io error")]
     Io(#[from] std::io::Error),
-    #[error(transparent)]
-    RmcpServerInitialize(#[from] rmcp::service::ServerInitializeError),
-    #[error(transparent)]
-    RmcpJoin(#[from] tokio::task::JoinError),
     #[error(transparent)]
     Poneglyph(#[from] poneglyph::Error),
     #[error(transparent)]

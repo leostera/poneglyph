@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use poneglyph::{Poneglyph, Workspace};
-use poneglyph_ctl::{ConnectorRuntime, PlexConnector};
-use poneglyph_mcp::PoneglyphMcpServer;
-use tracing::{debug, info, instrument};
+use poneglyph_api::PoneglyphApiServer;
+use poneglyph_ctl::{ConnectorRuntime, GcalConnector, PlexConnector};
+use tracing::{debug, info};
 
 use crate::config::PoneglyphDaemonConfig;
 
@@ -12,7 +12,7 @@ use crate::config::PoneglyphDaemonConfig;
 pub struct Daemon {
     poneglyph: Arc<Poneglyph>,
     connectors: ConnectorRuntime,
-    mcp: PoneglyphMcpServer,
+    api: PoneglyphApiServer,
 }
 
 impl Daemon {
@@ -25,17 +25,16 @@ impl Daemon {
         &self.poneglyph
     }
 
-    #[instrument(skip(self), fields(component = "poneglyphd"))]
     pub async fn run(self) -> Result<()> {
-        info!("daemon supervising runtime and MCP server");
+        info!("daemon supervising runtime, connectors, and api server");
         let poneglyph = self.poneglyph.clone();
         let connectors = self.connectors;
-        let mcp = self.mcp;
+        let api = self.api;
 
         tokio::try_join!(
             async move { poneglyph.run().await.map_err(anyhow::Error::from) },
             async move { connectors.run().await.map_err(anyhow::Error::from) },
-            async move { mcp.run().await.map_err(anyhow::Error::from) },
+            async move { api.run().await.map_err(anyhow::Error::from) },
         )?;
         Ok(())
     }
@@ -67,7 +66,6 @@ impl DaemonBuilder {
         self
     }
 
-    #[instrument(skip(self), fields(component = "poneglyphd"))]
     pub async fn build(self) -> Result<Daemon> {
         let workspace = match self.workspace {
             Some(workspace) => workspace,
@@ -81,10 +79,10 @@ impl DaemonBuilder {
             workspace = %workspace.root().display(),
             log_level = ?config.poneglyph.log_level,
             plex_enabled = config.ctl.plex.as_ref().map(|plex| plex.enabled).unwrap_or(false),
-            mcp_bind_addr = %config.mcp.bind_addr,
+            api_bind_addr = %config.api.bind_addr,
             "opening daemon runtime"
         );
-        let mcp_http_bind = config.mcp.bind_addr.clone();
+        let api_bind_addr = config.api.bind_addr.clone();
 
         let poneglyph = Arc::new(
             Poneglyph::builder()
@@ -93,14 +91,17 @@ impl DaemonBuilder {
                 .build()
                 .await?,
         );
-        let mcp = PoneglyphMcpServer::builder()
+        let api = PoneglyphApiServer::builder()
             .with_poneglyph_arc(poneglyph.clone())
-            .with_bind_addr(mcp_http_bind)
+            .with_bind_addr(api_bind_addr)
             .build()?;
         let connectors = {
             let mut builder = ConnectorRuntime::builder().with_poneglyph_arc(poneglyph.clone());
+            if let Some(gcal) = config.ctl.gcal.clone() {
+                builder = builder.add_gcal_connector(GcalConnector::init(gcal)?);
+            }
             if let Some(plex) = config.ctl.plex.clone() {
-                builder = builder.add_connector(PlexConnector::init(plex)?);
+                builder = builder.add_plex_connector(PlexConnector::init(plex)?);
             }
             builder.build().expect("connector runtime")
         };
@@ -108,7 +109,7 @@ impl DaemonBuilder {
         Ok(Daemon {
             poneglyph,
             connectors,
-            mcp,
+            api,
         })
     }
 }
@@ -116,7 +117,7 @@ impl DaemonBuilder {
 #[cfg(test)]
 mod tests {
     use poneglyph::{PoneglyphConfig, Workspace};
-    use poneglyph_mcp::PoneglyphMcpConfig;
+    use poneglyph_api::PoneglyphApiConfig;
     use tempfile::tempdir;
 
     use crate::config::PoneglyphDaemonConfig;
@@ -148,11 +149,11 @@ mod tests {
                     .build()
                     .expect("poneglyph config"),
             )
-            .mcp(
-                PoneglyphMcpConfig::builder()
+            .api(
+                PoneglyphApiConfig::builder()
                     .bind_addr("127.0.0.1:9002".to_string())
                     .build()
-                    .expect("mcp config"),
+                    .expect("api config"),
             )
             .build()
             .expect("config");

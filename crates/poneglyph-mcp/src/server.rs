@@ -8,11 +8,10 @@ use poneglyph::{
 use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use tracing::{debug, instrument};
+use tracing::debug;
 
-use crate::config::default_bind_addr;
 use crate::error::{Error, Result};
-use crate::rmcp_http::RmcpServer;
+use crate::rmcp_http;
 use crate::tool::{CallToolResult, Tool, ToolCall};
 
 const TOOL_STATE_FACTS: &str = "stateFacts";
@@ -96,8 +95,6 @@ Example:
 #[builder(pattern = "owned", build_fn(private, name = "fallible_build"))]
 pub struct PoneglyphMcpServer {
     poneglyph: Arc<Poneglyph>,
-    #[builder(default = "default_bind_addr()")]
-    bind_addr: String,
 }
 
 impl PoneglyphMcpServer {
@@ -105,12 +102,8 @@ impl PoneglyphMcpServer {
         PoneglyphMcpServerBuilder::default()
     }
 
-    pub async fn run(self) -> Result<()> {
-        RmcpServer::new(self).run().await
-    }
-
-    pub fn bind_addr(&self) -> &str {
-        &self.bind_addr
+    pub fn router(&self) -> axum::Router {
+        rmcp_http::router(self.clone())
     }
 
     pub fn list_tools(&self) -> Vec<Tool> {
@@ -148,8 +141,8 @@ impl PoneglyphMcpServer {
         ]
     }
 
-    #[instrument(skip(self, call), fields(component = "poneglyph_mcp", tool = %call.name))]
     pub async fn call_tool(&self, call: ToolCall) -> Result<CallToolResult> {
+        debug!(component = "poneglyph_mcp", tool = %call.name, "dispatching mcp tool");
         match call.name.as_str() {
             TOOL_CREATE_ENTITY => {
                 let result = self.handle_create_entity(call.arguments).await?;
@@ -299,10 +292,6 @@ impl PoneglyphMcpServerBuilder {
 
     pub fn with_poneglyph_arc(self, poneglyph: Arc<Poneglyph>) -> Self {
         self.poneglyph(poneglyph)
-    }
-
-    pub fn with_bind_addr(self, bind_addr: impl Into<String>) -> Self {
-        self.bind_addr(bind_addr.into())
     }
 
     pub fn build(self) -> Result<PoneglyphMcpServer> {

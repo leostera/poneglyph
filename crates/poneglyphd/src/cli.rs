@@ -112,6 +112,11 @@ fn tracing_filter(level: &str) -> EnvFilter {
                 .expect("valid poneglyph_mcp directive"),
         )
         .add_directive(
+            format!("poneglyph_api={level}")
+                .parse::<Directive>()
+                .expect("valid poneglyph_api directive"),
+        )
+        .add_directive(
             format!("datafox={level}")
                 .parse::<Directive>()
                 .expect("valid datafox directive"),
@@ -165,6 +170,7 @@ mod tests {
         assert!(rendered.contains("poneglyph=debug"));
         assert!(rendered.contains("poneglyph_ctl=debug"));
         assert!(rendered.contains("poneglyph_mcp=debug"));
+        assert!(rendered.contains("poneglyph_api=debug"));
         assert!(rendered.contains("datafox=debug"));
         assert!(rendered.contains("sqlx=warn"));
         assert!(rendered.contains("sqlx::query=warn"));
