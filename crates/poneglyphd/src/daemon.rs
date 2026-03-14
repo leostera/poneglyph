@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -49,9 +48,10 @@ pub struct DaemonBuilder {
 }
 
 impl DaemonBuilder {
+    #[cfg(test)]
     pub fn at_workspace<P>(mut self, workspace: P) -> Self
     where
-        P: Into<PathBuf>,
+        P: Into<std::path::PathBuf>,
     {
         self.workspace = Some(Workspace::at(workspace.into()));
         self

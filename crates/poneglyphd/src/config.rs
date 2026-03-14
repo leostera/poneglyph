@@ -34,6 +34,7 @@ pub struct PoneglyphDaemonConfig {
 }
 
 impl PoneglyphDaemonConfig {
+    #[cfg(test)]
     pub fn builder() -> PoneglyphDaemonConfigBuilder {
         PoneglyphDaemonConfigBuilder::default()
     }
