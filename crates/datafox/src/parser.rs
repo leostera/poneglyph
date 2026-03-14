@@ -8,6 +8,7 @@ enum TokenKind {
     Identifier(String),
     Integer(i64),
     String(String),
+    Quoted(String),
     Underscore,
     Bang,
     Comma,
@@ -86,6 +87,34 @@ fn lex(source: &str) -> Result<Vec<Token>> {
 
                 Token {
                     kind: TokenKind::String(value),
+                    span: Span::new(start, end),
+                }
+            }
+            '\'' => {
+                let mut end = start + ch.len_utf8();
+                let mut value = String::new();
+                let mut closed = false;
+
+                while let Some((index, next)) = chars.next() {
+                    end = index + next.len_utf8();
+                    if next == '\'' {
+                        closed = true;
+                        break;
+                    }
+                    value.push(next);
+                }
+
+                if !closed {
+                    return Err(Error::Parse {
+                        diagnostics: vec![
+                            Diagnostic::new("unterminated quoted identifier")
+                                .with_span(Span::new(start, end)),
+                        ],
+                    });
+                }
+
+                Token {
+                    kind: TokenKind::Quoted(value),
                     span: Span::new(start, end),
                 }
             }
@@ -215,7 +244,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_atom(&mut self) -> Result<Atom> {
-        let predicate = self.expect_identifier("expected a predicate name")?;
+        let predicate = self.parse_predicate()?;
         self.expect_kind(
             |kind| matches!(kind, TokenKind::LeftParen),
             "expected `(` after predicate",
@@ -253,7 +282,9 @@ impl<'a> Parser<'a> {
 
         match token.kind {
             TokenKind::Underscore => Ok(Term::wildcard()),
-            TokenKind::String(value) => Ok(Term::constant(Value::string(value))),
+            TokenKind::String(value) | TokenKind::Quoted(value) => {
+                Ok(Term::constant(Value::string(value)))
+            }
             TokenKind::Integer(value) => Ok(Term::constant(Value::integer(value))),
             TokenKind::Identifier(value) => {
                 if value
@@ -276,16 +307,19 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn expect_identifier(&mut self, message: &str) -> Result<String> {
+    fn parse_predicate(&mut self) -> Result<String> {
         let token = self.next().ok_or_else(|| Error::Parse {
-            diagnostics: vec![Diagnostic::new(message)],
+            diagnostics: vec![Diagnostic::new(
+                "expected a predicate name, found end of input",
+            )],
         })?;
 
         match token.kind {
             TokenKind::Identifier(value) => Ok(value),
+            TokenKind::Quoted(value) => Ok(value),
             _ => Err(Error::Parse {
                 diagnostics: vec![
-                    Diagnostic::new(message)
+                    Diagnostic::new("expected a predicate name")
                         .with_span(token.span)
                         .with_found(self.token_text(&token)),
                 ],
@@ -518,6 +552,81 @@ mod tests {
                     diagnostics[0].to_string(),
                     "unexpected trailing input at 8..16 (found `trailing`)"
                 );
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parses_single_quoted_predicate() {
+        let query = parse_query("'local://schema/name'(Entity, Value)").expect("query");
+
+        assert_eq!(
+            query,
+            Query::single(
+                Atom::new(
+                    "local://schema/name",
+                    vec![
+                        Term::variable("Entity").expect("variable"),
+                        Term::variable("Value").expect("variable"),
+                    ],
+                )
+                .expect("atom"),
+            )
+        );
+    }
+
+    #[test]
+    fn parses_quoted_predicate_with_special_chars() {
+        let query = parse_query("'http://example.org/pred#frag?x=1'(E, V)").expect("query");
+
+        assert_eq!(
+            query,
+            Query::single(
+                Atom::new(
+                    "http://example.org/pred#frag?x=1",
+                    vec![
+                        Term::variable("E").expect("variable"),
+                        Term::variable("V").expect("variable"),
+                    ],
+                )
+                .expect("atom"),
+            )
+        );
+    }
+
+    #[test]
+    fn unquoted_predicate_still_works() {
+        let query = parse_query("displayName(Album, Name)").expect("query");
+
+        assert_eq!(
+            query,
+            Query::single(
+                Atom::new(
+                    "displayName",
+                    vec![
+                        Term::variable("Album").expect("variable"),
+                        Term::variable("Name").expect("variable"),
+                    ],
+                )
+                .expect("atom"),
+            )
+        );
+    }
+
+    #[test]
+    fn reports_diagnostics_for_unterminated_quoted_predicate() {
+        let error = parse_query("'local:schema:name(Entity, Value)").expect_err("parse error");
+
+        match error {
+            Error::Parse { diagnostics } => {
+                assert_eq!(
+                    diagnostics.len(),
+                    1,
+                    "expected 1 diagnostic, got {}",
+                    diagnostics.len()
+                );
+                assert_eq!(diagnostics[0].message, "unterminated quoted identifier");
             }
             other => panic!("unexpected error: {other:?}"),
         }

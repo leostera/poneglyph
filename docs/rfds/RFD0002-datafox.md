@@ -171,6 +171,15 @@ Negation and builtins are explicitly deferred.
 
 The first implementation should treat recursive rules as out of scope. Query-only evaluation is enough to make the first end-to-end graph query path real.
 
+### Predicate naming
+
+Predicates may be specified using unquoted identifiers or quoted forms:
+
+- **Unquoted predicates**: `spotify:displayName(Album, "Rush")` - identifier characters (`[a-zA-Z0-9_:?-]`)
+- **Quoted predicates**: `'local://schema/name'(Entity, Value)` or `"local://schema/name"(Entity, Value)` - arbitrary characters
+
+Quoted predicates allow URIs and other special characters in predicate names. Both single (`'...'`) and double (`"..."`) quotes are supported. This enables queries over predicates like `local://schema/name`, `spotify:hasName`, or `http://example.org/pred#frag`.
+
 ## Universe
 
 `Universe` should be a thin wrapper around a storage snapshot. It should not own derivation state.
