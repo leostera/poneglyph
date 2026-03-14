@@ -92,6 +92,11 @@ impl Poneglyph {
         )?;
         Ok(())
     }
+
+    pub async fn repair(&self) -> PoneResult<()> {
+        self.fact_service.store().repair().await?;
+        Ok(())
+    }
 }
 
 pub struct PoneglyphBuilder {

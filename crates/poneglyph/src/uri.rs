@@ -5,6 +5,33 @@ use uuid::Uuid;
 
 use crate::error::{Error, PoneResult};
 
+const BASE62: &[u8; 62] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+fn uuid_to_base62(uuid: Uuid) -> String {
+    let mut value = u128::from_be_bytes(*uuid.as_bytes());
+
+    let mut out = Vec::new();
+
+    if value == 0 {
+        out.push(BASE62[0] as char);
+    } else {
+        while value > 0 {
+            let rem = (value % 62) as usize;
+            out.push(BASE62[rem] as char);
+            value /= 62;
+        }
+        out.reverse();
+    }
+
+    let s: String = out.into_iter().collect();
+
+    if s.len() < 22 {
+        format!("{:0>22}", s)
+    } else {
+        s
+    }
+}
+
 /// Validated URI identifier used across the Poneglyph domain model.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Uri(Url);
@@ -29,7 +56,7 @@ impl Uri {
 
         let id = id
             .map(ToOwned::to_owned)
-            .unwrap_or_else(|| Uuid::now_v7().to_string());
+            .unwrap_or_else(|| uuid_to_base62(Uuid::now_v7()));
         Self::parse(format!("{namespace}:{kind}:{id}"))
     }
 

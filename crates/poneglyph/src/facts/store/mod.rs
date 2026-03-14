@@ -20,6 +20,7 @@ pub trait Store: Send + Sync {
         filter: ActiveFilter,
     ) -> PoneResult<mpsc::Receiver<PoneResult<ActiveFact>>>;
     async fn get_schema(&self) -> PoneResult<SchemaDefinition>;
+    async fn repair(&self) -> PoneResult<()>;
 }
 
 pub(crate) fn new_tx_id() -> Uri {

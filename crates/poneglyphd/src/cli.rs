@@ -2,14 +2,13 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use poneglyph::{Workspace, default_workspace_path};
-use tracing::info;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
-use crate::daemon::Daemon;
 
 #[derive(Debug, Parser)]
 #[command(name = "poneglyphd")]
@@ -18,6 +17,21 @@ pub struct Cli {
     /// Override the workspace root. Defaults to ~/.poneglyph.
     #[arg(long, default_value_os_t = default_workspace_path())]
     pub workspace: PathBuf,
+
+    #[command(subcommand)]
+    pub command: Option<Command>,
+}
+
+#[derive(Debug, Clone, Subcommand)]
+pub enum Command {
+    Run(cmd::Run),
+    Repair(cmd::Repair),
+}
+
+impl Default for Command {
+    fn default() -> Self {
+        Self::Run(cmd::Run {})
+    }
 }
 
 impl Cli {
@@ -25,14 +39,12 @@ impl Cli {
         let workspace = Workspace::at(self.workspace.clone());
         let config = PoneglyphDaemonConfig::load_from(&workspace).await?;
         init_tracing(&workspace, &config)?;
-        info!("dispatching daemon command");
-        Daemon::builder()
-            .at_workspace(self.workspace)
-            .with_config(config)
-            .build()
-            .await?
-            .run()
-            .await
+
+        let cmd = self.command.unwrap_or_default();
+        match cmd {
+            Command::Run(cmd) => cmd.run(workspace, config).await,
+            Command::Repair(cmd) => cmd.run(workspace, config).await,
+        }
     }
 }
 

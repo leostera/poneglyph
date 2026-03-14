@@ -29,6 +29,10 @@ impl InMemoryFactStore {
 
 #[async_trait]
 impl Store for InMemoryFactStore {
+    async fn repair(&self) -> PoneResult<()> {
+        Ok(())
+    }
+
     async fn state_facts(
         &self,
         mut fact_stream: mpsc::Receiver<Fact>,

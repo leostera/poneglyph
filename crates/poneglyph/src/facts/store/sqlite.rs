@@ -6,6 +6,7 @@ use futures_util::StreamExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteRow};
 use sqlx::{Row, SqlitePool};
 use tokio::sync::mpsc;
+use tracing::debug;
 
 use crate::facts::store::{Store, new_tx_id, validate_pending_fact};
 use crate::schema::{
@@ -126,10 +127,43 @@ impl SqliteFactStore {
 
         Ok(())
     }
+
+    async fn backfill_schema_snapshot_if_needed(&self) -> PoneResult<()> {
+        debug!("Starting backfill of schema...");
+
+        let mut rows = sqlx::query(
+            r#"
+            SELECT
+                fact_id, source, entity, field, value_json, retraction, stated_at, tx_id
+            FROM facts
+            ORDER BY stated_at ASC, fact_id ASC
+            "#,
+        )
+        .fetch(&self.pool);
+
+        let mut facts = vec![];
+        while let Some(row) = rows.next().await {
+            let fact = decode_row(row?)?;
+            facts.push(fact);
+        }
+
+        let mut tx = self.pool.begin().await?;
+        for fact in facts {
+            update_schema_snapshot(&mut tx, &fact).await?;
+        }
+        tx.commit().await?;
+
+        Ok(())
+    }
 }
 
 #[async_trait]
 impl Store for SqliteFactStore {
+    async fn repair(&self) -> PoneResult<()> {
+        self.backfill_schema_snapshot_if_needed().await?;
+        Ok(())
+    }
+
     async fn state_facts(
         &self,
         mut fact_stream: mpsc::Receiver<Fact>,
