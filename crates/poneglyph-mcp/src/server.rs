@@ -1,7 +1,10 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use derive_builder::Builder;
-use poneglyph::{Entity, Fact, Poneglyph, Query, SearchHit, Uri, Value as PoneglyphValue};
+use poneglyph::{
+    Entity, Fact, Poneglyph, Query, SearchHit, Uri, Value as PoneglyphValue, fact, uri,
+};
 use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -14,6 +17,7 @@ use crate::rmcp_http::RmcpServer;
 use crate::tool::{CallToolResult, Tool, ToolCall};
 
 const TOOL_STATE_FACTS: &str = "stateFacts";
+const TOOL_CREATE_ENTITY: &str = "createEntity";
 const TOOL_QUERY: &str = "query";
 const TOOL_GET_SCHEMA: &str = "getSchema";
 const TOOL_GET_ENTITY: &str = "getEntity";
@@ -43,8 +47,13 @@ impl PoneglyphMcpServer {
     pub fn list_tools(&self) -> Vec<Tool> {
         vec![
             tool(
+                TOOL_CREATE_ENTITY,
+                "Create a new entity URI to state facts about it. Call this tool whenever you need to talk about a new entity but don't have an entity URI yet. Exceptions to this are entities about the schema whose URIs do not include uniquely random component.",
+                json_schema_for::<CreateEntityInput>(),
+            ),
+            tool(
                 TOOL_STATE_FACTS,
-                "Append one atomic batch of facts. Use getSchema first when you need to discover or extend the graph vocabulary.",
+                "Append one atomic batch of facts. Use `getSchema` first when you need to discover or extend the graph vocabulary. Use `createEntity` or `search` to find or create new entities to state facts about them.",
                 json_schema_for::<StateFactsInput>(),
             ),
             tool(
@@ -73,6 +82,12 @@ impl PoneglyphMcpServer {
     #[instrument(skip(self, call), fields(component = "poneglyph_mcp", tool = %call.name))]
     pub async fn call_tool(&self, call: ToolCall) -> Result<CallToolResult> {
         match call.name.as_str() {
+            TOOL_CREATE_ENTITY => {
+                let result = self.handle_create_entity(call.arguments).await?;
+                let content =
+                    serde_json::to_value(result).map_err(|e| Error::InvalidToolCallResult(e))?;
+                Ok(CallToolResult { content })
+            }
             TOOL_STATE_FACTS => self.handle_state_facts(call.arguments).await,
             TOOL_QUERY => self.handle_query(call.arguments).await,
             TOOL_GET_SCHEMA => self.handle_get_schema(call.arguments).await,
@@ -82,17 +97,53 @@ impl PoneglyphMcpServer {
         }
     }
 
+    async fn handle_create_entity(&self, arguments: Value) -> Result<CreateEntityOutput> {
+        let input: CreateEntityInput =
+            serde_json::from_value(arguments).map_err(|source| Error::InvalidToolInput {
+                tool: TOOL_CREATE_ENTITY,
+                source,
+            })?;
+        let entity_uri = uri!(input.namespace.as_str(), input.kind.as_str());
+        let facts = vec![
+            // TODO(@leostera): the source here is hardcoded to mcp but it should come from
+            // the context of the request!
+            fact!(
+                uri!("mcp:test"),
+                entity_uri.clone(),
+                uri!("schema:name"),
+                poneglyph::Value::text(input.name)
+            ),
+        ];
+        let tx_id = self.poneglyph.state_facts(fact_stream(facts)).await?;
+        debug!(%tx_id, "mcp state_facts succeeded");
+        Ok(CreateEntityOutput { tx_id, entity_uri })
+    }
+
     async fn handle_state_facts(&self, arguments: Value) -> Result<CallToolResult> {
         let input: StateFactsInput =
             serde_json::from_value(arguments).map_err(|source| Error::InvalidToolInput {
                 tool: TOOL_STATE_FACTS,
                 source,
             })?;
-        let facts = input
+
+        let entities: HashSet<Uri> = input
+            .entities
+            .into_iter()
+            .map(Uri::parse)
+            .collect::<poneglyph::PoneResult<HashSet<_>>>()?;
+
+        let facts: Vec<Fact> = input
             .facts
             .into_iter()
             .map(TryInto::try_into)
             .collect::<poneglyph::PoneResult<Vec<_>>>()?;
+
+        for fact in &facts {
+            if !entities.contains(&fact.entity) {
+                return Err(Error::StatingFactsOfUnknownEntities { fact: fact.clone() });
+            }
+        }
+
         let tx_id = self.poneglyph.state_facts(fact_stream(facts)).await?;
         debug!(%tx_id, "mcp state_facts succeeded");
         Ok(CallToolResult {
@@ -195,6 +246,8 @@ impl PoneglyphMcpServerBuilder {
 #[serde(deny_unknown_fields)]
 struct StateFactsInput {
     #[schemars(length(min = 1))]
+    entities: Vec<String>,
+    #[schemars(length(min = 1))]
     facts: Vec<McpFactInput>,
 }
 
@@ -243,6 +296,25 @@ struct GetSchemaInput {}
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 struct GetSchemaOutput {
     schema: poneglyph::SchemaDefinition,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct CreateEntityInput {
+    #[schemars(length(min = 1))]
+    namespace: String,
+    #[schemars(length(min = 1))]
+    kind: String,
+    #[schemars(length(min = 1))]
+    name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+struct CreateEntityOutput {
+    #[serde(rename = "txId")]
+    tx_id: Uri,
+    #[serde(rename = "entityUri")]
+    entity_uri: Uri,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -465,6 +537,13 @@ mod tests {
         })
     }
 
+    fn state_facts_args(entities: &[&str], facts: Vec<serde_json::Value>) -> serde_json::Value {
+        json!({
+            "entities": entities,
+            "facts": facts,
+        })
+    }
+
     #[tokio::test]
     async fn server_lists_expected_tools() {
         let test_server = build_server().await.expect("server");
@@ -511,11 +590,14 @@ mod tests {
         server
             .call_tool(ToolCall {
                 name: TOOL_STATE_FACTS.to_string(),
-                arguments: json!({
-                    "facts": [
-                        text_fact("spotify:artist:rush", "spotify:displayName", "Rush")
-                    ]
-                }),
+                arguments: state_facts_args(
+                    &["spotify:artist:rush"],
+                    vec![text_fact(
+                        "spotify:artist:rush",
+                        "spotify:displayName",
+                        "Rush",
+                    )],
+                ),
             })
             .await
             .expect("state facts");
@@ -584,11 +666,14 @@ mod tests {
         let result = server
             .call_tool(ToolCall {
                 name: TOOL_STATE_FACTS.to_string(),
-                arguments: json!({
-                    "facts": [
-                        text_fact("spotify:album:2112", "spotify:displayName", "2112")
-                    ]
-                }),
+                arguments: state_facts_args(
+                    &["spotify:album:2112"],
+                    vec![text_fact(
+                        "spotify:album:2112",
+                        "spotify:displayName",
+                        "2112",
+                    )],
+                ),
             })
             .await
             .expect("state facts");
@@ -604,11 +689,14 @@ mod tests {
         server
             .call_tool(ToolCall {
                 name: TOOL_STATE_FACTS.to_string(),
-                arguments: json!({
-                    "facts": [
-                        text_fact("spotify:album:2112", "spotify:displayName", "2112")
-                    ]
-                }),
+                arguments: state_facts_args(
+                    &["spotify:album:2112"],
+                    vec![text_fact(
+                        "spotify:album:2112",
+                        "spotify:displayName",
+                        "2112",
+                    )],
+                ),
             })
             .await
             .expect("state facts");
@@ -638,11 +726,10 @@ mod tests {
         server
             .call_tool(ToolCall {
                 name: TOOL_STATE_FACTS.to_string(),
-                arguments: json!({
-                    "facts": [
-                        text_fact(entity_uri, "spotify:displayName", "Signals")
-                    ]
-                }),
+                arguments: state_facts_args(
+                    &[entity_uri],
+                    vec![text_fact(entity_uri, "spotify:displayName", "Signals")],
+                ),
             })
             .await
             .expect("state facts");
@@ -667,15 +754,14 @@ mod tests {
         server
             .call_tool(ToolCall {
                 name: TOOL_STATE_FACTS.to_string(),
-                arguments: json!({
-                    "facts": [
-                        text_fact(
-                            "spotify:album:grace-under-pressure",
-                            "spotify:displayName",
-                            "Grace Under Pressure"
-                        )
-                    ]
-                }),
+                arguments: state_facts_args(
+                    &["spotify:album:grace-under-pressure"],
+                    vec![text_fact(
+                        "spotify:album:grace-under-pressure",
+                        "spotify:displayName",
+                        "Grace Under Pressure",
+                    )],
+                ),
             })
             .await
             .expect("state facts");

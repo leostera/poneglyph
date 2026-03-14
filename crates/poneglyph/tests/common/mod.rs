@@ -381,7 +381,12 @@ pub async fn assert_get_facts_returns_all_records_in_deterministic_order(store: 
         .iter()
         .map(|fact| fact.fact_id.clone())
         .collect::<Vec<_>>();
-    facts.sort_by(|left, right| right.fact_id.as_str().cmp(left.fact_id.as_str()));
+    facts.sort_by(|left, right| {
+        right
+            .stated_at
+            .cmp(&left.stated_at)
+            .then_with(|| right.fact_id.as_str().cmp(left.fact_id.as_str()))
+    });
     let expected_ids = facts
         .iter()
         .map(|fact| fact.fact_id.clone())

@@ -163,6 +163,12 @@ fn to_rmcp_error(error: Error) -> ::rmcp::ErrorData {
         }
         Error::RmcpJoin(source) => ::rmcp::ErrorData::internal_error(source.to_string(), None),
         Error::RmcpService(source) => ::rmcp::ErrorData::internal_error(source.to_string(), None),
+        Error::InvalidToolCallResult(error) => {
+            ::rmcp::ErrorData::internal_error(error.to_string(), None)
+        }
+        error @ Error::StatingFactsOfUnknownEntities { .. } => {
+            ::rmcp::ErrorData::internal_error(error.to_string(), None)
+        }
     }
 }
 
@@ -253,6 +259,7 @@ mod tests {
             .peer()
             .call_tool(
                 CallToolRequestParams::new("stateFacts").with_arguments(object(json!({
+                    "entities": ["spotify:album:2112"],
                     "facts": [
                         {
                             "entity": "spotify:album:2112",
