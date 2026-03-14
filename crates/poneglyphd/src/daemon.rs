@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use poneglyph::{Poneglyph, Workspace};
+use poneglyph_ctl::{ConnectorRuntime, PlexConnector};
 use poneglyph_mcp::PoneglyphMcpServer;
 use tracing::{debug, info, instrument};
 
@@ -11,6 +12,7 @@ use crate::config::PoneglyphDaemonConfig;
 /// Long-lived daemon host for a configured [`Poneglyph`] runtime.
 pub struct Daemon {
     poneglyph: Arc<Poneglyph>,
+    connectors: ConnectorRuntime,
     mcp: PoneglyphMcpServer,
 }
 
@@ -28,10 +30,12 @@ impl Daemon {
     pub async fn run(self) -> Result<()> {
         info!("daemon supervising runtime and MCP server");
         let poneglyph = self.poneglyph.clone();
+        let connectors = self.connectors;
         let mcp = self.mcp;
 
         tokio::try_join!(
             async move { poneglyph.run().await.map_err(anyhow::Error::from) },
+            async move { connectors.run().await.map_err(anyhow::Error::from) },
             async move { mcp.run().await.map_err(anyhow::Error::from) },
         )?;
         Ok(())
@@ -76,6 +80,7 @@ impl DaemonBuilder {
         debug!(
             workspace = %workspace.root().display(),
             log_level = ?config.poneglyph.log_level,
+            plex_enabled = config.ctl.plex.as_ref().map(|plex| plex.enabled).unwrap_or(false),
             mcp_bind_addr = %config.mcp.bind_addr,
             "opening daemon runtime"
         );
@@ -92,8 +97,19 @@ impl DaemonBuilder {
             .with_poneglyph_arc(poneglyph.clone())
             .with_bind_addr(mcp_http_bind)
             .build()?;
+        let connectors = {
+            let mut builder = ConnectorRuntime::builder();
+            if let Some(plex) = config.ctl.plex.clone() {
+                builder = builder.add_connector(PlexConnector::init(plex)?);
+            }
+            builder.build().expect("connector runtime")
+        };
         info!("daemon runtime opened");
-        Ok(Daemon { poneglyph, mcp })
+        Ok(Daemon {
+            poneglyph,
+            connectors,
+            mcp,
+        })
     }
 }
 
