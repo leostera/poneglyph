@@ -134,8 +134,8 @@ impl datafox::Storage for FactServiceStorage {
 
         tokio::spawn(async move {
             while let Some(active_fact) = active_facts.recv().await {
-                let tuple = match active_fact {
-                    Ok(active_fact) => match active_fact_to_tuple(active_fact) {
+                let tuples = match active_fact {
+                    Ok(active_fact) => match active_fact_to_tuples(active_fact) {
                         Ok(tuple) => tuple,
                         Err(error) => {
                             if tx.send(Err(datafox_store_error(error))).await.is_err() {
@@ -152,8 +152,12 @@ impl datafox::Storage for FactServiceStorage {
                     }
                 };
 
-                if datafox::matches_pattern(&pattern, &tuple) && tx.send(Ok(tuple)).await.is_err() {
-                    break;
+                for tuple in tuples {
+                    if datafox::matches_pattern(&pattern, &tuple)
+                        && tx.send(Ok(tuple)).await.is_err()
+                    {
+                        break;
+                    }
                 }
             }
         });
@@ -168,27 +172,23 @@ fn active_filter_for_pattern(field: Uri, pattern: &[Option<datafox::Value>]) -> 
     }
 
     let entity = pattern[0].as_ref().and_then(query_value_to_uri);
-    let value = pattern[1]
-        .as_ref()
-        .and_then(|value| query_value_to_value(value).ok());
 
-    match (entity, value) {
-        (Some(entity), Some(value)) => ActiveFilter::ByFieldEntityValue {
-            field,
-            entity,
-            value,
-        },
-        (Some(entity), None) => ActiveFilter::ByFieldEntity { field, entity },
-        (None, Some(value)) => ActiveFilter::ByFieldValue { field, value },
-        (None, None) => ActiveFilter::ByField(field),
+    match entity {
+        Some(entity) => ActiveFilter::ByFieldEntity { field, entity },
+        None => ActiveFilter::ByField(field),
     }
 }
 
-fn active_fact_to_tuple(fact: ActiveFact) -> PoneResult<Vec<datafox::Value>> {
-    Ok(vec![
-        datafox::Value::from(fact.entity.to_string()),
-        value_to_query_value(&fact.value)?,
-    ])
+fn active_fact_to_tuples(fact: ActiveFact) -> PoneResult<Vec<Vec<datafox::Value>>> {
+    let entity = datafox::Value::from(fact.entity.to_string());
+
+    match fact.value {
+        Value::List(values) => values
+            .into_iter()
+            .map(|value| Ok(vec![entity.clone(), value_to_query_value(&value)?]))
+            .collect(),
+        value => Ok(vec![vec![entity, value_to_query_value(&value)?]]),
+    }
 }
 
 fn value_to_query_value(value: &Value) -> PoneResult<datafox::Value> {
@@ -213,24 +213,6 @@ fn query_value_to_uri(value: &datafox::Value) -> Option<Uri> {
     match value {
         datafox::Value::String(value) => Uri::parse(value.clone()).ok(),
         datafox::Value::Integer(_) => None,
-    }
-}
-
-fn query_value_to_value(value: &datafox::Value) -> PoneResult<Value> {
-    match value {
-        datafox::Value::Integer(value) => Ok(Value::integer(*value)),
-        datafox::Value::String(value) => {
-            if value == "null" {
-                return Ok(Value::null());
-            }
-            if value == "true" || value == "false" {
-                return Ok(Value::boolean(value == "true"));
-            }
-            if let Ok(uri) = Uri::parse(value.clone()) {
-                return Ok(Value::reference(uri));
-            }
-            Ok(Value::text(value.clone()))
-        }
     }
 }
 
@@ -356,6 +338,36 @@ mod tests {
             .await?;
 
         assert!(result.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn query_engine_matches_list_membership_as_multiple_relations() -> PoneResult<()> {
+        let (facts, query_engine) = query_engine()?;
+        let has_nicknames = uri!("dev:hasNicknames");
+        let user = uri!("dev:user:leo");
+
+        facts
+            .state_facts(fact_stream(vec![fact!(
+                user.clone(),
+                has_nicknames,
+                Value::list(vec![
+                    Value::text("leo"),
+                    Value::text("le"),
+                    Value::text("leandro"),
+                ])
+            )]))
+            .await?;
+
+        let result = query_engine
+            .query_str(r#"dev:hasNicknames(User, "leo")"#)
+            .await?;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result.substitutions()[0].lookup("User"),
+            Some(&datafox::Value::from(user.to_string()))
+        );
         Ok(())
     }
 }
