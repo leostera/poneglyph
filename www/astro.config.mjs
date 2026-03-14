@@ -1,6 +1,6 @@
+import { fileURLToPath } from "node:url";
 import cloudflare from "@astrojs/cloudflare";
 import react from "@astrojs/react";
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "astro/config";
 
 const isCloudflareBuild = process.env.CLOUDFLARE === "true";
