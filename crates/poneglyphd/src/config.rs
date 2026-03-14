@@ -4,6 +4,7 @@ use anyhow::Result;
 use config::{Config, File, FileFormat};
 use derive_builder::Builder;
 use poneglyph::{PoneglyphConfig, Workspace};
+use poneglyph_ctl::PoneglyphCtlConfig;
 use poneglyph_mcp::PoneglyphMcpConfig;
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +22,9 @@ pub struct PoneglyphDaemonConfig {
     #[serde(default)]
     #[builder(default)]
     pub poneglyph: PoneglyphConfig,
+    #[serde(default)]
+    #[builder(default)]
+    pub ctl: PoneglyphCtlConfig,
     #[serde(default)]
     #[builder(default)]
     pub mcp: PoneglyphMcpConfig,
@@ -81,6 +85,12 @@ mod tests {
 [poneglyph]
 log_level = "debug"
 
+[ctl.plex]
+enabled = true
+base_url = "http://127.0.0.1:32400"
+token = "secret"
+libraries = ["Movies", "Shows"]
+
 [mcp]
 bind_addr = "127.0.0.1:9001"
 
@@ -96,6 +106,18 @@ server_log_path = "custom.log"
             .expect("loaded config");
 
         assert_eq!(config.poneglyph.log_level.as_deref(), Some("debug"));
+        assert_eq!(
+            config.ctl.plex.as_ref().map(|plex| plex.enabled),
+            Some(true)
+        );
+        assert_eq!(
+            config
+                .ctl
+                .plex
+                .as_ref()
+                .and_then(|plex| plex.base_url.as_deref()),
+            Some("http://127.0.0.1:32400")
+        );
         assert_eq!(config.mcp.bind_addr, "127.0.0.1:9001");
         assert_eq!(
             config.logging.server_log_path.as_deref(),

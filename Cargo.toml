@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/datafox",
+    "crates/poneglyph-ctl",
     "crates/poneglyph-mcp",
     "crates/poneglyph",
     "crates/poneglyphd",
@@ -18,6 +19,7 @@ datafox = { path = "crates/datafox" }
 derive_builder = "0"
 futures-util = "0"
 poneglyph = { path = "crates/poneglyph" }
+poneglyph-ctl = { path = "crates/poneglyph-ctl" }
 poneglyph-mcp = { path = "crates/poneglyph-mcp" }
 proptest = "1"
 schemars = { version = "1", features = ["chrono04"] }

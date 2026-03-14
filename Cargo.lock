@@ -1881,6 +1881,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "poneglyph-ctl"
+version = "0.1.0"
+dependencies = [
+ "derive_builder",
+ "serde",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
 name = "poneglyph-mcp"
 version = "0.1.0"
 dependencies = [
@@ -1910,6 +1920,7 @@ dependencies = [
  "config",
  "derive_builder",
  "poneglyph",
+ "poneglyph-ctl",
  "poneglyph-mcp",
  "serde",
  "tempfile",

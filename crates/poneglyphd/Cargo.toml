@@ -9,6 +9,7 @@ clap.workspace = true
 config = "0.15.21"
 derive_builder.workspace = true
 poneglyph.workspace = true
+poneglyph-ctl.workspace = true
 poneglyph-mcp.workspace = true
 serde.workspace = true
 tokio.workspace = true
