@@ -1,3 +1,4 @@
+use poneglyph::Fact;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -32,6 +33,10 @@ pub enum Error {
     Poneglyph(#[from] poneglyph::Error),
     #[error(transparent)]
     RmcpService(#[from] rmcp::ServiceError),
+    #[error(transparent)]
+    InvalidToolCallResult(#[from] serde_json::Error),
+    #[error("when stating facts, the following fact did not match the provided entities: {fact:?}")]
+    StatingFactsOfUnknownEntities { fact: Fact },
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
