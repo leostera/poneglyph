@@ -2,6 +2,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum CtlError {
+    #[error("control store I/O failed: {0}")]
+    StoreIo(String),
+    #[error("control store migration failed: {0}")]
+    StoreMigration(String),
     #[error("plex connector requires a base_url")]
     MissingPlexBaseUrl,
     #[error("plex connector requires a token")]

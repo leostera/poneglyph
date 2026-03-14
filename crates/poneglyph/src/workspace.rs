@@ -58,6 +58,11 @@ impl Workspace {
         self.store_dir().join("search.db")
     }
 
+    /// Returns the control-plane sqlite database path.
+    pub fn control_db_path(&self) -> PathBuf {
+        self.store_dir().join("control.db")
+    }
+
     /// Ensures the workspace root and common directories exist.
     pub fn ensure(&self) -> PoneResult<()> {
         std::fs::create_dir_all(&self.root).map_err(|source| Error::WorkspaceIo { source })?;
@@ -101,6 +106,10 @@ mod tests {
         assert_eq!(
             workspace.search_db_path(),
             tempdir.path().join("store").join("search.db")
+        );
+        assert_eq!(
+            workspace.control_db_path(),
+            tempdir.path().join("store").join("control.db")
         );
     }
 

@@ -1,0 +1,4 @@
+-- Control-plane migration infrastructure bootstrap.
+--
+-- Tables will be added in later migrations once the OAuth and connection
+-- models are finalized.

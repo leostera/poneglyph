@@ -33,6 +33,10 @@ This RFD defines what a connector is, what responsibilities it has, and what it 
 
 Those will build on top of the connector abstraction later.
 
+This RFD is also now informed by the first real connector spike, `plex`, which
+proved the baseline connector shape while surfacing a few corrections we should
+carry into future connectors.
+
 ## Motivation
 [motivation]: #motivation
 
@@ -60,6 +64,19 @@ For example:
 If Poneglyph models these integrations too generically too early, the connector surface will become vague and hard to configure, document, and reason about.
 
 So the first step should be to define connectors in product terms.
+
+The Plex spike validated that this approach is correct:
+
+- a product-specific connector is easy to explain and configure
+- it can declare a product-specific schema cleanly
+- it can emit ordinary graph facts without special-casing the runtime
+- it can run under daemon supervision without being folded into `poneglyph`
+
+It also showed that we need explicit rules for:
+
+- connector schema bootstrap
+- fact-batch bridging into `Poneglyph`
+- canonical identity resolution
 
 ## Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -92,6 +109,11 @@ Each connector should define:
 - the schema vocabulary it uses for that resource
 - the configuration shape required to use it
 
+In practice, the Plex spike established one more constraint:
+
+- connector configuration should be a typed Rust struct, not a bag of
+  unstructured JSON values
+
 This does **not** mean the connector itself owns persistence or UI.
 
 Instead:
@@ -105,6 +127,22 @@ For example:
 - connector: `gmail`
 - connection: “Leo’s personal Gmail account”
 - ingestor: “sync Gmail every 5 minutes and append new facts”
+
+### Learnings from the Plex spike
+
+The first connector implementation, `plex`, established a few concrete rules:
+
+- connectors should emit ordinary `Vec<Fact>` batches
+- the connector runtime, not the connector itself, should own the bridge into
+  `Poneglyph.state_facts(...)`
+- connector schema should be bootstrapped once before steady-state ingestion
+- steady-state runs should emit data facts only, not restate schema repeatedly
+
+It also clarified what connectors should not own:
+
+- connector-local supervision logic
+- connector-local persistence separate from graph facts
+- ad hoc runtime protocols for writing into `Poneglyph`
 
 ### Why connectors are specific, not generic
 
@@ -152,6 +190,33 @@ This is only illustrative. The important part is the boundary:
 - connectors are code-defined capabilities
 - they are not yet persisted user instances
 
+After the Plex spike, the practical connector shape looks more like this:
+
+```rust
+pub struct PlexConfig {
+    pub enabled: bool,
+    pub base_url: Option<String>,
+    pub token: Option<String>,
+    pub libraries: Vec<String>,
+}
+
+pub struct PlexConnector { ... }
+
+impl PlexConnector {
+    pub fn init(config: PlexConfig) -> Result<Self>;
+    pub fn name(&self) -> &'static str;
+    pub fn schema_facts(&self) -> Vec<Fact>;
+    pub async fn run(self, tx: mpsc::Sender<Vec<Fact>>) -> Result<()>;
+}
+```
+
+This should not yet be read as the final trait for every connector, but it does
+capture the current proven boundary:
+
+- typed config in
+- fact batches out
+- runtime-owned supervision and bridging
+
 ## Connector responsibilities
 
 A connector should be responsible for:
@@ -161,6 +226,13 @@ A connector should be responsible for:
 - declaring or contributing the schema it writes against
 - translating external product data into graph metadata and facts
 
+Operationally, the Plex spike suggests a connector’s responsibilities are best
+read as:
+
+- `init(config)` validates access requirements and constructs a client
+- `schema_facts()` declares connector schema vocabulary
+- `run(...)` fetches external data and emits fact batches
+
 A connector should **not** yet be responsible for:
 
 - storing its own credentials or settings
@@ -169,6 +241,14 @@ A connector should **not** yet be responsible for:
 - exposing UI forms directly
 
 Those concerns belong to the later control-plane and daemon layers.
+
+More concretely, the following responsibilities should remain outside the
+connector itself:
+
+- creating the shared channel that receives connector fact batches
+- forwarding those batches into `Poneglyph`
+- supervising multiple connectors together
+- deciding whether schema bootstrap is required before a connector starts
 
 ## Schema relationship
 
@@ -188,6 +268,12 @@ This means a connector should be able to provide either:
 - a declarative schema definition that can be turned into schema facts
 
 The exact mechanism can be finalized in a later RFD. The requirement is that connector-defined vocabulary becomes ordinary graph schema, not an opaque side registry.
+
+The Plex spike narrowed the current implementation direction:
+
+- connector schema should currently be emitted as ordinary schema facts
+- the daemon/control-plane runtime should ensure those facts exist once
+- connectors should not restate schema on every normal sync run
 
 `ConnectorConfigDefinition` here should be understood as a typed connector-configuration description owned by the connector subsystem, not an unstructured JSON blob.
 
@@ -222,6 +308,14 @@ It also means we defer some decisions:
 - how workers are supervised
 - how connector sync state is checkpointed
 
+The Plex spike also clarified some runtime consequences we should now preserve:
+
+- connector runtimes should own a shared fact-batch channel
+- connectors should be pure producers into that channel
+- a single bridge task should forward fact batches into `Poneglyph`
+- batch-shaped write APIs such as `Poneglyph.state_facts(Vec<Fact>)` matter for
+  connector ergonomics
+
 That deferral is intentional. The connector abstraction should be stable before those layers build on top of it.
 
 ## Alternatives considered
@@ -252,6 +346,11 @@ Rejected because the graph runtime should not need to know Gmail, Plex, or Obsid
 - Should connector configuration schemas be JSON Schema, Rust types, or both?
 - How should connectors expose sync modes like full import, incremental import, or one-shot pull?
 - How should connectors report capabilities such as “read-only”, “webhook-capable”, or “requires OAuth”?
+- How should connectors resolve canonical entity identity instead of baking
+  external IDs directly into canonical URIs?
+- Should identity resolution be driven by graph queries, search, or a connector
+  helper built on top of the graph?
+- How should connectors version and evolve schema bootstrap facts over time?
 
 ## Future possibilities
 

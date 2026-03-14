@@ -9,6 +9,7 @@ derive_builder.workspace = true
 poneglyph.workspace = true
 reqwest.workspace = true
 serde.workspace = true
+sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 toml.workspace = true
