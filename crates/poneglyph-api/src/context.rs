@@ -5,13 +5,23 @@ use oauth2::{
     AuthUrl, ClientId, ClientSecret, CsrfToken, PkceCodeVerifier, RedirectUrl, Scope, TokenUrl,
 };
 use poneglyph::Poneglyph;
-use poneglyph_ctl::CtlStore;
+use poneglyph_ctl::{CtlStore, GoogleOAuthConnection};
 use poneglyph_mcp::PoneglyphMcpServer;
 use tokio::sync::Mutex;
+use uuid::Uuid;
+
+use crate::config::PoneglyphApiConfig;
 
 #[derive(Debug, Clone)]
 pub(crate) struct GooglePendingAuth {
     pub verifier: String,
+    pub handoff_uri: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GoogleAuthGrant {
+    pub grant_id: String,
+    pub connection: GoogleOAuthConnection,
 }
 
 #[derive(Debug, Clone)]
@@ -66,20 +76,28 @@ impl GoogleOAuthConfig {
 
 #[derive(Clone)]
 pub(crate) struct AppContext {
+    pub api: PoneglyphApiConfig,
     pub poneglyph: Arc<Poneglyph>,
     pub ctl: CtlStore,
     pub mcp: PoneglyphMcpServer,
     pub google_oauth: GoogleOAuthConfig,
     pub google_auth: Arc<Mutex<HashMap<String, GooglePendingAuth>>>,
+    pub google_grants: Arc<Mutex<HashMap<String, GoogleAuthGrant>>>,
 }
 
 impl AppContext {
     #[allow(dead_code)]
     pub fn new(poneglyph: Arc<Poneglyph>, ctl: CtlStore) -> Self {
-        Self::new_with_google_oauth(poneglyph, ctl, GoogleOAuthConfig::default())
+        Self::new_with_google_oauth(
+            PoneglyphApiConfig::default(),
+            poneglyph,
+            ctl,
+            GoogleOAuthConfig::default(),
+        )
     }
 
     pub fn new_with_google_oauth(
+        api: PoneglyphApiConfig,
         poneglyph: Arc<Poneglyph>,
         ctl: CtlStore,
         google_oauth: GoogleOAuthConfig,
@@ -89,24 +107,51 @@ impl AppContext {
             .build()
             .expect("mcp server");
         Self {
+            api,
             poneglyph,
             ctl,
             mcp,
             google_oauth,
             google_auth: Arc::new(Mutex::new(HashMap::new())),
+            google_grants: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
-    pub async fn insert_google_auth_state(&self, state: &CsrfToken, verifier: PkceCodeVerifier) {
+    pub async fn insert_google_auth_state(
+        &self,
+        state: &CsrfToken,
+        verifier: PkceCodeVerifier,
+        handoff_uri: Option<String>,
+    ) {
         self.google_auth.lock().await.insert(
             state.secret().to_string(),
             GooglePendingAuth {
                 verifier: verifier.secret().to_string(),
+                handoff_uri,
             },
         );
     }
 
     pub async fn take_google_auth_state(&self, state: &str) -> Option<GooglePendingAuth> {
         self.google_auth.lock().await.remove(state)
+    }
+
+    pub async fn issue_google_auth_grant(
+        &self,
+        connection: GoogleOAuthConnection,
+    ) -> GoogleAuthGrant {
+        let grant = GoogleAuthGrant {
+            grant_id: Uuid::now_v7().to_string(),
+            connection,
+        };
+        self.google_grants
+            .lock()
+            .await
+            .insert(grant.grant_id.clone(), grant.clone());
+        grant
+    }
+
+    pub async fn take_google_auth_grant(&self, grant_id: &str) -> Option<GoogleAuthGrant> {
+        self.google_grants.lock().await.remove(grant_id)
     }
 }

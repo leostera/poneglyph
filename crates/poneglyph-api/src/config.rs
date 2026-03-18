@@ -7,12 +7,16 @@ pub struct PoneglyphApiConfig {
     #[serde(default = "default_bind_addr")]
     #[builder(default = "default_bind_addr()")]
     pub bind_addr: String,
+    #[serde(default)]
+    #[builder(default)]
+    pub google_auth_base_url: Option<String>,
 }
 
 impl Default for PoneglyphApiConfig {
     fn default() -> Self {
         Self {
             bind_addr: default_bind_addr(),
+            google_auth_base_url: None,
         }
     }
 }
@@ -39,5 +43,6 @@ mod tests {
     #[test]
     fn config_defaults_to_default_bind_addr() {
         assert_eq!(PoneglyphApiConfig::default().bind_addr, default_bind_addr());
+        assert_eq!(PoneglyphApiConfig::default().google_auth_base_url, None);
     }
 }

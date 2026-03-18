@@ -10,7 +10,7 @@ use tower_http::trace::{
 use tracing::debug;
 
 use crate::{
-    config::default_bind_addr,
+    config::{PoneglyphApiConfig, default_bind_addr},
     context::{AppContext, GoogleOAuthConfig},
     controllers::{auth::google, health},
     error::{Error, Result},
@@ -23,6 +23,8 @@ pub struct PoneglyphApiServer {
     ctl: CtlStore,
     #[builder(default = "default_bind_addr()")]
     bind_addr: String,
+    #[builder(default)]
+    api_config: PoneglyphApiConfig,
     #[builder(default)]
     google_oauth: GoogleOAuthConfig,
 }
@@ -38,6 +40,7 @@ impl PoneglyphApiServer {
 
     pub fn router(&self) -> Router {
         let context = AppContext::new_with_google_oauth(
+            self.api_config.clone(),
             self.poneglyph.clone(),
             self.ctl.clone(),
             self.google_oauth.clone(),
@@ -46,7 +49,8 @@ impl PoneglyphApiServer {
             .route("/", get(google::root))
             .route("/health", get(health::health))
             .route("/auth/google/login", get(google::login))
-            .route("/auth/google/callback", get(google::callback))
+            .route("/auth/google/callback", get(google::root))
+            .route("/auth/google/redeem", get(google::redeem))
             .nest_service("/mcp", context.mcp.router())
             .layer(
                 TraceLayer::new_for_http()
@@ -87,6 +91,10 @@ impl PoneglyphApiServerBuilder {
         self.bind_addr(bind_addr.into())
     }
 
+    pub fn with_api_config(self, api_config: PoneglyphApiConfig) -> Self {
+        self.api_config(api_config)
+    }
+
     #[cfg(test)]
     pub(crate) fn with_google_oauth(self, google_oauth: GoogleOAuthConfig) -> Self {
         self.google_oauth(google_oauth)
@@ -106,7 +114,7 @@ mod tests {
     use tempfile::{TempDir, tempdir};
 
     use super::PoneglyphApiServer;
-    use crate::context::GoogleOAuthConfig;
+    use crate::{config::PoneglyphApiConfig, context::GoogleOAuthConfig};
     use poneglyph::{Poneglyph, Workspace};
     use poneglyph_ctl::CtlStore;
 
@@ -304,6 +312,268 @@ mod tests {
         assert_eq!(connection.token_type, "bearer");
 
         server_task.abort();
+        oauth_task.abort();
+    }
+
+    #[tokio::test]
+    async fn google_callback_redirects_to_handoff_and_grant_can_be_redeemed() {
+        let oauth_bind_addr = next_http_bind_addr();
+        let oauth_listener = tokio::net::TcpListener::bind(&oauth_bind_addr)
+            .await
+            .expect("oauth listener");
+        let oauth_task = tokio::spawn(async move {
+            let app = Router::new().route(
+                "/token",
+                post(|| async {
+                    Json(json!({
+                        "access_token": "google-access-token",
+                        "refresh_token": "google-refresh-token",
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                        "scope": "https://www.googleapis.com/auth/calendar.readonly"
+                    }))
+                }),
+            );
+            axum::serve(oauth_listener, app).await.expect("oauth serve");
+        });
+
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+        let runtime = Poneglyph::builder()
+            .with_workspace(workspace)
+            .build()
+            .await
+            .expect("poneglyph");
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
+        let bind_addr = next_http_bind_addr();
+        let base_url = format!("http://{bind_addr}");
+        let server = PoneglyphApiServer::builder()
+            .with_poneglyph(runtime)
+            .with_ctl_store(ctl)
+            .with_bind_addr(bind_addr.clone())
+            .with_google_oauth(GoogleOAuthConfig {
+                auth_url: format!("http://{oauth_bind_addr}/authorize"),
+                token_url: format!("http://{oauth_bind_addr}/token"),
+                redirect_uri: base_url.clone(),
+                ..GoogleOAuthConfig::default()
+            })
+            .build()
+            .expect("api server");
+        let server_task = tokio::spawn(server.run());
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let client = Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("client");
+
+        let handoff_uri = "http://127.0.0.1:8788/auth/google/callback";
+        let encoded_handoff_uri: String =
+            url::form_urlencoded::byte_serialize(handoff_uri.as_bytes()).collect();
+        let login = client
+            .get(format!(
+                "{base_url}/auth/google/login?handoff_uri={}",
+                encoded_handoff_uri
+            ))
+            .send()
+            .await
+            .expect("login");
+        let location = login
+            .headers()
+            .get("location")
+            .and_then(|value| value.to_str().ok())
+            .expect("location");
+        let state = url::Url::parse(location)
+            .expect("google auth url")
+            .query_pairs()
+            .find(|(key, _)| key == "state")
+            .map(|(_, value)| value.to_string())
+            .expect("state");
+
+        let callback = client
+            .get(format!("{base_url}?code=test-code&state={state}"))
+            .send()
+            .await
+            .expect("callback");
+        assert_eq!(callback.status(), 307);
+        let handoff_location = callback
+            .headers()
+            .get("location")
+            .and_then(|value| value.to_str().ok())
+            .expect("handoff location");
+        assert!(handoff_location.starts_with(handoff_uri));
+        let grant = url::Url::parse(handoff_location)
+            .expect("handoff url")
+            .query_pairs()
+            .find(|(key, _)| key == "grant")
+            .map(|(_, value)| value.to_string())
+            .expect("grant");
+
+        let redeemed = client
+            .get(format!("{base_url}/auth/google/redeem?grant={grant}"))
+            .send()
+            .await
+            .expect("redeem");
+        assert_eq!(redeemed.status(), 200);
+        let redeemed: serde_json::Value = redeemed.json().await.expect("redeemed body");
+        assert_eq!(redeemed["grant_id"], grant);
+        assert_eq!(redeemed["access_token"], "google-access-token");
+        assert_eq!(redeemed["refresh_token"], "google-refresh-token");
+
+        let redeemed_again = client
+            .get(format!("{base_url}/auth/google/redeem?grant={grant}"))
+            .send()
+            .await
+            .expect("redeem again");
+        assert_eq!(redeemed_again.status(), 404);
+
+        server_task.abort();
+        oauth_task.abort();
+    }
+
+    #[tokio::test]
+    async fn local_google_callback_redeems_remote_handoff_grant_and_persists_connection() {
+        let oauth_bind_addr = next_http_bind_addr();
+        let oauth_listener = tokio::net::TcpListener::bind(&oauth_bind_addr)
+            .await
+            .expect("oauth listener");
+        let oauth_task = tokio::spawn(async move {
+            let app = Router::new().route(
+                "/token",
+                post(|| async {
+                    Json(json!({
+                        "access_token": "google-access-token",
+                        "refresh_token": "google-refresh-token",
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                        "scope": "https://www.googleapis.com/auth/calendar.readonly"
+                    }))
+                }),
+            );
+            axum::serve(oauth_listener, app).await.expect("oauth serve");
+        });
+
+        let remote_tempdir = tempdir().expect("remote tempdir");
+        let remote_workspace = Workspace::at(remote_tempdir.path());
+        let remote_runtime = Poneglyph::builder()
+            .with_workspace(remote_workspace)
+            .build()
+            .await
+            .expect("remote poneglyph");
+        let remote_ctl = CtlStore::open(remote_tempdir.path().join("control.db"))
+            .await
+            .expect("remote ctl");
+        let remote_bind_addr = next_http_bind_addr();
+        let remote_base_url = format!("http://{remote_bind_addr}");
+
+        let local_tempdir = tempdir().expect("local tempdir");
+        let local_workspace = Workspace::at(local_tempdir.path());
+        let local_runtime = Poneglyph::builder()
+            .with_workspace(local_workspace)
+            .build()
+            .await
+            .expect("local poneglyph");
+        let local_ctl = CtlStore::open(local_tempdir.path().join("control.db"))
+            .await
+            .expect("local ctl");
+        let local_bind_addr = next_http_bind_addr();
+        let local_base_url = format!("http://{local_bind_addr}");
+
+        let remote_server = PoneglyphApiServer::builder()
+            .with_poneglyph(remote_runtime)
+            .with_ctl_store(remote_ctl)
+            .with_bind_addr(remote_bind_addr.clone())
+            .with_api_config(PoneglyphApiConfig {
+                bind_addr: remote_bind_addr.clone(),
+                google_auth_base_url: None,
+            })
+            .with_google_oauth(GoogleOAuthConfig {
+                auth_url: format!("http://{oauth_bind_addr}/authorize"),
+                token_url: format!("http://{oauth_bind_addr}/token"),
+                redirect_uri: remote_base_url.clone(),
+                ..GoogleOAuthConfig::default()
+            })
+            .build()
+            .expect("remote api server");
+        let local_server = PoneglyphApiServer::builder()
+            .with_poneglyph(local_runtime)
+            .with_ctl_store(local_ctl.clone())
+            .with_bind_addr(local_bind_addr.clone())
+            .with_api_config(PoneglyphApiConfig {
+                bind_addr: local_bind_addr.clone(),
+                google_auth_base_url: Some(remote_base_url.clone()),
+            })
+            .build()
+            .expect("local api server");
+
+        let remote_task = tokio::spawn(remote_server.run());
+        let local_task = tokio::spawn(local_server.run());
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let client = Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("client");
+
+        let handoff_uri = format!("{local_base_url}/auth/google/callback");
+        let encoded_handoff_uri: String =
+            url::form_urlencoded::byte_serialize(handoff_uri.as_bytes()).collect();
+        let login = client
+            .get(format!(
+                "{remote_base_url}/auth/google/login?handoff_uri={encoded_handoff_uri}"
+            ))
+            .send()
+            .await
+            .expect("login");
+        let location = login
+            .headers()
+            .get("location")
+            .and_then(|value| value.to_str().ok())
+            .expect("location");
+        let state = url::Url::parse(location)
+            .expect("google auth url")
+            .query_pairs()
+            .find(|(key, _)| key == "state")
+            .map(|(_, value)| value.to_string())
+            .expect("state");
+
+        let hosted_callback = client
+            .get(format!("{remote_base_url}?code=test-code&state={state}"))
+            .send()
+            .await
+            .expect("hosted callback");
+        assert_eq!(hosted_callback.status(), 307);
+        let localhost_redirect = hosted_callback
+            .headers()
+            .get("location")
+            .and_then(|value| value.to_str().ok())
+            .expect("localhost redirect");
+        assert!(localhost_redirect.starts_with(&handoff_uri));
+
+        let local_callback = client
+            .get(localhost_redirect)
+            .send()
+            .await
+            .expect("local callback");
+        assert_eq!(local_callback.status(), 200);
+        let local_body = local_callback.text().await.expect("local body");
+        assert!(local_body.contains("You can close this tab now"));
+
+        let latest = local_ctl
+            .latest_google_oauth_connection()
+            .await
+            .expect("latest local connection")
+            .expect("persisted connection");
+        assert_eq!(latest.access_token, "google-access-token");
+        assert_eq!(
+            latest.refresh_token.as_deref(),
+            Some("google-refresh-token")
+        );
+
+        local_task.abort();
+        remote_task.abort();
         oauth_task.abort();
     }
 }

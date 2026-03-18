@@ -96,6 +96,7 @@ impl DaemonBuilder {
             .with_poneglyph_arc(poneglyph.clone())
             .with_ctl_store(ctl)
             .with_bind_addr(api_bind_addr)
+            .with_api_config(config.api.clone())
             .build()?;
         let connectors = {
             let mut builder = ConnectorRuntime::builder().with_poneglyph_arc(poneglyph.clone());
