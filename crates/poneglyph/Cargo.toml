@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 agents.workspace = true
+evals.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 chrono.workspace = true
@@ -29,4 +30,4 @@ uuid.workspace = true
 tempfile.workspace = true
 
 [build-dependencies]
-agents.workspace = true
+evals.workspace = true
