@@ -94,12 +94,14 @@ impl DaemonBuilder {
         );
         let api = PoneglyphApiServer::builder()
             .with_poneglyph_arc(poneglyph.clone())
-            .with_ctl_store(ctl)
+            .with_ctl_store(ctl.clone())
             .with_bind_addr(api_bind_addr)
             .with_api_config(config.api.clone())
             .build()?;
         let connectors = {
-            let mut builder = ConnectorRuntime::builder().with_poneglyph_arc(poneglyph.clone());
+            let mut builder = ConnectorRuntime::builder()
+                .with_poneglyph_arc(poneglyph.clone())
+                .with_ctl_store(ctl);
             if let Some(gcal) = config.ctl.gcal.clone() {
                 builder = builder.add_gcal_connector(GcalConnector::init(gcal)?);
             }

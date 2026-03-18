@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 use tracing::{debug, info, instrument, warn};
 
-use crate::{CtlError, CtlResult, GcalConnector, PlexConnector};
+use crate::{CtlError, CtlResult, CtlStore, GcalConnector, PlexConnector};
 
 #[derive(Debug)]
 enum ConnectorProcess {
@@ -18,6 +18,7 @@ enum ConnectorProcess {
 #[builder(pattern = "owned")]
 pub struct ConnectorRuntime {
     poneglyph: Arc<Poneglyph>,
+    ctl: CtlStore,
     #[builder(default)]
     connectors: Vec<ConnectorProcess>,
 }
@@ -31,6 +32,7 @@ impl ConnectorRuntime {
     pub async fn run(self) -> CtlResult<()> {
         info!("connector runtime starting");
         let poneglyph = self.poneglyph;
+        let ctl = self.ctl;
         for connector in &self.connectors {
             ensure_connector_schema(&poneglyph, connector).await?;
         }
@@ -43,7 +45,9 @@ impl ConnectorRuntime {
                 ConnectorProcess::Gcal(connector) => {
                     debug!(connector = connector.name(), "running connector");
                     let fact_tx = fact_tx.clone();
-                    tasks.spawn(async move { connector.run(fact_tx).await });
+                    let ctl = ctl.clone();
+                    let poneglyph = poneglyph.clone();
+                    tasks.spawn(async move { connector.run(ctl, poneglyph, fact_tx).await });
                 }
                 ConnectorProcess::Plex(connector) => {
                     debug!(connector = connector.name(), "running connector");
@@ -181,6 +185,11 @@ impl ConnectorRuntimeBuilder {
         self
     }
 
+    pub fn with_ctl_store(mut self, ctl: CtlStore) -> Self {
+        self.ctl = Some(ctl);
+        self
+    }
+
     pub fn add_gcal_connector(mut self, connector: GcalConnector) -> Self {
         self.connectors
             .get_or_insert_with(Vec::new)
@@ -202,7 +211,7 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use crate::{ConnectorRuntime, GcalConfig, GcalConnector, PlexConfig, PlexConnector};
+    use crate::{ConnectorRuntime, CtlStore, GcalConfig, GcalConnector, PlexConfig, PlexConnector};
     use poneglyph::{Poneglyph, Query, QueryResult, Workspace};
 
     async fn test_poneglyph() -> Arc<Poneglyph> {
@@ -216,12 +225,20 @@ mod tests {
         )
     }
 
+    async fn test_ctl() -> CtlStore {
+        let tempdir = tempdir().expect("tempdir");
+        CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl")
+    }
+
     #[tokio::test]
     async fn runtime_runs_without_connectors() {
         let poneglyph = test_poneglyph().await;
 
         ConnectorRuntime::builder()
             .with_poneglyph_arc(poneglyph)
+            .with_ctl_store(test_ctl().await)
             .build()
             .expect("runtime")
             .run()
@@ -236,6 +253,7 @@ mod tests {
 
         ConnectorRuntime::builder()
             .with_poneglyph_arc(poneglyph)
+            .with_ctl_store(test_ctl().await)
             .add_plex_connector(plex)
             .build()
             .expect("runtime")
@@ -251,6 +269,7 @@ mod tests {
 
         ConnectorRuntime::builder()
             .with_poneglyph_arc(poneglyph)
+            .with_ctl_store(test_ctl().await)
             .add_gcal_connector(gcal)
             .build()
             .expect("runtime")
@@ -319,6 +338,7 @@ mod tests {
 
         ConnectorRuntime::builder()
             .with_poneglyph_arc(poneglyph.clone())
+            .with_ctl_store(test_ctl().await)
             .add_plex_connector(plex)
             .build()
             .expect("runtime")

@@ -5,18 +5,20 @@ edition = "2024"
 
 [dependencies]
 chrono.workspace = true
+datafox.workspace = true
 derive_builder.workspace = true
 poneglyph = { path = "../poneglyph" }
 reqwest.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 toml.workspace = true
 tracing.workspace = true
+url.workspace = true
 
 [dev-dependencies]
 axum.workspace = true
 dotenvy.workspace = true
-serde_json.workspace = true
 tempfile.workspace = true

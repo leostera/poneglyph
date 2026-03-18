@@ -1,5 +1,6 @@
 mod client;
 mod connector;
+mod ingestor;
 mod schema;
 mod types;
 
