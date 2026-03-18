@@ -6,6 +6,8 @@ pub enum CtlError {
     StoreIo(String),
     #[error("control store migration failed: {0}")]
     StoreMigration(String),
+    #[error("control store query failed: {0}")]
+    StoreQuery(String),
     #[error("plex connector requires a base_url")]
     MissingPlexBaseUrl,
     #[error("plex connector requires a token")]

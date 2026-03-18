@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use poneglyph::{Poneglyph, Workspace};
 use poneglyph_api::PoneglyphApiServer;
-use poneglyph_ctl::{ConnectorRuntime, GcalConnector, PlexConnector};
+use poneglyph_ctl::{ConnectorRuntime, CtlStore, GcalConnector, PlexConnector};
 use tracing::{debug, info};
 
 use crate::config::PoneglyphDaemonConfig;
@@ -83,6 +83,7 @@ impl DaemonBuilder {
             "opening daemon runtime"
         );
         let api_bind_addr = config.api.bind_addr.clone();
+        let ctl = CtlStore::open(workspace.control_db_path()).await?;
 
         let poneglyph = Arc::new(
             Poneglyph::builder()
@@ -93,6 +94,7 @@ impl DaemonBuilder {
         );
         let api = PoneglyphApiServer::builder()
             .with_poneglyph_arc(poneglyph.clone())
+            .with_ctl_store(ctl)
             .with_bind_addr(api_bind_addr)
             .build()?;
         let connectors = {

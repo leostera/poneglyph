@@ -3,6 +3,7 @@ use std::sync::Arc;
 use axum::{Router, routing::get};
 use derive_builder::Builder;
 use poneglyph::Poneglyph;
+use poneglyph_ctl::CtlStore;
 use tower_http::trace::{
     DefaultMakeSpan, DefaultOnFailure, DefaultOnRequest, DefaultOnResponse, TraceLayer,
 };
@@ -10,7 +11,7 @@ use tracing::debug;
 
 use crate::{
     config::default_bind_addr,
-    context::AppContext,
+    context::{AppContext, GoogleOAuthConfig},
     controllers::{auth::google, health},
     error::{Error, Result},
 };
@@ -19,8 +20,11 @@ use crate::{
 #[builder(pattern = "owned", build_fn(private, name = "fallible_build"))]
 pub struct PoneglyphApiServer {
     poneglyph: Arc<Poneglyph>,
+    ctl: CtlStore,
     #[builder(default = "default_bind_addr()")]
     bind_addr: String,
+    #[builder(default)]
+    google_oauth: GoogleOAuthConfig,
 }
 
 impl PoneglyphApiServer {
@@ -33,8 +37,13 @@ impl PoneglyphApiServer {
     }
 
     pub fn router(&self) -> Router {
-        let context = AppContext::new(self.poneglyph.clone());
+        let context = AppContext::new_with_google_oauth(
+            self.poneglyph.clone(),
+            self.ctl.clone(),
+            self.google_oauth.clone(),
+        );
         Router::new()
+            .route("/", get(google::root))
             .route("/health", get(health::health))
             .route("/auth/google/login", get(google::login))
             .route("/auth/google/callback", get(google::callback))
@@ -70,23 +79,36 @@ impl PoneglyphApiServerBuilder {
         self.poneglyph(poneglyph)
     }
 
+    pub fn with_ctl_store(self, ctl: CtlStore) -> Self {
+        self.ctl(ctl)
+    }
+
     pub fn with_bind_addr(self, bind_addr: impl Into<String>) -> Self {
         self.bind_addr(bind_addr.into())
     }
 
+    #[cfg(test)]
+    pub(crate) fn with_google_oauth(self, google_oauth: GoogleOAuthConfig) -> Self {
+        self.google_oauth(google_oauth)
+    }
+
     pub fn build(self) -> Result<PoneglyphApiServer> {
         self.fallible_build()
-            .map_err(|_| Error::MissingServerPoneglyph)
+            .map_err(|_| Error::MissingServerDependencies)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use axum::{Json, Router, routing::post};
     use reqwest::Client;
+    use serde_json::json;
     use tempfile::{TempDir, tempdir};
 
     use super::PoneglyphApiServer;
+    use crate::context::GoogleOAuthConfig;
     use poneglyph::{Poneglyph, Workspace};
+    use poneglyph_ctl::CtlStore;
 
     struct TestApiServer {
         _tempdir: TempDir,
@@ -100,8 +122,12 @@ mod tests {
             .with_workspace(workspace)
             .build()
             .await?;
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
         let server = PoneglyphApiServer::builder()
             .with_poneglyph(runtime)
+            .with_ctl_store(ctl)
             .build()
             .expect("api server");
 
@@ -142,6 +168,11 @@ mod tests {
             .expect("health");
         assert_eq!(health.status(), 200);
 
+        let root = client.get(&base_url).send().await.expect("root");
+        assert_eq!(root.status(), 200);
+        let root_body = root.text().await.expect("root body");
+        assert!(root_body.contains("Poneglyph API"));
+
         let login = client
             .get(format!("{base_url}/auth/google/login"))
             .send()
@@ -178,5 +209,101 @@ mod tests {
         assert_eq!(initialize.status(), 200);
 
         server_task.abort();
+    }
+
+    #[tokio::test]
+    async fn google_callback_exchanges_code_and_persists_connection() {
+        let oauth_bind_addr = next_http_bind_addr();
+        let oauth_listener = tokio::net::TcpListener::bind(&oauth_bind_addr)
+            .await
+            .expect("oauth listener");
+        let oauth_task = tokio::spawn(async move {
+            let app = Router::new().route(
+                "/token",
+                post(|| async {
+                    Json(json!({
+                        "access_token": "google-access-token",
+                        "refresh_token": "google-refresh-token",
+                        "token_type": "Bearer",
+                        "expires_in": 3600,
+                        "scope": "https://www.googleapis.com/auth/calendar.readonly"
+                    }))
+                }),
+            );
+            axum::serve(oauth_listener, app).await.expect("oauth serve");
+        });
+
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+        let runtime = Poneglyph::builder()
+            .with_workspace(workspace)
+            .build()
+            .await
+            .expect("poneglyph");
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
+        let bind_addr = next_http_bind_addr();
+        let base_url = format!("http://{bind_addr}");
+        let server = PoneglyphApiServer::builder()
+            .with_poneglyph(runtime)
+            .with_ctl_store(ctl.clone())
+            .with_bind_addr(bind_addr.clone())
+            .with_google_oauth(GoogleOAuthConfig {
+                auth_url: format!("http://{oauth_bind_addr}/authorize"),
+                token_url: format!("http://{oauth_bind_addr}/token"),
+                redirect_uri: base_url.clone(),
+                ..GoogleOAuthConfig::default()
+            })
+            .build()
+            .expect("api server");
+        let server_task = tokio::spawn(server.run());
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let client = Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("client");
+
+        let login = client
+            .get(format!("{base_url}/auth/google/login"))
+            .send()
+            .await
+            .expect("login");
+        let location = login
+            .headers()
+            .get("location")
+            .and_then(|value| value.to_str().ok())
+            .expect("location");
+        let redirect = url::Url::parse(location).expect("redirect url");
+        let state = redirect
+            .query_pairs()
+            .find(|(key, _)| key == "state")
+            .map(|(_, value)| value.to_string())
+            .expect("state");
+
+        let callback = client
+            .get(format!("{base_url}?code=test-code&state={state}"))
+            .send()
+            .await
+            .expect("callback");
+        assert_eq!(callback.status(), 200);
+        let body = callback.text().await.expect("body");
+        assert!(body.contains("You can close this tab now."));
+
+        let connection = ctl
+            .latest_google_oauth_connection()
+            .await
+            .expect("latest")
+            .expect("saved");
+        assert_eq!(connection.access_token, "google-access-token");
+        assert_eq!(
+            connection.refresh_token.as_deref(),
+            Some("google-refresh-token")
+        );
+        assert_eq!(connection.token_type, "bearer");
+
+        server_task.abort();
+        oauth_task.abort();
     }
 }

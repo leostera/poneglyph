@@ -5,16 +5,20 @@ edition = "2024"
 
 [dependencies]
 axum.workspace = true
+chrono.workspace = true
 derive_builder.workspace = true
 oauth2.workspace = true
-poneglyph.workspace = true
-poneglyph-mcp.workspace = true
+poneglyph= { path = "../poneglyph" }
+poneglyph-ctl = { path = "../poneglyph-ctl" }
+poneglyph-mcp = { path = "../poneglyph-mcp" }
 serde.workspace = true
+serde_json.workspace = true
+reqwest.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tower-http.workspace = true
 tracing.workspace = true
+url.workspace = true
 
 [dev-dependencies]
-reqwest.workspace = true
 tempfile.workspace = true

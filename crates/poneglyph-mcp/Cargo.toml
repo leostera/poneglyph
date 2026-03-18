@@ -6,11 +6,11 @@ edition = "2024"
 [dependencies]
 axum.workspace = true
 chrono.workspace = true
-config = "0.15.21"
+config.workspace = true
 datafox.workspace = true
 derive_builder.workspace = true
-poneglyph.workspace = true
-rmcp = { version = "1.2.0", features = ["transport-streamable-http-server"] }
+poneglyph = { path = "../poneglyph"} 
+rmcp.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -19,5 +19,5 @@ tokio.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest.workspace = true
 tempfile.workspace = true

@@ -6,11 +6,11 @@ edition = "2024"
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-config = "0.15.21"
+config.workspace = true
 derive_builder.workspace = true
-poneglyph.workspace = true
-poneglyph-api.workspace = true
-poneglyph-ctl.workspace = true
+poneglyph = { path = "../poneglyph" }
+poneglyph-api = { path = "../poneglyph-api" }
+poneglyph-ctl = { path = "../poneglyph-ctl" }
 serde.workspace = true
 tokio.workspace = true
 tracing.workspace = true

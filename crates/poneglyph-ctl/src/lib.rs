@@ -9,4 +9,4 @@ pub use connectors::gcal::{GcalConfig, GcalConnector};
 pub use connectors::plex::{PlexConfig, PlexConnector};
 pub use error::{CtlError, CtlResult};
 pub use runtime::{ConnectorRuntime, ConnectorRuntimeBuilder};
-pub use store::CtlStore;
+pub use store::{CtlStore, GoogleOAuthConnection, SaveGoogleOAuthConnection};

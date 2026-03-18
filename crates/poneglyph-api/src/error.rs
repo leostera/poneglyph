@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("api server builder requires a poneglyph runtime")]
-    MissingServerPoneglyph,
+    #[error("api server builder requires a poneglyph runtime and control-plane store")]
+    MissingServerDependencies,
     #[error("api bind address is invalid")]
     BindAddress(#[from] std::net::AddrParseError),
     #[error("api io error")]

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 chrono.workspace = true
 derive_builder.workspace = true
-poneglyph.workspace = true
+poneglyph = { path = "../poneglyph" }
 reqwest.workspace = true
 serde.workspace = true
 sqlx.workspace = true

@@ -13,6 +13,9 @@ resolver = "2"
 anyhow = "1"
 async-trait = "0"
 axum = "0.8"
+borg-agent = { path = "/Users/leostera/Developer/github.com/leostera/borg/crates/borg-agent", package = "borg-agent", version = "0" }
+borg-evals = { path = "/Users/leostera/Developer/github.com/leostera/borg/crates/borg-evals", package = "borg-evals", version = "0" }
+borg-llm = { path = "/Users/leostera/Developer/github.com/leostera/borg/crates/borg-llm", package = "borg-llm", version = "0" }
 chrono = { version = "0", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
 config = "0.15"
@@ -21,12 +24,9 @@ derive_builder = "0"
 dotenvy = "0.15"
 futures-util = "0"
 oauth2 = { version = "5", default-features = false, features = ["reqwest", "rustls-tls"] }
-poneglyph = { path = "crates/poneglyph" }
-poneglyph-api = { path = "crates/poneglyph-api" }
-poneglyph-ctl = { path = "crates/poneglyph-ctl" }
-poneglyph-mcp = { path = "crates/poneglyph-mcp" }
 proptest = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rmcp = { version = "1.2.0", features = ["transport-streamable-http-server"] }
 schemars = { version = "1", features = ["chrono04"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
