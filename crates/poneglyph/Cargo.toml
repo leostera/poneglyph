@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+agents.workspace = true
+anyhow.workspace = true
 async-trait.workspace = true
 chrono.workspace = true
 config.workspace = true
@@ -25,3 +27,6 @@ uuid.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+
+[build-dependencies]
+agents.workspace = true

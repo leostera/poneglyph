@@ -1,0 +1,8 @@
+[evals]
+trials = 50
+targets = [
+  { provider = "ollama", model = "llama3.2:3b" },
+]
+
+[provider.ollama]
+url = "http://192.168.0.2:11434"

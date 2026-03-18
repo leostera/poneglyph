@@ -10,23 +10,21 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
+agents = { path = "/Users/leostera/Developer/github.com/leostera/borg/crates/agents", package = "agents", version = "0" }
 anyhow = "1"
 async-trait = "0"
-axum = "0.8"
-borg-agent = { path = "/Users/leostera/Developer/github.com/leostera/borg/crates/borg-agent", package = "borg-agent", version = "0" }
-borg-evals = { path = "/Users/leostera/Developer/github.com/leostera/borg/crates/borg-evals", package = "borg-evals", version = "0" }
-borg-llm = { path = "/Users/leostera/Developer/github.com/leostera/borg/crates/borg-llm", package = "borg-llm", version = "0" }
+axum = "0"
 chrono = { version = "0", features = ["serde"] }
 clap = { version = "4", features = ["derive"] }
-config = "0.15"
+config = "0"
 datafox = { path = "crates/datafox" }
 derive_builder = "0"
-dotenvy = "0.15"
+dotenvy = "0"
 futures-util = "0"
 oauth2 = { version = "5", default-features = false, features = ["reqwest", "rustls-tls"] }
 proptest = "1"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-rmcp = { version = "1.2.0", features = ["transport-streamable-http-server"] }
+reqwest = { version = "0", default-features = false, features = ["json", "rustls-tls"] }
+rmcp = { version = "1", features = ["transport-streamable-http-server"] }
 schemars = { version = "1", features = ["chrono04"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -36,7 +34,7 @@ tempfile = "3"
 thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal", "sync"] }
 toml = { version = "1" }
-tower-http = { version = "0.6", features = ["trace"] }
+tower-http = { version = "0", features = ["trace"] }
 tracing = "0"
 tracing-appender = "0"
 tracing-subscriber = { version = "0", features = ["env-filter", "fmt"] }
