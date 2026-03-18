@@ -6,9 +6,7 @@ use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
 use poneglyph::{Workspace, default_workspace_path};
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{
-    EnvFilter, filter::Directive, fmt, layer::SubscriberExt, util::SubscriberInitExt,
-};
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
@@ -90,59 +88,11 @@ fn init_tracing(workspace: &Workspace, config: &PoneglyphDaemonConfig) -> Result
 }
 
 fn tracing_filter(level: &str) -> EnvFilter {
-    let level = canonical_log_level(level);
-    let filter = EnvFilter::new("off");
-    let app_level = level
-        .parse::<Directive>()
-        .expect("default log level directive");
-    let filter = filter
-        .add_directive(app_level)
-        .add_directive(
-            format!("poneglyph={level}")
-                .parse::<Directive>()
-                .expect("valid poneglyph directive"),
-        )
-        .add_directive(
-            format!("poneglyph_ctl={level}")
-                .parse::<Directive>()
-                .expect("valid poneglyph_ctl directive"),
-        )
-        .add_directive(
-            format!("poneglyph_mcp={level}")
-                .parse::<Directive>()
-                .expect("valid poneglyph_mcp directive"),
-        )
-        .add_directive(
-            format!("poneglyph_api={level}")
-                .parse::<Directive>()
-                .expect("valid poneglyph_api directive"),
-        )
-        .add_directive(
-            format!("datafox={level}")
-                .parse::<Directive>()
-                .expect("valid datafox directive"),
-        );
-
-    if level == "off" {
-        return filter;
-    }
-
-    filter
-        .add_directive(
-            "sqlx=warn"
-                .parse::<Directive>()
-                .expect("valid sqlx directive"),
-        )
-        .add_directive(
-            "sqlx::query=warn"
-                .parse::<Directive>()
-                .expect("valid sqlx::query directive"),
-        )
-        .add_directive(
-            "tantivy=warn"
-                .parse::<Directive>()
-                .expect("valid tantivy directive"),
-        )
+    EnvFilter::new(canonical_log_level(level))
+        .add_directive("tantivy=off".parse().expect("valid tantivy off directive"))
+        .add_directive("mio=off".parse().expect("valid mio off directive"))
+        .add_directive("hyper=off".parse().expect("valid hyper off directive"))
+        .add_directive("reqwest=off".parse().expect("valid reqwest off directive"))
 }
 
 fn canonical_log_level(level: &str) -> &'static str {
@@ -181,18 +131,15 @@ mod tests {
     }
 
     #[test]
-    fn tracing_filter_suppresses_sqlx_debug_by_default() {
+    fn tracing_filter_uses_requested_level() {
         let filter: EnvFilter = tracing_filter("debug");
         let rendered = filter.to_string();
 
-        assert!(rendered.contains("poneglyph=debug"));
-        assert!(rendered.contains("poneglyph_ctl=debug"));
-        assert!(rendered.contains("poneglyph_mcp=debug"));
-        assert!(rendered.contains("poneglyph_api=debug"));
-        assert!(rendered.contains("datafox=debug"));
-        assert!(rendered.contains("sqlx=warn"));
-        assert!(rendered.contains("sqlx::query=warn"));
-        assert!(rendered.contains("tantivy=warn"));
+        assert!(rendered.contains("debug"));
+        assert!(rendered.contains("tantivy=off"));
+        assert!(rendered.contains("mio=off"));
+        assert!(rendered.contains("hyper=off"));
+        assert!(rendered.contains("reqwest=off"));
     }
 
     #[test]
@@ -200,8 +147,8 @@ mod tests {
         let filter: EnvFilter = tracing_filter("garbage");
         let rendered = filter.to_string();
 
-        assert!(rendered.contains("poneglyph=off"));
-        assert!(rendered.contains("poneglyph_ctl=off"));
+        assert!(rendered.contains("off"));
+        assert!(rendered.contains("tantivy=off"));
     }
 
     #[test]
@@ -209,8 +156,16 @@ mod tests {
         let filter: EnvFilter = tracing_filter("off");
         let rendered = filter.to_string();
 
-        assert!(rendered.contains("poneglyph=off"));
-        assert!(!rendered.contains("sqlx=warn"));
-        assert!(!rendered.contains("tantivy=warn"));
+        assert!(rendered.contains("off"));
+        assert!(rendered.contains("tantivy=off"));
+    }
+
+    #[test]
+    fn tracing_filter_disables_tantivy_logs() {
+        let filter: EnvFilter = tracing_filter("trace");
+        let rendered = filter.to_string();
+
+        assert!(rendered.contains("trace"));
+        assert!(rendered.contains("tantivy=off"));
     }
 }
