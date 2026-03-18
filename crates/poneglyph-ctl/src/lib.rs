@@ -9,4 +9,7 @@ pub use connectors::gcal::{GcalConfig, GcalConnector, GoogleCalendarResource};
 pub use connectors::plex::{PlexConfig, PlexConnector};
 pub use error::{CtlError, CtlResult};
 pub use runtime::{ConnectorRuntime, ConnectorRuntimeBuilder};
-pub use store::{CtlStore, GoogleOAuthConnection, SaveGoogleOAuthConnection};
+pub use store::{
+    CtlStore, GoogleCalendarSyncState, GoogleOAuthConnection, PlexLibrarySyncState,
+    SaveGoogleOAuthConnection,
+};

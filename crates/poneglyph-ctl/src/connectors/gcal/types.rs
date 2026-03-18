@@ -40,6 +40,12 @@ pub struct GoogleCalendarEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GoogleCalendarEventSync {
+    pub events: Vec<GoogleCalendarEvent>,
+    pub next_sync_token: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GoogleCalendarTime {
     Date(NaiveDate),
     DateTime(DateTime<Utc>),
@@ -49,6 +55,8 @@ pub enum GoogleCalendarTime {
 pub(crate) struct EventListResponse {
     #[serde(default)]
     pub items: Vec<EventListEntry>,
+    #[serde(rename = "nextSyncToken")]
+    pub next_sync_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

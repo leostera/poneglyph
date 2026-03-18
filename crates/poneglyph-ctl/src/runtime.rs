@@ -51,7 +51,8 @@ impl ConnectorRuntime {
                 ConnectorProcess::Plex(connector) => {
                     debug!(connector = connector.name(), "running connector");
                     let fact_tx = fact_tx.clone();
-                    tasks.spawn(async move { connector.run(fact_tx).await });
+                    let ctl = ctl.clone();
+                    tasks.spawn(async move { connector.run(ctl, fact_tx).await });
                 }
             }
         }

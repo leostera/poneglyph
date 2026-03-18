@@ -198,7 +198,7 @@ mod tests {
     use std::sync::Arc;
 
     use chrono::{DateTime, NaiveDate, Utc};
-    use poneglyph::{FactService, InMemoryFactStore, QueryResult, uri};
+    use poneglyph::{FactService, InMemoryFactStore, QueryResult, Workspace, uri};
 
     use super::{facts_for_selected_calendars, query_result_entity};
     use crate::connectors::gcal::GoogleCalendarResource;
@@ -212,8 +212,10 @@ mod tests {
                 .build()
                 .expect("facts"),
         );
+        let tempdir = tempfile::tempdir().expect("tempdir");
         let poneglyph = Arc::new(
             poneglyph::Poneglyph::builder()
+                .with_workspace(Workspace::at(tempdir.path()))
                 .with_fact_service_arc(facts)
                 .build()
                 .await

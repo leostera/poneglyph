@@ -3,8 +3,8 @@ use reqwest::Client;
 use crate::{CtlError, CtlResult};
 
 use super::types::{
-    CalendarListResponse, EventListResponse, GoogleCalendarEvent, GoogleCalendarResource,
-    GoogleCalendarTime,
+    CalendarListResponse, EventListResponse, GoogleCalendarEvent, GoogleCalendarEventSync,
+    GoogleCalendarResource, GoogleCalendarTime,
 };
 
 #[derive(Debug, Clone)]
@@ -72,24 +72,35 @@ impl GcalClient {
             .collect())
     }
 
-    pub async fn list_events(
+    pub async fn sync_events(
         &self,
         access_token: &str,
         calendar_id: &str,
-    ) -> CtlResult<Vec<GoogleCalendarEvent>> {
+        sync_token: Option<&str>,
+    ) -> CtlResult<GoogleCalendarEventSync> {
         let calendar_id: String =
             url::form_urlencoded::byte_serialize(calendar_id.as_bytes()).collect();
-        let response = self
+        let mut request = self
             .http
             .get(format!(
                 "{}/calendar/v3/calendars/{calendar_id}/events",
                 self.base_url.trim_end_matches('/')
             ))
-            .query(&[("singleEvents", "true"), ("orderBy", "startTime")])
-            .bearer_auth(access_token)
+            .query(&[("singleEvents", "true"), ("showDeleted", "true")])
+            .bearer_auth(access_token);
+
+        if let Some(sync_token) = sync_token {
+            request = request.query(&[("syncToken", sync_token)]);
+        }
+
+        let response = request
             .send()
             .await
             .map_err(|error| CtlError::GcalRequest(error.to_string()))?;
+
+        if response.status().as_u16() == 410 {
+            return Err(CtlError::GcalSyncTokenExpired);
+        }
 
         if !response.status().is_success() {
             return Err(CtlError::GcalUnexpectedStatus(response.status().as_u16()));
@@ -100,19 +111,22 @@ impl GcalClient {
             .await
             .map_err(|error| CtlError::GcalResponseDecode(error.to_string()))?;
 
-        Ok(payload
-            .items
-            .into_iter()
-            .map(|item| GoogleCalendarEvent {
-                event_id: item.id,
-                status: item.status,
-                summary: item.summary,
-                description: item.description,
-                html_link: item.html_link,
-                start: item.start.as_ref().and_then(GoogleCalendarTime::parse),
-                end: item.end.as_ref().and_then(GoogleCalendarTime::parse),
-            })
-            .collect())
+        Ok(GoogleCalendarEventSync {
+            events: payload
+                .items
+                .into_iter()
+                .map(|item| GoogleCalendarEvent {
+                    event_id: item.id,
+                    status: item.status,
+                    summary: item.summary,
+                    description: item.description,
+                    html_link: item.html_link,
+                    start: item.start.as_ref().and_then(GoogleCalendarTime::parse),
+                    end: item.end.as_ref().and_then(GoogleCalendarTime::parse),
+                })
+                .collect(),
+            next_sync_token: payload.next_sync_token,
+        })
     }
 }
 
@@ -197,7 +211,8 @@ mod tests {
                                 "start": { "dateTime": "2026-03-18T09:00:00Z" },
                                 "end": { "dateTime": "2026-03-18T09:30:00Z" }
                             }
-                        ]
+                        ],
+                        "nextSyncToken": "sync-token-1"
                     }))
                 }),
             );
@@ -210,14 +225,45 @@ mod tests {
             .expect("http");
         let client = GcalClient::new_with_base_url(http, format!("http://{bind_addr}"));
 
-        let events = client
-            .list_events("access-token", "primary")
+        let sync = client
+            .sync_events("access-token", "primary", None)
             .await
             .expect("events");
 
-        assert_eq!(events.len(), 1);
-        assert_eq!(events[0].event_id, "event-1");
-        assert_eq!(events[0].summary.as_deref(), Some("Standup"));
+        assert_eq!(sync.events.len(), 1);
+        assert_eq!(sync.events[0].event_id, "event-1");
+        assert_eq!(sync.events[0].summary.as_deref(), Some("Standup"));
+        assert_eq!(sync.next_sync_token.as_deref(), Some("sync-token-1"));
+
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn gcal_client_reports_expired_sync_tokens() {
+        let bind_addr = next_http_bind_addr();
+        let listener = tokio::net::TcpListener::bind(&bind_addr)
+            .await
+            .expect("listener");
+        let server = tokio::spawn(async move {
+            let app = Router::new().route(
+                "/calendar/v3/calendars/primary/events",
+                get(|| async { axum::http::StatusCode::GONE }),
+            );
+            axum::serve(listener, app).await.expect("serve");
+        });
+
+        let http = Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("http");
+        let client = GcalClient::new_with_base_url(http, format!("http://{bind_addr}"));
+
+        let error = client
+            .sync_events("access-token", "primary", Some("stale-token"))
+            .await
+            .expect_err("expired token");
+
+        assert!(matches!(error, crate::CtlError::GcalSyncTokenExpired));
 
         server.abort();
     }

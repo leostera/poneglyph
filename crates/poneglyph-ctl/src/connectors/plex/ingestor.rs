@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 
 use poneglyph::{Fact, Value, fact, uri};
+use serde_json::json;
 
 use super::types::{PlexLibrarySection, PlexMetadataItem};
 
@@ -173,9 +174,20 @@ pub(super) fn item_facts(section: &PlexLibrarySection, items: &[PlexMetadataItem
     facts
 }
 
+pub(super) fn section_snapshot_fingerprint(
+    section: &PlexLibrarySection,
+    items: &[PlexMetadataItem],
+) -> String {
+    serde_json::to_string(&json!({
+        "section": section,
+        "items": items,
+    }))
+    .expect("valid plex snapshot fingerprint")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{item_facts, library_facts, select_sections};
+    use super::{item_facts, library_facts, section_snapshot_fingerprint, select_sections};
     use crate::connectors::plex::types::{PlexLibrarySection, PlexLocation, PlexMetadataItem};
 
     fn section(key: &str, title: &str, section_type: &str) -> PlexLibrarySection {
@@ -253,5 +265,30 @@ mod tests {
                 .iter()
                 .any(|fact| fact.field.as_str() == "plex:summary")
         );
+    }
+
+    #[test]
+    fn section_snapshot_fingerprint_changes_when_items_change() {
+        let section = section("5", "Movies", "movie");
+        let items = vec![PlexMetadataItem {
+            rating_key: "101".to_string(),
+            key: Some("/library/metadata/101".to_string()),
+            guid: Some("plex://movie/abc".to_string()),
+            item_type: "movie".to_string(),
+            title: "Dune".to_string(),
+            summary: Some("Spice.".to_string()),
+            year: Some(2021),
+            added_at: Some(1_710_000_000),
+            updated_at: Some(1_710_000_100),
+        }];
+        let changed = vec![PlexMetadataItem {
+            updated_at: Some(1_710_000_200),
+            ..items[0].clone()
+        }];
+
+        let left = section_snapshot_fingerprint(&section, &items);
+        let right = section_snapshot_fingerprint(&section, &changed);
+
+        assert_ne!(left, right);
     }
 }

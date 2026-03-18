@@ -28,6 +28,8 @@ pub enum CtlError {
     GcalRequest(String),
     #[error("gcal returned unexpected status: {0}")]
     GcalUnexpectedStatus(u16),
+    #[error("gcal sync token expired")]
+    GcalSyncTokenExpired,
     #[error("gcal response decode failed: {0}")]
     GcalResponseDecode(String),
     #[error("connector task join failed: {0}")]

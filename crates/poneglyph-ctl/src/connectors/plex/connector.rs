@@ -5,10 +5,10 @@ use tokio::sync::mpsc;
 use tokio::time::{Duration, sleep};
 use tracing::{debug, info, warn};
 
-use crate::{CtlError, CtlResult};
+use crate::{CtlError, CtlResult, CtlStore};
 
 use super::client::PlexClient;
-use super::ingestor::{item_facts, library_facts, select_sections};
+use super::ingestor::{item_facts, library_facts, section_snapshot_fingerprint, select_sections};
 use super::schema::schema_facts;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
@@ -61,7 +61,7 @@ impl PlexConnector {
         schema_facts()
     }
 
-    pub async fn run(self, fact_tx: mpsc::Sender<Vec<Fact>>) -> CtlResult<()> {
+    pub async fn run(self, ctl: CtlStore, fact_tx: mpsc::Sender<Vec<Fact>>) -> CtlResult<()> {
         if !self.config.enabled {
             info!("plex connector disabled, skipping");
             return Ok(());
@@ -97,20 +97,48 @@ impl PlexConnector {
         }
 
         sleep(Duration::from_millis(10)).await;
-        let mut facts = library_facts(&selected_sections);
+        let mut facts = Vec::new();
 
         for section in &selected_sections {
-            let items = self
-                .client
-                .fetch_library_items(section.key.as_str())
-                .await?;
+            let items = match self.client.fetch_library_items(section.key.as_str()).await {
+                Ok(items) => items,
+                Err(error) => {
+                    let _ = ctl
+                        .save_plex_library_sync_failure(section.key.as_str(), &error.to_string())
+                        .await;
+                    return Err(error);
+                }
+            };
+            let fingerprint = section_snapshot_fingerprint(section, &items);
+            let previous = ctl
+                .plex_library_sync_state(section.key.as_str())
+                .await?
+                .and_then(|state| state.content_fingerprint);
+            if previous.as_deref() == Some(fingerprint.as_str()) {
+                debug!(
+                    library = %section.title,
+                    section_key = %section.key,
+                    "plex connector skipped unchanged library"
+                );
+                ctl.save_plex_library_sync_success(section.key.as_str(), &fingerprint)
+                    .await?;
+                continue;
+            }
             debug!(
                 library = %section.title,
                 section_key = %section.key,
                 item_count = items.len(),
                 "plex connector fetched library items"
             );
+            facts.extend(library_facts(std::slice::from_ref(section)));
             facts.extend(item_facts(section, &items));
+            ctl.save_plex_library_sync_success(section.key.as_str(), &fingerprint)
+                .await?;
+        }
+
+        if facts.is_empty() {
+            info!("plex connector found no changed libraries to sync");
+            return Ok(());
         }
 
         info!(
@@ -143,6 +171,8 @@ mod tests {
         net::TcpListener,
         sync::{Mutex, mpsc},
     };
+
+    use crate::CtlStore;
 
     use super::{PlexConfig, PlexConnector};
 
@@ -235,9 +265,13 @@ mod tests {
             libraries: vec!["Movies".to_string()],
         })
         .expect("connector");
+        let tempdir = tempfile::tempdir().expect("tempdir");
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
 
         let (fact_tx, mut fact_stream) = mpsc::channel(1);
-        connector.run(fact_tx).await.expect("run");
+        connector.run(ctl, fact_tx).await.expect("run");
         let facts: Vec<Fact> = fact_stream.recv().await.expect("facts");
 
         assert!(facts.iter().any(|fact| {
@@ -272,9 +306,13 @@ mod tests {
             ],
         })
         .expect("connector");
+        let tempdir = tempfile::tempdir().expect("tempdir");
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
 
         let (fact_tx, mut fact_stream) = mpsc::channel(1);
-        connector.run(fact_tx).await.expect("run");
+        connector.run(ctl, fact_tx).await.expect("run");
         let facts: Vec<Fact> = fact_stream.recv().await.expect("facts");
         assert!(facts.iter().any(|fact| {
             fact.field.as_str() == "plex:title" && fact.value == Value::text("Movies")
@@ -355,9 +393,13 @@ mod tests {
             libraries: vec![],
         })
         .expect("connector");
+        let tempdir = tempfile::tempdir().expect("tempdir");
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
 
         let (fact_tx, mut fact_stream) = mpsc::channel(1);
-        connector.run(fact_tx).await.expect("run");
+        connector.run(ctl, fact_tx).await.expect("run");
         let facts: Vec<Fact> = fact_stream.recv().await.expect("facts");
         assert!(!facts.is_empty());
 
@@ -369,6 +411,91 @@ mod tests {
             .expect("recorded request");
         assert_eq!(recorded.token.as_deref(), Some("secret"));
         assert_eq!(recorded.accept.as_deref(), Some("application/json"));
+
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn plex_connector_skips_unchanged_libraries_on_subsequent_runs() {
+        async fn library_sections() -> Json<serde_json::Value> {
+            Json(json!({
+                "MediaContainer": {
+                    "Directory": [
+                        { "key": "1", "title": "Movies", "type": "movie", "Location": [{ "path": "/media/movies" }] }
+                    ]
+                }
+            }))
+        }
+
+        async fn library_items() -> Json<serde_json::Value> {
+            Json(json!({
+                "MediaContainer": {
+                    "Metadata": [
+                        {
+                            "ratingKey": "101",
+                            "key": "/library/metadata/101",
+                            "guid": "plex://movie/abc",
+                            "type": "movie",
+                            "title": "Dune",
+                            "summary": "Spice.",
+                            "year": 2021,
+                            "addedAt": 1710000000,
+                            "updatedAt": 1710000100
+                        }
+                    ]
+                }
+            }))
+        }
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        let app = Router::new()
+            .route("/library/sections/all", get(library_sections))
+            .route("/library/sections/1/all", get(library_items));
+        let server = tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve");
+        });
+
+        let tempdir = tempfile::tempdir().expect("tempdir");
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
+
+        let connector = PlexConnector::init(PlexConfig {
+            enabled: true,
+            base_url: Some(format!("http://{addr}")),
+            token: Some("secret".to_string()),
+            libraries: vec!["Movies".to_string()],
+        })
+        .expect("connector");
+        let (fact_tx, mut fact_stream) = mpsc::channel(1);
+        connector
+            .run(ctl.clone(), fact_tx)
+            .await
+            .expect("first run");
+        assert!(fact_stream.recv().await.is_some());
+
+        let connector = PlexConnector::init(PlexConfig {
+            enabled: true,
+            base_url: Some(format!("http://{addr}")),
+            token: Some("secret".to_string()),
+            libraries: vec!["Movies".to_string()],
+        })
+        .expect("connector");
+        let (fact_tx, mut fact_stream) = mpsc::channel(1);
+        connector
+            .run(ctl.clone(), fact_tx)
+            .await
+            .expect("second run");
+        assert!(fact_stream.recv().await.is_none());
+
+        let sync_state = ctl
+            .plex_library_sync_state("1")
+            .await
+            .expect("sync state")
+            .expect("saved sync state");
+        assert!(sync_state.content_fingerprint.is_some());
+        assert!(sync_state.last_synced_at.is_some());
 
         server.abort();
     }
