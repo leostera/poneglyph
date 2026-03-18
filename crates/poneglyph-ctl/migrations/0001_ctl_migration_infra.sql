@@ -1,25 +1,4 @@
-CREATE TABLE IF NOT EXISTS google_oauth_connections (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  access_token TEXT NOT NULL,
-  refresh_token TEXT,
-  token_type TEXT NOT NULL,
-  scopes TEXT NOT NULL DEFAULT '',
-  expires_at TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS google_calendar_resources (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  connection_id INTEGER NOT NULL,
-  calendar_id TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  description TEXT,
-  time_zone TEXT,
-  primary_calendar INTEGER NOT NULL DEFAULT 0,
-  selected INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  UNIQUE(connection_id, calendar_id),
-  FOREIGN KEY (connection_id) REFERENCES google_oauth_connections(id) ON DELETE CASCADE
-);
+-- Control-plane migration infrastructure bootstrap.
+--
+-- Tables will be added in later migrations once the OAuth and connection
+-- models are finalized.
