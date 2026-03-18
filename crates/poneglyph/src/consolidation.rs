@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, warn};
 
 use crate::{Entity, EntityStore, Error, Fact, PoneResult, Uri};
 
@@ -30,7 +30,6 @@ impl Consolidator {
         self.entity_broadcaster.subscribe()
     }
 
-    #[instrument(skip_all, fields(component = "consolidator"))]
     pub async fn start(mut self) -> PoneResult<()> {
         info!("consolidator started");
         loop {
@@ -146,7 +145,6 @@ fn new_entity_broadcaster() -> broadcast::Sender<Entity> {
     broadcast::channel(DEFAULT_ENTITY_BROADCAST_BUFFER).0
 }
 
-#[instrument(skip(current, facts), fields(component = "consolidator", %entity_uri))]
 pub(crate) fn consolidate_entity_over(
     current: Option<Entity>,
     entity_uri: &Uri,

@@ -3,7 +3,7 @@ use poneglyph::Fact;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio::time::{Duration, sleep};
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, warn};
 
 use crate::{CtlError, CtlResult};
 
@@ -61,10 +61,6 @@ impl PlexConnector {
         schema_facts()
     }
 
-    #[instrument(
-        skip(self, fact_tx),
-        fields(component = "poneglyph-ctl", connector = "plex")
-    )]
     pub async fn run(self, fact_tx: mpsc::Sender<Vec<Fact>>) -> CtlResult<()> {
         if !self.config.enabled {
             info!("plex connector disabled, skipping");

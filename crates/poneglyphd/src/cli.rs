@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use dotenvy::dotenv;
 use poneglyph::{Workspace, default_workspace_path};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
@@ -38,6 +39,7 @@ impl Default for Command {
 
 impl Cli {
     pub async fn run(self) -> Result<()> {
+        let _ = dotenv();
         let workspace = Workspace::at(self.workspace.clone());
         let config = PoneglyphDaemonConfig::load_from(&workspace).await?;
         init_tracing(&workspace, &config)?;
@@ -75,7 +77,7 @@ fn init_tracing(workspace: &Workspace, config: &PoneglyphDaemonConfig) -> Result
         let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
         let _ = FILE_GUARD.set(guard);
 
-        let filter = tracing_filter(config.poneglyph.log_level.as_deref().unwrap_or("info"));
+        let filter = tracing_filter(config.poneglyph.log_level.as_deref().unwrap_or("off"));
         let stderr_layer = fmt::layer().with_target(true);
         let file_layer = fmt::layer().with_target(true).with_writer(file_writer);
         let _ = tracing_subscriber::registry()
@@ -88,13 +90,12 @@ fn init_tracing(workspace: &Workspace, config: &PoneglyphDaemonConfig) -> Result
 }
 
 fn tracing_filter(level: &str) -> EnvFilter {
-    let filter = EnvFilter::new("warn");
-    let app_level = level.parse::<Directive>().unwrap_or_else(|_| {
-        "info"
-            .parse::<Directive>()
-            .expect("default log level directive")
-    });
-    filter
+    let level = canonical_log_level(level);
+    let filter = EnvFilter::new("off");
+    let app_level = level
+        .parse::<Directive>()
+        .expect("default log level directive");
+    let filter = filter
         .add_directive(app_level)
         .add_directive(
             format!("poneglyph={level}")
@@ -120,7 +121,13 @@ fn tracing_filter(level: &str) -> EnvFilter {
             format!("datafox={level}")
                 .parse::<Directive>()
                 .expect("valid datafox directive"),
-        )
+        );
+
+    if level == "off" {
+        return filter;
+    }
+
+    filter
         .add_directive(
             "sqlx=warn"
                 .parse::<Directive>()
@@ -136,6 +143,18 @@ fn tracing_filter(level: &str) -> EnvFilter {
                 .parse::<Directive>()
                 .expect("valid tantivy directive"),
         )
+}
+
+fn canonical_log_level(level: &str) -> &'static str {
+    match level {
+        "off" => "off",
+        "error" => "error",
+        "warn" => "warn",
+        "info" => "info",
+        "debug" => "debug",
+        "trace" => "trace",
+        _ => "off",
+    }
 }
 
 #[cfg(test)]
@@ -166,7 +185,6 @@ mod tests {
         let filter: EnvFilter = tracing_filter("debug");
         let rendered = filter.to_string();
 
-        assert!(rendered.contains("warn"));
         assert!(rendered.contains("poneglyph=debug"));
         assert!(rendered.contains("poneglyph_ctl=debug"));
         assert!(rendered.contains("poneglyph_mcp=debug"));
@@ -175,5 +193,24 @@ mod tests {
         assert!(rendered.contains("sqlx=warn"));
         assert!(rendered.contains("sqlx::query=warn"));
         assert!(rendered.contains("tantivy=warn"));
+    }
+
+    #[test]
+    fn tracing_filter_defaults_to_off_for_invalid_levels() {
+        let filter: EnvFilter = tracing_filter("garbage");
+        let rendered = filter.to_string();
+
+        assert!(rendered.contains("poneglyph=off"));
+        assert!(rendered.contains("poneglyph_ctl=off"));
+    }
+
+    #[test]
+    fn tracing_filter_hides_all_logs_by_default() {
+        let filter: EnvFilter = tracing_filter("off");
+        let rendered = filter.to_string();
+
+        assert!(rendered.contains("poneglyph=off"));
+        assert!(!rendered.contains("sqlx=warn"));
+        assert!(!rendered.contains("tantivy=warn"));
     }
 }

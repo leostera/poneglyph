@@ -2833,6 +2833,7 @@ dependencies = [
  "clap",
  "config",
  "derive_builder",
+ "dotenvy",
  "poneglyph",
  "poneglyph-api",
  "poneglyph-ctl",

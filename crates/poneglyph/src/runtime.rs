@@ -7,7 +7,7 @@ use crate::{
 };
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use tracing::{debug, info, instrument};
+use tracing::{debug, info};
 
 /// Assembled Poneglyph runtime dependencies.
 pub struct Poneglyph {
@@ -24,12 +24,10 @@ impl Poneglyph {
         PoneglyphBuilder::default()
     }
 
-    #[instrument(skip_all, fields(component = "runtime"))]
     pub async fn open() -> PoneResult<Self> {
         Self::builder().build().await
     }
 
-    #[instrument(skip(config), fields(component = "runtime"))]
     pub async fn from_config(config: PoneglyphConfig) -> PoneResult<Self> {
         Self::builder().with_config(config).build().await
     }
@@ -86,7 +84,6 @@ impl Poneglyph {
         self.fact_service.get_schema().await
     }
 
-    #[instrument(skip(self), fields(component = "runtime"))]
     pub async fn run(self: Arc<Self>) -> PoneResult<()> {
         let (consolidator_handle, projection_runner_handle) = self.spawn_background_workers()?;
         info!("poneglyph runtime workers started");
@@ -167,7 +164,6 @@ impl PoneglyphBuilder {
         self
     }
 
-    #[instrument(skip(self), fields(component = "runtime"))]
     pub async fn build(self) -> PoneResult<Poneglyph> {
         let workspace = match self.workspace {
             Some(workspace) => workspace,

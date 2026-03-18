@@ -4,7 +4,7 @@ use derive_builder::Builder;
 use poneglyph::{Poneglyph, uri};
 use tokio::sync::mpsc;
 use tokio::task::JoinSet;
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, warn};
 
 use crate::{CtlError, CtlResult, CtlStore, GcalConnector, PlexConnector};
 
@@ -28,7 +28,6 @@ impl ConnectorRuntime {
         ConnectorRuntimeBuilder::default()
     }
 
-    #[instrument(skip(self), fields(component = "poneglyph-ctl", connector_count = self.connectors.len()))]
     pub async fn run(self) -> CtlResult<()> {
         info!("connector runtime starting");
         let poneglyph = self.poneglyph;

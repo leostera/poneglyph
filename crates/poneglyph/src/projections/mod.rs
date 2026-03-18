@@ -5,7 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, warn};
 
 use crate::{Entity, Error, PoneResult};
 
@@ -32,7 +32,6 @@ impl ProjectionRunner {
         ProjectionRunnerBuilder::default()
     }
 
-    #[instrument(skip_all, fields(component = "projection_runner"))]
     pub async fn start(mut self) -> PoneResult<()> {
         info!(
             projection_count = self.projections.len(),

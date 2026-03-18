@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use derive_builder::Builder;
 use tokio::sync::{broadcast, mpsc};
-use tracing::{debug, instrument, warn};
+use tracing::{debug, warn};
 
 use crate::facts::store::Store;
 use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, SchemaDefinition, Uri};
@@ -22,12 +22,10 @@ impl FactService {
         FactServiceBuilder::default()
     }
 
-    #[instrument(skip_all, fields(component = "fact_service"))]
     pub async fn state_facts(&self, facts: Vec<Fact>) -> PoneResult<Uri> {
         self.stream_facts(fact_stream(facts)).await
     }
 
-    #[instrument(skip_all, fields(component = "fact_service"))]
     pub async fn stream_facts(&self, facts: mpsc::Receiver<Fact>) -> PoneResult<Uri> {
         let (tx_id, committed_facts) = self.store.state_facts(facts).await?;
         let fact_count = committed_facts.len();
@@ -40,12 +38,10 @@ impl FactService {
         Ok(tx_id)
     }
 
-    #[instrument(skip(self), fields(component = "fact_service", ?filter))]
     pub async fn get_facts(&self, filter: Filter) -> PoneResult<mpsc::Receiver<PoneResult<Fact>>> {
         self.store.get_facts(filter).await
     }
 
-    #[instrument(skip(self), fields(component = "fact_service", ?filter))]
     pub async fn get_active_facts(
         &self,
         filter: ActiveFilter,

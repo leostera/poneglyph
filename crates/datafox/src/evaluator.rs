@@ -1,5 +1,5 @@
 use tokio::sync::mpsc;
-use tracing::{debug, instrument};
+use tracing::debug;
 
 use crate::{Atom, Clause, Error, Query, Result, Storage, Substitution, Unifier, Universe, Value};
 
@@ -11,7 +11,6 @@ const DEFAULT_STREAM_BUFFER: usize = 64;
 pub struct Evaluator;
 
 impl Evaluator {
-    #[instrument(skip(universe, atom), fields(component = "datafox", predicate = %atom.predicate))]
     pub async fn query<S>(universe: &Universe<S>, atom: &Atom) -> Result<SubstitutionStream>
     where
         S: Storage + Clone + Send + Sync + 'static,
@@ -19,7 +18,6 @@ impl Evaluator {
         Self::evaluate_query(universe.clone(), Query::single(atom.clone())).await
     }
 
-    #[instrument(skip(universe, query), fields(component = "datafox"))]
     pub async fn evaluate<S>(universe: &Universe<S>, query: &Query) -> Result<SubstitutionStream>
     where
         S: Storage + Clone + Send + Sync + 'static,
@@ -91,7 +89,6 @@ impl Evaluator {
         Ok(seeds)
     }
 
-    #[instrument(skip(universe, atom, seed), fields(component = "datafox", predicate = %atom.predicate))]
     async fn query_atom_matches<S>(
         universe: &Universe<S>,
         atom: &Atom,

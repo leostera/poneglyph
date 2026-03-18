@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use datafox::{Evaluator, Query as DatafoxQuery, Substitution, Universe};
 use tokio::sync::mpsc;
-use tracing::{debug, instrument};
+use tracing::debug;
 
 use crate::{ActiveFact, ActiveFilter, FactService, PoneResult, Uri, Value};
 
@@ -75,7 +75,6 @@ impl QueryEngine {
         Self { facts }
     }
 
-    #[instrument(skip(self, query), fields(component = "query_engine"))]
     pub async fn query(&self, query: Query) -> PoneResult<QueryResult> {
         let storage = FactServiceStorage::new(self.facts.clone());
         let universe = Universe::new(storage);
@@ -90,7 +89,6 @@ impl QueryEngine {
         Ok(QueryResult::new(results))
     }
 
-    #[instrument(skip(self, source), fields(component = "query_engine"))]
     pub async fn query_str(&self, source: &str) -> PoneResult<QueryResult> {
         self.query(Query::parse(source)?).await
     }
@@ -109,7 +107,6 @@ impl FactServiceStorage {
 
 #[async_trait]
 impl datafox::Storage for FactServiceStorage {
-    #[instrument(skip(self, pattern), fields(component = "query_engine", predicate, arity = pattern.len()))]
     async fn get_facts_matching(
         &self,
         predicate: &str,

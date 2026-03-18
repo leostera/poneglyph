@@ -7,7 +7,7 @@ use tantivy::directory::MmapDirectory;
 use tantivy::query::QueryParser;
 use tantivy::schema::{STORED, STRING, Schema, TEXT, TantivyDocument, Value as _};
 use tantivy::{Index, IndexReader, IndexWriter, Term, doc};
-use tracing::{debug, instrument};
+use tracing::debug;
 
 use crate::projections::{Projection, ProjectionBatch};
 use crate::{Entity, Error, PoneResult, Uri, Value};
@@ -49,7 +49,6 @@ impl SearchProjection {
         Self::open_index(index, fields)
     }
 
-    #[instrument(skip(self), fields(component = "search_projection", query, limit))]
     pub fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>> {
         let searcher = self.reader.searcher();
         let parser = QueryParser::for_index(

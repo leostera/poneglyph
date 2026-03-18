@@ -8,6 +8,7 @@ anyhow.workspace = true
 clap.workspace = true
 config.workspace = true
 derive_builder.workspace = true
+dotenvy.workspace = true
 poneglyph = { path = "../poneglyph" }
 poneglyph-api = { path = "../poneglyph-api" }
 poneglyph-ctl = { path = "../poneglyph-ctl" }
