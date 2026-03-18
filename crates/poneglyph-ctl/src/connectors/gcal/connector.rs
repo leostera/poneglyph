@@ -4,8 +4,9 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tracing::info;
 
-use crate::CtlResult;
+use crate::{CtlError, CtlResult, CtlStore, GoogleCalendarResource, GoogleOAuthConnection};
 
+use super::client::GcalClient;
 use super::schema::schema_facts;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
@@ -53,6 +54,32 @@ impl GcalConnector {
             "gcal connector scaffold initialized"
         );
         Ok(())
+    }
+
+    pub async fn discover_calendars(
+        &self,
+        store: &CtlStore,
+    ) -> CtlResult<Vec<GoogleCalendarResource>> {
+        let connection = store
+            .latest_google_oauth_connection()
+            .await?
+            .ok_or(CtlError::MissingGoogleOAuthConnection)?;
+        self.discover_calendars_for_connection(&connection, store)
+            .await
+    }
+
+    pub async fn discover_calendars_for_connection(
+        &self,
+        connection: &GoogleOAuthConnection,
+        store: &CtlStore,
+    ) -> CtlResult<Vec<GoogleCalendarResource>> {
+        let calendars = GcalClient::default()
+            .list_calendars(&connection.access_token)
+            .await?;
+        store
+            .save_google_calendar_resources(connection.id, calendars.clone())
+            .await?;
+        Ok(calendars)
     }
 }
 

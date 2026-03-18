@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use derive_builder::Builder;
 use poneglyph::Poneglyph;
 use poneglyph_ctl::CtlStore;
@@ -50,7 +53,17 @@ impl PoneglyphApiServer {
             .route("/health", get(health::health))
             .route("/auth/google/login", get(google::login))
             .route("/auth/google/callback", get(google::root))
+            .route("/auth/google/grant", get(google::grant))
             .route("/auth/google/redeem", get(google::redeem))
+            .route(
+                "/google/calendars/discover",
+                post(google::discover_calendars),
+            )
+            .route("/google/calendars", get(google::list_calendars))
+            .route(
+                "/google/calendars/selection",
+                post(google::select_calendars),
+            )
             .nest_service("/mcp", context.mcp.router())
             .layer(
                 TraceLayer::new_for_http()
@@ -116,7 +129,7 @@ mod tests {
     use super::PoneglyphApiServer;
     use crate::{config::PoneglyphApiConfig, context::GoogleOAuthConfig};
     use poneglyph::{Poneglyph, Workspace};
-    use poneglyph_ctl::CtlStore;
+    use poneglyph_ctl::{CtlStore, SaveGoogleOAuthConnection};
 
     struct TestApiServer {
         _tempdir: TempDir,
@@ -369,7 +382,7 @@ mod tests {
             .build()
             .expect("client");
 
-        let handoff_uri = "http://127.0.0.1:8788/auth/google/callback";
+        let handoff_uri = "http://127.0.0.1:8788/auth/google/grant";
         let encoded_handoff_uri: String =
             url::form_urlencoded::byte_serialize(handoff_uri.as_bytes()).collect();
         let login = client
@@ -517,7 +530,7 @@ mod tests {
             .build()
             .expect("client");
 
-        let handoff_uri = format!("{local_base_url}/auth/google/callback");
+        let handoff_uri = format!("{local_base_url}/auth/google/grant");
         let encoded_handoff_uri: String =
             url::form_urlencoded::byte_serialize(handoff_uri.as_bytes()).collect();
         let login = client
@@ -575,5 +588,95 @@ mod tests {
         local_task.abort();
         remote_task.abort();
         oauth_task.abort();
+    }
+
+    #[tokio::test]
+    async fn google_calendar_endpoints_list_and_update_selection() {
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+        let runtime = Poneglyph::builder()
+            .with_workspace(workspace)
+            .build()
+            .await
+            .expect("poneglyph");
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
+        let connection = ctl
+            .save_google_oauth_connection(SaveGoogleOAuthConnection {
+                access_token: "google-access-token".to_string(),
+                refresh_token: Some("google-refresh-token".to_string()),
+                token_type: "Bearer".to_string(),
+                scopes: vec!["https://www.googleapis.com/auth/calendar.readonly".to_string()],
+                expires_at: None,
+            })
+            .await
+            .expect("connection");
+        ctl.save_google_calendar_resources(
+            connection.id,
+            vec![
+                poneglyph_ctl::GoogleCalendarResource {
+                    calendar_id: "primary".to_string(),
+                    summary: "Primary".to_string(),
+                    description: Some("Main".to_string()),
+                    time_zone: Some("Europe/Prague".to_string()),
+                    primary: true,
+                    selected: false,
+                },
+                poneglyph_ctl::GoogleCalendarResource {
+                    calendar_id: "work".to_string(),
+                    summary: "Work".to_string(),
+                    description: None,
+                    time_zone: Some("Europe/Prague".to_string()),
+                    primary: false,
+                    selected: false,
+                },
+            ],
+        )
+        .await
+        .expect("save calendars");
+
+        let bind_addr = next_http_bind_addr();
+        let base_url = format!("http://{bind_addr}");
+        let server = PoneglyphApiServer::builder()
+            .with_poneglyph(runtime)
+            .with_ctl_store(ctl.clone())
+            .with_bind_addr(bind_addr.clone())
+            .build()
+            .expect("api server");
+        let server_task = tokio::spawn(server.run());
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let client = Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("client");
+
+        let listed = client
+            .get(format!("{base_url}/google/calendars"))
+            .send()
+            .await
+            .expect("list calendars");
+        assert_eq!(listed.status(), 200);
+        let listed: serde_json::Value = listed.json().await.expect("listed body");
+        assert_eq!(listed.as_array().expect("array").len(), 2);
+
+        let selected = client
+            .post(format!("{base_url}/google/calendars/selection"))
+            .json(&json!({ "calendar_ids": ["work"] }))
+            .send()
+            .await
+            .expect("select calendars");
+        assert_eq!(selected.status(), 200);
+        let selected: serde_json::Value = selected.json().await.expect("selected body");
+        assert!(
+            selected
+                .as_array()
+                .expect("array")
+                .iter()
+                .any(|calendar| calendar["calendar_id"] == "work" && calendar["selected"] == true)
+        );
+
+        server_task.abort();
     }
 }

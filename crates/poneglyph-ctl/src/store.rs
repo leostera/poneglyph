@@ -27,6 +27,20 @@ pub struct SaveGoogleOAuthConnection {
     pub expires_at: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GoogleCalendarResource {
+    pub id: i64,
+    pub connection_id: i64,
+    pub calendar_id: String,
+    pub summary: String,
+    pub description: Option<String>,
+    pub time_zone: Option<String>,
+    pub primary: bool,
+    pub selected: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Clone)]
 pub struct CtlStore {
     pool: SqlitePool,
@@ -158,6 +172,138 @@ impl CtlStore {
 
         row.map(decode_google_oauth_connection).transpose()
     }
+
+    pub async fn save_google_calendar_resources(
+        &self,
+        connection_id: i64,
+        calendars: Vec<crate::connectors::gcal::GoogleCalendarResource>,
+    ) -> CtlResult<()> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+        let now = Utc::now().to_rfc3339();
+
+        for calendar in calendars {
+            sqlx::query(
+                r#"
+                INSERT INTO google_calendar_resources (
+                    connection_id,
+                    calendar_id,
+                    summary,
+                    description,
+                    time_zone,
+                    primary_calendar,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(connection_id, calendar_id) DO UPDATE SET
+                    summary = excluded.summary,
+                    description = excluded.description,
+                    time_zone = excluded.time_zone,
+                    primary_calendar = excluded.primary_calendar,
+                    updated_at = excluded.updated_at
+                "#,
+            )
+            .bind(connection_id)
+            .bind(calendar.calendar_id)
+            .bind(calendar.summary)
+            .bind(calendar.description)
+            .bind(calendar.time_zone)
+            .bind(calendar.primary)
+            .bind(&now)
+            .bind(&now)
+            .execute(&mut *tx)
+            .await
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+        }
+
+        tx.commit()
+            .await
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+        Ok(())
+    }
+
+    pub async fn list_google_calendar_resources(
+        &self,
+        connection_id: i64,
+    ) -> CtlResult<Vec<GoogleCalendarResource>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                id,
+                connection_id,
+                calendar_id,
+                summary,
+                description,
+                time_zone,
+                primary_calendar,
+                selected,
+                created_at,
+                updated_at
+            FROM google_calendar_resources
+            WHERE connection_id = ?
+            ORDER BY primary_calendar DESC, summary ASC, calendar_id ASC
+            "#,
+        )
+        .bind(connection_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        rows.into_iter()
+            .map(decode_google_calendar_resource)
+            .collect()
+    }
+
+    pub async fn set_google_calendar_selection(
+        &self,
+        connection_id: i64,
+        calendar_ids: &[String],
+    ) -> CtlResult<Vec<GoogleCalendarResource>> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+        sqlx::query(
+            r#"
+            UPDATE google_calendar_resources
+            SET selected = 0,
+                updated_at = ?
+            WHERE connection_id = ?
+            "#,
+        )
+        .bind(Utc::now().to_rfc3339())
+        .bind(connection_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        for calendar_id in calendar_ids {
+            sqlx::query(
+                r#"
+                UPDATE google_calendar_resources
+                SET selected = 1,
+                    updated_at = ?
+                WHERE connection_id = ? AND calendar_id = ?
+                "#,
+            )
+            .bind(Utc::now().to_rfc3339())
+            .bind(connection_id)
+            .bind(calendar_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+        }
+
+        tx.commit()
+            .await
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.list_google_calendar_resources(connection_id).await
+    }
 }
 
 fn resolve_db_path(path: &Path) -> PathBuf {
@@ -173,6 +319,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{CtlStore, SaveGoogleOAuthConnection};
+    use crate::connectors::gcal::GoogleCalendarResource as DiscoveredGoogleCalendarResource;
     use chrono::Utc;
 
     #[tokio::test]
@@ -216,6 +363,72 @@ mod tests {
         assert_eq!(latest.token_type, "Bearer");
         assert_eq!(latest.scopes, vec!["scope:a", "scope:b"]);
         assert_eq!(latest.expires_at, Some(expires_at));
+    }
+
+    #[tokio::test]
+    async fn ctl_store_tracks_google_calendar_resources_and_selection() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+        let connection = store
+            .save_google_oauth_connection(SaveGoogleOAuthConnection {
+                access_token: "access-token".to_string(),
+                refresh_token: Some("refresh-token".to_string()),
+                token_type: "Bearer".to_string(),
+                scopes: vec!["scope:a".to_string()],
+                expires_at: None,
+            })
+            .await
+            .expect("saved connection");
+
+        store
+            .save_google_calendar_resources(
+                connection.id,
+                vec![
+                    DiscoveredGoogleCalendarResource {
+                        calendar_id: "primary".to_string(),
+                        summary: "Primary".to_string(),
+                        description: Some("Main".to_string()),
+                        time_zone: Some("Europe/Prague".to_string()),
+                        primary: true,
+                        selected: false,
+                    },
+                    DiscoveredGoogleCalendarResource {
+                        calendar_id: "work".to_string(),
+                        summary: "Work".to_string(),
+                        description: None,
+                        time_zone: Some("Europe/Prague".to_string()),
+                        primary: false,
+                        selected: false,
+                    },
+                ],
+            )
+            .await
+            .expect("save calendars");
+
+        let all = store
+            .list_google_calendar_resources(connection.id)
+            .await
+            .expect("list calendars");
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].calendar_id, "primary");
+        assert!(!all[0].selected);
+
+        let selected = store
+            .set_google_calendar_selection(connection.id, &["work".to_string()])
+            .await
+            .expect("select calendars");
+        assert_eq!(selected.len(), 2);
+        assert!(
+            selected
+                .iter()
+                .any(|calendar| calendar.calendar_id == "work" && calendar.selected)
+        );
+        assert!(
+            selected
+                .iter()
+                .any(|calendar| calendar.calendar_id == "primary" && !calendar.selected)
+        );
     }
 }
 
@@ -266,6 +479,54 @@ fn decode_google_oauth_connection(
             scopes.split(' ').map(str::to_string).collect()
         },
         expires_at,
+        created_at,
+        updated_at,
+    })
+}
+
+fn decode_google_calendar_resource(
+    row: sqlx::sqlite::SqliteRow,
+) -> CtlResult<GoogleCalendarResource> {
+    use sqlx::Row;
+
+    let created_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("created_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let updated_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("updated_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+
+    Ok(GoogleCalendarResource {
+        id: row
+            .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        connection_id: row
+            .try_get("connection_id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        calendar_id: row
+            .try_get("calendar_id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        summary: row
+            .try_get("summary")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        description: row
+            .try_get("description")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        time_zone: row
+            .try_get("time_zone")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        primary: row
+            .try_get("primary_calendar")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        selected: row
+            .try_get("selected")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
         created_at,
         updated_at,
     })
