@@ -33,9 +33,13 @@ This RFD defines what a connector is, what responsibilities it has, and what it 
 
 Those will build on top of the connector abstraction later.
 
-This RFD is also now informed by the first real connector spike, `plex`, which
-proved the baseline connector shape while surfacing a few corrections we should
-carry into future connectors.
+This RFD is also now informed by two real connector spikes:
+
+- `plex`, which proved the baseline connector shape
+- `gcal`, which proved the first OAuth-backed, resource-scoped connector flow
+
+Together they surfaced a few corrections we should carry into future
+connectors.
 
 ## Motivation
 [motivation]: #motivation
@@ -77,6 +81,16 @@ It also showed that we need explicit rules for:
 - connector schema bootstrap
 - fact-batch bridging into `Poneglyph`
 - canonical identity resolution
+
+The Google Calendar spike extended those lessons:
+
+- some connectors are multi-phase, not just long-running workers
+- OAuth, resource discovery, and resource selection belong outside the sync
+  runtime
+- `control.db` is required to persist connection state, selected resources, and
+  sync checkpoints
+- browser auth should remain HTTP-native, not be forced through MCP or
+  GraphQL
 
 ## Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
@@ -143,6 +157,41 @@ It also clarified what connectors should not own:
 - connector-local supervision logic
 - connector-local persistence separate from graph facts
 - ad hoc runtime protocols for writing into `Poneglyph`
+
+### Learnings from the Google Calendar spike
+
+The second connector implementation, `gcal`, clarified that many real
+connectors are not a single-step "run and ingest" operation. Instead, they have
+at least three distinct phases:
+
+1. authorization
+2. resource discovery and selection
+3. sync
+
+For Google Calendar specifically, that means:
+
+- the user authorizes access to Google
+- Poneglyph lists available calendars
+- the user selects which calendars should sync
+- only then can the connector runtime ingest events
+
+This proved a few architectural points:
+
+- `ConnectorRuntime` is only responsible for the sync phase
+- OAuth/browser callbacks belong to the HTTP API layer
+- resource discovery and resource selection are control-plane operations
+- selected resources are part of durable connector state, not config-file input
+- sync checkpoints such as `nextSyncToken` must be stored in `control.db`
+
+It also validated a hosted-auth handoff pattern that we should preserve:
+
+- hosted `/auth/:provider/login`
+- hosted `/auth/:provider/callback`
+- local `/auth/:provider/grant`
+
+In that pattern, the hosted API performs the confidential code exchange, then
+hands a one-time grant back to the local app, which redeems it and stores the
+connection locally.
 
 ### Why connectors are specific, not generic
 
@@ -217,6 +266,32 @@ capture the current proven boundary:
 - fact batches out
 - runtime-owned supervision and bridging
 
+The Google Calendar spike adds a second proven boundary next to the connector
+itself:
+
+```rust
+pub struct GoogleOAuthConnection {
+    pub provider_account_id: String,
+    pub email: Option<String>,
+    pub access_token: String,
+    pub refresh_token: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+pub struct GoogleCalendarResource {
+    pub calendar_id: String,
+    pub summary: String,
+    pub selected: bool,
+    pub sync_token: Option<String>,
+}
+```
+
+These are illustrative, but they capture the current architectural reality:
+
+- OAuth-backed connectors need persisted connection records
+- discoverable resources need durable selection state
+- per-resource sync state is part of the connector control plane
+
 ## Connector responsibilities
 
 A connector should be responsible for:
@@ -249,6 +324,10 @@ connector itself:
 - forwarding those batches into `Poneglyph`
 - supervising multiple connectors together
 - deciding whether schema bootstrap is required before a connector starts
+- running OAuth authorization flows
+- listing resources for user selection
+- storing connection credentials or selected resources
+- checkpointing per-resource sync cursors and last-sync status
 
 ## Schema relationship
 
@@ -290,7 +369,16 @@ This RFD intentionally separates three concepts:
 - `Ingestor`
   a runtime worker that uses one connection to append facts
 
-Only the first concept is in scope for this RFD.
+The Google Calendar spike showed that a `Connection` is not a theoretical future
+concept. For OAuth-backed connectors it is operationally required now.
+
+This RFD still centers the `Connector` concept, but from here on it should be
+read together with these derived consequences:
+
+- connectors may require one or more persisted `Connection` records
+- connections may have discoverable `Resource` records
+- resources may need explicit user selection before sync begins
+- ingestors should consume those persisted connection and resource records
 
 ## Operational consequences
 
@@ -308,6 +396,16 @@ It also means we defer some decisions:
 - how workers are supervised
 - how connector sync state is checkpointed
 
+The `gcal` spike narrows some of those deferrals in practice:
+
+- connections are currently stored in `control.db`
+- credentials are currently stored in `control.db`
+- selected resources are currently stored in `control.db`
+- sync state is currently stored in `control.db`
+
+What remains deferred is not whether these concepts exist, but how broadly we
+generalize them across every future connector.
+
 The Plex spike also clarified some runtime consequences we should now preserve:
 
 - connector runtimes should own a shared fact-batch channel
@@ -315,6 +413,15 @@ The Plex spike also clarified some runtime consequences we should now preserve:
 - a single bridge task should forward fact batches into `Poneglyph`
 - batch-shaped write APIs such as `Poneglyph.state_facts(Vec<Fact>)` matter for
   connector ergonomics
+
+The Google Calendar spike adds more runtime consequences we should preserve:
+
+- sync workers should load selected resources from persistent state, not config
+- sync workers should resume from saved checkpoints when the upstream API
+  supports it
+- startup should not imply full re-import if a connector can resume
+- browser-native auth endpoints should remain HTTP routes, not GraphQL or MCP
+  calls
 
 That deferral is intentional. The connector abstraction should be stable before those layers build on top of it.
 
@@ -351,6 +458,12 @@ Rejected because the graph runtime should not need to know Gmail, Plex, or Obsid
 - Should identity resolution be driven by graph queries, search, or a connector
   helper built on top of the graph?
 - How should connectors version and evolve schema bootstrap facts over time?
+- How should the local and hosted `poneglyph-api` roles be described for
+  OAuth-backed connectors?
+- Should resource discovery results always be persisted, or can some connectors
+  treat them as ephemeral?
+- How should manual sync triggers and connector status inspection be exposed to
+  the app and MCP?
 
 ## Future possibilities
 
