@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{Router, routing::get};
 use derive_builder::Builder;
 use poneglyph::Poneglyph;
-use poneglyph_ctl::CtlStore;
+use poneglyph_ctl::{CtlStore, PoneglyphCtlConfig};
 use tower_http::trace::{
     DefaultMakeSpan, DefaultOnFailure, DefaultOnRequest, DefaultOnResponse, TraceLayer,
 };
@@ -27,6 +27,8 @@ pub struct PoneglyphApiServer {
     #[builder(default)]
     api_config: PoneglyphApiConfig,
     #[builder(default)]
+    ctl_config: PoneglyphCtlConfig,
+    #[builder(default)]
     google_oauth: GoogleOAuthConfig,
 }
 
@@ -42,6 +44,7 @@ impl PoneglyphApiServer {
     pub fn router(&self) -> Router {
         let context = AppContext::new_with_google_oauth(
             self.api_config.clone(),
+            self.ctl_config.clone(),
             self.poneglyph.clone(),
             self.ctl.clone(),
             self.google_oauth.clone(),
@@ -99,6 +102,10 @@ impl PoneglyphApiServerBuilder {
         self.api_config(api_config)
     }
 
+    pub fn with_ctl_config(self, ctl_config: PoneglyphCtlConfig) -> Self {
+        self.ctl_config(ctl_config)
+    }
+
     #[cfg(test)]
     pub(crate) fn with_google_oauth(self, google_oauth: GoogleOAuthConfig) -> Self {
         self.google_oauth(google_oauth)
@@ -112,6 +119,8 @@ impl PoneglyphApiServerBuilder {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use axum::{Json, Router, routing::post};
     use reqwest::Client;
     use serde_json::json;
@@ -119,8 +128,8 @@ mod tests {
 
     use super::PoneglyphApiServer;
     use crate::{config::PoneglyphApiConfig, context::GoogleOAuthConfig};
-    use poneglyph::{Poneglyph, Workspace};
-    use poneglyph_ctl::{CtlStore, SaveGoogleOAuthConnection};
+    use poneglyph::{Poneglyph, Query, QueryResult, Workspace};
+    use poneglyph_ctl::{CtlStore, PlexConfig, PoneglyphCtlConfig, SaveGoogleOAuthConnection};
 
     struct TestApiServer {
         _tempdir: TempDir,
@@ -688,5 +697,146 @@ mod tests {
         );
 
         server_task.abort();
+    }
+
+    #[tokio::test]
+    async fn graphql_connector_statuses_and_sync_connector_drive_plex() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("listener");
+        let addr = listener.local_addr().expect("addr");
+        let app = Router::new()
+            .route(
+                "/library/sections/all",
+                axum::routing::get(|| async {
+                    Json(json!({
+                        "MediaContainer": {
+                            "Directory": [
+                                {
+                                    "key": "5",
+                                    "title": "Movies",
+                                    "type": "movie",
+                                    "Location": [{ "path": "/media/movies" }]
+                                }
+                            ]
+                        }
+                    }))
+                }),
+            )
+            .route(
+                "/library/sections/5/all",
+                axum::routing::get(|| async {
+                    Json(json!({
+                        "MediaContainer": {
+                            "Metadata": [
+                                {
+                                    "ratingKey": "101",
+                                    "key": "/library/metadata/101",
+                                    "guid": "plex://movie/dune",
+                                    "type": "movie",
+                                    "title": "Dune",
+                                    "summary": "Spice.",
+                                    "year": 2021,
+                                    "addedAt": 1710000000,
+                                    "updatedAt": 1710000100
+                                }
+                            ]
+                        }
+                    }))
+                }),
+            );
+        let plex_task = tokio::spawn(async move {
+            axum::serve(listener, app).await.expect("serve");
+        });
+
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+        let runtime = Arc::new(
+            Poneglyph::builder()
+                .with_workspace(workspace)
+                .build()
+                .await
+                .expect("runtime"),
+        );
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
+        let ctl_config = PoneglyphCtlConfig {
+            gcal: None,
+            plex: Some(PlexConfig {
+                enabled: true,
+                base_url: Some(format!("http://{addr}")),
+                token: Some("secret".to_string()),
+                libraries: vec!["Movies".to_string()],
+            }),
+        };
+
+        let bind_addr = next_http_bind_addr();
+        let base_url = format!("http://{bind_addr}");
+        let server = PoneglyphApiServer::builder()
+            .with_poneglyph_arc(runtime.clone())
+            .with_ctl_store(ctl)
+            .with_ctl_config(ctl_config)
+            .with_bind_addr(bind_addr.clone())
+            .build()
+            .expect("api server");
+        let server_task = tokio::spawn(server.run());
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let client = Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .expect("client");
+
+        let statuses = client
+            .post(format!("{base_url}/gql"))
+            .json(&json!({
+                "query": "{ connectorStatuses { name enabled connected selectedResourceCount } }"
+            }))
+            .send()
+            .await
+            .expect("graphql statuses");
+        assert_eq!(statuses.status(), 200);
+        let statuses: serde_json::Value = statuses.json().await.expect("statuses body");
+        assert!(
+            statuses["data"]["connectorStatuses"]
+                .as_array()
+                .expect("array")
+                .iter()
+                .any(|status| {
+                    status["name"] == "plex"
+                        && status["enabled"] == true
+                        && status["connected"] == true
+                        && status["selectedResourceCount"] == 1
+                })
+        );
+
+        let sync = client
+            .post(format!("{base_url}/gql"))
+            .json(&json!({
+                "query": "mutation { syncConnector(name: \"plex\") { name synced message } }"
+            }))
+            .send()
+            .await
+            .expect("graphql sync");
+        assert_eq!(sync.status(), 200);
+        let sync: serde_json::Value = sync.json().await.expect("sync body");
+        assert_eq!(sync["data"]["syncConnector"]["name"], "plex");
+        assert_eq!(sync["data"]["syncConnector"]["synced"], true);
+
+        let result: QueryResult = runtime
+            .query(Query::parse("'plex:title'(Library, \"Movies\")").expect("query"))
+            .await
+            .expect("query result");
+        assert_eq!(result.len(), 1);
+
+        let item_result: QueryResult = runtime
+            .query(Query::parse("'plex:title'(Item, \"Dune\")").expect("query"))
+            .await
+            .expect("item query result");
+        assert_eq!(item_result.len(), 1);
+
+        server_task.abort();
+        plex_task.abort();
     }
 }

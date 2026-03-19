@@ -5,7 +5,7 @@ use oauth2::{
     AuthUrl, ClientId, ClientSecret, CsrfToken, PkceCodeVerifier, RedirectUrl, Scope, TokenUrl,
 };
 use poneglyph::Poneglyph;
-use poneglyph_ctl::{CtlStore, GoogleOAuthConnection};
+use poneglyph_ctl::{CtlStore, GoogleOAuthConnection, PoneglyphCtlConfig};
 use poneglyph_mcp::PoneglyphMcpServer;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -77,6 +77,7 @@ impl GoogleOAuthConfig {
 #[derive(Clone)]
 pub(crate) struct AppContext {
     pub api: PoneglyphApiConfig,
+    pub ctl_config: PoneglyphCtlConfig,
     pub poneglyph: Arc<Poneglyph>,
     pub ctl: CtlStore,
     pub mcp: PoneglyphMcpServer,
@@ -90,6 +91,7 @@ impl AppContext {
     pub fn new(poneglyph: Arc<Poneglyph>, ctl: CtlStore) -> Self {
         Self::new_with_google_oauth(
             PoneglyphApiConfig::default(),
+            PoneglyphCtlConfig::default(),
             poneglyph,
             ctl,
             GoogleOAuthConfig::default(),
@@ -98,6 +100,7 @@ impl AppContext {
 
     pub fn new_with_google_oauth(
         api: PoneglyphApiConfig,
+        ctl_config: PoneglyphCtlConfig,
         poneglyph: Arc<Poneglyph>,
         ctl: CtlStore,
         google_oauth: GoogleOAuthConfig,
@@ -108,6 +111,7 @@ impl AppContext {
             .expect("mcp server");
         Self {
             api,
+            ctl_config,
             poneglyph,
             ctl,
             mcp,

@@ -95,6 +95,7 @@ impl DaemonBuilder {
         let api = PoneglyphApiServer::builder()
             .with_poneglyph_arc(poneglyph.clone())
             .with_ctl_store(ctl.clone())
+            .with_ctl_config(config.ctl.clone())
             .with_bind_addr(api_bind_addr)
             .with_api_config(config.api.clone())
             .build()?;

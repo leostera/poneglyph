@@ -24,6 +24,23 @@ struct GoogleCalendarResourceObject {
     selected: bool,
 }
 
+#[derive(SimpleObject)]
+struct ConnectorStatusObject {
+    name: String,
+    enabled: bool,
+    connected: bool,
+    selected_resource_count: i32,
+    last_synced_at: Option<String>,
+    last_error: Option<String>,
+}
+
+#[derive(SimpleObject)]
+struct ConnectorSyncResultObject {
+    name: String,
+    synced: bool,
+    message: String,
+}
+
 #[derive(InputObject)]
 struct SelectGoogleCalendarsInput {
     calendar_ids: Vec<String>,
@@ -39,6 +56,17 @@ impl ApiQuery {
         google::list_calendars(app)
             .await
             .map(map_google_calendars)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn connector_statuses(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+    ) -> Result<Vec<ConnectorStatusObject>> {
+        let app = ctx.data::<AppContext>()?;
+        google::connector_statuses(app)
+            .await
+            .map(map_connector_statuses)
             .map_err(async_graphql::Error::new)
     }
 }
@@ -65,6 +93,18 @@ impl ApiMutation {
         google::select_calendars(app, &input.calendar_ids)
             .await
             .map(map_google_calendars)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn sync_connector(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        name: String,
+    ) -> Result<ConnectorSyncResultObject> {
+        let app = ctx.data::<AppContext>()?;
+        google::sync_connector(app, &name)
+            .await
+            .map(map_connector_sync_result)
             .map_err(async_graphql::Error::new)
     }
 }
@@ -100,4 +140,26 @@ fn map_google_calendars(
             selected: calendar.selected,
         })
         .collect()
+}
+
+fn map_connector_statuses(statuses: Vec<google::ConnectorStatus>) -> Vec<ConnectorStatusObject> {
+    statuses
+        .into_iter()
+        .map(|status| ConnectorStatusObject {
+            name: status.name,
+            enabled: status.enabled,
+            connected: status.connected,
+            selected_resource_count: status.selected_resource_count,
+            last_synced_at: status.last_synced_at.map(|value| value.to_rfc3339()),
+            last_error: status.last_error,
+        })
+        .collect()
+}
+
+fn map_connector_sync_result(result: google::ConnectorSyncResult) -> ConnectorSyncResultObject {
+    ConnectorSyncResultObject {
+        name: result.name,
+        synced: result.synced,
+        message: result.message,
+    }
 }
