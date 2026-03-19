@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use axum::{
-    Router,
-    routing::{get, post},
-};
+use axum::{Router, routing::get};
 use derive_builder::Builder;
 use poneglyph::Poneglyph;
 use poneglyph_ctl::CtlStore;
@@ -17,6 +14,7 @@ use crate::{
     context::{AppContext, GoogleOAuthConfig},
     controllers::{auth::google, health},
     error::{Error, Result},
+    graphql,
 };
 
 #[derive(Clone, Builder)]
@@ -51,19 +49,12 @@ impl PoneglyphApiServer {
         Router::new()
             .route("/", get(google::root))
             .route("/health", get(health::health))
+            .route("/gql", get(graphql::graphiql).post(graphql::graphql))
+            .route("/graphiql", get(graphql::graphiql))
             .route("/auth/google/login", get(google::login))
             .route("/auth/google/callback", get(google::root))
             .route("/auth/google/grant", get(google::grant))
             .route("/auth/google/redeem", get(google::redeem))
-            .route(
-                "/google/calendars/discover",
-                post(google::discover_calendars),
-            )
-            .route("/google/calendars", get(google::list_calendars))
-            .route(
-                "/google/calendars/selection",
-                post(google::select_calendars),
-            )
             .nest_service("/mcp", context.mcp.router())
             .layer(
                 TraceLayer::new_for_http()
@@ -218,6 +209,13 @@ mod tests {
             .await
             .expect("callback");
         assert_eq!(bad_callback.status(), 400);
+
+        let graphiql = client
+            .get(format!("{base_url}/graphiql"))
+            .send()
+            .await
+            .expect("graphiql");
+        assert_eq!(graphiql.status(), 200);
 
         let initialize = client
             .post(format!("{base_url}/mcp"))
@@ -591,7 +589,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn google_calendar_endpoints_list_and_update_selection() {
+    async fn graphql_google_calendars_list_discover_and_update_selection() {
         let tempdir = tempdir().expect("tempdir");
         let workspace = Workspace::at(tempdir.path());
         let runtime = Poneglyph::builder()
@@ -653,28 +651,40 @@ mod tests {
             .expect("client");
 
         let listed = client
-            .get(format!("{base_url}/google/calendars"))
+            .post(format!("{base_url}/gql"))
+            .json(&json!({
+                "query": "{ googleCalendars { calendarId summary selected } }"
+            }))
             .send()
             .await
-            .expect("list calendars");
+            .expect("graphql list calendars");
         assert_eq!(listed.status(), 200);
         let listed: serde_json::Value = listed.json().await.expect("listed body");
-        assert_eq!(listed.as_array().expect("array").len(), 2);
+        assert_eq!(
+            listed["data"]["googleCalendars"]
+                .as_array()
+                .expect("array")
+                .len(),
+            2
+        );
 
         let selected = client
-            .post(format!("{base_url}/google/calendars/selection"))
-            .json(&json!({ "calendar_ids": ["work"] }))
+            .post(format!("{base_url}/gql"))
+            .json(&json!({
+                "query": "mutation($input: SelectGoogleCalendarsInput!) { selectGoogleCalendars(input: $input) { calendarId selected } }",
+                "variables": { "input": { "calendarIds": ["work"] } }
+            }))
             .send()
             .await
-            .expect("select calendars");
+            .expect("graphql select calendars");
         assert_eq!(selected.status(), 200);
         let selected: serde_json::Value = selected.json().await.expect("selected body");
         assert!(
-            selected
+            selected["data"]["selectGoogleCalendars"]
                 .as_array()
                 .expect("array")
                 .iter()
-                .any(|calendar| calendar["calendar_id"] == "work" && calendar["selected"] == true)
+                .any(|calendar| calendar["calendarId"] == "work" && calendar["selected"] == true)
         );
 
         server_task.abort();

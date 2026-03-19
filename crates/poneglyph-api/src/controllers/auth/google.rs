@@ -8,7 +8,7 @@ use oauth2::{
     AuthType, AuthorizationCode, CsrfToken, PkceCodeChallenge, PkceCodeVerifier, TokenResponse,
     basic::{BasicClient, BasicTokenResponse},
 };
-use poneglyph_ctl::{GcalConnector, SaveGoogleOAuthConnection};
+use poneglyph_ctl::SaveGoogleOAuthConnection;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use url::Url;
@@ -45,21 +45,6 @@ pub(crate) struct GoogleAuthGrantPayload {
 #[derive(Debug, Deserialize)]
 pub(crate) struct GoogleRedeemGrantQuery {
     pub grant: String,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct GoogleCalendarResourceResponse {
-    pub calendar_id: String,
-    pub summary: String,
-    pub description: Option<String>,
-    pub time_zone: Option<String>,
-    pub primary: bool,
-    pub selected: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct GoogleCalendarSelectionRequest {
-    pub calendar_ids: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -348,161 +333,6 @@ async fn callback_with_grant(context: AppContext, grant_id: String) -> Response 
     );
 
     (StatusCode::OK, views::auth::login_successful("Google")).into_response()
-}
-
-pub(crate) async fn discover_calendars(State(context): State<AppContext>) -> Response {
-    let connector = match GcalConnector::init(Default::default()) {
-        Ok(connector) => connector,
-        Err(error) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(GoogleCallbackError {
-                    error: format!("failed to initialize gcal connector: {error}"),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    match connector.discover_calendars(&context.ctl).await {
-        Ok(calendars) => (
-            StatusCode::OK,
-            Json(
-                calendars
-                    .into_iter()
-                    .map(|calendar| GoogleCalendarResourceResponse {
-                        calendar_id: calendar.calendar_id,
-                        summary: calendar.summary,
-                        description: calendar.description,
-                        time_zone: calendar.time_zone,
-                        primary: calendar.primary,
-                        selected: calendar.selected,
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-        )
-            .into_response(),
-        Err(error) => (
-            StatusCode::BAD_GATEWAY,
-            Json(GoogleCallbackError {
-                error: format!("failed to discover google calendars: {error}"),
-            }),
-        )
-            .into_response(),
-    }
-}
-
-pub(crate) async fn list_calendars(State(context): State<AppContext>) -> Response {
-    let connection = match context.ctl.latest_google_oauth_connection().await {
-        Ok(Some(connection)) => connection,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(GoogleCallbackError {
-                    error: "no google oauth connection found".to_string(),
-                }),
-            )
-                .into_response();
-        }
-        Err(error) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(GoogleCallbackError {
-                    error: format!("failed to load google oauth connection: {error}"),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    match context
-        .ctl
-        .list_google_calendar_resources(connection.id)
-        .await
-    {
-        Ok(calendars) => (
-            StatusCode::OK,
-            Json(
-                calendars
-                    .into_iter()
-                    .map(|calendar| GoogleCalendarResourceResponse {
-                        calendar_id: calendar.calendar_id,
-                        summary: calendar.summary,
-                        description: calendar.description,
-                        time_zone: calendar.time_zone,
-                        primary: calendar.primary,
-                        selected: calendar.selected,
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-        )
-            .into_response(),
-        Err(error) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(GoogleCallbackError {
-                error: format!("failed to list google calendars: {error}"),
-            }),
-        )
-            .into_response(),
-    }
-}
-
-pub(crate) async fn select_calendars(
-    State(context): State<AppContext>,
-    Json(request): Json<GoogleCalendarSelectionRequest>,
-) -> Response {
-    let connection = match context.ctl.latest_google_oauth_connection().await {
-        Ok(Some(connection)) => connection,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(GoogleCallbackError {
-                    error: "no google oauth connection found".to_string(),
-                }),
-            )
-                .into_response();
-        }
-        Err(error) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(GoogleCallbackError {
-                    error: format!("failed to load google oauth connection: {error}"),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    match context
-        .ctl
-        .set_google_calendar_selection(connection.id, &request.calendar_ids)
-        .await
-    {
-        Ok(calendars) => (
-            StatusCode::OK,
-            Json(
-                calendars
-                    .into_iter()
-                    .map(|calendar| GoogleCalendarResourceResponse {
-                        calendar_id: calendar.calendar_id,
-                        summary: calendar.summary,
-                        description: calendar.description,
-                        time_zone: calendar.time_zone,
-                        primary: calendar.primary,
-                        selected: calendar.selected,
-                    })
-                    .collect::<Vec<_>>(),
-            ),
-        )
-            .into_response(),
-        Err(error) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(GoogleCallbackError {
-                error: format!("failed to update google calendar selection: {error}"),
-            }),
-        )
-            .into_response(),
-    }
 }
 
 pub(crate) async fn redeem(
