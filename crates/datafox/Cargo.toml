@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 async-trait.workspace = true
+regex.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

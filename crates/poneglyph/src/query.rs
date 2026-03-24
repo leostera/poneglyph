@@ -353,4 +353,68 @@ mod tests {
         );
         Ok(())
     }
+
+    #[tokio::test]
+    async fn query_engine_filters_results_with_infix_comparison_builtins() -> PoneResult<()> {
+        let (facts, query_engine) = query_engine()?;
+        let started_at = uri!("gcal:startedAt");
+        let event_one = uri!("gcal:event:one");
+        let event_two = uri!("gcal:event:two");
+
+        facts
+            .state_facts(vec![
+                fact!(
+                    event_one.clone(),
+                    started_at.clone(),
+                    Value::text("2026-01-01 22:00:00")
+                ),
+                fact!(event_two, started_at, Value::text("2026-01-03 08:00:00")),
+            ])
+            .await?;
+
+        let result = query_engine
+            .query_str(
+                r#"gcal:startedAt(Event, Start), Start > "2026-01-01", Start < "2026-01-02""#,
+            )
+            .await?;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result.substitutions()[0].lookup("Event"),
+            Some(&datafox::Value::from(event_one.to_string()))
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn query_engine_filters_results_with_named_string_builtins() -> PoneResult<()> {
+        let (facts, query_engine) = query_engine()?;
+        let display_name = uri!("spotify:displayName");
+        let artist_rush = uri!("spotify:artist:rush");
+        let artist_yes = uri!("spotify:artist:yes");
+
+        facts
+            .state_facts(vec![
+                fact!(
+                    artist_rush.clone(),
+                    display_name.clone(),
+                    Value::text("Rush")
+                ),
+                fact!(artist_yes, display_name, Value::text("Yes")),
+            ])
+            .await?;
+
+        let result = query_engine
+            .query_str(
+                r#"spotify:displayName(Artist, Name), startsWith(Name, "Ru"), endsWith(Name, "sh")"#,
+            )
+            .await?;
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(
+            result.substitutions()[0].lookup("Artist"),
+            Some(&datafox::Value::from(artist_rush.to_string()))
+        );
+        Ok(())
+    }
 }

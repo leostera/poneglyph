@@ -16,8 +16,18 @@ pub enum Error {
     UnsupportedMultiQuery,
     #[error("negated clauses are not implemented yet")]
     UnsupportedNegation,
-    #[error("builtin clauses are not implemented yet")]
-    UnsupportedBuiltin,
+    #[error("unsupported builtin clause `{name}`")]
+    UnsupportedBuiltin { name: String },
+    #[error("builtin `{name}` expected {expected} arguments, found {found}")]
+    BuiltinArityMismatch {
+        name: String,
+        expected: usize,
+        found: usize,
+    },
+    #[error("builtin `{name}` expected {expected}")]
+    BuiltinTypeMismatch { name: String, expected: String },
+    #[error("builtin `{name}` requires ground arguments before it can be evaluated")]
+    UngroundedBuiltin { name: String },
     #[error("arity mismatch for predicate `{predicate}`: expected {expected}, found {found}")]
     ArityMismatch {
         predicate: String,

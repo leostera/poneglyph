@@ -1,3 +1,4 @@
+use regex::Regex;
 use tokio::sync::mpsc;
 use tracing::debug;
 
@@ -74,7 +75,21 @@ impl Evaluator {
             let atom = match clause {
                 Clause::Atom(atom) => atom,
                 Clause::Negated(_) => return Err(Error::UnsupportedNegation),
-                Clause::Builtin { .. } => return Err(Error::UnsupportedBuiltin),
+                Clause::Builtin { name, args } => {
+                    let mut next_seeds = Vec::new();
+                    for seed in seeds {
+                        if Self::evaluate_builtin_clause(&name, &args, &seed)? {
+                            next_seeds.push(seed);
+                        }
+                    }
+                    debug!(
+                        builtin = %name,
+                        seed_count = next_seeds.len(),
+                        "advanced builtin clause evaluation"
+                    );
+                    seeds = next_seeds;
+                    continue;
+                }
             };
 
             let mut next_seeds = Vec::new();
@@ -87,6 +102,64 @@ impl Evaluator {
         }
 
         Ok(seeds)
+    }
+
+    fn evaluate_builtin_clause(
+        name: &str,
+        args: &[crate::Term],
+        seed: &Substitution,
+    ) -> Result<bool> {
+        let [left, right] = args else {
+            return Err(Error::BuiltinArityMismatch {
+                name: name.to_string(),
+                expected: 2,
+                found: args.len(),
+            });
+        };
+
+        let Some(left) = Unifier::ground_term(seed, left) else {
+            return Err(Error::UngroundedBuiltin {
+                name: name.to_string(),
+            });
+        };
+        let Some(right) = Unifier::ground_term(seed, right) else {
+            return Err(Error::UngroundedBuiltin {
+                name: name.to_string(),
+            });
+        };
+
+        match name {
+            "eq" => Ok(left == right),
+            "gt" => Ok(values_are_ordered_compatibly(&left, &right) && left > right),
+            "gte" => Ok(values_are_ordered_compatibly(&left, &right) && left >= right),
+            "lt" => Ok(values_are_ordered_compatibly(&left, &right) && left < right),
+            "lte" => Ok(values_are_ordered_compatibly(&left, &right) && left <= right),
+            "startsWith" => {
+                let (haystack, prefix) = string_args(name, &left, &right)?;
+                Ok(haystack.starts_with(prefix))
+            }
+            "endsWith" => {
+                let (haystack, suffix) = string_args(name, &left, &right)?;
+                Ok(haystack.ends_with(suffix))
+            }
+            "contains" => {
+                let (haystack, needle) = string_args(name, &left, &right)?;
+                Ok(haystack.contains(needle))
+            }
+            "matchesRegex" => {
+                let (haystack, pattern) = string_args(name, &left, &right)?;
+                let regex = Regex::new(pattern).map_err(|_| Error::BuiltinTypeMismatch {
+                    name: name.to_string(),
+                    expected: "a valid regex pattern as the second string argument".to_string(),
+                })?;
+                Ok(regex.is_match(haystack))
+            }
+            "before" => Ok(values_are_ordered_compatibly(&left, &right) && left < right),
+            "after" => Ok(values_are_ordered_compatibly(&left, &right) && left > right),
+            _ => Err(Error::UnsupportedBuiltin {
+                name: name.to_string(),
+            }),
+        }
     }
 
     async fn query_atom_matches<S>(
@@ -126,6 +199,23 @@ fn atom_to_pattern(atom: &Atom) -> Vec<Option<Value>> {
             crate::Term::Var(_) | crate::Term::Wildcard => None,
         })
         .collect()
+}
+
+fn values_are_ordered_compatibly(left: &Value, right: &Value) -> bool {
+    matches!(
+        (left, right),
+        (Value::Integer(_), Value::Integer(_)) | (Value::String(_), Value::String(_))
+    )
+}
+
+fn string_args<'a>(name: &str, left: &'a Value, right: &'a Value) -> Result<(&'a str, &'a str)> {
+    match (left, right) {
+        (Value::String(left), Value::String(right)) => Ok((left, right)),
+        _ => Err(Error::BuiltinTypeMismatch {
+            name: name.to_string(),
+            expected: "two string arguments".to_string(),
+        }),
+    }
 }
 
 #[cfg(test)]
@@ -273,6 +363,162 @@ mod tests {
         };
 
         assert_eq!(error, crate::Error::UnsupportedNegation);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn evaluator_filters_results_with_infix_comparison_builtins() -> Result<()> {
+        let universe = Universe::new(InMemoryStorage::from_facts([(
+            "gcal:startedAt".to_string(),
+            vec![
+                vec![
+                    Value::string("gcal:event:one"),
+                    Value::string("2026-01-01 22:00:00"),
+                ],
+                vec![
+                    Value::string("gcal:event:two"),
+                    Value::string("2026-01-03 08:00:00"),
+                ],
+            ],
+        )]));
+        let query = parse_query(
+            "gcal:startedAt(Event, Start), Start > \"2026-01-01\", Start < \"2026-01-02\"",
+        )?;
+
+        let results = collect_results(Evaluator::evaluate(&universe, &query).await?).await?;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].lookup("Event"),
+            Some(&Value::string("gcal:event:one"))
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn evaluator_supports_equality_builtins() -> Result<()> {
+        let universe = Universe::new(InMemoryStorage::from_facts([(
+            "edge".to_string(),
+            vec![
+                vec![Value::integer(1), Value::integer(1)],
+                vec![Value::integer(1), Value::integer(2)],
+            ],
+        )]));
+        let query = parse_query("edge(X, Y), X = Y")?;
+
+        let results = collect_results(Evaluator::evaluate(&universe, &query).await?).await?;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].lookup("X"), Some(&Value::integer(1)));
+        assert_eq!(results[0].lookup("Y"), Some(&Value::integer(1)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn evaluator_supports_named_string_builtins() -> Result<()> {
+        let universe = Universe::new(InMemoryStorage::from_facts([(
+            "spotify:displayName".to_string(),
+            vec![
+                vec![Value::string("spotify:artist:rush"), Value::string("Rush")],
+                vec![Value::string("spotify:artist:yes"), Value::string("Yes")],
+            ],
+        )]));
+        let query = parse_query(
+            r#"spotify:displayName(Artist, Name), startsWith(Name, "Ru"), endsWith(Name, "sh"), contains(Name, "us"), matchesRegex(Name, "^R.*h$")"#,
+        )?;
+
+        let results = collect_results(Evaluator::evaluate(&universe, &query).await?).await?;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].lookup("Artist"),
+            Some(&Value::string("spotify:artist:rush"))
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn evaluator_supports_temporal_alias_builtins() -> Result<()> {
+        let universe = Universe::new(InMemoryStorage::from_facts([(
+            "gcal:startedAt".to_string(),
+            vec![
+                vec![
+                    Value::string("gcal:event:one"),
+                    Value::string("2026-01-01 22:00:00"),
+                ],
+                vec![
+                    Value::string("gcal:event:two"),
+                    Value::string("2026-01-03 08:00:00"),
+                ],
+            ],
+        )]));
+        let query = parse_query(
+            r#"gcal:startedAt(Event, Start), after(Start, "2026-01-01"), before(Start, "2026-01-02")"#,
+        )?;
+
+        let results = collect_results(Evaluator::evaluate(&universe, &query).await?).await?;
+
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].lookup("Event"),
+            Some(&Value::string("gcal:event:one"))
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn evaluator_requires_ground_builtin_arguments() -> Result<()> {
+        let universe = Universe::new(InMemoryStorage::new());
+        let query = Query::multi(vec![Clause::builtin(
+            "gt",
+            vec![
+                crate::var!("Start"),
+                crate::lit!(Value::string("2026-01-01")),
+            ],
+        )])?;
+
+        let error = match Evaluator::evaluate(&universe, &query).await {
+            Ok(mut stream) => match stream.recv().await {
+                Some(Err(error)) => error,
+                other => panic!("expected ungrounded builtin error, got {other:?}"),
+            },
+            Err(error) => error,
+        };
+
+        assert_eq!(
+            error,
+            crate::Error::UngroundedBuiltin {
+                name: "gt".to_string(),
+            }
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn evaluator_rejects_unknown_builtins() -> Result<()> {
+        let universe = Universe::new(InMemoryStorage::new());
+        let query = Query::multi(vec![Clause::builtin(
+            "bogusBuiltin",
+            vec![
+                crate::lit!(Value::string("hello")),
+                crate::lit!(Value::string("ell")),
+            ],
+        )])?;
+
+        let error = match Evaluator::evaluate(&universe, &query).await {
+            Ok(mut stream) => match stream.recv().await {
+                Some(Err(error)) => error,
+                other => panic!("expected unsupported builtin error, got {other:?}"),
+            },
+            Err(error) => error,
+        };
+
+        assert_eq!(
+            error,
+            crate::Error::UnsupportedBuiltin {
+                name: "bogusBuiltin".to_string(),
+            }
+        );
         Ok(())
     }
 }

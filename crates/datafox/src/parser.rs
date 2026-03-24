@@ -11,7 +11,12 @@ enum TokenKind {
     Quoted(String),
     Underscore,
     Bang,
+    Equal,
     Comma,
+    GreaterThan,
+    GreaterThanOrEqual,
+    LessThan,
+    LessThanOrEqual,
     LeftParen,
     RightParen,
 }
@@ -46,10 +51,42 @@ fn lex(source: &str) -> Result<Vec<Token>> {
                 kind: TokenKind::Bang,
                 span: Span::new(start, start + ch.len_utf8()),
             },
+            '=' => Token {
+                kind: TokenKind::Equal,
+                span: Span::new(start, start + ch.len_utf8()),
+            },
             ',' => Token {
                 kind: TokenKind::Comma,
                 span: Span::new(start, start + ch.len_utf8()),
             },
+            '<' => {
+                if let Some((index, '=')) = chars.peek().copied() {
+                    chars.next();
+                    Token {
+                        kind: TokenKind::LessThanOrEqual,
+                        span: Span::new(start, index + '='.len_utf8()),
+                    }
+                } else {
+                    Token {
+                        kind: TokenKind::LessThan,
+                        span: Span::new(start, start + ch.len_utf8()),
+                    }
+                }
+            }
+            '>' => {
+                if let Some((index, '=')) = chars.peek().copied() {
+                    chars.next();
+                    Token {
+                        kind: TokenKind::GreaterThanOrEqual,
+                        span: Span::new(start, index + '='.len_utf8()),
+                    }
+                } else {
+                    Token {
+                        kind: TokenKind::GreaterThan,
+                        span: Span::new(start, start + ch.len_utf8()),
+                    }
+                }
+            }
             '(' => Token {
                 kind: TokenKind::LeftParen,
                 span: Span::new(start, start + ch.len_utf8()),
@@ -240,7 +277,44 @@ impl<'a> Parser<'a> {
             return Ok(Clause::negated(self.parse_atom()?));
         }
 
-        Ok(Clause::atom(self.parse_atom()?))
+        if self.is_infix_builtin_start() {
+            return self.parse_infix_builtin();
+        }
+
+        let atom = self.parse_atom()?;
+        if is_named_builtin(&atom.predicate) {
+            Ok(Clause::builtin(atom.predicate, atom.args))
+        } else {
+            Ok(Clause::atom(atom))
+        }
+    }
+
+    fn parse_infix_builtin(&mut self) -> Result<Clause> {
+        let left = self.parse_term()?;
+        let operator = self.next().ok_or_else(|| Error::Parse {
+            diagnostics: vec![Diagnostic::new(
+                "expected an infix operator, found end of input",
+            )],
+        })?;
+        let name = match operator.kind {
+            TokenKind::GreaterThan => "gt",
+            TokenKind::GreaterThanOrEqual => "gte",
+            TokenKind::LessThan => "lt",
+            TokenKind::LessThanOrEqual => "lte",
+            TokenKind::Equal => "eq",
+            _ => {
+                return Err(Error::Parse {
+                    diagnostics: vec![
+                        Diagnostic::new("expected an infix operator")
+                            .with_span(operator.span)
+                            .with_found(self.token_text(&operator)),
+                    ],
+                });
+            }
+        };
+        let right = self.parse_term()?;
+
+        Ok(Clause::builtin(name, vec![left, right]))
     }
 
     fn parse_atom(&mut self) -> Result<Atom> {
@@ -363,15 +437,53 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.cursor)
     }
 
+    fn peek_n(&self, offset: usize) -> Option<&Token> {
+        self.tokens.get(self.cursor + offset)
+    }
+
     fn next(&mut self) -> Option<Token> {
         let token = self.tokens.get(self.cursor).cloned()?;
         self.cursor += 1;
         Some(token)
     }
 
+    fn is_infix_builtin_start(&self) -> bool {
+        let Some(left) = self.peek() else {
+            return false;
+        };
+        if !matches!(
+            left.kind,
+            TokenKind::Identifier(_)
+                | TokenKind::Integer(_)
+                | TokenKind::String(_)
+                | TokenKind::Quoted(_)
+                | TokenKind::Underscore
+        ) {
+            return false;
+        }
+
+        self.peek_n(1).is_some_and(|token| {
+            matches!(
+                token.kind,
+                TokenKind::GreaterThan
+                    | TokenKind::GreaterThanOrEqual
+                    | TokenKind::LessThan
+                    | TokenKind::LessThanOrEqual
+                    | TokenKind::Equal
+            )
+        })
+    }
+
     fn token_text(&self, token: &Token) -> String {
         self.source[token.span.start..token.span.end].to_string()
     }
+}
+
+fn is_named_builtin(name: &str) -> bool {
+    matches!(
+        name,
+        "startsWith" | "endsWith" | "contains" | "matchesRegex" | "before" | "after"
+    )
 }
 
 #[cfg(test)]
@@ -457,6 +569,115 @@ mod tests {
                         ],
                     )
                     .expect("atom"),
+                ),
+            ])
+            .expect("multi"),
+        );
+    }
+
+    #[test]
+    fn parses_infix_comparison_builtins() {
+        let query = parse_query(
+            "gcal:startedAt(Event, Start), Start < \"2026-01-01 21:12:00\", Start > \"2026-01-02\"",
+        )
+        .expect("query");
+
+        assert_eq!(
+            query,
+            Query::multi(vec![
+                Clause::atom(
+                    Atom::new(
+                        "gcal:startedAt",
+                        vec![
+                            Term::variable("Event").expect("variable"),
+                            Term::variable("Start").expect("variable"),
+                        ],
+                    )
+                    .expect("atom"),
+                ),
+                Clause::builtin(
+                    "lt",
+                    vec![
+                        Term::variable("Start").expect("variable"),
+                        Term::constant(Value::string("2026-01-01 21:12:00")),
+                    ],
+                ),
+                Clause::builtin(
+                    "gt",
+                    vec![
+                        Term::variable("Start").expect("variable"),
+                        Term::constant(Value::string("2026-01-02")),
+                    ],
+                ),
+            ])
+            .expect("multi"),
+        );
+    }
+
+    #[test]
+    fn parses_infix_comparison_operator_variants() {
+        let query = parse_query("A <= B, B >= C, C = D").expect("query");
+
+        assert_eq!(
+            query,
+            Query::multi(vec![
+                Clause::builtin(
+                    "lte",
+                    vec![
+                        Term::variable("A").expect("variable"),
+                        Term::variable("B").expect("variable"),
+                    ],
+                ),
+                Clause::builtin(
+                    "gte",
+                    vec![
+                        Term::variable("B").expect("variable"),
+                        Term::variable("C").expect("variable"),
+                    ],
+                ),
+                Clause::builtin(
+                    "eq",
+                    vec![
+                        Term::variable("C").expect("variable"),
+                        Term::variable("D").expect("variable"),
+                    ],
+                ),
+            ])
+            .expect("multi"),
+        );
+    }
+
+    #[test]
+    fn parses_named_builtin_clauses() {
+        let query = parse_query("edge(X, Y), startsWith(Name, \"Leo\"), before(Start, End)")
+            .expect("query");
+
+        assert_eq!(
+            query,
+            Query::multi(vec![
+                Clause::atom(
+                    Atom::new(
+                        "edge",
+                        vec![
+                            Term::variable("X").expect("variable"),
+                            Term::variable("Y").expect("variable"),
+                        ],
+                    )
+                    .expect("atom"),
+                ),
+                Clause::builtin(
+                    "startsWith",
+                    vec![
+                        Term::variable("Name").expect("variable"),
+                        Term::constant(Value::string("Leo")),
+                    ],
+                ),
+                Clause::builtin(
+                    "before",
+                    vec![
+                        Term::variable("Start").expect("variable"),
+                        Term::variable("End").expect("variable"),
+                    ],
                 ),
             ])
             .expect("multi"),
