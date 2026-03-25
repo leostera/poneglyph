@@ -52,11 +52,6 @@ impl GcalConnector {
         poneglyph: Arc<Poneglyph>,
         fact_tx: mpsc::Sender<Vec<Fact>>,
     ) -> CtlResult<()> {
-        if !self.config.enabled {
-            info!("gcal connector disabled, skipping");
-            return Ok(());
-        }
-
         let connections = store.list_google_oauth_connections().await?;
         if connections.is_empty() {
             info!("gcal connector has no saved google connections");
@@ -157,10 +152,7 @@ impl GcalConnector {
             .send(facts)
             .await
             .map_err(|error| CtlError::GcalRequest(error.to_string()))?;
-        info!(
-            enabled = self.config.enabled,
-            fact_count, "gcal connector synced selected calendars"
-        );
+        info!(fact_count, "gcal connector synced selected calendars");
         Ok(())
     }
 

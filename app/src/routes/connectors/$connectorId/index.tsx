@@ -59,11 +59,9 @@ function ConnectorDetailPage() {
   const statusesQuery = useConnectorStatusesQuery();
   const status = findConnectorStatus(statusesQuery.data, connectorName);
   const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(
-    (connectorName === "gcal" || connectorName === "gmail") && Boolean(status?.enabled),
+    connectorName === "gcal" || connectorName === "gmail",
   );
-  const plexConnectionsQuery = usePlexConnectionsQuery(
-    connectorName === "plex" && Boolean(status?.enabled),
-  );
+  const plexConnectionsQuery = usePlexConnectionsQuery(connectorName === "plex");
 
   const [selectedConnectionId, setSelectedConnectionId] = useState<number | null>(null);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
@@ -284,7 +282,7 @@ function ConnectorDetailPage() {
               </Button>
             ) : null}
             <Button
-              disabled={!status?.enabled || syncPending}
+              disabled={syncPending}
               onClick={() => syncMutation.mutate(connectorName)}
               size="sm"
               variant="outline"
@@ -381,10 +379,6 @@ function ConnectorDetailPage() {
                           Manage which calendars from this account should stay in sync.
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <Badge variant={status?.enabled ? "secondary" : "outline"}>
-                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-500" />
-                            {status?.enabled ? "Enabled" : "Disabled"}
-                          </Badge>
                           <Badge variant={status?.connected ? "secondary" : "outline"}>
                             <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
                             {status?.connected ? "Connected" : "Waiting"}
@@ -558,7 +552,7 @@ function ConnectorDetailPage() {
                         >
                           <div className="text-sm font-medium">{connection.label}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            {connection.calendars.length} calendars discovered
+                            {status?.selectedResourceCount ?? 0} emails ingested
                           </div>
                         </button>
                       ))}
@@ -593,10 +587,6 @@ function ConnectorDetailPage() {
                           (subject, sender, recipient, snippet, internal date, thread linkage).
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <Badge variant={status?.enabled ? "secondary" : "outline"}>
-                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-500" />
-                            {status?.enabled ? "Enabled" : "Disabled"}
-                          </Badge>
                           <Badge variant={status?.connected ? "secondary" : "outline"}>
                             <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
                             {status?.connected ? "Connected" : "Waiting"}
@@ -818,10 +808,6 @@ function ConnectorDetailPage() {
                       <div className="space-y-2">
                         <div className="text-base font-medium">{selectedPlexConnection.name}</div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant={status?.enabled ? "secondary" : "outline"}>
-                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-500" />
-                            {status?.enabled ? "Enabled" : "Disabled"}
-                          </Badge>
                           <Badge variant={status?.connected ? "secondary" : "outline"}>
                             <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
                             {status?.connected ? "Connected" : "Waiting"}

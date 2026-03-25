@@ -47,11 +47,6 @@ impl PlexConnector {
     }
 
     pub async fn run(self, ctl: CtlStore, fact_tx: mpsc::Sender<Vec<Fact>>) -> CtlResult<()> {
-        if !self.config.enabled {
-            info!("plex connector disabled, skipping");
-            return Ok(());
-        }
-
         let mut facts = Vec::new();
         let connections = ctl
             .list_plex_connections()

@@ -40,13 +40,7 @@ function ConnectorsOverviewPage() {
   const statusesQuery = useConnectorStatusesQuery();
   const [selectedConnectorNames, setSelectedConnectorNames] = useState<ConnectorName[]>([]);
 
-  const availableConnectorNames = useMemo(
-    () =>
-      connectorOrder.filter((connectorName) =>
-        Boolean(findConnectorStatus(statusesQuery.data, connectorName)?.enabled),
-      ),
-    [statusesQuery.data],
-  );
+  const availableConnectorNames = connectorOrder;
   const configuredConnectorNames = useMemo(
     () =>
       connectorOrder.filter((connectorName) =>
@@ -257,7 +251,6 @@ function ConnectorsOverviewPage() {
                         <Checkbox
                           aria-label={`Select ${meta.title}`}
                           checked={selected}
-                          disabled={!status?.enabled}
                           onCheckedChange={(checked) => {
                             setConnectorSelected(connectorName, Boolean(checked));
                           }}
@@ -278,10 +271,7 @@ function ConnectorsOverviewPage() {
                       </TableCell>
                       <TableCell>
                         <div className="text-xs leading-5 text-muted-foreground">
-                          <div>
-                            {status?.enabled ? "Enabled" : "Disabled"} ·{" "}
-                            {status?.connected ? "Connected" : "Waiting"}
-                          </div>
+                          <div>{status?.connected ? "Connected" : "Waiting"}</div>
                           <div>{status?.lastError ? "Error recorded" : "Healthy"}</div>
                         </div>
                       </TableCell>

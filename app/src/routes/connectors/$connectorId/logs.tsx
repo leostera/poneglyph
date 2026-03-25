@@ -79,9 +79,6 @@ function ConnectorLogsPage() {
                   <TableCell className="text-muted-foreground">Runtime state</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">
-                      <Badge variant={status?.enabled ? "secondary" : "outline"}>
-                        {status?.enabled ? "Enabled" : "Disabled"}
-                      </Badge>
                       <Badge variant={status?.connected ? "secondary" : "outline"}>
                         {status?.connected ? "Connected" : "Waiting"}
                       </Badge>

@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use poneglyph::Query;
 use poneglyph_ctl::{
     CtlStore, GcalConnector, GmailConnector, GoogleOAuthConnection, PlexConnector,
 };
@@ -208,94 +209,90 @@ pub(crate) async fn connector_statuses(
 ) -> std::result::Result<Vec<ConnectorStatus>, String> {
     let mut statuses = Vec::new();
 
-    if let Some(config) = context.ctl_config.gcal.as_ref() {
-        let connections = context
-            .ctl
-            .list_google_oauth_connections()
-            .await
-            .map_err(|error| format!("failed to load google oauth connections: {error}"))?;
-        let connected = !connections.is_empty();
-        let mut selected_resource_count = 0;
-        let mut last_synced_at = None;
-        let mut last_error = None;
+    let connections = context
+        .ctl
+        .list_google_oauth_connections()
+        .await
+        .map_err(|error| format!("failed to load google oauth connections: {error}"))?;
+    let connected_google = !connections.is_empty();
+    let mut selected_resource_count = 0;
+    let mut last_synced_at = None;
+    let mut last_error = None;
 
-        for connection in connections {
-            let calendars = context
+    for connection in &connections {
+        let calendars = context
+            .ctl
+            .list_google_calendar_resources(connection.id)
+            .await
+            .map_err(|error| format!("failed to list google calendars: {error}"))?;
+        for calendar in calendars.into_iter().filter(|calendar| calendar.selected) {
+            selected_resource_count += 1;
+            let sync_state = context
                 .ctl
-                .list_google_calendar_resources(connection.id)
+                .google_calendar_sync_state(connection.id, &calendar.calendar_id)
                 .await
-                .map_err(|error| format!("failed to list google calendars: {error}"))?;
-            for calendar in calendars.into_iter().filter(|calendar| calendar.selected) {
-                selected_resource_count += 1;
-                let sync_state = context
-                    .ctl
-                    .google_calendar_sync_state(connection.id, &calendar.calendar_id)
-                    .await
-                    .map_err(|error| {
-                        format!("failed to load google calendar sync state: {error}")
-                    })?;
-                if let Some(sync_state) = sync_state {
-                    update_latest_sync(
-                        &mut last_synced_at,
-                        &mut last_error,
-                        sync_state.last_synced_at,
-                        sync_state.last_error,
-                    );
-                }
+                .map_err(|error| format!("failed to load google calendar sync state: {error}"))?;
+            if let Some(sync_state) = sync_state {
+                update_latest_sync(
+                    &mut last_synced_at,
+                    &mut last_error,
+                    sync_state.last_synced_at,
+                    sync_state.last_error,
+                );
             }
         }
-
-        statuses.push(ConnectorStatus {
-            name: "gcal".to_string(),
-            enabled: config.enabled,
-            connected,
-            selected_resource_count,
-            last_synced_at,
-            last_error,
-        });
     }
 
-    if let Some(config) = context.ctl_config.gmail.as_ref() {
-        let connections = context
-            .ctl
-            .list_google_oauth_connections()
-            .await
-            .map_err(|error| format!("failed to load google oauth connections: {error}"))?;
-        let connected = !connections.is_empty();
+    statuses.push(ConnectorStatus {
+        name: "gcal".to_string(),
+        enabled: true,
+        connected: connected_google,
+        selected_resource_count,
+        last_synced_at,
+        last_error,
+    });
 
-        statuses.push(ConnectorStatus {
-            name: "gmail".to_string(),
-            enabled: config.enabled,
-            connected,
-            selected_resource_count: 0,
-            last_synced_at: None,
-            last_error: None,
-        });
-    }
+    statuses.push(ConnectorStatus {
+        name: "gmail".to_string(),
+        enabled: true,
+        connected: connected_google,
+        selected_resource_count: gmail_message_count(&context.poneglyph).await?,
+        last_synced_at: None,
+        last_error: None,
+    });
 
-    if let Some(config) = context.ctl_config.plex.as_ref() {
-        let stored_connections = context
-            .ctl
-            .list_plex_connections()
-            .await
-            .map_err(|error| format!("failed to load plex connections: {error}"))?;
-        let connected = !stored_connections.is_empty();
-        let selected_resource_count = stored_connections
-            .iter()
-            .map(|connection| connection.libraries.len() as i32)
-            .sum();
+    let stored_connections = context
+        .ctl
+        .list_plex_connections()
+        .await
+        .map_err(|error| format!("failed to load plex connections: {error}"))?;
+    let connected = !stored_connections.is_empty();
+    let selected_resource_count = stored_connections
+        .iter()
+        .map(|connection| connection.libraries.len() as i32)
+        .sum();
 
-        statuses.push(ConnectorStatus {
-            name: "plex".to_string(),
-            enabled: config.enabled,
-            connected,
-            selected_resource_count,
-            last_synced_at: None,
-            last_error: None,
-        });
-    }
+    statuses.push(ConnectorStatus {
+        name: "plex".to_string(),
+        enabled: true,
+        connected,
+        selected_resource_count,
+        last_synced_at: None,
+        last_error: None,
+    });
 
     Ok(statuses)
+}
+
+async fn gmail_message_count(poneglyph: &poneglyph::Poneglyph) -> std::result::Result<i32, String> {
+    let parsed = Query::parse("'schema:type'(Entity, \"gmail:message\")")
+        .map_err(|error| format!("failed to parse gmail message count query: {error}"))?;
+    let result = poneglyph
+        .query(parsed)
+        .await
+        .map_err(|error| format!("failed to run gmail message count query: {error}"))?;
+    let count = result.substitutions().len();
+    i32::try_from(count).map_err(|_| "gmail message count exceeded i32 range".to_string())
 }
 
 pub(crate) async fn sync_connector(
@@ -318,9 +315,7 @@ pub(crate) async fn sync_connector(
 
     match connector_name {
         "gcal" => {
-            let Some(config) = context.ctl_config.gcal.clone() else {
-                return Err("gcal connector is not configured".to_string());
-            };
+            let config = context.ctl_config.gcal.clone().unwrap_or_default();
             let connector = GcalConnector::init(config)
                 .map_err(|error| format!("failed to initialize gcal connector: {error}"))?;
             connector
@@ -329,9 +324,7 @@ pub(crate) async fn sync_connector(
                 .map_err(|error| format!("gcal sync failed: {error}"))?;
         }
         "plex" => {
-            let Some(config) = context.ctl_config.plex.clone() else {
-                return Err("plex connector is not configured".to_string());
-            };
+            let config = context.ctl_config.plex.clone().unwrap_or_default();
             let connector = PlexConnector::init(config)
                 .map_err(|error| format!("failed to initialize plex connector: {error}"))?;
             connector
@@ -340,9 +333,7 @@ pub(crate) async fn sync_connector(
                 .map_err(|error| format!("plex sync failed: {error}"))?;
         }
         "gmail" => {
-            let Some(config) = context.ctl_config.gmail.clone() else {
-                return Err("gmail connector is not configured".to_string());
-            };
+            let config = context.ctl_config.gmail.clone().unwrap_or_default();
             let connector = GmailConnector::init(config)
                 .map_err(|error| format!("failed to initialize gmail connector: {error}"))?;
             connector

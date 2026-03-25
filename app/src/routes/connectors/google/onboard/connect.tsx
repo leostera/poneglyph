@@ -11,11 +11,16 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+type OnboardDestination = "gcal" | "gmail";
+
 function GoogleConnectorOnboardingConnectPage() {
+  const search = Route.useSearch();
+  const destination = search.destination ?? "gcal";
   const navigate = useNavigate();
   const statusesQuery = useConnectorStatusesQuery({ refetchInterval: 1_000 });
   const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(true);
-  const googleStatus = findConnectorStatus(statusesQuery.data, "gcal");
+  const statusConnector = destination === "gmail" ? "gmail" : "gcal";
+  const googleStatus = findConnectorStatus(statusesQuery.data, statusConnector);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [knownLatestConnectionId, setKnownLatestConnectionId] = useState<number | null>(null);
 
@@ -23,6 +28,7 @@ function GoogleConnectorOnboardingConnectPage() {
     const connections = googleConnectionsQuery.data ?? [];
     return connections[0] ?? null;
   }, [googleConnectionsQuery.data]);
+  const isGmailDestination = destination === "gmail";
 
   useEffect(() => {
     if (!isAuthorizing) {
@@ -36,12 +42,21 @@ function GoogleConnectorOnboardingConnectPage() {
       return;
     }
 
+    if (destination === "gmail") {
+      navigate({
+        replace: true,
+        params: { connectorId: "gmail" },
+        to: "/connectors/$connectorId",
+      });
+      return;
+    }
+
     navigate({
       replace: true,
       to: "/connectors/google/onboard/select",
       search: { connectionId: latestConnection.id },
     });
-  }, [isAuthorizing, knownLatestConnectionId, latestConnection, navigate]);
+  }, [destination, isAuthorizing, knownLatestConnectionId, latestConnection, navigate]);
 
   useEffect(() => {
     if (!isAuthorizing) {
@@ -61,13 +76,10 @@ function GoogleConnectorOnboardingConnectPage() {
           <div className="space-y-2">
             <h2 className="text-base font-medium">Step 1. Authorize Google</h2>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Open the browser auth flow, grant calendar access, and return to the app. As soon as
-              the local daemon stores the connection, this flow will advance automatically.
+              Open the browser auth flow, grant read access, and return to the app. As soon as the
+              local daemon stores the connection, this flow will advance automatically.
             </p>
             <div className="flex flex-wrap gap-1.5">
-              <Badge variant={googleStatus?.enabled ? "secondary" : "outline"}>
-                {googleStatus?.enabled ? "Enabled" : "Disabled"}
-              </Badge>
               <Badge variant={googleStatus?.connected ? "secondary" : "outline"}>
                 {googleStatus?.connected ? "Connected" : "Waiting"}
               </Badge>
@@ -87,40 +99,37 @@ function GoogleConnectorOnboardingConnectPage() {
               Connect Google
             </Button>
             <Button asChild disabled={!googleStatus?.connected} size="sm" variant="outline">
-              <Link
-                search={{ connectionId: latestConnection?.id }}
-                to="/connectors/google/onboard/select"
-              >
-                Next
-              </Link>
+              {isGmailDestination ? (
+                <Link params={{ connectorId: "gmail" }} to="/connectors/$connectorId">
+                  Continue
+                </Link>
+              ) : (
+                <Link
+                  search={{ connectionId: latestConnection?.id }}
+                  to="/connectors/google/onboard/select"
+                >
+                  Next
+                </Link>
+              )}
             </Button>
           </div>
         </div>
       </div>
 
-      {!googleStatus?.enabled ? (
-        <Alert variant="destructive">
-          <AlertTitle>Google Calendar is disabled</AlertTitle>
-          <AlertDescription>
-            Enable `[ctl.gcal]` in the daemon config first, then come back to finish onboarding.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       {googleStatus?.connected ? (
         <Alert>
           <AlertTitle>Connection is ready</AlertTitle>
           <AlertDescription>
-            The daemon already has a Google connection. Continue to choose the calendars that should
-            remain in sync.
+            The daemon already has a Google connection. Continue to finish
+            {isGmailDestination ? " Gmail setup." : " calendar selection."}
           </AlertDescription>
         </Alert>
       ) : (
         <Alert>
           <AlertTitle>Waiting for the browser auth flow</AlertTitle>
           <AlertDescription>
-            After the browser window completes the auth handoff, this screen will switch to the
-            calendar picker for the newly added account.
+            After the browser window completes the auth handoff, this screen will switch to the next
+            onboarding step for the newly added account.
           </AlertDescription>
         </Alert>
       )}
@@ -129,5 +138,8 @@ function GoogleConnectorOnboardingConnectPage() {
 }
 
 export const Route = createFileRoute("/connectors/google/onboard/connect")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    destination: search.destination === "gmail" ? ("gmail" as OnboardDestination) : undefined,
+  }),
   component: GoogleConnectorOnboardingConnectPage,
 });

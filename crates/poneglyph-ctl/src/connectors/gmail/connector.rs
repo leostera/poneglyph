@@ -53,11 +53,6 @@ impl GmailConnector {
         poneglyph: Arc<Poneglyph>,
         fact_tx: mpsc::Sender<Vec<Fact>>,
     ) -> CtlResult<()> {
-        if !self.config.enabled {
-            info!("gmail connector disabled, skipping");
-            return Ok(());
-        }
-
         let connections = store.list_google_oauth_connections().await?;
         if connections.is_empty() {
             info!("gmail connector has no saved google oauth connections");

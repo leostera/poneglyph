@@ -78,8 +78,6 @@ impl DaemonBuilder {
         debug!(
             workspace = %workspace.root().display(),
             log_level = ?config.poneglyph.log_level,
-            gmail_enabled = config.ctl.gmail.as_ref().map(|gmail| gmail.enabled).unwrap_or(false),
-            plex_enabled = config.ctl.plex.as_ref().map(|plex| plex.enabled).unwrap_or(false),
             api_bind_addr = %config.api.bind_addr,
             "opening daemon runtime"
         );
@@ -101,19 +99,20 @@ impl DaemonBuilder {
             .with_api_config(config.api.clone())
             .build()?;
         let connectors = {
-            let mut builder = ConnectorRuntime::builder()
+            ConnectorRuntime::builder()
                 .with_poneglyph_arc(poneglyph.clone())
-                .with_ctl_store(ctl);
-            if let Some(gcal) = config.ctl.gcal.clone() {
-                builder = builder.add_gcal_connector(GcalConnector::init(gcal)?);
-            }
-            if let Some(gmail) = config.ctl.gmail.clone() {
-                builder = builder.add_gmail_connector(GmailConnector::init(gmail)?);
-            }
-            if let Some(plex) = config.ctl.plex.clone() {
-                builder = builder.add_plex_connector(PlexConnector::init(plex)?);
-            }
-            builder.build().expect("connector runtime")
+                .with_ctl_store(ctl)
+                .add_gcal_connector(GcalConnector::init(
+                    config.ctl.gcal.clone().unwrap_or_default(),
+                )?)
+                .add_gmail_connector(GmailConnector::init(
+                    config.ctl.gmail.clone().unwrap_or_default(),
+                )?)
+                .add_plex_connector(PlexConnector::init(
+                    config.ctl.plex.clone().unwrap_or_default(),
+                )?)
+                .build()
+                .expect("connector runtime")
         };
         info!("daemon runtime opened");
         Ok(Daemon {

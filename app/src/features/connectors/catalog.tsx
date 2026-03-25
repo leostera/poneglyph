@@ -180,7 +180,7 @@ export const connectorOfferings: ConnectorOffering[] = [
     title: "Gmail",
     summary: "Pull message metadata, threads, senders, and conversation structure into Poneglyph.",
     icon: brandIcon(SiGmail, SiGmailHex, "Gmail"),
-    href: "/connectors/gmail",
+    href: "/connectors/google/onboard/connect?destination=gmail",
   },
   {
     category: "communication",
@@ -527,11 +527,7 @@ export function sidebarConnectorItems(statuses: ConnectorStatus[] | undefined) {
         return null;
       }
 
-      const shouldShow =
-        status.connected ||
-        status.selectedResourceCount > 0 ||
-        (status.name === "plex" && status.enabled) ||
-        (status.name === "gmail" && status.enabled);
+      const shouldShow = status.connected || status.selectedResourceCount > 0;
 
       if (!shouldShow) {
         return null;

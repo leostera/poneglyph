@@ -129,7 +129,12 @@ function GoogleConnectorOnboardingSelectPage() {
 
         <div className="flex items-center gap-2">
           <Button
-            onClick={() => navigate({ to: "/connectors/google/onboard/connect" })}
+            onClick={() =>
+              navigate({
+                to: "/connectors/google/onboard/connect",
+                search: { destination: "gcal" },
+              })
+            }
             size="sm"
             variant="ghost"
           >
