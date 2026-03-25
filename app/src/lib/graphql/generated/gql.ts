@@ -20,6 +20,7 @@ type Documents = {
     "\n  query GmailConnections {\n    gmailConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n": typeof types.GmailConnectionsDocument,
     "\n  query GmailConnectionSummary($connectionId: Int!) {\n    gmailConnectionSummary(connectionId: $connectionId) {\n      connectionId\n      sendingAddresses\n      mailboxes\n      labels\n      emails\n      lastEmailReceivedAt\n    }\n  }\n": typeof types.GmailConnectionSummaryDocument,
     "\n  query Entities($limit: Int, $offset: Int) {\n    entities(limit: $limit, offset: $offset) {\n      uri\n      namespace\n      kind\n    }\n  }\n": typeof types.EntitiesDocument,
+    "\n  query Entity($uri: String!) {\n    entity(uri: $uri) {\n      uri\n      namespace\n      kind\n      fields {\n        field\n        value\n      }\n    }\n  }\n": typeof types.EntityDocument,
     "\n  query KnowledgeGraphSchema {\n    schemaDefinition {\n      namespaces {\n        uri\n        name\n      }\n      kinds {\n        uri\n        name\n      }\n      fields {\n        uri\n        name\n        domain\n        range\n      }\n    }\n  }\n": typeof types.KnowledgeGraphSchemaDocument,
     "\n  query EntityKinds {\n    entityKinds\n  }\n": typeof types.EntityKindsDocument,
     "\n  query PlexConnections {\n    plexConnections {\n      id\n      name\n      baseUrl\n      libraries\n      lastSyncedAt\n      lastError\n    }\n  }\n": typeof types.PlexConnectionsDocument,
@@ -41,6 +42,7 @@ const documents: Documents = {
     "\n  query GmailConnections {\n    gmailConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n": types.GmailConnectionsDocument,
     "\n  query GmailConnectionSummary($connectionId: Int!) {\n    gmailConnectionSummary(connectionId: $connectionId) {\n      connectionId\n      sendingAddresses\n      mailboxes\n      labels\n      emails\n      lastEmailReceivedAt\n    }\n  }\n": types.GmailConnectionSummaryDocument,
     "\n  query Entities($limit: Int, $offset: Int) {\n    entities(limit: $limit, offset: $offset) {\n      uri\n      namespace\n      kind\n    }\n  }\n": types.EntitiesDocument,
+    "\n  query Entity($uri: String!) {\n    entity(uri: $uri) {\n      uri\n      namespace\n      kind\n      fields {\n        field\n        value\n      }\n    }\n  }\n": types.EntityDocument,
     "\n  query KnowledgeGraphSchema {\n    schemaDefinition {\n      namespaces {\n        uri\n        name\n      }\n      kinds {\n        uri\n        name\n      }\n      fields {\n        uri\n        name\n        domain\n        range\n      }\n    }\n  }\n": types.KnowledgeGraphSchemaDocument,
     "\n  query EntityKinds {\n    entityKinds\n  }\n": types.EntityKindsDocument,
     "\n  query PlexConnections {\n    plexConnections {\n      id\n      name\n      baseUrl\n      libraries\n      lastSyncedAt\n      lastError\n    }\n  }\n": types.PlexConnectionsDocument,
@@ -94,6 +96,10 @@ export function graphql(source: "\n  query GmailConnectionSummary($connectionId:
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query Entities($limit: Int, $offset: Int) {\n    entities(limit: $limit, offset: $offset) {\n      uri\n      namespace\n      kind\n    }\n  }\n"): (typeof documents)["\n  query Entities($limit: Int, $offset: Int) {\n    entities(limit: $limit, offset: $offset) {\n      uri\n      namespace\n      kind\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query Entity($uri: String!) {\n    entity(uri: $uri) {\n      uri\n      namespace\n      kind\n      fields {\n        field\n        value\n      }\n    }\n  }\n"): (typeof documents)["\n  query Entity($uri: String!) {\n    entity(uri: $uri) {\n      uri\n      namespace\n      kind\n      fields {\n        field\n        value\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

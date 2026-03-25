@@ -65,7 +65,7 @@ export default function BaseLayout({
                   <SidebarMenuButton
                     asChild
                     className="h-auto rounded-[3px] px-3 py-2 text-sm"
-                    isActive={pathname === "/entities"}
+                    isActive={pathname === "/entities" || pathname.startsWith("/entities/")}
                     size="lg"
                   >
                     <Link to="/entities">

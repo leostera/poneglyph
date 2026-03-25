@@ -13,6 +13,7 @@ import { Route as EntitiesRouteImport } from './routes/entities'
 import { Route as ConnectorsRouteRouteImport } from './routes/connectors/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConnectorsIndexRouteImport } from './routes/connectors/index'
+import { Route as EntitiesScopeRouteImport } from './routes/entities.$scope'
 import { Route as ConnectorsNewRouteImport } from './routes/connectors/new'
 import { Route as ConnectorsAddRouteImport } from './routes/connectors/add'
 import { Route as ConnectorsConnectorIdRouteRouteImport } from './routes/connectors/$connectorId/route'
@@ -43,6 +44,11 @@ const ConnectorsIndexRoute = ConnectorsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ConnectorsRouteRoute,
+} as any)
+const EntitiesScopeRoute = EntitiesScopeRouteImport.update({
+  id: '/$scope',
+  path: '/$scope',
+  getParentRoute: () => EntitiesRoute,
 } as any)
 const ConnectorsNewRoute = ConnectorsNewRouteImport.update({
   id: '/new',
@@ -106,10 +112,11 @@ const ConnectorsGoogleOnboardConnectRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/connectors': typeof ConnectorsRouteRouteWithChildren
-  '/entities': typeof EntitiesRoute
+  '/entities': typeof EntitiesRouteWithChildren
   '/connectors/$connectorId': typeof ConnectorsConnectorIdRouteRouteWithChildren
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
+  '/entities/$scope': typeof EntitiesScopeRoute
   '/connectors/': typeof ConnectorsIndexRoute
   '/connectors/google/onboard': typeof ConnectorsGoogleOnboardRouteRouteWithChildren
   '/connectors/$connectorId/logs': typeof ConnectorsConnectorIdLogsRoute
@@ -121,9 +128,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/entities': typeof EntitiesRoute
+  '/entities': typeof EntitiesRouteWithChildren
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
+  '/entities/$scope': typeof EntitiesScopeRoute
   '/connectors': typeof ConnectorsIndexRoute
   '/connectors/$connectorId/logs': typeof ConnectorsConnectorIdLogsRoute
   '/connectors/$connectorId': typeof ConnectorsConnectorIdIndexRoute
@@ -136,10 +144,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/connectors': typeof ConnectorsRouteRouteWithChildren
-  '/entities': typeof EntitiesRoute
+  '/entities': typeof EntitiesRouteWithChildren
   '/connectors/$connectorId': typeof ConnectorsConnectorIdRouteRouteWithChildren
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
+  '/entities/$scope': typeof EntitiesScopeRoute
   '/connectors/': typeof ConnectorsIndexRoute
   '/connectors/google/onboard': typeof ConnectorsGoogleOnboardRouteRouteWithChildren
   '/connectors/$connectorId/logs': typeof ConnectorsConnectorIdLogsRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/connectors/$connectorId'
     | '/connectors/add'
     | '/connectors/new'
+    | '/entities/$scope'
     | '/connectors/'
     | '/connectors/google/onboard'
     | '/connectors/$connectorId/logs'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/entities'
     | '/connectors/add'
     | '/connectors/new'
+    | '/entities/$scope'
     | '/connectors'
     | '/connectors/$connectorId/logs'
     | '/connectors/$connectorId'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/connectors/$connectorId'
     | '/connectors/add'
     | '/connectors/new'
+    | '/entities/$scope'
     | '/connectors/'
     | '/connectors/google/onboard'
     | '/connectors/$connectorId/logs'
@@ -200,7 +212,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConnectorsRouteRoute: typeof ConnectorsRouteRouteWithChildren
-  EntitiesRoute: typeof EntitiesRoute
+  EntitiesRoute: typeof EntitiesRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +244,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/connectors/'
       preLoaderRoute: typeof ConnectorsIndexRouteImport
       parentRoute: typeof ConnectorsRouteRoute
+    }
+    '/entities/$scope': {
+      id: '/entities/$scope'
+      path: '/$scope'
+      fullPath: '/entities/$scope'
+      preLoaderRoute: typeof EntitiesScopeRouteImport
+      parentRoute: typeof EntitiesRoute
     }
     '/connectors/new': {
       id: '/connectors/new'
@@ -363,10 +382,22 @@ const ConnectorsRouteRouteWithChildren = ConnectorsRouteRoute._addFileChildren(
   ConnectorsRouteRouteChildren,
 )
 
+interface EntitiesRouteChildren {
+  EntitiesScopeRoute: typeof EntitiesScopeRoute
+}
+
+const EntitiesRouteChildren: EntitiesRouteChildren = {
+  EntitiesScopeRoute: EntitiesScopeRoute,
+}
+
+const EntitiesRouteWithChildren = EntitiesRoute._addFileChildren(
+  EntitiesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConnectorsRouteRoute: ConnectorsRouteRouteWithChildren,
-  EntitiesRoute: EntitiesRoute,
+  EntitiesRoute: EntitiesRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

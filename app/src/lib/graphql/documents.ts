@@ -92,6 +92,20 @@ export const EntitiesDocument = graphql(`
   }
 `);
 
+export const EntityDocument = graphql(`
+  query Entity($uri: String!) {
+    entity(uri: $uri) {
+      uri
+      namespace
+      kind
+      fields {
+        field
+        value
+      }
+    }
+  }
+`);
+
 export const KnowledgeGraphSchemaDocument = graphql(`
   query KnowledgeGraphSchema {
     schemaDefinition {

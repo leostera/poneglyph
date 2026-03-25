@@ -27,6 +27,18 @@ type ConnectorSyncResult {
   message: String!
 }
 
+type EntityDetail {
+  uri: String!
+  namespace: String!
+  kind: String!
+  fields: [EntityField!]!
+}
+
+type EntityField {
+  field: String!
+  value: String!
+}
+
 type EntitySummary {
   uri: String!
   namespace: String!
@@ -104,6 +116,7 @@ type Query {
   entities(limit: Int, offset: Int): [EntitySummary!]!
   schemaDefinition: KnowledgeGraphSchema!
   entityKinds: [String!]!
+  entity(uri: String!): EntityDetail
 }
 
 input SavePlexConnectionInput {

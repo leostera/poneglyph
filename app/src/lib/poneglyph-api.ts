@@ -7,6 +7,7 @@ import {
   DiscoverGoogleCalendarsForConnectionDocument,
   DiscoverPlexLibrariesDocument,
   EntitiesDocument,
+  EntityDocument,
   GmailConnectionSummaryDocument,
   GmailConnectionsDocument,
   GoogleCalendarConnectionsDocument,
@@ -45,6 +46,7 @@ export type GmailConnectionSummary = ResultOf<
   typeof GmailConnectionSummaryDocument
 >["gmailConnectionSummary"];
 export type EntitySummary = ResultOf<typeof EntitiesDocument>["entities"][number];
+export type EntityDetail = ResultOf<typeof EntityDocument>["entity"];
 export type KnowledgeGraphSchema = ResultOf<
   typeof KnowledgeGraphSchemaDocument
 >["schemaDefinition"];
@@ -91,6 +93,11 @@ export async function getPlexConnections() {
 export async function getEntities(limit = 250, offset = 0) {
   const data = await graphqlRequest(EntitiesDocument, { limit, offset });
   return data.entities;
+}
+
+export async function getEntity(uri: string) {
+  const data = await graphqlRequest(EntityDocument, { uri });
+  return data.entity;
 }
 
 export async function getKnowledgeGraphSchema() {

@@ -1,3 +1,5 @@
+import { GcalEventView } from "@/components/entities/gcal/event/view";
+import { GmailMessageView } from "@/components/entities/gmail/message/view";
 import { SpotifyArtistView } from "@/components/entities/spotify/artist/view";
 import type { EntityViewModel } from "@/components/entities/types";
 import { EntityView } from "@/components/entities/view";
@@ -8,6 +10,8 @@ type EntityViewProps = {
 };
 
 const ENTITY_VIEW_REGISTRY: Record<string, ComponentType<EntityViewProps>> = {
+  "gcal:event": GcalEventView,
+  "gmail:message": GmailMessageView,
   "spotify:artist": SpotifyArtistView,
 };
 

@@ -97,6 +97,22 @@ struct EntitySummaryObject {
 }
 
 #[derive(SimpleObject)]
+#[graphql(name = "EntityField")]
+struct EntityFieldObject {
+    field: String,
+    value: String,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "EntityDetail")]
+struct EntityDetailObject {
+    uri: String,
+    namespace: String,
+    kind: String,
+    fields: Vec<EntityFieldObject>,
+}
+
+#[derive(SimpleObject)]
 #[graphql(name = "SchemaNamespace")]
 struct SchemaNamespaceObject {
     uri: String,
@@ -253,6 +269,19 @@ impl ApiQuery {
         entities::EntityService::new(app)
             .entity_kinds()
             .await
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn entity(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        uri: String,
+    ) -> Result<Option<EntityDetailObject>> {
+        let app = ctx.data::<AppContext>()?;
+        entities::EntityService::new(app)
+            .entity_by_uri(uri.as_str())
+            .await
+            .map(|entity| entity.map(map_entity_detail))
             .map_err(async_graphql::Error::new)
     }
 }
@@ -512,6 +541,22 @@ fn map_schema_definition(schema: entities::SchemaDefinition) -> KnowledgeGraphSc
                 name: field.name,
                 domain: field.domain,
                 range: field.range,
+            })
+            .collect(),
+    }
+}
+
+fn map_entity_detail(entity: entities::EntityDetail) -> EntityDetailObject {
+    EntityDetailObject {
+        uri: entity.uri,
+        namespace: entity.namespace,
+        kind: entity.kind,
+        fields: entity
+            .fields
+            .into_iter()
+            .map(|field| EntityFieldObject {
+                field: field.field,
+                value: field.value,
             })
             .collect(),
     }
