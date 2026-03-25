@@ -1,8 +1,11 @@
 import {
   ConnectorStatusesDocument,
   DiscoverGoogleCalendarsDocument,
+  DiscoverGoogleCalendarsForConnectionDocument,
+  GoogleCalendarConnectionsDocument,
   GoogleCalendarsDocument,
   SelectGoogleCalendarsDocument,
+  SelectGoogleCalendarsForConnectionDocument,
   SyncConnectorDocument,
 } from "@/lib/graphql/documents";
 import type { ResultOf, VariablesOf } from "@graphql-typed-document-node/core";
@@ -23,6 +26,9 @@ export type ConnectorStatus = ResultOf<
 export type GoogleCalendarResource = ResultOf<
   typeof GoogleCalendarsDocument
 >["googleCalendars"][number];
+export type GoogleCalendarConnection = ResultOf<
+  typeof GoogleCalendarConnectionsDocument
+>["googleCalendarConnections"][number];
 export type ConnectorSyncResult = ResultOf<typeof SyncConnectorDocument>["syncConnector"];
 
 export function isConnectorName(value: string): value is ConnectorName {
@@ -39,9 +45,22 @@ export async function getGoogleCalendars() {
   return data.googleCalendars;
 }
 
+export async function getGoogleCalendarConnections() {
+  const data = await graphqlRequest(GoogleCalendarConnectionsDocument);
+  return data.googleCalendarConnections;
+}
+
 export async function discoverGoogleCalendars() {
   const data = await graphqlRequest(DiscoverGoogleCalendarsDocument);
   return data.discoverGoogleCalendars;
+}
+
+export async function discoverGoogleCalendarsForConnection(connectionId: number) {
+  const data = await graphqlRequest(DiscoverGoogleCalendarsForConnectionDocument, {
+    connectionId,
+  });
+
+  return data.discoverGoogleCalendarsForConnection;
 }
 
 export async function selectGoogleCalendars(calendarIds: string[]) {
@@ -50,6 +69,18 @@ export async function selectGoogleCalendars(calendarIds: string[]) {
   });
 
   return data.selectGoogleCalendars;
+}
+
+export async function selectGoogleCalendarsForConnection(
+  connectionId: number,
+  calendarIds: string[],
+) {
+  const data = await graphqlRequest(SelectGoogleCalendarsForConnectionDocument, {
+    connectionId,
+    input: { calendarIds },
+  });
+
+  return data.selectGoogleCalendarsForConnection;
 }
 
 export async function syncConnector(name: ConnectorName) {

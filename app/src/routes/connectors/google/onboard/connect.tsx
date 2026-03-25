@@ -2,33 +2,61 @@ import { openExternalLink } from "@/actions/shell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { findConnectorStatus, useConnectorStatusesQuery } from "@/features/connectors/queries";
+import {
+  findConnectorStatus,
+  useConnectorStatusesQuery,
+  useGoogleCalendarConnectionsQuery,
+} from "@/features/connectors/queries";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function GoogleConnectorOnboardingConnectPage() {
   const navigate = useNavigate();
   const statusesQuery = useConnectorStatusesQuery({ refetchInterval: 1_000 });
+  const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(true);
   const googleStatus = findConnectorStatus(statusesQuery.data, "gcal");
-  const wasConnected = useRef(Boolean(googleStatus?.connected));
+  const [isAuthorizing, setIsAuthorizing] = useState(false);
+  const [knownLatestConnectionId, setKnownLatestConnectionId] = useState<number | null>(null);
+
+  const latestConnection = useMemo(() => {
+    const connections = googleConnectionsQuery.data ?? [];
+    return connections[0] ?? null;
+  }, [googleConnectionsQuery.data]);
 
   useEffect(() => {
-    const isConnected = Boolean(googleStatus?.connected);
-
-    if (!wasConnected.current && isConnected) {
-      navigate({
-        replace: true,
-        to: "/connectors/google/onboard/select",
-      });
+    if (!isAuthorizing) {
+      return;
+    }
+    if (latestConnection == null) {
+      return;
     }
 
-    wasConnected.current = isConnected;
-  }, [googleStatus?.connected, navigate]);
+    if (knownLatestConnectionId != null && latestConnection.id <= knownLatestConnectionId) {
+      return;
+    }
+
+    navigate({
+      replace: true,
+      to: "/connectors/google/onboard/select",
+      search: { connectionId: latestConnection.id },
+    });
+  }, [isAuthorizing, knownLatestConnectionId, latestConnection, navigate]);
+
+  useEffect(() => {
+    if (!isAuthorizing) {
+      return;
+    }
+    const interval = setInterval(() => {
+      void googleConnectionsQuery.refetch();
+      void statusesQuery.refetch();
+    }, 1_000);
+    return () => clearInterval(interval);
+  }, [googleConnectionsQuery, isAuthorizing, statusesQuery]);
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-xl border bg-background">
+      <div className="overflow-hidden rounded-[3px] border bg-background">
         <div className="flex items-start justify-between gap-6 px-5 py-5">
           <div className="space-y-2">
             <h2 className="text-base font-medium">Step 1. Authorize Google</h2>
@@ -48,14 +76,23 @@ function GoogleConnectorOnboardingConnectPage() {
 
           <div className="flex items-center gap-2">
             <Button
-              onClick={() => openExternalLink(`${window.poneglyph.apiBaseUrl}/auth/google/login`)}
+              onClick={() => {
+                setKnownLatestConnectionId(latestConnection?.id ?? null);
+                setIsAuthorizing(true);
+                openExternalLink(`${window.poneglyph.apiBaseUrl}/auth/google/login`);
+              }}
               size="sm"
             >
               <ExternalLink />
               Connect Google
             </Button>
             <Button asChild disabled={!googleStatus?.connected} size="sm" variant="outline">
-              <Link to="/connectors/google/onboard/select">Next</Link>
+              <Link
+                search={{ connectionId: latestConnection?.id }}
+                to="/connectors/google/onboard/select"
+              >
+                Next
+              </Link>
             </Button>
           </div>
         </div>
@@ -82,8 +119,8 @@ function GoogleConnectorOnboardingConnectPage() {
         <Alert>
           <AlertTitle>Waiting for the browser auth flow</AlertTitle>
           <AlertDescription>
-            After the browser window completes the auth handoff, this screen will switch to
-            Connected and move on automatically.
+            After the browser window completes the auth handoff, this screen will switch to the
+            calendar picker for the newly added account.
           </AlertDescription>
         </Alert>
       )}

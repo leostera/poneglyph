@@ -114,7 +114,7 @@ function ConnectorsOverviewPage() {
           </Alert>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[3px] border bg-background px-4 py-3">
           <div className="text-sm text-muted-foreground">
             {selectedCount === 0
               ? `${connectorOrder.length} connectors`
@@ -137,7 +137,7 @@ function ConnectorsOverviewPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-xl border bg-background">
+        <div className="overflow-hidden rounded-[3px] border bg-background">
           <Table>
             <TableHeader>
               <TableRow>

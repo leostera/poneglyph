@@ -13,25 +13,34 @@ import {
 } from "@/components/ui/table";
 import {
   findConnectorStatus,
-  googleCalendarsQueryKey,
+  googleCalendarConnectionsQueryKey,
   invalidateConnectorQueries,
   useConnectorStatusesQuery,
-  useGoogleCalendarsQuery,
+  useGoogleCalendarConnectionsQuery,
 } from "@/features/connectors/queries";
-import { discoverGoogleCalendars, selectGoogleCalendars } from "@/lib/poneglyph-api";
+import {
+  discoverGoogleCalendarsForConnection,
+  selectGoogleCalendarsForConnection,
+} from "@/lib/poneglyph-api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CheckCircle2, LoaderCircle, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 function GoogleConnectorOnboardingSelectPage() {
+  const { connectionId } = Route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const statusesQuery = useConnectorStatusesQuery();
   const googleStatus = findConnectorStatus(statusesQuery.data, "gcal");
-  const googleCalendarsQuery = useGoogleCalendarsQuery(Boolean(googleStatus?.enabled));
+  const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(Boolean(googleStatus?.enabled));
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const didAutoDiscover = useRef(false);
+  const selectedConnection =
+    googleConnectionsQuery.data?.find((connection) => connection.id === connectionId) ??
+    googleConnectionsQuery.data?.[0] ??
+    null;
+  const calendars = selectedConnection?.calendars ?? [];
 
   const setCalendarSelected = (calendarId: string, nextChecked: boolean) => {
     setSelectedCalendarIds((current) => {
@@ -48,29 +57,32 @@ function GoogleConnectorOnboardingSelectPage() {
   };
 
   useEffect(() => {
-    if (!googleCalendarsQuery.data) {
+    if (!selectedConnection) {
       return;
     }
 
     setSelectedCalendarIds(
-      googleCalendarsQuery.data
+      selectedConnection.calendars
         .filter((calendar) => calendar.selected)
         .map((calendar) => calendar.calendarId),
     );
-  }, [googleCalendarsQuery.data]);
+  }, [selectedConnection]);
 
   const discoverMutation = useMutation({
-    mutationFn: discoverGoogleCalendars,
-    onSuccess: async (calendars) => {
-      queryClient.setQueryData(googleCalendarsQueryKey, calendars);
+    mutationFn: discoverGoogleCalendarsForConnection,
+    onSuccess: async () => {
       await invalidateConnectorQueries(queryClient);
     },
   });
 
   const selectMutation = useMutation({
-    mutationFn: selectGoogleCalendars,
-    onSuccess: async (calendars) => {
-      queryClient.setQueryData(googleCalendarsQueryKey, calendars);
+    mutationFn: (calendarIds: string[]) => {
+      if (selectedConnection == null) {
+        return Promise.resolve([]);
+      }
+      return selectGoogleCalendarsForConnection(selectedConnection.id, calendarIds);
+    },
+    onSuccess: async () => {
       await invalidateConnectorQueries(queryClient);
       navigate({
         params: { connectorId: "gcal" },
@@ -80,26 +92,27 @@ function GoogleConnectorOnboardingSelectPage() {
   });
 
   useEffect(() => {
-    if (!googleStatus?.connected || didAutoDiscover.current) {
+    if (!googleStatus?.connected || didAutoDiscover.current || selectedConnection == null) {
       return;
     }
 
-    if (googleCalendarsQuery.isLoading || googleCalendarsQuery.data?.length) {
+    if (googleConnectionsQuery.isLoading || calendars.length > 0) {
       return;
     }
 
     didAutoDiscover.current = true;
-    discoverMutation.mutate();
+    discoverMutation.mutate(selectedConnection.id);
   }, [
+    calendars.length,
     discoverMutation,
-    googleCalendarsQuery.data,
-    googleCalendarsQuery.isLoading,
+    googleConnectionsQuery.isLoading,
     googleStatus?.connected,
+    selectedConnection,
   ]);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 rounded-xl border bg-background px-5 py-5">
+      <div className="flex items-center justify-between gap-4 rounded-[3px] border bg-background px-5 py-5">
         <div className="space-y-2">
           <h2 className="text-base font-medium">Step 2. Choose calendars</h2>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -123,8 +136,15 @@ function GoogleConnectorOnboardingSelectPage() {
             Back
           </Button>
           <Button
-            disabled={!googleStatus?.connected || discoverMutation.isPending}
-            onClick={() => discoverMutation.mutate()}
+            disabled={
+              !googleStatus?.connected || discoverMutation.isPending || selectedConnection == null
+            }
+            onClick={() => {
+              if (selectedConnection == null) {
+                return;
+              }
+              discoverMutation.mutate(selectedConnection.id);
+            }}
             size="sm"
             variant="outline"
           >
@@ -132,7 +152,7 @@ function GoogleConnectorOnboardingSelectPage() {
             Refresh
           </Button>
           <Button
-            disabled={!googleCalendarsQuery.data?.length || selectMutation.isPending}
+            disabled={calendars.length === 0 || selectMutation.isPending}
             onClick={() => selectMutation.mutate(selectedCalendarIds)}
             size="sm"
           >
@@ -154,7 +174,7 @@ function GoogleConnectorOnboardingSelectPage() {
             calendars.
           </AlertDescription>
         </Alert>
-      ) : googleCalendarsQuery.isLoading || discoverMutation.isPending ? (
+      ) : googleConnectionsQuery.isLoading || discoverMutation.isPending ? (
         <div className="space-y-2">
           <Alert>
             <AlertTitle>Loading calendars</AlertTitle>
@@ -166,7 +186,7 @@ function GoogleConnectorOnboardingSelectPage() {
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-4/5" />
         </div>
-      ) : !googleCalendarsQuery.data?.length ? (
+      ) : calendars.length === 0 ? (
         <Alert>
           <AlertTitle>No calendars found yet</AlertTitle>
           <AlertDescription>
@@ -175,7 +195,7 @@ function GoogleConnectorOnboardingSelectPage() {
           </AlertDescription>
         </Alert>
       ) : (
-        <div className="overflow-hidden rounded-xl border bg-background">
+        <div className="overflow-hidden rounded-[3px] border bg-background">
           <Table>
             <TableHeader>
               <TableRow>
@@ -186,14 +206,14 @@ function GoogleConnectorOnboardingSelectPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {googleCalendarsQuery.data.map((calendar) => {
+              {calendars.map((calendar) => {
                 const checked = selectedCalendarIds.includes(calendar.calendarId);
 
                 return (
                   <TableRow
                     className="cursor-pointer"
                     data-state={checked ? "selected" : undefined}
-                    key={calendar.calendarId}
+                    key={`${calendar.connectionId}:${calendar.calendarId}`}
                     onClick={() => toggleCalendarSelection(calendar.calendarId)}
                     onKeyDown={(event) => {
                       if (event.key !== "Enter" && event.key !== " ") {
@@ -253,5 +273,8 @@ function GoogleConnectorOnboardingSelectPage() {
 }
 
 export const Route = createFileRoute("/connectors/google/onboard/select")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    connectionId: typeof search.connectionId === "number" ? search.connectionId : undefined,
+  }),
   component: GoogleConnectorOnboardingSelectPage,
 });

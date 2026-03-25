@@ -13,7 +13,7 @@ import { connectorCatalog, formatSyncTimestamp } from "@/features/connectors/cat
 import {
   findConnectorStatus,
   useConnectorStatusesQuery,
-  useGoogleCalendarsQuery,
+  useGoogleCalendarConnectionsQuery,
 } from "@/features/connectors/queries";
 import { isConnectorName } from "@/lib/poneglyph-api";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
@@ -29,9 +29,11 @@ function ConnectorLogsPage() {
   const meta = connectorCatalog[connectorName];
   const statusQuery = useConnectorStatusesQuery();
   const status = findConnectorStatus(statusQuery.data, connectorName);
-  const googleCalendarsQuery = useGoogleCalendarsQuery(
+  const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(
     connectorName === "gcal" && Boolean(status?.connected),
   );
+  const googleCalendars =
+    googleConnectionsQuery.data?.flatMap((connection) => connection.calendars) ?? [];
 
   return (
     <div className="min-h-full px-8 py-7">
@@ -64,7 +66,7 @@ function ConnectorLogsPage() {
         </Alert>
 
         <div className="space-y-6">
-          <div className="overflow-hidden rounded-xl border bg-background">
+          <div className="overflow-hidden rounded-[3px] border bg-background">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -103,8 +105,8 @@ function ConnectorLogsPage() {
             </Table>
           </div>
 
-          {connectorName === "gcal" && googleCalendarsQuery.data?.length ? (
-            <div className="overflow-hidden rounded-xl border bg-background">
+          {connectorName === "gcal" && googleCalendars.length > 0 ? (
+            <div className="overflow-hidden rounded-[3px] border bg-background">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -114,8 +116,8 @@ function ConnectorLogsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {googleCalendarsQuery.data.map((calendar) => (
-                    <TableRow key={calendar.calendarId}>
+                  {googleCalendars.map((calendar) => (
+                    <TableRow key={`${calendar.connectionId}:${calendar.calendarId}`}>
                       <TableCell>
                         <div className="space-y-1">
                           <div className="text-sm font-medium">{calendar.summary}</div>

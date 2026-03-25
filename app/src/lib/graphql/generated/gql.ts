@@ -1,6 +1,6 @@
-import type { TypedDocumentNode as DocumentNode } from "@graphql-typed-document-node/core";
 /* eslint-disable */
-import * as types from "./graphql";
+import * as types from './graphql';
+import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
 
 /**
  * Map of all GraphQL operations in the project.
@@ -14,23 +14,24 @@ import * as types from "./graphql";
  * Learn more about it here: https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#reducing-bundle-size
  */
 type Documents = {
-  "\n  query ConnectorStatuses {\n    connectorStatuses {\n      name\n      enabled\n      connected\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n    }\n  }\n": typeof types.ConnectorStatusesDocument;
-  "\n  query GoogleCalendars {\n    googleCalendars {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.GoogleCalendarsDocument;
-  "\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.DiscoverGoogleCalendarsDocument;
-  "\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.SelectGoogleCalendarsDocument;
-  "\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n": typeof types.SyncConnectorDocument;
+    "\n  query ConnectorStatuses {\n    connectorStatuses {\n      name\n      enabled\n      connected\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n    }\n  }\n": typeof types.ConnectorStatusesDocument,
+    "\n  query GoogleCalendars {\n    googleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.GoogleCalendarsDocument,
+    "\n  query GoogleCalendarConnections {\n    googleCalendarConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n": typeof types.GoogleCalendarConnectionsDocument,
+    "\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.DiscoverGoogleCalendarsDocument,
+    "\n  mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {\n    discoverGoogleCalendarsForConnection(connectionId: $connectionId) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.DiscoverGoogleCalendarsForConnectionDocument,
+    "\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.SelectGoogleCalendarsDocument,
+    "\n  mutation SelectGoogleCalendarsForConnection(\n    $connectionId: Int!\n    $input: SelectGoogleCalendarsInput!\n  ) {\n    selectGoogleCalendarsForConnection(connectionId: $connectionId, input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.SelectGoogleCalendarsForConnectionDocument,
+    "\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n": typeof types.SyncConnectorDocument,
 };
 const documents: Documents = {
-  "\n  query ConnectorStatuses {\n    connectorStatuses {\n      name\n      enabled\n      connected\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n    }\n  }\n":
-    types.ConnectorStatusesDocument,
-  "\n  query GoogleCalendars {\n    googleCalendars {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n":
-    types.GoogleCalendarsDocument,
-  "\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n":
-    types.DiscoverGoogleCalendarsDocument,
-  "\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n":
-    types.SelectGoogleCalendarsDocument,
-  "\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n":
-    types.SyncConnectorDocument,
+    "\n  query ConnectorStatuses {\n    connectorStatuses {\n      name\n      enabled\n      connected\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n    }\n  }\n": types.ConnectorStatusesDocument,
+    "\n  query GoogleCalendars {\n    googleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.GoogleCalendarsDocument,
+    "\n  query GoogleCalendarConnections {\n    googleCalendarConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n": types.GoogleCalendarConnectionsDocument,
+    "\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.DiscoverGoogleCalendarsDocument,
+    "\n  mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {\n    discoverGoogleCalendarsForConnection(connectionId: $connectionId) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.DiscoverGoogleCalendarsForConnectionDocument,
+    "\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.SelectGoogleCalendarsDocument,
+    "\n  mutation SelectGoogleCalendarsForConnection(\n    $connectionId: Int!\n    $input: SelectGoogleCalendarsInput!\n  ) {\n    selectGoogleCalendarsForConnection(connectionId: $connectionId, input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.SelectGoogleCalendarsForConnectionDocument,
+    "\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n": types.SyncConnectorDocument,
 };
 
 /**
@@ -50,37 +51,38 @@ export function graphql(source: string): unknown;
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(
-  source: "\n  query ConnectorStatuses {\n    connectorStatuses {\n      name\n      enabled\n      connected\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n    }\n  }\n",
-): (typeof documents)["\n  query ConnectorStatuses {\n    connectorStatuses {\n      name\n      enabled\n      connected\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n    }\n  }\n"];
+export function graphql(source: "\n  query ConnectorStatuses {\n    connectorStatuses {\n      name\n      enabled\n      connected\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n    }\n  }\n"): (typeof documents)["\n  query ConnectorStatuses {\n    connectorStatuses {\n      name\n      enabled\n      connected\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(
-  source: "\n  query GoogleCalendars {\n    googleCalendars {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n",
-): (typeof documents)["\n  query GoogleCalendars {\n    googleCalendars {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
+export function graphql(source: "\n  query GoogleCalendars {\n    googleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"): (typeof documents)["\n  query GoogleCalendars {\n    googleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(
-  source: "\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n",
-): (typeof documents)["\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
+export function graphql(source: "\n  query GoogleCalendarConnections {\n    googleCalendarConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n"): (typeof documents)["\n  query GoogleCalendarConnections {\n    googleCalendarConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(
-  source: "\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n",
-): (typeof documents)["\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
+export function graphql(source: "\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"): (typeof documents)["\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(
-  source: "\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n",
-): (typeof documents)["\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n"];
+export function graphql(source: "\n  mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {\n    discoverGoogleCalendarsForConnection(connectionId: $connectionId) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"): (typeof documents)["\n  mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {\n    discoverGoogleCalendarsForConnection(connectionId: $connectionId) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"): (typeof documents)["\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SelectGoogleCalendarsForConnection(\n    $connectionId: Int!\n    $input: SelectGoogleCalendarsInput!\n  ) {\n    selectGoogleCalendarsForConnection(connectionId: $connectionId, input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"): (typeof documents)["\n  mutation SelectGoogleCalendarsForConnection(\n    $connectionId: Int!\n    $input: SelectGoogleCalendarsInput!\n  ) {\n    selectGoogleCalendarsForConnection(connectionId: $connectionId, input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n"): (typeof documents)["\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};
 }
 
-export type DocumentType<TDocumentNode extends DocumentNode<any, any>> =
-  TDocumentNode extends DocumentNode<infer TType, any> ? TType : never;
+export type DocumentType<TDocumentNode extends DocumentNode<any, any>> = TDocumentNode extends DocumentNode<  infer TType,  any>  ? TType  : never;

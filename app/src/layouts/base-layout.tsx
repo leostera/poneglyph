@@ -41,8 +41,8 @@ export default function BaseLayout({
         <SidebarHeader className="flex flex-row no-drag gap-3 px-3 pt-[45px]">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton className="h-10 rounded-xl" size="lg">
-                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-foreground text-[10px] font-semibold text-background">
+              <SidebarMenuButton className="h-10 rounded-[3px]" size="lg">
+                <div className="grid size-8 shrink-0 place-items-center rounded-[3px] bg-foreground text-[10px] font-semibold text-background">
                   PG
                 </div>
                 <div className="min-w-0 flex-2">
@@ -64,7 +64,7 @@ export default function BaseLayout({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    className="h-auto rounded-xl px-3 py-2 text-sm"
+                    className="h-auto rounded-[3px] px-3 py-2 text-sm"
                     isActive={pathname === "/connectors"}
                     size="lg"
                   >

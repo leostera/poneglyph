@@ -17,12 +17,12 @@ import {
   findConnectorStatus,
   invalidateConnectorQueries,
   useConnectorStatusesQuery,
-  useGoogleCalendarsQuery,
+  useGoogleCalendarConnectionsQuery,
 } from "@/features/connectors/queries";
 import {
-  discoverGoogleCalendars,
+  discoverGoogleCalendarsForConnection,
   isConnectorName,
-  selectGoogleCalendars,
+  selectGoogleCalendarsForConnection,
   syncConnector,
 } from "@/lib/poneglyph-api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +35,7 @@ import {
   RefreshCw,
   Server,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function ConnectorDetailPage() {
   const { connectorId } = Route.useParams();
@@ -49,17 +49,55 @@ function ConnectorDetailPage() {
   const queryClient = useQueryClient();
   const statusesQuery = useConnectorStatusesQuery();
   const status = findConnectorStatus(statusesQuery.data, connectorName);
-  const googleCalendarsQuery = useGoogleCalendarsQuery(
+  const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(
     connectorName === "gcal" && Boolean(status?.enabled),
   );
+
+  const [selectedConnectionId, setSelectedConnectionId] = useState<number | null>(null);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
+
+  const selectedConnection = useMemo(() => {
+    if (connectorName !== "gcal") {
+      return null;
+    }
+    const connections = googleConnectionsQuery.data ?? [];
+    if (connections.length === 0) {
+      return null;
+    }
+    if (selectedConnectionId == null) {
+      return connections[0];
+    }
+    return (
+      connections.find((connection) => connection.id === selectedConnectionId) ?? connections[0]
+    );
+  }, [connectorName, googleConnectionsQuery.data, selectedConnectionId]);
+
+  const selectedCalendars = selectedConnection?.calendars ?? [];
+
+  useEffect(() => {
+    if (selectedConnectionId == null && selectedConnection != null) {
+      setSelectedConnectionId(selectedConnection.id);
+    }
+  }, [selectedConnection, selectedConnectionId]);
+
+  useEffect(() => {
+    if (selectedConnection == null) {
+      setSelectedCalendarIds([]);
+      return;
+    }
+
+    setSelectedCalendarIds(
+      selectedConnection.calendars
+        .filter((calendar) => calendar.selected)
+        .map((calendar) => calendar.calendarId),
+    );
+  }, [selectedConnection]);
 
   const setCalendarSelected = (calendarId: string, nextChecked: boolean) => {
     setSelectedCalendarIds((current) => {
       if (nextChecked) {
         return current.includes(calendarId) ? current : [...current, calendarId];
       }
-
       return current.filter((currentId) => currentId !== calendarId);
     });
   };
@@ -68,30 +106,17 @@ function ConnectorDetailPage() {
     setCalendarSelected(calendarId, !selectedCalendarIds.includes(calendarId));
   };
 
-  useEffect(() => {
-    if (connectorName !== "gcal" || !googleCalendarsQuery.data) {
-      return;
-    }
-
-    setSelectedCalendarIds(
-      googleCalendarsQuery.data
-        .filter((calendar) => calendar.selected)
-        .map((calendar) => calendar.calendarId),
-    );
-  }, [connectorName, googleCalendarsQuery.data]);
-
   const discoverMutation = useMutation({
-    mutationFn: discoverGoogleCalendars,
-    onSuccess: async (calendars) => {
-      queryClient.setQueryData(["google-calendars"], calendars);
+    mutationFn: (connectionId: number) => discoverGoogleCalendarsForConnection(connectionId),
+    onSuccess: async () => {
       await invalidateConnectorQueries(queryClient);
     },
   });
 
   const selectMutation = useMutation({
-    mutationFn: selectGoogleCalendars,
-    onSuccess: async (calendars) => {
-      queryClient.setQueryData(["google-calendars"], calendars);
+    mutationFn: (input: { connectionId: number; calendarIds: string[] }) =>
+      selectGoogleCalendarsForConnection(input.connectionId, input.calendarIds),
+    onSuccess: async () => {
       await invalidateConnectorQueries(queryClient);
     },
   });
@@ -117,7 +142,7 @@ function ConnectorDetailPage() {
               </Link>
             </Button>
             <div className="flex items-center gap-3">
-              <div className="rounded-lg border p-2 text-muted-foreground">
+              <div className="rounded-[3px] border p-2 text-muted-foreground">
                 <Icon className="size-4" />
               </div>
               <div>
@@ -138,13 +163,20 @@ function ConnectorDetailPage() {
                 variant="ghost"
               >
                 <ExternalLink />
-                Connect
+                Connect account
               </Button>
             ) : null}
             {connectorName === "gcal" ? (
               <Button
-                disabled={!status?.connected || discoverMutation.isPending}
-                onClick={() => discoverMutation.mutate()}
+                disabled={
+                  !status?.connected || discoverMutation.isPending || selectedConnection == null
+                }
+                onClick={() => {
+                  if (selectedConnection == null) {
+                    return;
+                  }
+                  discoverMutation.mutate(selectedConnection.id);
+                }}
                 size="sm"
                 variant="ghost"
               >
@@ -181,7 +213,7 @@ function ConnectorDetailPage() {
         ) : null}
 
         <div className="space-y-6">
-          <div className="overflow-hidden rounded-xl border bg-background">
+          <div className="overflow-hidden rounded-[3px] border bg-background">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -221,126 +253,171 @@ function ConnectorDetailPage() {
           </div>
 
           {connectorName === "gcal" ? (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-medium">Calendar selection</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Discover calendars first, then choose which resources should remain in sync.
-                </p>
+            <div className="flex flex-col gap-4 lg:flex-row">
+              <div className="w-full rounded-[3px] border bg-background lg:w-[320px] lg:shrink-0">
+                <div className="border-b px-4 py-3 text-sm font-medium">Google accounts</div>
+                {!status?.connected ? (
+                  <div className="px-4 py-3 text-xs text-muted-foreground">
+                    No connected accounts yet.
+                  </div>
+                ) : googleConnectionsQuery.isLoading ? (
+                  <div className="space-y-2 px-4 py-3">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                  </div>
+                ) : !googleConnectionsQuery.data?.length ? (
+                  <div className="px-4 py-3 text-xs text-muted-foreground">
+                    No accounts discovered yet.
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {googleConnectionsQuery.data.map((connection) => (
+                      <button
+                        className={`w-full px-4 py-3 text-left ${
+                          selectedConnection?.id === connection.id ? "bg-muted/50" : ""
+                        }`}
+                        key={connection.id}
+                        onClick={() => setSelectedConnectionId(connection.id)}
+                        type="button"
+                      >
+                        <div className="text-sm font-medium">{connection.label}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {connection.calendars.length} calendars ·{" "}
+                          {connection.selectedResourceCount} selected
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {!status?.connected ? (
-                <Alert>
-                  <AlertTitle>Google Calendar is not connected</AlertTitle>
-                  <AlertDescription>
-                    Start the browser auth flow, then return here to discover calendars and save the
-                    calendars that should stay in sync.
-                  </AlertDescription>
-                </Alert>
-              ) : googleCalendarsQuery.isLoading ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-4/5" />
-                </div>
-              ) : !googleCalendarsQuery.data?.length ? (
-                <Alert>
-                  <AlertTitle>No calendars discovered yet</AlertTitle>
-                  <AlertDescription>
-                    Use Discover to fetch the available calendars for the saved Google connection.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex justify-end">
-                    <Button
-                      disabled={selectMutation.isPending}
-                      onClick={() => selectMutation.mutate(selectedCalendarIds)}
-                      size="sm"
-                    >
-                      {selectMutation.isPending ? (
-                        <LoaderCircle className="animate-spin" />
-                      ) : (
-                        <CheckCircle2 />
-                      )}
-                      Save selection
-                    </Button>
-                  </div>
+              <div className="min-w-0 flex-1 space-y-3">
+                {!status?.connected ? (
+                  <Alert>
+                    <AlertTitle>Google Calendar is not connected</AlertTitle>
+                    <AlertDescription>
+                      Start the browser auth flow, then return here to discover calendars and save
+                      the calendars that should stay in sync.
+                    </AlertDescription>
+                  </Alert>
+                ) : selectedConnection == null ? (
+                  <Alert>
+                    <AlertTitle>Select an account</AlertTitle>
+                    <AlertDescription>
+                      Choose a Google account from the left column to manage its calendars.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-base font-medium">{selectedConnection.label}</h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Manage which calendars from this account should stay in sync.
+                        </p>
+                      </div>
+                      <Button
+                        disabled={selectMutation.isPending}
+                        onClick={() =>
+                          selectMutation.mutate({
+                            connectionId: selectedConnection.id,
+                            calendarIds: selectedCalendarIds,
+                          })
+                        }
+                        size="sm"
+                      >
+                        {selectMutation.isPending ? (
+                          <LoaderCircle className="animate-spin" />
+                        ) : (
+                          <CheckCircle2 />
+                        )}
+                        Save selection
+                      </Button>
+                    </div>
 
-                  <div className="overflow-hidden rounded-xl border bg-background">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-12">Sync</TableHead>
-                          <TableHead>Calendar</TableHead>
-                          <TableHead>Timezone</TableHead>
-                          <TableHead>State</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {googleCalendarsQuery.data.map((calendar) => {
-                          const checked = selectedCalendarIds.includes(calendar.calendarId);
-
-                          return (
-                            <TableRow
-                              className="cursor-pointer"
-                              data-state={checked ? "selected" : undefined}
-                              key={calendar.calendarId}
-                              onClick={() => toggleCalendarSelection(calendar.calendarId)}
-                              onKeyDown={(event) => {
-                                if (event.key !== "Enter" && event.key !== " ") {
-                                  return;
-                                }
-
-                                event.preventDefault();
-                                toggleCalendarSelection(calendar.calendarId);
-                              }}
-                              tabIndex={0}
-                            >
-                              <TableCell>
-                                <Checkbox
-                                  aria-label={`Toggle ${calendar.summary}`}
-                                  checked={checked}
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                  }}
-                                  onCheckedChange={(value) => {
-                                    setCalendarSelected(calendar.calendarId, Boolean(value));
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-1">
-                                  <div className="text-sm font-medium">{calendar.summary}</div>
-                                  <div className="font-mono text-[11px] text-muted-foreground">
-                                    {calendar.calendarId}
-                                  </div>
-                                  {calendar.description ? (
-                                    <div className="text-xs text-muted-foreground">
-                                      {calendar.description}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </TableCell>
-                              <TableCell>{calendar.timeZone ?? "No timezone"}</TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {calendar.primary ? (
-                                    <Badge variant="outline">Primary</Badge>
-                                  ) : null}
-                                  {calendar.selected ? (
-                                    <Badge variant="secondary">Selected</Badge>
-                                  ) : null}
-                                </div>
-                              </TableCell>
+                    {selectedCalendars.length === 0 ? (
+                      <Alert>
+                        <AlertTitle>No calendars discovered yet</AlertTitle>
+                        <AlertDescription>
+                          Use Discover to fetch calendars for this account.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="overflow-hidden rounded-[3px] border bg-background">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12">Sync</TableHead>
+                              <TableHead>Calendar</TableHead>
+                              <TableHead>Timezone</TableHead>
+                              <TableHead>State</TableHead>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
+                          </TableHeader>
+                          <TableBody>
+                            {selectedCalendars.map((calendar) => {
+                              const checked = selectedCalendarIds.includes(calendar.calendarId);
+
+                              return (
+                                <TableRow
+                                  className="cursor-pointer"
+                                  data-state={checked ? "selected" : undefined}
+                                  key={`${calendar.connectionId}:${calendar.calendarId}`}
+                                  onClick={() => toggleCalendarSelection(calendar.calendarId)}
+                                  onKeyDown={(event) => {
+                                    if (event.key !== "Enter" && event.key !== " ") {
+                                      return;
+                                    }
+                                    event.preventDefault();
+                                    toggleCalendarSelection(calendar.calendarId);
+                                  }}
+                                  tabIndex={0}
+                                >
+                                  <TableCell>
+                                    <Checkbox
+                                      aria-label={`Toggle ${calendar.summary}`}
+                                      checked={checked}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                      }}
+                                      onCheckedChange={(value) => {
+                                        setCalendarSelected(calendar.calendarId, Boolean(value));
+                                      }}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="space-y-1">
+                                      <div className="text-sm font-medium">{calendar.summary}</div>
+                                      <div className="font-mono text-[11px] text-muted-foreground">
+                                        {calendar.calendarId}
+                                      </div>
+                                      {calendar.description ? (
+                                        <div className="text-xs text-muted-foreground">
+                                          {calendar.description}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{calendar.timeZone ?? "No timezone"}</TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {calendar.primary ? (
+                                        <Badge variant="outline">Primary</Badge>
+                                      ) : null}
+                                      {calendar.selected ? (
+                                        <Badge variant="secondary">Selected</Badge>
+                                      ) : null}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           ) : (
             <Alert>
