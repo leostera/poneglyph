@@ -770,13 +770,18 @@ mod tests {
             .expect("ctl");
         let ctl_config = PoneglyphCtlConfig {
             gcal: None,
-            plex: Some(PlexConfig {
-                enabled: true,
-                base_url: Some(format!("http://{addr}")),
-                token: Some("secret".to_string()),
-                libraries: vec!["Movies".to_string()],
-            }),
+            plex: Some(PlexConfig { enabled: true }),
         };
+
+        ctl.save_plex_connection(poneglyph_ctl::SavePlexConnection {
+            name: "Test Plex".to_string(),
+            machine_identifier: "machine-test".to_string(),
+            base_url: format!("http://{addr}"),
+            token: "secret".to_string(),
+            libraries: vec!["Movies".to_string()],
+        })
+        .await
+        .expect("save plex connection");
 
         let bind_addr = next_http_bind_addr();
         let base_url = format!("http://{bind_addr}");

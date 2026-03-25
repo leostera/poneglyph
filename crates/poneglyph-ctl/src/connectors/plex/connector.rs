@@ -18,15 +18,6 @@ pub struct PlexConfig {
     #[serde(default)]
     #[builder(default)]
     pub enabled: bool,
-    #[serde(default)]
-    #[builder(default)]
-    pub base_url: Option<String>,
-    #[serde(default)]
-    #[builder(default)]
-    pub token: Option<String>,
-    #[serde(default)]
-    #[builder(default)]
-    pub libraries: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -36,15 +27,6 @@ pub struct PlexConnector {
 
 impl PlexConnector {
     pub fn init(config: PlexConfig) -> CtlResult<Self> {
-        if config.enabled {
-            if config.base_url.is_some() && config.token.is_none() {
-                return Err(CtlError::MissingPlexToken);
-            }
-            if config.base_url.is_none() && config.token.is_some() {
-                return Err(CtlError::MissingPlexBaseUrl);
-            }
-        }
-
         Ok(Self { config })
     }
 
@@ -71,7 +53,7 @@ impl PlexConnector {
         }
 
         let mut facts = Vec::new();
-        let mut connections = ctl
+        let connections = ctl
             .list_plex_connections()
             .await?
             .into_iter()
@@ -84,19 +66,6 @@ impl PlexConnector {
             .collect::<Vec<_>>();
 
         if connections.is_empty() {
-            if let (Some(base_url), Some(token)) =
-                (self.config.base_url.clone(), self.config.token.clone())
-            {
-                connections.push(PlexRunConnection {
-                    scope: "config".to_string(),
-                    base_url,
-                    token,
-                    libraries: self.config.libraries.clone(),
-                });
-            }
-        }
-
-        if connections.is_empty() {
             info!("plex connector has no configured servers");
             return Ok(());
         }
@@ -104,20 +73,11 @@ impl PlexConnector {
         sleep(Duration::from_millis(10)).await;
 
         for connection in connections {
-            let connection_config = PlexConfig {
-                enabled: true,
-                base_url: Some(connection.base_url.clone()),
-                token: Some(connection.token.clone()),
-                libraries: connection.libraries.clone(),
-            };
-            let client = PlexClient::new(&connection_config)?;
+            let client = PlexClient::new(&connection.base_url, &connection.token)?;
             let sections = client.fetch_library_sections().await?;
             let selected_sections = select_sections(&connection.libraries, sections);
             let libraries_url = client.redacted_library_sections_url()?;
-            let base_url = client
-                .base_url()
-                .map(ToString::to_string)
-                .unwrap_or_else(|| "<missing>".to_string());
+            let base_url = client.base_url().to_string();
             info!(
                 scope = %connection.scope,
                 base_url = %base_url,
@@ -252,48 +212,35 @@ mod tests {
         sync::{Mutex, mpsc},
     };
 
-    use crate::CtlStore;
+    use crate::{CtlStore, SavePlexConnection};
 
     use super::{PlexConfig, PlexConnector};
 
     #[test]
     fn plex_connector_initializes_with_valid_config() {
-        let connector = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: Some("http://127.0.0.1:32400".to_string()),
-            token: Some("secret".to_string()),
-            libraries: vec!["Movies".to_string()],
-        })
-        .expect("connector");
+        let connector = PlexConnector::init(PlexConfig { enabled: true }).expect("connector");
 
         assert_eq!(connector.name(), "plex");
         assert_eq!(connector.schema_namespace(), "plex");
     }
 
-    #[test]
-    fn enabled_plex_connector_requires_base_url() {
-        let error = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: None,
-            token: Some("secret".to_string()),
-            libraries: vec![],
+    async fn save_test_plex_connection(
+        ctl: &CtlStore,
+        name: &str,
+        machine_identifier: &str,
+        base_url: &str,
+        token: &str,
+        libraries: Vec<String>,
+    ) {
+        ctl.save_plex_connection(SavePlexConnection {
+            name: name.to_string(),
+            machine_identifier: machine_identifier.to_string(),
+            base_url: base_url.to_string(),
+            token: token.to_string(),
+            libraries,
         })
-        .expect_err("missing base url");
-
-        assert_eq!(error.to_string(), "plex connector requires a base_url");
-    }
-
-    #[test]
-    fn enabled_plex_connector_requires_token() {
-        let error = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: Some("http://127.0.0.1:32400".to_string()),
-            token: None,
-            libraries: vec![],
-        })
-        .expect_err("missing token");
-
-        assert_eq!(error.to_string(), "plex connector requires a token");
+        .await
+        .expect("save plex connection");
     }
 
     #[tokio::test]
@@ -338,17 +285,21 @@ mod tests {
             axum::serve(listener, app).await.expect("serve");
         });
 
-        let connector = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: Some(format!("http://{addr}")),
-            token: Some("secret".to_string()),
-            libraries: vec!["Movies".to_string()],
-        })
-        .expect("connector");
+        let connector = PlexConnector::init(PlexConfig { enabled: true }).expect("connector");
         let tempdir = tempfile::tempdir().expect("tempdir");
         let ctl = CtlStore::open(tempdir.path().join("control.db"))
             .await
             .expect("ctl");
+        let base_url = format!("http://{addr}");
+        save_test_plex_connection(
+            &ctl,
+            "Local Plex",
+            "machine-1",
+            &base_url,
+            "secret",
+            vec!["Movies".to_string()],
+        )
+        .await;
 
         let (fact_tx, mut fact_stream) = mpsc::channel(1);
         connector.run(ctl, fact_tx).await.expect("run");
@@ -375,21 +326,24 @@ mod tests {
             std::env::var("PONEGLYPH_PLEX_BASE_URL").expect("PONEGLYPH_PLEX_BASE_URL is set");
         let token = std::env::var("PONEGLYPH_PLEX_TOKEN").expect("PONEGLYPH_PLEX_TOKEN is set");
 
-        let connector = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: Some(base_url),
-            token: Some(token),
-            libraries: vec![
-                "Movies".to_string(),
-                "Anime".to_string(),
-                "Series".to_string(),
-            ],
-        })
-        .expect("connector");
+        let connector = PlexConnector::init(PlexConfig { enabled: true }).expect("connector");
         let tempdir = tempfile::tempdir().expect("tempdir");
         let ctl = CtlStore::open(tempdir.path().join("control.db"))
             .await
             .expect("ctl");
+        save_test_plex_connection(
+            &ctl,
+            "Local Plex",
+            "machine-live",
+            &base_url,
+            &token,
+            vec![
+                "Movies".to_string(),
+                "Anime".to_string(),
+                "Series".to_string(),
+            ],
+        )
+        .await;
 
         let (fact_tx, mut fact_stream) = mpsc::channel(1);
         connector.run(ctl, fact_tx).await.expect("run");
@@ -466,17 +420,14 @@ mod tests {
             axum::serve(listener, app).await.expect("serve");
         });
 
-        let connector = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: Some(format!("http://{addr}")),
-            token: Some("secret".to_string()),
-            libraries: vec![],
-        })
-        .expect("connector");
+        let connector = PlexConnector::init(PlexConfig { enabled: true }).expect("connector");
         let tempdir = tempfile::tempdir().expect("tempdir");
         let ctl = CtlStore::open(tempdir.path().join("control.db"))
             .await
             .expect("ctl");
+        let base_url = format!("http://{addr}");
+        save_test_plex_connection(&ctl, "Local Plex", "machine-2", &base_url, "secret", vec![])
+            .await;
 
         let (fact_tx, mut fact_stream) = mpsc::channel(1);
         connector.run(ctl, fact_tx).await.expect("run");
@@ -541,13 +492,17 @@ mod tests {
             .await
             .expect("ctl");
 
-        let connector = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: Some(format!("http://{addr}")),
-            token: Some("secret".to_string()),
-            libraries: vec!["Movies".to_string()],
-        })
-        .expect("connector");
+        let connector = PlexConnector::init(PlexConfig { enabled: true }).expect("connector");
+        let base_url = format!("http://{addr}");
+        save_test_plex_connection(
+            &ctl,
+            "Local Plex",
+            "machine-3",
+            &base_url,
+            "secret",
+            vec!["Movies".to_string()],
+        )
+        .await;
         let (fact_tx, mut fact_stream) = mpsc::channel(1);
         connector
             .run(ctl.clone(), fact_tx)
@@ -555,13 +510,7 @@ mod tests {
             .expect("first run");
         assert!(fact_stream.recv().await.is_some());
 
-        let connector = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: Some(format!("http://{addr}")),
-            token: Some("secret".to_string()),
-            libraries: vec!["Movies".to_string()],
-        })
-        .expect("connector");
+        let connector = PlexConnector::init(PlexConfig { enabled: true }).expect("connector");
         let (fact_tx, mut fact_stream) = mpsc::channel(1);
         connector
             .run(ctl.clone(), fact_tx)
@@ -570,7 +519,7 @@ mod tests {
         assert!(fact_stream.recv().await.is_none());
 
         let sync_state = ctl
-            .plex_library_sync_state("config:1")
+            .plex_library_sync_state("store-1:1")
             .await
             .expect("sync state")
             .expect("saved sync state");

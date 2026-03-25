@@ -30,12 +30,7 @@ mod tests {
     fn connector_configs_round_trip_through_toml() {
         let config = PoneglyphCtlConfig {
             gcal: Some(GcalConfig { enabled: true }),
-            plex: Some(PlexConfig {
-                enabled: true,
-                base_url: Some("http://127.0.0.1:32400".to_string()),
-                token: Some("secret".to_string()),
-                libraries: vec!["Movies".to_string(), "Shows".to_string()],
-            }),
+            plex: Some(PlexConfig { enabled: true }),
         };
 
         let toml = toml::to_string(&config).expect("serialize");

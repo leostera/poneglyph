@@ -248,7 +248,7 @@ mod tests {
 
     use crate::{
         ConnectorRuntime, CtlStore, GcalConfig, GcalConnector, GoogleCalendarResource, PlexConfig,
-        PlexConnector, SaveGoogleOAuthConnection,
+        PlexConnector, SaveGoogleOAuthConnection, SavePlexConnection,
     };
     use poneglyph::{Poneglyph, Query, QueryResult, Workspace};
 
@@ -468,17 +468,21 @@ mod tests {
         });
 
         let poneglyph = test_poneglyph().await;
-        let plex = PlexConnector::init(PlexConfig {
-            enabled: true,
-            base_url: Some(format!("http://{addr}")),
-            token: Some("secret".to_string()),
+        let plex = PlexConnector::init(PlexConfig { enabled: true }).expect("plex");
+        let ctl = test_ctl().await;
+        ctl.save_plex_connection(SavePlexConnection {
+            name: "Runtime Plex".to_string(),
+            machine_identifier: "machine-runtime".to_string(),
+            base_url: format!("http://{addr}"),
+            token: "secret".to_string(),
             libraries: vec!["Movies".to_string()],
         })
-        .expect("plex");
+        .await
+        .expect("save plex connection");
 
         ConnectorRuntime::builder()
             .with_poneglyph_arc(poneglyph.clone())
-            .with_ctl_store(test_ctl().await)
+            .with_ctl_store(ctl)
             .add_plex_connector(plex)
             .build()
             .expect("runtime")

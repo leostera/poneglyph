@@ -259,16 +259,11 @@ pub(crate) async fn connector_statuses(
             .list_plex_connections()
             .await
             .map_err(|error| format!("failed to load plex connections: {error}"))?;
-        let has_legacy_connection = config.base_url.is_some() && config.token.is_some();
-        let connected = has_legacy_connection || !stored_connections.is_empty();
-        let selected_resource_count = if stored_connections.is_empty() {
-            config.libraries.len() as i32
-        } else {
-            stored_connections
-                .iter()
-                .map(|connection| connection.libraries.len() as i32)
-                .sum()
-        };
+        let connected = !stored_connections.is_empty();
+        let selected_resource_count = stored_connections
+            .iter()
+            .map(|connection| connection.libraries.len() as i32)
+            .sum();
 
         statuses.push(ConnectorStatus {
             name: "plex".to_string(),

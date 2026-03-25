@@ -88,9 +88,6 @@ log_level = "debug"
 
 [ctl.plex]
 enabled = true
-base_url = "http://127.0.0.1:32400"
-token = "secret"
-libraries = ["Movies", "Shows"]
 
 [api]
 bind_addr = "127.0.0.1:9001"
@@ -110,14 +107,6 @@ server_log_path = "custom.log"
         assert_eq!(
             config.ctl.plex.as_ref().map(|plex| plex.enabled),
             Some(true)
-        );
-        assert_eq!(
-            config
-                .ctl
-                .plex
-                .as_ref()
-                .and_then(|plex| plex.base_url.as_deref()),
-            Some("http://127.0.0.1:32400")
         );
         assert_eq!(config.api.bind_addr, "127.0.0.1:9001");
         assert_eq!(

@@ -3,80 +3,59 @@ use reqwest::{Client, StatusCode, Url};
 
 use crate::{CtlError, CtlResult};
 
-use super::connector::PlexConfig;
 use super::types::{PlexLibrarySection, PlexMediaContainer, PlexMetadataItem};
 
 #[derive(Debug, Clone)]
 pub(super) struct PlexClient {
-    base_url: Option<Url>,
-    token: Option<String>,
+    base_url: Url,
+    token: String,
     http: Client,
 }
 
 impl PlexClient {
-    pub(super) fn new(config: &PlexConfig) -> CtlResult<Self> {
-        let base_url = match &config.base_url {
-            Some(base_url) => Some(
-                Url::parse(base_url)
-                    .map_err(|_| CtlError::InvalidPlexBaseUrl(base_url.to_string()))?,
-            ),
-            None => None,
-        };
-
-        if config.enabled && config.token.is_none() {
-            return Err(CtlError::MissingPlexToken);
-        }
+    pub(super) fn new(base_url: &str, token: &str) -> CtlResult<Self> {
+        let base_url =
+            Url::parse(base_url).map_err(|_| CtlError::InvalidPlexBaseUrl(base_url.to_string()))?;
 
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
         let http = Client::builder()
             .default_headers(headers)
             .build()
-            .map_err(|_| {
-                CtlError::InvalidPlexBaseUrl(
-                    base_url
-                        .as_ref()
-                        .map(Url::to_string)
-                        .unwrap_or_else(|| "missing".to_string()),
-                )
-            })?;
+            .map_err(|_| CtlError::InvalidPlexBaseUrl(base_url.to_string()))?;
 
         Ok(Self {
             base_url,
-            token: config.token.clone(),
+            token: token.to_string(),
             http,
         })
     }
 
-    pub(super) fn base_url(&self) -> Option<&Url> {
-        self.base_url.as_ref()
+    pub(super) fn base_url(&self) -> &Url {
+        &self.base_url
     }
 
     pub(super) fn library_sections_url(&self) -> CtlResult<Url> {
-        let mut url = self.base_url.clone().ok_or(CtlError::MissingPlexBaseUrl)?;
+        let mut url = self.base_url.clone();
         url.set_path("/library/sections/all");
-        if let Some(token) = &self.token {
-            url.query_pairs_mut().append_pair("X-Plex-Token", token);
-        }
+        url.query_pairs_mut()
+            .append_pair("X-Plex-Token", &self.token);
         Ok(url)
     }
 
     pub(super) fn redacted_library_sections_url(&self) -> CtlResult<String> {
-        let mut url = self.base_url.clone().ok_or(CtlError::MissingPlexBaseUrl)?;
+        let mut url = self.base_url.clone();
         url.set_path("/library/sections/all");
-        if self.token.is_some() {
-            url.query_pairs_mut()
-                .append_pair("X-Plex-Token", "<redacted>");
-        }
+        url.query_pairs_mut()
+            .append_pair("X-Plex-Token", "<redacted>");
         Ok(url.to_string())
     }
 
     pub(super) fn library_items_url(&self, section_key: &str) -> CtlResult<Url> {
-        let mut url = self.base_url.clone().ok_or(CtlError::MissingPlexBaseUrl)?;
+        let mut url = self.base_url.clone();
         url.set_path(&format!("/library/sections/{section_key}/all"));
-        if let Some(token) = &self.token {
-            url.query_pairs_mut().append_pair("X-Plex-Token", token);
-        }
+        url.query_pairs_mut()
+            .append_pair("X-Plex-Token", &self.token);
         Ok(url)
     }
 
