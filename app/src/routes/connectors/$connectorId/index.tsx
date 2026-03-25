@@ -213,44 +213,46 @@ function ConnectorDetailPage() {
         ) : null}
 
         <div className="space-y-6">
-          <div className="overflow-hidden rounded-[3px] border bg-background">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[220px]">Field</TableHead>
-                  <TableHead>Value</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="text-muted-foreground">Runtime state</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Badge variant={status?.enabled ? "secondary" : "outline"}>
-                        {status?.enabled ? "Enabled" : "Disabled"}
-                      </Badge>
-                      <Badge variant={status?.connected ? "secondary" : "outline"}>
-                        {status?.connected ? "Connected" : "Waiting"}
-                      </Badge>
-                      {status?.lastError ? <Badge variant="destructive">Error</Badge> : null}
-                    </div>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="text-muted-foreground">Selected resources</TableCell>
-                  <TableCell>{status?.selectedResourceCount ?? 0}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="text-muted-foreground">Last sync</TableCell>
-                  <TableCell>{formatSyncTimestamp(status?.lastSyncedAt)}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="text-muted-foreground">Last error</TableCell>
-                  <TableCell>{status?.lastError ?? "No connector errors recorded"}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          {connectorName !== "gcal" ? (
+            <div className="overflow-hidden rounded-[3px] border bg-background">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[220px]">Field</TableHead>
+                    <TableHead>Value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Runtime state</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge variant={status?.enabled ? "secondary" : "outline"}>
+                          {status?.enabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                        <Badge variant={status?.connected ? "secondary" : "outline"}>
+                          {status?.connected ? "Connected" : "Waiting"}
+                        </Badge>
+                        {status?.lastError ? <Badge variant="destructive">Error</Badge> : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Selected resources</TableCell>
+                    <TableCell>{status?.selectedResourceCount ?? 0}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Last sync</TableCell>
+                    <TableCell>{formatSyncTimestamp(status?.lastSyncedAt)}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-muted-foreground">Last error</TableCell>
+                    <TableCell>{status?.lastError ?? "No connector errors recorded"}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          ) : null}
 
           {connectorName === "gcal" ? (
             <div className="flex flex-col gap-8 lg:h-[calc(100vh-260px)] lg:flex-row lg:items-start">
@@ -300,7 +302,7 @@ function ConnectorDetailPage() {
                 </div>
               </aside>
 
-              <section className="min-w-0 flex-1 space-y-3 pb-6 lg:max-h-full lg:overflow-y-auto lg:pr-2">
+              <section className="min-w-0 flex-1 space-y-3 pb-6 lg:pr-2">
                 {!status?.connected ? (
                   <Alert>
                     <AlertTitle>Google Calendar is not connected</AlertTitle>
@@ -318,6 +320,51 @@ function ConnectorDetailPage() {
                   </Alert>
                 ) : (
                   <>
+                    <div className="overflow-hidden rounded-[3px] border bg-background">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[220px]">Field</TableHead>
+                            <TableHead>Value</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="text-muted-foreground">Runtime state</TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1.5">
+                                <Badge variant={status?.enabled ? "secondary" : "outline"}>
+                                  {status?.enabled ? "Enabled" : "Disabled"}
+                                </Badge>
+                                <Badge variant={status?.connected ? "secondary" : "outline"}>
+                                  {status?.connected ? "Connected" : "Waiting"}
+                                </Badge>
+                                {status?.lastError ? (
+                                  <Badge variant="destructive">Error</Badge>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-muted-foreground">
+                              Selected resources
+                            </TableCell>
+                            <TableCell>{status?.selectedResourceCount ?? 0}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-muted-foreground">Last sync</TableCell>
+                            <TableCell>{formatSyncTimestamp(status?.lastSyncedAt)}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="text-muted-foreground">Last error</TableCell>
+                            <TableCell>
+                              {status?.lastError ?? "No connector errors recorded"}
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-base font-medium">{selectedConnection.label}</h2>

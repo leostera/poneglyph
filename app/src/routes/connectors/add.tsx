@@ -97,7 +97,7 @@ function AddConnectorPage() {
             </div>
           </aside>
 
-          <section className="space-y-3 px-2 pb-10 lg:min-h-0 lg:flex-1 lg:self-start lg:overflow-y-auto lg:pr-2">
+          <section className="space-y-3 px-2 pb-10 lg:flex-1 lg:self-start lg:pr-2">
             <div className="flex min-h-9 items-center justify-between gap-4">
               <div className="text-sm text-muted-foreground">
                 {filteredConnectors.length} connector
