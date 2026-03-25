@@ -2,6 +2,7 @@ use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
 use crate::connectors::gcal::GcalConfig;
+use crate::connectors::gmail::GmailConfig;
 use crate::connectors::plex::PlexConfig;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
@@ -12,17 +13,21 @@ pub struct PoneglyphCtlConfig {
     pub gcal: Option<GcalConfig>,
     #[serde(default)]
     #[builder(default)]
+    pub gmail: Option<GmailConfig>,
+    #[serde(default)]
+    #[builder(default)]
     pub plex: Option<PlexConfig>,
 }
 
 #[cfg(test)]
 mod tests {
     use super::PoneglyphCtlConfig;
-    use crate::{GcalConfig, PlexConfig};
+    use crate::{GcalConfig, GmailConfig, PlexConfig};
 
     #[test]
     fn ctl_config_defaults_to_no_connectors() {
         assert_eq!(PoneglyphCtlConfig::default().gcal, None);
+        assert_eq!(PoneglyphCtlConfig::default().gmail, None);
         assert_eq!(PoneglyphCtlConfig::default().plex, None);
     }
 
@@ -30,6 +35,7 @@ mod tests {
     fn connector_configs_round_trip_through_toml() {
         let config = PoneglyphCtlConfig {
             gcal: Some(GcalConfig { enabled: true }),
+            gmail: Some(GmailConfig::default()),
             plex: Some(PlexConfig { enabled: true }),
         };
 

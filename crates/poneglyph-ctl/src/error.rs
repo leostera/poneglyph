@@ -32,6 +32,12 @@ pub enum CtlError {
     GcalSyncTokenExpired,
     #[error("gcal response decode failed: {0}")]
     GcalResponseDecode(String),
+    #[error("gmail request failed: {0}")]
+    GmailRequest(String),
+    #[error("gmail returned unexpected status: {0}")]
+    GmailUnexpectedStatus(u16),
+    #[error("gmail response decode failed: {0}")]
+    GmailResponseDecode(String),
     #[error("connector task join failed: {0}")]
     ConnectorTaskJoin(String),
 }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use poneglyph::{Poneglyph, Workspace};
 use poneglyph_api::PoneglyphApiServer;
-use poneglyph_ctl::{ConnectorRuntime, CtlStore, GcalConnector, PlexConnector};
+use poneglyph_ctl::{ConnectorRuntime, CtlStore, GcalConnector, GmailConnector, PlexConnector};
 use tracing::{debug, info};
 
 use crate::config::PoneglyphDaemonConfig;
@@ -78,6 +78,7 @@ impl DaemonBuilder {
         debug!(
             workspace = %workspace.root().display(),
             log_level = ?config.poneglyph.log_level,
+            gmail_enabled = config.ctl.gmail.as_ref().map(|gmail| gmail.enabled).unwrap_or(false),
             plex_enabled = config.ctl.plex.as_ref().map(|plex| plex.enabled).unwrap_or(false),
             api_bind_addr = %config.api.bind_addr,
             "opening daemon runtime"
@@ -105,6 +106,9 @@ impl DaemonBuilder {
                 .with_ctl_store(ctl);
             if let Some(gcal) = config.ctl.gcal.clone() {
                 builder = builder.add_gcal_connector(GcalConnector::init(gcal)?);
+            }
+            if let Some(gmail) = config.ctl.gmail.clone() {
+                builder = builder.add_gmail_connector(GmailConnector::init(gmail)?);
             }
             if let Some(plex) = config.ctl.plex.clone() {
                 builder = builder.add_plex_connector(PlexConnector::init(plex)?);

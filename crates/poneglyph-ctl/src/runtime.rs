@@ -6,11 +6,12 @@ use tokio::sync::mpsc;
 use tokio::task::JoinSet;
 use tracing::{debug, info, warn};
 
-use crate::{CtlError, CtlResult, CtlStore, GcalConnector, PlexConnector};
+use crate::{CtlError, CtlResult, CtlStore, GcalConnector, GmailConnector, PlexConnector};
 
 #[derive(Debug)]
 enum ConnectorProcess {
     Gcal(GcalConnector),
+    Gmail(GmailConnector),
     Plex(PlexConnector),
 }
 
@@ -71,6 +72,29 @@ impl ConnectorRuntime {
                     tasks.spawn(async move {
                         let connector_name = connector.name();
                         match connector.run(ctl, fact_tx).await {
+                            Ok(()) => {
+                                info!(connector = connector_name, "connector run completed");
+                                Ok(())
+                            }
+                            Err(error) => {
+                                warn!(
+                                    connector = connector_name,
+                                    %error,
+                                    "connector run failed"
+                                );
+                                Ok(())
+                            }
+                        }
+                    });
+                }
+                ConnectorProcess::Gmail(connector) => {
+                    debug!(connector = connector.name(), "running connector");
+                    let fact_tx = fact_tx.clone();
+                    let ctl = ctl.clone();
+                    let poneglyph = poneglyph.clone();
+                    tasks.spawn(async move {
+                        let connector_name = connector.name();
+                        match connector.run(ctl, poneglyph, fact_tx).await {
                             Ok(()) => {
                                 info!(connector = connector_name, "connector run completed");
                                 Ok(())
@@ -205,6 +229,46 @@ async fn ensure_connector_schema(
             );
             Ok(())
         }
+        ConnectorProcess::Gmail(connector) => {
+            let schema = poneglyph
+                .get_schema()
+                .await
+                .map_err(|error| CtlError::PlexRequest(error.to_string()))?;
+            let namespace_uri = uri!("gmail:namespace");
+            if schema
+                .namespaces
+                .iter()
+                .any(|namespace| namespace.uri == namespace_uri)
+            {
+                debug!(
+                    connector = connector.name(),
+                    "connector schema already present"
+                );
+                return Ok(());
+            }
+
+            let schema_facts = connector.schema_facts();
+            if schema_facts.is_empty() {
+                debug!(
+                    connector = connector.name(),
+                    "connector has no schema facts yet"
+                );
+                return Ok(());
+            }
+
+            let fact_count = schema_facts.len();
+            let tx_id = poneglyph
+                .state_facts(schema_facts)
+                .await
+                .map_err(|error| CtlError::PlexRequest(error.to_string()))?;
+            info!(
+                connector = connector.name(),
+                %tx_id,
+                fact_count,
+                "connector schema bootstrapped"
+            );
+            Ok(())
+        }
     }
 }
 
@@ -228,6 +292,13 @@ impl ConnectorRuntimeBuilder {
         self.connectors
             .get_or_insert_with(Vec::new)
             .push(ConnectorProcess::Gcal(connector));
+        self
+    }
+
+    pub fn add_gmail_connector(mut self, connector: GmailConnector) -> Self {
+        self.connectors
+            .get_or_insert_with(Vec::new)
+            .push(ConnectorProcess::Gmail(connector));
         self
     }
 

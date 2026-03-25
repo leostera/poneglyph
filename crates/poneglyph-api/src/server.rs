@@ -770,6 +770,7 @@ mod tests {
             .expect("ctl");
         let ctl_config = PoneglyphCtlConfig {
             gcal: None,
+            gmail: None,
             plex: Some(PlexConfig { enabled: true }),
         };
 

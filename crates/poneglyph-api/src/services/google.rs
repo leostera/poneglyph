@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
-use poneglyph_ctl::{CtlStore, GcalConnector, GoogleOAuthConnection, PlexConnector};
+use poneglyph_ctl::{
+    CtlStore, GcalConnector, GmailConnector, GoogleOAuthConnection, PlexConnector,
+};
 use tokio::sync::mpsc;
 
 use crate::context::AppContext;
@@ -253,6 +255,24 @@ pub(crate) async fn connector_statuses(
         });
     }
 
+    if let Some(config) = context.ctl_config.gmail.as_ref() {
+        let connections = context
+            .ctl
+            .list_google_oauth_connections()
+            .await
+            .map_err(|error| format!("failed to load google oauth connections: {error}"))?;
+        let connected = !connections.is_empty();
+
+        statuses.push(ConnectorStatus {
+            name: "gmail".to_string(),
+            enabled: config.enabled,
+            connected,
+            selected_resource_count: 0,
+            last_synced_at: None,
+            last_error: None,
+        });
+    }
+
     if let Some(config) = context.ctl_config.plex.as_ref() {
         let stored_connections = context
             .ctl
@@ -318,6 +338,17 @@ pub(crate) async fn sync_connector(
                 .run(context.ctl.clone(), tx)
                 .await
                 .map_err(|error| format!("plex sync failed: {error}"))?;
+        }
+        "gmail" => {
+            let Some(config) = context.ctl_config.gmail.clone() else {
+                return Err("gmail connector is not configured".to_string());
+            };
+            let connector = GmailConnector::init(config)
+                .map_err(|error| format!("failed to initialize gmail connector: {error}"))?;
+            connector
+                .run(context.ctl.clone(), context.poneglyph.clone(), tx)
+                .await
+                .map_err(|error| format!("gmail sync failed: {error}"))?;
         }
         other => return Err(format!("unknown connector: {other}")),
     }
