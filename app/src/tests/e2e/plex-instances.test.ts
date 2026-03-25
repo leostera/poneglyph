@@ -16,6 +16,7 @@ type MockServer = {
 type PlexConnection = {
   __typename: "PlexConnection";
   id: number;
+  name: string;
   baseUrl: string;
   libraries: string[];
   lastSyncedAt: string | null;
@@ -28,6 +29,7 @@ async function startMockPoneglyphApi(): Promise<MockServer> {
     {
       __typename: "PlexConnection",
       id: 1,
+      name: "Home Plex",
       baseUrl: "http://127.0.0.1:32400",
       libraries: ["Movies"],
       lastSyncedAt: "2026-03-25T10:00:00Z",
@@ -122,6 +124,7 @@ async function startMockPoneglyphApi(): Promise<MockServer> {
 
           if (query.includes("savePlexConnection")) {
             const input = variables.input as {
+              name: string;
               baseUrl: string;
               token: string;
               libraries: string[];
@@ -131,6 +134,7 @@ async function startMockPoneglyphApi(): Promise<MockServer> {
               (connection) => connection.baseUrl === input.baseUrl,
             );
             if (existing) {
+              existing.name = input.name;
               existing.libraries = input.libraries;
               response.end(
                 JSON.stringify({
@@ -145,6 +149,7 @@ async function startMockPoneglyphApi(): Promise<MockServer> {
             const created: PlexConnection = {
               __typename: "PlexConnection",
               id: nextPlexConnectionId++,
+              name: input.name,
               baseUrl: input.baseUrl,
               libraries: input.libraries,
               lastSyncedAt: null,
@@ -275,18 +280,19 @@ test("manages multiple plex instances from provider detail page", async () => {
   await expect(page.getByText("Movies ×")).toBeVisible();
   await expect(page.getByText("Shows ×")).toBeVisible();
 
+  await page.getByPlaceholder("Name (required)").fill("Remote Plex");
   await page
     .getByPlaceholder("Base URL (e.g. http://127.0.0.1:32400)")
     .fill("http://127.0.0.2:32400");
   await page.getByPlaceholder("Plex token").fill("manual-token");
   await page.getByRole("button", { name: "Save server" }).click();
 
-  await expect(page.getByText("http://127.0.0.2:32400")).toBeVisible();
-  await expect(page.getByText("http://127.0.0.1:32400")).toBeVisible();
+  await expect(page.getByText("Remote Plex")).toBeVisible();
+  await expect(page.getByText("Home Plex")).toBeVisible();
 
   page.on("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Delete connection" }).click();
 
-  await expect(page.getByText("http://127.0.0.2:32400")).not.toBeVisible();
-  await expect(page.getByText("http://127.0.0.1:32400")).toBeVisible();
+  await expect(page.getByText("Remote Plex")).not.toBeVisible();
+  await expect(page.getByText("Home Plex")).toBeVisible();
 });

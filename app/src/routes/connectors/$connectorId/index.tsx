@@ -22,6 +22,7 @@ import {
   usePlexConnectionsQuery,
 } from "@/features/connectors/queries";
 import {
+  type PlexConnection,
   deleteGoogleConnection,
   deletePlexConnection,
   detectLocalPlexConnection,
@@ -66,6 +67,7 @@ function ConnectorDetailPage() {
 
   const [selectedConnectionId, setSelectedConnectionId] = useState<number | null>(null);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
+  const [plexName, setPlexName] = useState("");
   const [plexBaseUrl, setPlexBaseUrl] = useState("");
   const [plexToken, setPlexToken] = useState("");
   const [discoveredPlexLibraries, setDiscoveredPlexLibraries] = useState<string[]>([]);
@@ -101,7 +103,11 @@ function ConnectorDetailPage() {
     if (selectedPlexConnectionId == null) {
       return connections[0];
     }
-    return connections.find((connection) => connection.id === selectedPlexConnectionId) ?? null;
+    return (
+      connections.find(
+        (connection: PlexConnection) => connection.id === selectedPlexConnectionId,
+      ) ?? null
+    );
   }, [connectorName, plexConnectionsQuery.data, selectedPlexConnectionId]);
 
   useEffect(() => {
@@ -179,10 +185,11 @@ function ConnectorDetailPage() {
   });
 
   const savePlexConnectionMutation = useMutation({
-    mutationFn: (input: { baseUrl: string; token: string; libraries: string[] }) =>
-      savePlexConnection(input.baseUrl, input.token, input.libraries),
+    mutationFn: (input: { name: string; baseUrl: string; token: string; libraries: string[] }) =>
+      savePlexConnection(input.name, input.baseUrl, input.token, input.libraries),
     onSuccess: async (connection) => {
       setSelectedPlexConnectionId(connection.id);
+      setPlexName("");
       setPlexToken("");
       await invalidateConnectorQueries(queryClient);
     },
@@ -536,7 +543,7 @@ function ConnectorDetailPage() {
                     </div>
                   ) : (
                     <div className="divide-y">
-                      {plexConnectionsQuery.data.map((connection) => (
+                      {plexConnectionsQuery.data.map((connection: PlexConnection) => (
                         <button
                           className={`w-full px-4 py-3 text-left ${
                             selectedPlexConnection?.id === connection.id ? "bg-muted/50" : ""
@@ -545,9 +552,9 @@ function ConnectorDetailPage() {
                           onClick={() => setSelectedPlexConnectionId(connection.id)}
                           type="button"
                         >
-                          <div className="text-sm font-medium">{connection.baseUrl}</div>
+                          <div className="text-sm font-medium">{connection.name}</div>
                           <div className="mt-1 text-xs text-muted-foreground">
-                            {connection.libraries.length} libraries
+                            {connection.baseUrl} · {connection.libraries.length} libraries
                           </div>
                         </button>
                       ))}
@@ -560,6 +567,11 @@ function ConnectorDetailPage() {
                 <div className="rounded-[3px] border bg-background p-4">
                   <div className="mb-3 text-sm font-medium">Add Plex server</div>
                   <div className="grid gap-2">
+                    <Input
+                      onChange={(event) => setPlexName(event.target.value)}
+                      placeholder="Name (required)"
+                      value={plexName}
+                    />
                     <Input
                       onChange={(event) => setPlexBaseUrl(event.target.value)}
                       placeholder="Base URL (e.g. http://127.0.0.1:32400)"
@@ -661,9 +673,10 @@ function ConnectorDetailPage() {
                   </div>
                   <div className="mt-3">
                     <Button
-                      disabled={savePlexConnectionMutation.isPending}
+                      disabled={savePlexConnectionMutation.isPending || plexName.trim() === ""}
                       onClick={() => {
                         savePlexConnectionMutation.mutate({
+                          name: plexName.trim(),
                           baseUrl: plexBaseUrl.trim(),
                           token: plexToken.trim(),
                           libraries: selectedPlexLibraries,
@@ -690,9 +703,7 @@ function ConnectorDetailPage() {
                   <div className="rounded-[3px] border bg-background p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-2">
-                        <div className="text-base font-medium">
-                          {selectedPlexConnection.baseUrl}
-                        </div>
+                        <div className="text-base font-medium">{selectedPlexConnection.name}</div>
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant={status?.enabled ? "secondary" : "outline"}>
                             <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-500" />

@@ -113,9 +113,14 @@ export async function deleteGoogleConnection(connectionId: number) {
   return data.deleteGoogleConnection;
 }
 
-export async function savePlexConnection(baseUrl: string, token: string, libraries: string[]) {
+export async function savePlexConnection(
+  name: string,
+  baseUrl: string,
+  token: string,
+  libraries: string[],
+) {
   const data = await graphqlRequest(SavePlexConnectionDocument, {
-    input: { baseUrl, token, libraries },
+    input: { name, baseUrl, token, libraries },
   });
   return data.savePlexConnection;
 }

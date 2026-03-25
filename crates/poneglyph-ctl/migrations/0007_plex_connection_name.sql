@@ -1,0 +1,2 @@
+ALTER TABLE plex_connections
+ADD COLUMN name TEXT NOT NULL DEFAULT '';

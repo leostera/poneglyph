@@ -67,6 +67,8 @@ pub struct PlexLibrarySyncState {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlexConnection {
     pub id: i64,
+    pub name: String,
+    pub machine_identifier: Option<String>,
     pub base_url: String,
     pub token: String,
     pub libraries: Vec<String>,
@@ -76,6 +78,8 @@ pub struct PlexConnection {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SavePlexConnection {
+    pub name: String,
+    pub machine_identifier: String,
     pub base_url: String,
     pub token: String,
     pub libraries: Vec<String>,
@@ -594,25 +598,41 @@ impl CtlStore {
         &self,
         connection: SavePlexConnection,
     ) -> CtlResult<PlexConnection> {
+        if connection.name.trim().is_empty() {
+            return Err(CtlError::StoreQuery(
+                "plex connection name is required".to_string(),
+            ));
+        }
+        if connection.machine_identifier.trim().is_empty() {
+            return Err(CtlError::StoreQuery(
+                "plex connection machine identifier is required".to_string(),
+            ));
+        }
         let now = Utc::now().to_rfc3339();
-        let base_url = connection.base_url.clone();
+        let machine_identifier = connection.machine_identifier.clone();
         let libraries = connection.libraries.join("\n");
 
         sqlx::query(
             r#"
             INSERT INTO plex_connections (
+                name,
+                machine_identifier,
                 base_url,
                 token,
                 libraries,
                 created_at,
                 updated_at
-            ) VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(base_url) DO UPDATE SET
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(machine_identifier) DO UPDATE SET
+                name = excluded.name,
+                base_url = excluded.base_url,
                 token = excluded.token,
                 libraries = excluded.libraries,
                 updated_at = excluded.updated_at
             "#,
         )
+        .bind(connection.name)
+        .bind(connection.machine_identifier)
         .bind(connection.base_url)
         .bind(connection.token)
         .bind(libraries)
@@ -622,7 +642,7 @@ impl CtlStore {
         .await
         .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
 
-        self.plex_connection_by_base_url(base_url.as_str())
+        self.plex_connection_by_machine_identifier(machine_identifier.as_str())
             .await?
             .ok_or_else(|| CtlError::StoreQuery("saved plex connection missing".into()))
     }
@@ -632,6 +652,8 @@ impl CtlStore {
             r#"
             SELECT
                 id,
+                name,
+                machine_identifier,
                 base_url,
                 token,
                 libraries,
@@ -653,6 +675,8 @@ impl CtlStore {
             r#"
             SELECT
                 id,
+                name,
+                machine_identifier,
                 base_url,
                 token,
                 libraries,
@@ -670,24 +694,26 @@ impl CtlStore {
         row.map(decode_plex_connection).transpose()
     }
 
-    pub async fn plex_connection_by_base_url(
+    pub async fn plex_connection_by_machine_identifier(
         &self,
-        base_url: &str,
+        machine_identifier: &str,
     ) -> CtlResult<Option<PlexConnection>> {
         let row = sqlx::query(
             r#"
             SELECT
                 id,
+                name,
+                machine_identifier,
                 base_url,
                 token,
                 libraries,
                 created_at,
                 updated_at
             FROM plex_connections
-            WHERE base_url = ?
+            WHERE machine_identifier = ?
             "#,
         )
-        .bind(base_url)
+        .bind(machine_identifier)
         .fetch_optional(&self.pool)
         .await
         .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
@@ -980,6 +1006,8 @@ mod tests {
 
         let first = store
             .save_plex_connection(SavePlexConnection {
+                name: "Local Plex".to_string(),
+                machine_identifier: "machine-1".to_string(),
                 base_url: "http://127.0.0.1:32400".to_string(),
                 token: "token-a".to_string(),
                 libraries: vec!["Movies".to_string(), "Shows".to_string()],
@@ -988,6 +1016,8 @@ mod tests {
             .expect("saved first");
         let second = store
             .save_plex_connection(SavePlexConnection {
+                name: "Remote Plex".to_string(),
+                machine_identifier: "machine-2".to_string(),
                 base_url: "http://127.0.0.2:32400".to_string(),
                 token: "token-b".to_string(),
                 libraries: vec!["Anime".to_string()],
@@ -998,19 +1028,28 @@ mod tests {
         let all = store.list_plex_connections().await.expect("list");
         assert_eq!(all.len(), 2);
         assert_eq!(all[0].id, second.id);
+        assert_eq!(all[0].name, "Remote Plex");
+        assert_eq!(all[0].machine_identifier.as_deref(), Some("machine-2"));
         assert_eq!(all[0].libraries, vec!["Anime"]);
         assert_eq!(all[1].id, first.id);
+        assert_eq!(all[1].name, "Local Plex");
+        assert_eq!(all[1].machine_identifier.as_deref(), Some("machine-1"));
         assert_eq!(all[1].libraries, vec!["Movies", "Shows"]);
 
         let updated = store
             .save_plex_connection(SavePlexConnection {
-                base_url: "http://127.0.0.1:32400".to_string(),
+                name: "Local Plex Updated".to_string(),
+                machine_identifier: "machine-1".to_string(),
+                base_url: "http://127.0.0.9:32400".to_string(),
                 token: "token-c".to_string(),
                 libraries: vec!["Movies".to_string()],
             })
             .await
             .expect("updated");
         assert_eq!(updated.id, first.id);
+        assert_eq!(updated.name, "Local Plex Updated");
+        assert_eq!(updated.machine_identifier.as_deref(), Some("machine-1"));
+        assert_eq!(updated.base_url, "http://127.0.0.9:32400");
         assert_eq!(updated.token, "token-c");
         assert_eq!(updated.libraries, vec!["Movies"]);
 
@@ -1236,6 +1275,12 @@ fn decode_plex_connection(row: sqlx::sqlite::SqliteRow) -> CtlResult<PlexConnect
     Ok(PlexConnection {
         id: row
             .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        name: row
+            .try_get("name")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        machine_identifier: row
+            .try_get("machine_identifier")
             .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
         base_url: row
             .try_get("base_url")

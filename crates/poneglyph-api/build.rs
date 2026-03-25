@@ -60,6 +60,7 @@ type Mutation {
 
 type PlexConnection {
   id: Int!
+  name: String!
   baseUrl: String!
   libraries: [String!]!
   lastSyncedAt: String
@@ -80,6 +81,7 @@ type Query {
 }
 
 input SavePlexConnectionInput {
+  name: String!
   baseUrl: String!
   token: String!
   libraries: [String!]!

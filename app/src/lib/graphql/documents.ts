@@ -52,6 +52,7 @@ export const PlexConnectionsDocument = graphql(`
   query PlexConnections {
     plexConnections {
       id
+      name
       baseUrl
       libraries
       lastSyncedAt
@@ -138,6 +139,7 @@ export const SavePlexConnectionDocument = graphql(`
   mutation SavePlexConnection($input: SavePlexConnectionInput!) {
     savePlexConnection(input: $input) {
       id
+      name
       baseUrl
       libraries
       lastSyncedAt
