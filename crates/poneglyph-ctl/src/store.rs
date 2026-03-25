@@ -54,6 +54,17 @@ pub struct GoogleCalendarSyncState {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GmailSyncState {
+    pub id: i64,
+    pub connection_id: i64,
+    pub last_history_id: Option<String>,
+    pub last_synced_at: Option<DateTime<Utc>>,
+    pub last_error: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlexLibrarySyncState {
     pub id: i64,
     pub library_key: String,
@@ -497,6 +508,100 @@ impl CtlStore {
             })
     }
 
+    pub async fn gmail_sync_state(&self, connection_id: i64) -> CtlResult<Option<GmailSyncState>> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                id,
+                connection_id,
+                last_history_id,
+                last_synced_at,
+                last_error,
+                created_at,
+                updated_at
+            FROM gmail_sync_state
+            WHERE connection_id = ?
+            "#,
+        )
+        .bind(connection_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        row.map(decode_gmail_sync_state).transpose()
+    }
+
+    pub async fn save_gmail_sync_success(
+        &self,
+        connection_id: i64,
+        last_history_id: Option<&str>,
+    ) -> CtlResult<GmailSyncState> {
+        let now = Utc::now().to_rfc3339();
+        sqlx::query(
+            r#"
+            INSERT INTO gmail_sync_state (
+                connection_id,
+                last_history_id,
+                last_synced_at,
+                last_error,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, NULL, ?, ?)
+            ON CONFLICT(connection_id) DO UPDATE SET
+                last_history_id = excluded.last_history_id,
+                last_synced_at = excluded.last_synced_at,
+                last_error = NULL,
+                updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(connection_id)
+        .bind(last_history_id)
+        .bind(&now)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.gmail_sync_state(connection_id).await?.ok_or_else(|| {
+            CtlError::StoreQuery("saved gmail sync state missing after success".into())
+        })
+    }
+
+    pub async fn save_gmail_sync_failure(
+        &self,
+        connection_id: i64,
+        error_message: &str,
+    ) -> CtlResult<GmailSyncState> {
+        let now = Utc::now().to_rfc3339();
+        sqlx::query(
+            r#"
+            INSERT INTO gmail_sync_state (
+                connection_id,
+                last_history_id,
+                last_synced_at,
+                last_error,
+                created_at,
+                updated_at
+            ) VALUES (?, NULL, NULL, ?, ?, ?)
+            ON CONFLICT(connection_id) DO UPDATE SET
+                last_error = excluded.last_error,
+                updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(connection_id)
+        .bind(error_message)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.gmail_sync_state(connection_id).await?.ok_or_else(|| {
+            CtlError::StoreQuery("saved gmail sync state missing after failure".into())
+        })
+    }
+
     pub async fn plex_library_sync_state(
         &self,
         library_key: &str,
@@ -903,6 +1008,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn ctl_store_tracks_gmail_sync_state() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+        let connection = store
+            .save_google_oauth_connection(SaveGoogleOAuthConnection {
+                access_token: "access-token".to_string(),
+                refresh_token: Some("refresh-token".to_string()),
+                token_type: "Bearer".to_string(),
+                scopes: vec!["scope:a".to_string()],
+                expires_at: None,
+            })
+            .await
+            .expect("saved connection");
+
+        let success = store
+            .save_gmail_sync_success(connection.id, Some("history-1"))
+            .await
+            .expect("saved success");
+
+        assert_eq!(success.last_history_id.as_deref(), Some("history-1"));
+        assert!(success.last_synced_at.is_some());
+        assert_eq!(success.last_error, None);
+
+        let failure = store
+            .save_gmail_sync_failure(connection.id, "boom")
+            .await
+            .expect("saved failure");
+
+        assert_eq!(failure.last_history_id.as_deref(), Some("history-1"));
+        assert_eq!(failure.last_error.as_deref(), Some("boom"));
+    }
+
+    #[tokio::test]
     async fn ctl_store_deletes_google_oauth_connection_cascade() {
         let tempdir = tempdir().expect("tempdir");
         let db_path = tempdir.path().join("control.db");
@@ -963,6 +1102,13 @@ mod tests {
                 .google_calendar_sync_state(connection.id, "primary")
                 .await
                 .expect("sync state after delete")
+                .is_none()
+        );
+        assert!(
+            store
+                .gmail_sync_state(connection.id)
+                .await
+                .expect("gmail sync state after delete")
                 .is_none()
         );
     }
@@ -1201,6 +1347,48 @@ fn decode_google_calendar_sync_state(
             .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
         next_sync_token: row
             .try_get("next_sync_token")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        last_synced_at,
+        last_error: row
+            .try_get("last_error")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        created_at,
+        updated_at,
+    })
+}
+
+fn decode_gmail_sync_state(row: sqlx::sqlite::SqliteRow) -> CtlResult<GmailSyncState> {
+    use sqlx::Row;
+
+    let last_synced_at = row
+        .try_get::<Option<String>, _>("last_synced_at")
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+        .map(|value| DateTime::parse_from_rfc3339(&value))
+        .transpose()
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+        .map(|value| value.with_timezone(&Utc));
+    let created_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("created_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let updated_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("updated_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+
+    Ok(GmailSyncState {
+        id: row
+            .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        connection_id: row
+            .try_get("connection_id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        last_history_id: row
+            .try_get("last_history_id")
             .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
         last_synced_at,
         last_error: row

@@ -1,8 +1,6 @@
-use agents::{
-    agent::SessionAgent,
-    evals::{eval, suite, trajectory, EvalContext, Trajectory},
-};
+use agents::agent::SessionAgent;
 use anyhow::Result;
+use evals::{EvalContext, Trajectory, eval, suite, trajectory};
 
 type BasicAgent = SessionAgent<String, (), (), String>;
 

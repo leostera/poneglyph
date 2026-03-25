@@ -23,6 +23,11 @@ toml.workspace = true
 tracing.workspace = true
 url.workspace = true
 uuid.workspace = true
+agents.workspace = true
+evals.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+
+[build-dependencies]
+evals.workspace = true

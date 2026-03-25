@@ -12,7 +12,7 @@
 //! - [`Workspace`], [`PoneglyphConfig`], [`Config`], and [`Poneglyph`] for runtime configuration and assembly.
 //! - [`Error`] and [`PoneResult`] for typed backend errors.
 
-//evals::setup!();
+evals::setup!();
 
 mod active_graph;
 mod config;

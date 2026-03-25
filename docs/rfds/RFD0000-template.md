@@ -2,18 +2,18 @@
 
 - Feature Name: `<fill_me_in_with_a_unique_ident>`
 - Start Date: `<YYYY-MM-DD>`
-- RFD PR: [leostera/borg#0000](https://github.com/leostera/borg/pull/0000)
-- Borg Issue: [leostera/borg#0000](https://github.com/leostera/borg/issues/0000)
+- RFD PR: [leostera/poneglyph#0000](https://github.com/leostera/poneglyph/pull/0000)
+- Poneglyph Issue: [leostera/poneglyph#0000](https://github.com/leostera/poneglyph/issues/0000)
 
 ## Summary
 [summary]: #summary
 
-One paragraph explanation of the Borg feature or system improvement.
+One paragraph explanation of the Poneglyph feature or system improvement.
 
 ## Motivation
 [motivation]: #motivation
 
-Any changes to Borg should focus on solving a real problem for Borg users, operators, or contributors.
+Any changes to Poneglyph should focus on solving a real problem for Poneglyph users, operators, or contributors.
 This section should explain that problem in detail, including necessary background.
 
 It should also contain several specific use cases where this change can help, and explain how it helps.
@@ -24,16 +24,16 @@ This section is one of the most important sections of any RFD, and can be length
 ## Guide-level explanation
 [guide-level-explanation]: #guide-level-explanation
 
-Explain the proposal as if it was already included in Borg and you were teaching it to another Borg contributor. That generally means:
+Explain the proposal as if it was already included in Poneglyph and you were teaching it to another Poneglyph contributor. That generally means:
 
 - Introducing new named concepts.
 - Explaining the feature largely in terms of examples.
-- Explaining how Borg contributors/operators should think about the feature, and how it should impact the way they build, run, and maintain Borg systems.
+- Explaining how Poneglyph contributors/operators should think about the feature, and how it should impact the way they build, run, and maintain Poneglyph systems.
 - If applicable, provide sample error messages, deprecation warnings, API examples, CLI examples, or migration guidance.
-- If applicable, describe the differences between teaching this to existing Borg contributors and new contributors.
-- Discuss how this impacts the ability to read, understand, and maintain Borg code. Code is read and modified far more often than written; will the proposed feature make code easier to maintain?
+- If applicable, describe the differences between teaching this to existing Poneglyph contributors and new contributors.
+- Discuss how this impacts the ability to read, understand, and maintain Poneglyph code. Code is read and modified far more often than written; will the proposed feature make code easier to maintain?
 
-For implementation-oriented RFDs (for runtime internals, ports, memory, scheduling, etc.), this section should focus on how Borg contributors should think about the change, and give examples of its concrete impact. For policy RFDs, this section should provide an example-driven introduction to the policy and explain its impact in concrete terms.
+For implementation-oriented RFDs (for runtime internals, ports, memory, scheduling, etc.), this section should focus on how Poneglyph contributors should think about the change, and give examples of its concrete impact. For policy RFDs, this section should provide an example-driven introduction to the policy and explain its impact in concrete terms.
 
 ### Diagram template (when relevant)
 
@@ -50,7 +50,7 @@ flowchart TD
 
 This is the technical portion of the RFD. Explain the design in sufficient detail that:
 
-- Its interaction with other Borg subsystems is clear.
+- Its interaction with other Poneglyph subsystems is clear.
 - It is reasonably clear how the feature would be implemented.
 - Corner cases are dissected by example.
 
@@ -67,7 +67,7 @@ Why should we *not* do this?
 - Why is this design the best in the space of possible designs?
 - What other designs have been considered and what is the rationale for not choosing them?
 - What is the impact of not doing this?
-- Could this be done in a simpler Borg module, library helper, or port-level integration instead?
+- Could this be done in a simpler Poneglyph module, library helper, or port-level integration instead?
 
 ## Prior art
 [prior-art]: #prior-art
@@ -76,7 +76,7 @@ Discuss prior art, both the good and the bad, in relation to this proposal.
 A few examples of what this can include are:
 
 - Similar features in other agent systems, orchestration runtimes, or bot frameworks.
-- Prior approaches used inside Borg itself.
+- Prior approaches used inside Poneglyph itself.
 - Practices from adjacent systems (policy engines, memory systems, event processors).
 - Papers or posts that discuss related approaches.
 
@@ -84,7 +84,7 @@ This section is intended to encourage you as an author to think about lessons fr
 If there is no prior art, that is fine.
 
 Note that precedent in another system can be motivating, but does not on its own justify an RFD.
-Borg may intentionally diverge from common patterns when it better fits Borg's architecture and goals.
+Poneglyph may intentionally diverge from common patterns when it better fits Poneglyph's architecture and goals.
 
 ## Unresolved questions
 [unresolved-questions]: #unresolved-questions
@@ -96,7 +96,7 @@ Borg may intentionally diverge from common patterns when it better fits Borg's a
 ## Future possibilities
 [future-possibilities]: #future-possibilities
 
-Think about what the natural extension and evolution of your proposal would be and how it would affect Borg holistically over time.
+Think about what the natural extension and evolution of your proposal would be and how it would affect Poneglyph holistically over time.
 Use this section to consider future interactions with runtime, ports, memory, API, and operations.
 
 This is also a good place to dump related ideas if they are out of scope for the RFD you are writing.
