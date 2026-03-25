@@ -46,13 +46,45 @@ impl ConnectorRuntime {
                     let fact_tx = fact_tx.clone();
                     let ctl = ctl.clone();
                     let poneglyph = poneglyph.clone();
-                    tasks.spawn(async move { connector.run(ctl, poneglyph, fact_tx).await });
+                    tasks.spawn(async move {
+                        let connector_name = connector.name();
+                        match connector.run(ctl, poneglyph, fact_tx).await {
+                            Ok(()) => {
+                                info!(connector = connector_name, "connector run completed");
+                                Ok(())
+                            }
+                            Err(error) => {
+                                warn!(
+                                    connector = connector_name,
+                                    %error,
+                                    "connector run failed"
+                                );
+                                Ok(())
+                            }
+                        }
+                    });
                 }
                 ConnectorProcess::Plex(connector) => {
                     debug!(connector = connector.name(), "running connector");
                     let fact_tx = fact_tx.clone();
                     let ctl = ctl.clone();
-                    tasks.spawn(async move { connector.run(ctl, fact_tx).await });
+                    tasks.spawn(async move {
+                        let connector_name = connector.name();
+                        match connector.run(ctl, fact_tx).await {
+                            Ok(()) => {
+                                info!(connector = connector_name, "connector run completed");
+                                Ok(())
+                            }
+                            Err(error) => {
+                                warn!(
+                                    connector = connector_name,
+                                    %error,
+                                    "connector run failed"
+                                );
+                                Ok(())
+                            }
+                        }
+                    });
                 }
             }
         }
@@ -83,11 +115,13 @@ impl ConnectorRuntime {
             Ok(())
         });
 
-        let _ = tasks
-            .join_all()
-            .await
-            .into_iter()
-            .collect::<Result<Vec<()>, _>>()?;
+        while let Some(result) = tasks.join_next().await {
+            match result {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => return Err(error),
+                Err(error) => return Err(CtlError::ConnectorTaskJoin(error.to_string())),
+            }
+        }
 
         info!("connector runtime stopped");
         Ok(())
@@ -208,11 +242,28 @@ impl ConnectorRuntimeBuilder {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+    use std::sync::{Mutex, OnceLock};
 
+    use axum::{Json, Router, routing::get};
     use tempfile::tempdir;
 
-    use crate::{ConnectorRuntime, CtlStore, GcalConfig, GcalConnector, PlexConfig, PlexConnector};
+    use crate::{
+        ConnectorRuntime, CtlStore, GcalConfig, GcalConnector, GoogleCalendarResource, PlexConfig,
+        PlexConnector, SaveGoogleOAuthConnection,
+    };
     use poneglyph::{Poneglyph, Query, QueryResult, Workspace};
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    fn next_http_bind_addr() -> String {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("ephemeral tcp listener");
+        let addr = listener.local_addr().expect("local addr");
+        drop(listener);
+        addr.to_string()
+    }
 
     async fn test_poneglyph() -> Arc<Poneglyph> {
         let tempdir = tempdir().expect("tempdir");
@@ -244,6 +295,99 @@ mod tests {
             .run()
             .await
             .expect("run");
+    }
+
+    #[tokio::test]
+    async fn runtime_does_not_fail_when_gcal_connector_returns_401() {
+        let _guard = env_lock().lock().unwrap_or_else(|error| error.into_inner());
+        let bind_addr = next_http_bind_addr();
+        let listener = tokio::net::TcpListener::bind(&bind_addr)
+            .await
+            .expect("listener");
+        let server = tokio::spawn(async move {
+            let app = Router::new().route(
+                "/calendar/v3/calendars/primary/events",
+                get(|| async {
+                    (
+                        axum::http::StatusCode::UNAUTHORIZED,
+                        Json(serde_json::json!({})),
+                    )
+                }),
+            );
+            axum::serve(listener, app).await.expect("serve");
+        });
+
+        // SAFETY: guarded by env_lock() so no concurrent mutation occurs in tests.
+        unsafe {
+            std::env::set_var("PONEGLYPH_GCAL_API_BASE_URL", format!("http://{bind_addr}"));
+        }
+
+        let tempdir = tempdir().expect("tempdir");
+        let ctl = CtlStore::open(tempdir.path().join("control.db"))
+            .await
+            .expect("ctl");
+        let connection = ctl
+            .save_google_oauth_connection(SaveGoogleOAuthConnection {
+                access_token: "bad-access-token".to_string(),
+                refresh_token: Some("refresh-token".to_string()),
+                token_type: "Bearer".to_string(),
+                scopes: vec!["https://www.googleapis.com/auth/calendar.readonly".to_string()],
+                expires_at: None,
+            })
+            .await
+            .expect("connection");
+        ctl.save_google_calendar_resources(
+            connection.id,
+            vec![GoogleCalendarResource {
+                calendar_id: "primary".to_string(),
+                summary: "Primary".to_string(),
+                description: Some("Main".to_string()),
+                time_zone: Some("Europe/Prague".to_string()),
+                primary: true,
+                selected: true,
+            }],
+        )
+        .await
+        .expect("save calendars");
+        ctl.set_google_calendar_selection(connection.id, &["primary".to_string()])
+            .await
+            .expect("select calendar");
+
+        let workspace = Workspace::at(tempdir.path().join("workspace"));
+        let poneglyph = Arc::new(
+            Poneglyph::builder()
+                .with_workspace(workspace)
+                .build()
+                .await
+                .expect("poneglyph"),
+        );
+        let gcal = GcalConnector::init(GcalConfig { enabled: true }).expect("gcal");
+
+        ConnectorRuntime::builder()
+            .with_poneglyph_arc(poneglyph)
+            .with_ctl_store(ctl.clone())
+            .add_gcal_connector(gcal)
+            .build()
+            .expect("runtime")
+            .run()
+            .await
+            .expect("runtime should ignore connector 401");
+
+        let sync_state = ctl
+            .google_calendar_sync_state(connection.id, "primary")
+            .await
+            .expect("sync state")
+            .expect("persisted sync state");
+        assert_eq!(
+            sync_state.last_error.as_deref(),
+            Some("gcal returned unexpected status: 401")
+        );
+
+        // SAFETY: guarded by env_lock() so no concurrent mutation occurs in tests.
+        unsafe {
+            std::env::remove_var("PONEGLYPH_GCAL_API_BASE_URL");
+        }
+        server.abort();
     }
 
     #[tokio::test]
