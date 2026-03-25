@@ -97,6 +97,22 @@ pub struct SavePlexConnection {
     pub libraries: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FilesystemConnection {
+    pub id: i64,
+    pub name: String,
+    pub root_path: String,
+    pub canonical_root_path: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SaveFilesystemConnection {
+    pub name: String,
+    pub root_path: String,
+}
+
 #[derive(Clone)]
 pub struct CtlStore {
     pool: SqlitePool,
@@ -873,6 +889,110 @@ impl CtlStore {
 
         Ok(result.rows_affected() > 0)
     }
+
+    pub async fn save_filesystem_connection(
+        &self,
+        connection: SaveFilesystemConnection,
+    ) -> CtlResult<FilesystemConnection> {
+        if connection.name.trim().is_empty() {
+            return Err(CtlError::StoreQuery(
+                "filesystem connection name is required".to_string(),
+            ));
+        }
+
+        let (root_path, canonical_root_path) =
+            normalize_filesystem_root_path(connection.root_path.as_str())?;
+
+        let now = Utc::now().to_rfc3339();
+        sqlx::query(
+            r#"
+            INSERT INTO filesystem_connections (
+                name,
+                root_path,
+                canonical_root_path,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(canonical_root_path) DO UPDATE SET
+                name = excluded.name,
+                root_path = excluded.root_path,
+                updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(connection.name)
+        .bind(root_path)
+        .bind(canonical_root_path.clone())
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.filesystem_connection_by_canonical_root_path(canonical_root_path.as_str())
+            .await?
+            .ok_or_else(|| CtlError::StoreQuery("saved filesystem connection missing".into()))
+    }
+
+    pub async fn list_filesystem_connections(&self) -> CtlResult<Vec<FilesystemConnection>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                id,
+                name,
+                root_path,
+                canonical_root_path,
+                created_at,
+                updated_at
+            FROM filesystem_connections
+            ORDER BY id DESC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        rows.into_iter().map(decode_filesystem_connection).collect()
+    }
+
+    pub async fn filesystem_connection_by_canonical_root_path(
+        &self,
+        canonical_root_path: &str,
+    ) -> CtlResult<Option<FilesystemConnection>> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                id,
+                name,
+                root_path,
+                canonical_root_path,
+                created_at,
+                updated_at
+            FROM filesystem_connections
+            WHERE canonical_root_path = ?
+            "#,
+        )
+        .bind(canonical_root_path)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        row.map(decode_filesystem_connection).transpose()
+    }
+
+    pub async fn delete_filesystem_connection(&self, id: i64) -> CtlResult<bool> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM filesystem_connections
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        Ok(result.rows_affected() > 0)
+    }
 }
 
 fn resolve_db_path(path: &Path) -> PathBuf {
@@ -883,11 +1003,44 @@ fn resolve_db_path(path: &Path) -> PathBuf {
     }
 }
 
+fn normalize_filesystem_root_path(root_path: &str) -> CtlResult<(String, String)> {
+    let trimmed = root_path.trim();
+    if trimmed.is_empty() {
+        return Err(CtlError::StoreQuery(
+            "filesystem connection root path is required".to_string(),
+        ));
+    }
+
+    let as_path = PathBuf::from(trimmed);
+    let absolute = if as_path.is_absolute() {
+        as_path
+    } else {
+        std::env::current_dir()
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+            .join(as_path)
+    };
+    let canonical = absolute
+        .canonicalize()
+        .map_err(|error| CtlError::StoreQuery(format!("invalid filesystem root path: {error}")))?;
+    if !canonical.is_dir() {
+        return Err(CtlError::StoreQuery(
+            "filesystem root path must be a directory".to_string(),
+        ));
+    }
+
+    Ok((
+        absolute.to_string_lossy().to_string(),
+        canonical.to_string_lossy().to_string(),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
 
-    use super::{CtlStore, SaveGoogleOAuthConnection, SavePlexConnection};
+    use super::{
+        CtlStore, SaveFilesystemConnection, SaveGoogleOAuthConnection, SavePlexConnection,
+    };
     use crate::connectors::gcal::GoogleCalendarResource as DiscoveredGoogleCalendarResource;
     use chrono::Utc;
 
@@ -1275,6 +1428,58 @@ mod tests {
         assert_eq!(remaining.len(), 1);
         assert_eq!(remaining[0].id, first.id);
     }
+
+    #[tokio::test]
+    async fn ctl_store_persists_filesystem_connections() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+
+        let root = tempdir.path().join("documents");
+        std::fs::create_dir_all(&root).expect("create root");
+
+        let first = store
+            .save_filesystem_connection(SaveFilesystemConnection {
+                name: "Documents".to_string(),
+                root_path: root.to_string_lossy().to_string(),
+            })
+            .await
+            .expect("save connection");
+
+        let second = store
+            .save_filesystem_connection(SaveFilesystemConnection {
+                name: "Documents Updated".to_string(),
+                root_path: root.to_string_lossy().to_string(),
+            })
+            .await
+            .expect("upsert connection");
+
+        assert_eq!(first.id, second.id);
+        assert_eq!(second.name, "Documents Updated");
+        let all = store.list_filesystem_connections().await.expect("list");
+        assert_eq!(all.len(), 1);
+        assert_eq!(
+            all[0].canonical_root_path,
+            root.canonicalize()
+                .expect("canonical root")
+                .to_string_lossy()
+                .to_string()
+        );
+
+        let deleted = store
+            .delete_filesystem_connection(second.id)
+            .await
+            .expect("delete");
+        assert!(deleted);
+        assert_eq!(
+            store
+                .list_filesystem_connections()
+                .await
+                .expect("list after delete")
+                .len(),
+            0
+        );
+    }
 }
 
 fn decode_google_oauth_connection(
@@ -1551,6 +1756,40 @@ fn decode_plex_connection(row: sqlx::sqlite::SqliteRow) -> CtlResult<PlexConnect
         } else {
             libraries.lines().map(str::to_string).collect()
         },
+        created_at,
+        updated_at,
+    })
+}
+
+fn decode_filesystem_connection(row: sqlx::sqlite::SqliteRow) -> CtlResult<FilesystemConnection> {
+    use sqlx::Row;
+
+    let created_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("created_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let updated_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("updated_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+
+    Ok(FilesystemConnection {
+        id: row
+            .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        name: row
+            .try_get("name")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        root_path: row
+            .try_get("root_path")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        canonical_root_path: row
+            .try_get("canonical_root_path")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
         created_at,
         updated_at,
     })

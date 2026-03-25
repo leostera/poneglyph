@@ -2,6 +2,7 @@ import {
   type ConnectorName,
   type ConnectorStatus,
   getConnectorStatuses,
+  getFilesystemConnections,
   getGmailConnectionSummary,
   getGmailConnections,
   getGoogleCalendarConnections,
@@ -15,6 +16,7 @@ export const googleCalendarsQueryKey = ["google-calendars"] as const;
 export const googleCalendarConnectionsQueryKey = ["google-calendar-connections"] as const;
 export const gmailConnectionsQueryKey = ["gmail-connections"] as const;
 export const plexConnectionsQueryKey = ["plex-connections"] as const;
+export const filesystemConnectionsQueryKey = ["filesystem-connections"] as const;
 export const gmailConnectionSummaryQueryKey = (connectionId: number | null) =>
   ["gmail-connection-summary", connectionId] as const;
 
@@ -63,6 +65,14 @@ export function usePlexConnectionsQuery(enabled: boolean) {
   });
 }
 
+export function useFilesystemConnectionsQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: filesystemConnectionsQueryKey,
+    queryFn: getFilesystemConnections,
+    enabled,
+  });
+}
+
 export function useGmailConnectionSummaryQuery(connectionId: number | null, enabled: boolean) {
   return useQuery({
     queryKey: gmailConnectionSummaryQueryKey(connectionId),
@@ -85,6 +95,7 @@ export async function invalidateConnectorQueries(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: googleCalendarConnectionsQueryKey }),
     queryClient.invalidateQueries({ queryKey: gmailConnectionsQueryKey }),
     queryClient.invalidateQueries({ queryKey: plexConnectionsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: filesystemConnectionsQueryKey }),
     queryClient.invalidateQueries({ queryKey: ["gmail-connection-summary"] }),
   ]);
 }

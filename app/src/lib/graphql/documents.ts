@@ -169,6 +169,16 @@ export const DiscoverGoogleCalendarsDocument = graphql(`
   }
 `);
 
+export const FilesystemConnectionsDocument = graphql(`
+  query FilesystemConnections {
+    filesystemConnections {
+      id
+      name
+      rootPath
+    }
+  }
+`);
+
 export const DiscoverGoogleCalendarsForConnectionDocument = graphql(`
   mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {
     discoverGoogleCalendarsForConnection(connectionId: $connectionId) {
@@ -236,6 +246,22 @@ export const SavePlexConnectionDocument = graphql(`
 export const DeletePlexConnectionDocument = graphql(`
   mutation DeletePlexConnection($connectionId: Int!) {
     deletePlexConnection(connectionId: $connectionId)
+  }
+`);
+
+export const SaveFilesystemConnectionDocument = graphql(`
+  mutation SaveFilesystemConnection($input: SaveFilesystemConnectionInput!) {
+    saveFilesystemConnection(input: $input) {
+      id
+      name
+      rootPath
+    }
+  }
+`);
+
+export const DeleteFilesystemConnectionDocument = graphql(`
+  mutation DeleteFilesystemConnection($connectionId: Int!) {
+    deleteFilesystemConnection(connectionId: $connectionId)
   }
 `);
 

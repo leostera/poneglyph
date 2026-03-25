@@ -9,7 +9,7 @@ use axum::{
 
 use crate::{
     context::AppContext,
-    services::{entities, google, plex},
+    services::{entities, filesystem, google, plex},
 };
 
 pub(crate) type ApiSchema = Schema<ApiQuery, ApiMutation, EmptySubscription>;
@@ -75,6 +75,14 @@ struct PlexConnectionObject {
 struct PlexDetectionObject {
     base_url: String,
     token: Option<String>,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "FilesystemConnection")]
+struct FilesystemConnectionObject {
+    id: i64,
+    name: String,
+    root_path: String,
 }
 
 #[derive(SimpleObject)]
@@ -158,6 +166,13 @@ struct SavePlexConnectionInput {
     libraries: Vec<String>,
 }
 
+#[derive(InputObject)]
+#[graphql(name = "SaveFilesystemConnectionInput")]
+struct SaveFilesystemConnectionInput {
+    name: String,
+    root_path: String,
+}
+
 #[Object(name = "Query")]
 impl ApiQuery {
     async fn google_calendar_connections(
@@ -211,6 +226,18 @@ impl ApiQuery {
             base_url: detected.base_url,
             token: detected.token,
         }
+    }
+
+    async fn filesystem_connections(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+    ) -> Result<Vec<FilesystemConnectionObject>> {
+        let app = ctx.data::<AppContext>()?;
+        filesystem::FilesystemService::new(app)
+            .list_connections()
+            .await
+            .map(map_filesystem_connections)
+            .map_err(async_graphql::Error::new)
     }
 
     async fn gmail_connections(
@@ -393,6 +420,31 @@ impl ApiMutation {
             .await
             .map_err(async_graphql::Error::new)
     }
+
+    async fn save_filesystem_connection(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        input: SaveFilesystemConnectionInput,
+    ) -> Result<FilesystemConnectionObject> {
+        let app = ctx.data::<AppContext>()?;
+        filesystem::FilesystemService::new(app)
+            .save_connection(input.name, input.root_path)
+            .await
+            .map(map_filesystem_connection)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn delete_filesystem_connection(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        connection_id: i64,
+    ) -> Result<bool> {
+        let app = ctx.data::<AppContext>()?;
+        filesystem::FilesystemService::new(app)
+            .delete_connection(connection_id)
+            .await
+            .map_err(async_graphql::Error::new)
+    }
 }
 
 pub(crate) async fn graphql(
@@ -487,6 +539,25 @@ fn map_plex_connection(connection: plex::PlexConnection) -> PlexConnectionObject
 
 fn map_plex_connections(connections: Vec<plex::PlexConnection>) -> Vec<PlexConnectionObject> {
     connections.into_iter().map(map_plex_connection).collect()
+}
+
+fn map_filesystem_connection(
+    connection: filesystem::FilesystemConnection,
+) -> FilesystemConnectionObject {
+    FilesystemConnectionObject {
+        id: connection.id,
+        name: connection.name,
+        root_path: connection.root_path,
+    }
+}
+
+fn map_filesystem_connections(
+    connections: Vec<filesystem::FilesystemConnection>,
+) -> Vec<FilesystemConnectionObject> {
+    connections
+        .into_iter()
+        .map(map_filesystem_connection)
+        .collect()
 }
 
 fn map_gmail_connection_summary(

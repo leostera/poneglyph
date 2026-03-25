@@ -8,14 +8,16 @@ mod store;
 use std::sync::{Mutex, OnceLock};
 
 pub use config::{PoneglyphCtlConfig, PoneglyphCtlConfigBuilder};
+pub use connectors::filesystem::{FilesystemConfig, FilesystemConnector};
 pub use connectors::gcal::{GcalConfig, GcalConnector, GoogleCalendarResource};
 pub use connectors::gmail::{GmailConfig, GmailConnector};
 pub use connectors::plex::{PlexConfig, PlexConnector};
 pub use error::{CtlError, CtlResult};
 pub use runtime::{ConnectorRuntime, ConnectorRuntimeBuilder};
 pub use store::{
-    CtlStore, GmailSyncState, GoogleCalendarSyncState, GoogleOAuthConnection, PlexConnection,
-    PlexLibrarySyncState, SaveGoogleOAuthConnection, SavePlexConnection,
+    CtlStore, FilesystemConnection, GmailSyncState, GoogleCalendarSyncState, GoogleOAuthConnection,
+    PlexConnection, PlexLibrarySyncState, SaveFilesystemConnection, SaveGoogleOAuthConnection,
+    SavePlexConnection,
 };
 
 #[cfg(test)]

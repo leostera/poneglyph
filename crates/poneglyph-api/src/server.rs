@@ -769,6 +769,7 @@ mod tests {
             .await
             .expect("ctl");
         let ctl_config = PoneglyphCtlConfig {
+            filesystem: None,
             gcal: None,
             gmail: None,
             plex: Some(PlexConfig { enabled: true }),

@@ -3,7 +3,9 @@ use std::sync::Arc;
 use anyhow::Result;
 use poneglyph::{Poneglyph, Workspace};
 use poneglyph_api::PoneglyphApiServer;
-use poneglyph_ctl::{ConnectorRuntime, CtlStore, GcalConnector, GmailConnector, PlexConnector};
+use poneglyph_ctl::{
+    ConnectorRuntime, CtlStore, FilesystemConnector, GcalConnector, GmailConnector, PlexConnector,
+};
 use tracing::{debug, info};
 
 use crate::config::PoneglyphDaemonConfig;
@@ -102,6 +104,9 @@ impl DaemonBuilder {
             ConnectorRuntime::builder()
                 .with_poneglyph_arc(poneglyph.clone())
                 .with_ctl_store(ctl)
+                .add_filesystem_connector(FilesystemConnector::init(
+                    config.ctl.filesystem.clone().unwrap_or_default(),
+                )?)
                 .add_gcal_connector(GcalConnector::init(
                     config.ctl.gcal.clone().unwrap_or_default(),
                 )?)

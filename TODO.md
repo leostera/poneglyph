@@ -11,7 +11,7 @@ This file tracks connector integrations we want in Poneglyph and the repeatable 
 - `[x]` Plex
 - `[x]` Google Calendar
 - `[x]` Gmail
-- [ ] File System
+- [-] File System
 
 ## Backlog (requested)
 ### Communication & Messaging
@@ -35,7 +35,7 @@ This file tracks connector integrations we want in Poneglyph and the repeatable 
 - [ ] Google Drive
 - [ ] Postgres
 - [ ] SQLite
-- [ ] File System
+- [-] File System
 - [ ] iCloud
 
 ### Browser & Knowledge

@@ -141,7 +141,7 @@ export const connectorCatalogCategories = [
 
 export type ConnectorCatalogCategory = (typeof connectorCatalogCategories)[number]["id"];
 
-export const connectorOrder: ConnectorName[] = ["gcal", "gmail", "plex"];
+export const connectorOrder: ConnectorName[] = ["gcal", "gmail", "plex", "filesystem"];
 
 export const connectorCatalog: Record<ConnectorName, ConnectorMeta> = {
   gcal: {
@@ -161,6 +161,12 @@ export const connectorCatalog: Record<ConnectorName, ConnectorMeta> = {
     summary:
       "Scan configured Plex libraries, ingest libraries and items, and skip unchanged libraries across daemon restarts.",
     icon: brandIcon(SiPlex, SiPlexHex, "Plex"),
+  },
+  filesystem: {
+    title: "File System",
+    summary:
+      "Scan configured local roots, ingest file and folder metadata, and keep a searchable file graph.",
+    icon: glyphIcon(FolderTree, "File System"),
   },
 };
 
@@ -305,6 +311,7 @@ export const connectorOfferings: ConnectorOffering[] = [
     summary:
       "Walk directories, track documents, and enrich local files and folders into the graph.",
     icon: glyphIcon(FolderTree, "File System"),
+    href: "/connectors/filesystem",
   },
   {
     category: "communication",

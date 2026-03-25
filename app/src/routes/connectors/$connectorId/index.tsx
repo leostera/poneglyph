@@ -18,19 +18,23 @@ import {
   findConnectorStatus,
   invalidateConnectorQueries,
   useConnectorStatusesQuery,
+  useFilesystemConnectionsQuery,
   useGmailConnectionSummaryQuery,
   useGmailConnectionsQuery,
   useGoogleCalendarConnectionsQuery,
   usePlexConnectionsQuery,
 } from "@/features/connectors/queries";
 import {
+  type FilesystemConnection,
   type PlexConnection,
+  deleteFilesystemConnection,
   deleteGoogleConnection,
   deletePlexConnection,
   detectLocalPlexConnection,
   discoverGoogleCalendarsForConnection,
   discoverPlexLibraries,
   isConnectorName,
+  saveFilesystemConnection,
   savePlexConnection,
   selectGoogleCalendarsForConnection,
   syncConnector,
@@ -63,6 +67,7 @@ function ConnectorDetailPage() {
   const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(connectorName === "gcal");
   const gmailConnectionsQuery = useGmailConnectionsQuery(connectorName === "gmail");
   const plexConnectionsQuery = usePlexConnectionsQuery(connectorName === "plex");
+  const filesystemConnectionsQuery = useFilesystemConnectionsQuery(connectorName === "filesystem");
 
   const [selectedConnectionId, setSelectedConnectionId] = useState<number | null>(null);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
@@ -73,6 +78,11 @@ function ConnectorDetailPage() {
   const [selectedPlexLibraries, setSelectedPlexLibraries] = useState<string[]>([]);
   const [plexLibraryCandidate, setPlexLibraryCandidate] = useState("");
   const [selectedPlexConnectionId, setSelectedPlexConnectionId] = useState<number | null>(null);
+  const [filesystemName, setFilesystemName] = useState("");
+  const [filesystemRootPath, setFilesystemRootPath] = useState("");
+  const [selectedFilesystemConnectionId, setSelectedFilesystemConnectionId] = useState<
+    number | null
+  >(null);
 
   const selectedConnection = useMemo(() => {
     if (connectorName !== "gcal" && connectorName !== "gmail") {
@@ -121,6 +131,24 @@ function ConnectorDetailPage() {
     );
   }, [connectorName, plexConnectionsQuery.data, selectedPlexConnectionId]);
 
+  const selectedFilesystemConnection = useMemo(() => {
+    if (connectorName !== "filesystem") {
+      return null;
+    }
+    const connections = filesystemConnectionsQuery.data ?? [];
+    if (connections.length === 0) {
+      return null;
+    }
+    if (selectedFilesystemConnectionId == null) {
+      return connections[0];
+    }
+    return (
+      connections.find(
+        (connection: FilesystemConnection) => connection.id === selectedFilesystemConnectionId,
+      ) ?? null
+    );
+  }, [connectorName, filesystemConnectionsQuery.data, selectedFilesystemConnectionId]);
+
   useEffect(() => {
     if (selectedConnectionId == null && selectedConnection != null) {
       setSelectedConnectionId(selectedConnection.id);
@@ -151,6 +179,22 @@ function ConnectorDetailPage() {
       setSelectedPlexConnectionId(selectedPlexConnection.id);
     }
   }, [plexConnectionsQuery.data, selectedPlexConnection, selectedPlexConnectionId]);
+
+  useEffect(() => {
+    if (selectedFilesystemConnection == null) {
+      if (filesystemConnectionsQuery.data?.length) {
+        setSelectedFilesystemConnectionId(filesystemConnectionsQuery.data[0].id);
+      }
+      return;
+    }
+    if (selectedFilesystemConnectionId == null) {
+      setSelectedFilesystemConnectionId(selectedFilesystemConnection.id);
+    }
+  }, [
+    filesystemConnectionsQuery.data,
+    selectedFilesystemConnection,
+    selectedFilesystemConnectionId,
+  ]);
 
   const setCalendarSelected = (calendarId: string, nextChecked: boolean) => {
     setSelectedCalendarIds((current) => {
@@ -210,6 +254,25 @@ function ConnectorDetailPage() {
     mutationFn: (connectionId: number) => deletePlexConnection(connectionId),
     onSuccess: async () => {
       setSelectedPlexConnectionId(null);
+      await invalidateConnectorQueries(queryClient);
+    },
+  });
+
+  const saveFilesystemConnectionMutation = useMutation({
+    mutationFn: (input: { name: string; rootPath: string }) =>
+      saveFilesystemConnection(input.name, input.rootPath),
+    onSuccess: async (connection) => {
+      setSelectedFilesystemConnectionId(connection.id);
+      setFilesystemName("");
+      setFilesystemRootPath("");
+      await invalidateConnectorQueries(queryClient);
+    },
+  });
+
+  const deleteFilesystemConnectionMutation = useMutation({
+    mutationFn: (connectionId: number) => deleteFilesystemConnection(connectionId),
+    onSuccess: async () => {
+      setSelectedFilesystemConnectionId(null);
       await invalidateConnectorQueries(queryClient);
     },
   });
@@ -926,6 +989,142 @@ function ConnectorDetailPage() {
                         variant="destructive"
                       >
                         {deletePlexConnectionMutation.isPending ? (
+                          <LoaderCircle className="animate-spin" />
+                        ) : (
+                          <Trash2 />
+                        )}
+                        Delete connection
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </section>
+            </div>
+          ) : connectorName === "filesystem" ? (
+            <div className="flex flex-col gap-8 lg:h-[calc(100vh-260px)] lg:flex-row lg:items-start">
+              <aside className="space-y-3 lg:h-fit lg:w-[320px] lg:shrink-0 lg:sticky lg:top-7">
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                    Filesystem roots
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Add and manage local root directories to ingest.
+                  </p>
+                </div>
+                <div className="w-full rounded-[3px] border bg-background">
+                  {filesystemConnectionsQuery.isLoading ? (
+                    <div className="space-y-2 px-4 py-3">
+                      <Skeleton className="h-8 w-full" />
+                      <Skeleton className="h-8 w-full" />
+                    </div>
+                  ) : !filesystemConnectionsQuery.data?.length ? (
+                    <div className="px-4 py-3 text-xs text-muted-foreground">
+                      No filesystem roots configured yet.
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {filesystemConnectionsQuery.data.map((connection) => (
+                        <button
+                          className={`w-full px-4 py-3 text-left ${
+                            selectedFilesystemConnection?.id === connection.id ? "bg-muted/50" : ""
+                          }`}
+                          key={connection.id}
+                          onClick={() => setSelectedFilesystemConnectionId(connection.id)}
+                          type="button"
+                        >
+                          <div className="text-sm font-medium">{connection.name}</div>
+                          <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {connection.rootPath}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </aside>
+
+              <section className="min-w-0 flex-1 space-y-3 pb-6 lg:pr-2">
+                <div className="rounded-[3px] border bg-background p-4">
+                  <div className="mb-3 text-sm font-medium">Add filesystem root</div>
+                  <div className="grid gap-2">
+                    <Input
+                      onChange={(event) => setFilesystemName(event.target.value)}
+                      placeholder="Name (required)"
+                      value={filesystemName}
+                    />
+                    <Input
+                      onChange={(event) => setFilesystemRootPath(event.target.value)}
+                      placeholder="Root path (e.g. /Users/me/Documents)"
+                      value={filesystemRootPath}
+                    />
+                  </div>
+                  <div className="mt-3">
+                    <Button
+                      disabled={
+                        saveFilesystemConnectionMutation.isPending ||
+                        filesystemName.trim() === "" ||
+                        filesystemRootPath.trim() === ""
+                      }
+                      onClick={() => {
+                        saveFilesystemConnectionMutation.mutate({
+                          name: filesystemName.trim(),
+                          rootPath: filesystemRootPath.trim(),
+                        });
+                      }}
+                      size="sm"
+                    >
+                      {saveFilesystemConnectionMutation.isPending ? (
+                        <LoaderCircle className="animate-spin" />
+                      ) : null}
+                      Save root
+                    </Button>
+                  </div>
+                </div>
+
+                {selectedFilesystemConnection == null ? (
+                  <Alert>
+                    <AlertTitle>Select a filesystem root</AlertTitle>
+                    <AlertDescription>
+                      Choose a root from the left column to inspect it or remove it.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="rounded-[3px] border bg-background p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-2">
+                        <div className="text-base font-medium">
+                          {selectedFilesystemConnection.name}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant={status?.connected ? "secondary" : "outline"}>
+                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
+                            {status?.connected ? "Connected" : "Waiting"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatSyncTimestamp(status?.lastSyncedAt)}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {selectedFilesystemConnection.rootPath}
+                        </div>
+                      </div>
+                      <Button
+                        disabled={deleteFilesystemConnectionMutation.isPending}
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            "Delete this filesystem root connection?",
+                          );
+                          if (!confirmed) {
+                            return;
+                          }
+                          deleteFilesystemConnectionMutation.mutate(
+                            selectedFilesystemConnection.id,
+                          );
+                        }}
+                        size="sm"
+                        variant="destructive"
+                      >
+                        {deleteFilesystemConnectionMutation.isPending ? (
                           <LoaderCircle className="animate-spin" />
                         ) : (
                           <Trash2 />

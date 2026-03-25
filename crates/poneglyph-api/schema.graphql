@@ -31,6 +31,12 @@ type EntitySummary {
   kind: String!
 }
 
+type FilesystemConnection {
+  id: Int!
+  name: String!
+  rootPath: String!
+}
+
 type GmailConnectionSummary {
   connectionId: Int!
   sendingAddresses: [String!]!
@@ -75,6 +81,8 @@ type Mutation {
   savePlexConnection(input: SavePlexConnectionInput!): PlexConnection!
   deletePlexConnection(connectionId: Int!): Boolean!
   discoverPlexLibraries(baseUrl: String!, token: String!): [String!]!
+  saveFilesystemConnection(input: SaveFilesystemConnectionInput!): FilesystemConnection!
+  deleteFilesystemConnection(connectionId: Int!): Boolean!
 }
 
 type PlexConnection {
@@ -97,12 +105,18 @@ type Query {
   connectorStatuses: [ConnectorStatus!]!
   plexConnections: [PlexConnection!]!
   detectLocalPlexConnection: PlexDetection!
+  filesystemConnections: [FilesystemConnection!]!
   gmailConnections: [GoogleCalendarConnection!]!
   gmailConnectionSummary(connectionId: Int!): GmailConnectionSummary!
   entities(limit: Int, offset: Int): [EntitySummary!]!
   schemaDefinition: KnowledgeGraphSchema!
   entityKinds: [String!]!
   entity(uri: String!): EntityDetail
+}
+
+input SaveFilesystemConnectionInput {
+  name: String!
+  rootPath: String!
 }
 
 input SavePlexConnectionInput {

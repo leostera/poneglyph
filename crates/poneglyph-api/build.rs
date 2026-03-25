@@ -7,6 +7,7 @@ fn main() {
     fs::write(&schema_path, schema_sdl()).expect("write schema.graphql");
 
     println!("cargo:rerun-if-changed=src/graphql/schema.rs");
+    println!("cargo:rerun-if-changed=src/services/filesystem.rs");
     println!("cargo:rerun-if-changed=src/services/google.rs");
     println!("cargo:rerun-if-changed=build.rs");
 }
@@ -43,6 +44,12 @@ type EntitySummary {
   uri: String!
   namespace: String!
   kind: String!
+}
+
+type FilesystemConnection {
+  id: Int!
+  name: String!
+  rootPath: String!
 }
 
 type GmailConnectionSummary {
@@ -89,6 +96,8 @@ type Mutation {
   savePlexConnection(input: SavePlexConnectionInput!): PlexConnection!
   deletePlexConnection(connectionId: Int!): Boolean!
   discoverPlexLibraries(baseUrl: String!, token: String!): [String!]!
+  saveFilesystemConnection(input: SaveFilesystemConnectionInput!): FilesystemConnection!
+  deleteFilesystemConnection(connectionId: Int!): Boolean!
 }
 
 type PlexConnection {
@@ -111,12 +120,18 @@ type Query {
   connectorStatuses: [ConnectorStatus!]!
   plexConnections: [PlexConnection!]!
   detectLocalPlexConnection: PlexDetection!
+  filesystemConnections: [FilesystemConnection!]!
   gmailConnections: [GoogleCalendarConnection!]!
   gmailConnectionSummary(connectionId: Int!): GmailConnectionSummary!
   entities(limit: Int, offset: Int): [EntitySummary!]!
   schemaDefinition: KnowledgeGraphSchema!
   entityKinds: [String!]!
   entity(uri: String!): EntityDetail
+}
+
+input SaveFilesystemConnectionInput {
+  name: String!
+  rootPath: String!
 }
 
 input SavePlexConnectionInput {

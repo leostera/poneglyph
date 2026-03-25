@@ -1,7 +1,8 @@
 use chrono::{DateTime, Utc};
 use poneglyph::Query;
 use poneglyph_ctl::{
-    CtlStore, GcalConnector, GmailConnector, GoogleOAuthConnection, PlexConnector,
+    CtlStore, FilesystemConnector, GcalConnector, GmailConnector, GoogleOAuthConnection,
+    PlexConnector,
 };
 use tokio::sync::mpsc;
 
@@ -425,6 +426,20 @@ pub(crate) async fn connector_statuses(
         last_error: None,
     });
 
+    let filesystem_connections = context
+        .ctl
+        .list_filesystem_connections()
+        .await
+        .map_err(|error| format!("failed to load filesystem connections: {error}"))?;
+    statuses.push(ConnectorStatus {
+        name: "filesystem".to_string(),
+        enabled: true,
+        connected: !filesystem_connections.is_empty(),
+        selected_resource_count: filesystem_connections.len() as i32,
+        last_synced_at: None,
+        last_error: None,
+    });
+
     Ok(statuses)
 }
 
@@ -477,6 +492,15 @@ pub(crate) async fn sync_connector(
                 .run(context.ctl.clone(), context.poneglyph.clone(), tx)
                 .await
                 .map_err(|error| format!("gmail sync failed: {error}"))?;
+        }
+        "filesystem" => {
+            let config = context.ctl_config.filesystem.clone().unwrap_or_default();
+            let connector = FilesystemConnector::init(config)
+                .map_err(|error| format!("failed to initialize filesystem connector: {error}"))?;
+            connector
+                .run(context.ctl.clone(), tx)
+                .await
+                .map_err(|error| format!("filesystem sync failed: {error}"))?;
         }
         other => return Err(format!("unknown connector: {other}")),
     }

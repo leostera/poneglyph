@@ -1,5 +1,6 @@
 import {
   ConnectorStatusesDocument,
+  DeleteFilesystemConnectionDocument,
   DeleteGoogleConnectionDocument,
   DeletePlexConnectionDocument,
   DetectLocalPlexConnectionDocument,
@@ -8,12 +9,14 @@ import {
   DiscoverPlexLibrariesDocument,
   EntitiesDocument,
   EntityDocument,
+  FilesystemConnectionsDocument,
   GmailConnectionSummaryDocument,
   GmailConnectionsDocument,
   GoogleCalendarConnectionsDocument,
   GoogleCalendarsDocument,
   KnowledgeGraphSchemaDocument,
   PlexConnectionsDocument,
+  SaveFilesystemConnectionDocument,
   SavePlexConnectionDocument,
   SelectGoogleCalendarsDocument,
   SelectGoogleCalendarsForConnectionDocument,
@@ -29,7 +32,7 @@ type GraphqlEnvelope<TData> = {
 };
 
 const DEFAULT_LOCAL_API_BASE_URL = "http://127.0.0.1:8787";
-const CONNECTOR_NAMES = ["plex", "gcal", "gmail"] as const;
+const CONNECTOR_NAMES = ["plex", "gcal", "gmail", "filesystem"] as const;
 
 export type ConnectorName = (typeof CONNECTOR_NAMES)[number];
 export type ConnectorStatus = ResultOf<
@@ -55,6 +58,9 @@ export type PlexDetection = ResultOf<
   typeof DetectLocalPlexConnectionDocument
 >["detectLocalPlexConnection"];
 export type ConnectorSyncResult = ResultOf<typeof SyncConnectorDocument>["syncConnector"];
+export type FilesystemConnection = ResultOf<
+  typeof FilesystemConnectionsDocument
+>["filesystemConnections"][number];
 
 export function isConnectorName(value: string): value is ConnectorName {
   return CONNECTOR_NAMES.includes(value as ConnectorName);
@@ -88,6 +94,11 @@ export async function getGmailConnectionSummary(connectionId: number) {
 export async function getPlexConnections() {
   const data = await graphqlRequest(PlexConnectionsDocument);
   return data.plexConnections;
+}
+
+export async function getFilesystemConnections() {
+  const data = await graphqlRequest(FilesystemConnectionsDocument);
+  return data.filesystemConnections;
 }
 
 export async function getEntities(limit = 250, offset = 0) {
@@ -168,6 +179,18 @@ export async function savePlexConnection(
 export async function deletePlexConnection(connectionId: number) {
   const data = await graphqlRequest(DeletePlexConnectionDocument, { connectionId });
   return data.deletePlexConnection;
+}
+
+export async function saveFilesystemConnection(name: string, rootPath: string) {
+  const data = await graphqlRequest(SaveFilesystemConnectionDocument, {
+    input: { name, rootPath },
+  });
+  return data.saveFilesystemConnection;
+}
+
+export async function deleteFilesystemConnection(connectionId: number) {
+  const data = await graphqlRequest(DeleteFilesystemConnectionDocument, { connectionId });
+  return data.deleteFilesystemConnection;
 }
 
 export async function discoverPlexLibraries(baseUrl: string, token: string) {
