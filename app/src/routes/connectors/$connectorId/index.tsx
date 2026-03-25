@@ -253,45 +253,54 @@ function ConnectorDetailPage() {
           </div>
 
           {connectorName === "gcal" ? (
-            <div className="flex flex-col gap-4 lg:flex-row">
-              <div className="w-full rounded-[3px] border bg-background lg:w-[320px] lg:shrink-0">
-                <div className="border-b px-4 py-3 text-sm font-medium">Google accounts</div>
-                {!status?.connected ? (
-                  <div className="px-4 py-3 text-xs text-muted-foreground">
-                    No connected accounts yet.
+            <div className="flex flex-col gap-8 lg:h-[calc(100vh-260px)] lg:flex-row lg:items-start">
+              <aside className="space-y-3 lg:h-fit lg:w-[320px] lg:shrink-0 lg:sticky lg:top-7">
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                    Google accounts
                   </div>
-                ) : googleConnectionsQuery.isLoading ? (
-                  <div className="space-y-2 px-4 py-3">
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
-                  </div>
-                ) : !googleConnectionsQuery.data?.length ? (
-                  <div className="px-4 py-3 text-xs text-muted-foreground">
-                    No accounts discovered yet.
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {googleConnectionsQuery.data.map((connection) => (
-                      <button
-                        className={`w-full px-4 py-3 text-left ${
-                          selectedConnection?.id === connection.id ? "bg-muted/50" : ""
-                        }`}
-                        key={connection.id}
-                        onClick={() => setSelectedConnectionId(connection.id)}
-                        type="button"
-                      >
-                        <div className="text-sm font-medium">{connection.label}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {connection.calendars.length} calendars ·{" "}
-                          {connection.selectedResourceCount} selected
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  <p className="text-sm text-muted-foreground">
+                    Select the account connection you want to manage.
+                  </p>
+                </div>
+                <div className="w-full rounded-[3px] border bg-background">
+                  {!status?.connected ? (
+                    <div className="px-4 py-3 text-xs text-muted-foreground">
+                      No connected accounts yet.
+                    </div>
+                  ) : googleConnectionsQuery.isLoading ? (
+                    <div className="space-y-2 px-4 py-3">
+                      <Skeleton className="h-8 w-full" />
+                      <Skeleton className="h-8 w-full" />
+                    </div>
+                  ) : !googleConnectionsQuery.data?.length ? (
+                    <div className="px-4 py-3 text-xs text-muted-foreground">
+                      No accounts discovered yet.
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {googleConnectionsQuery.data.map((connection) => (
+                        <button
+                          className={`w-full px-4 py-3 text-left ${
+                            selectedConnection?.id === connection.id ? "bg-muted/50" : ""
+                          }`}
+                          key={connection.id}
+                          onClick={() => setSelectedConnectionId(connection.id)}
+                          type="button"
+                        >
+                          <div className="text-sm font-medium">{connection.label}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {connection.calendars.length} calendars ·{" "}
+                            {connection.selectedResourceCount} selected
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </aside>
 
-              <div className="min-w-0 flex-1 space-y-3">
+              <section className="min-w-0 flex-1 space-y-3 pb-6 lg:max-h-full lg:overflow-y-auto lg:pr-2">
                 {!status?.connected ? (
                   <Alert>
                     <AlertTitle>Google Calendar is not connected</AlertTitle>
@@ -417,7 +426,7 @@ function ConnectorDetailPage() {
                     )}
                   </>
                 )}
-              </div>
+              </section>
             </div>
           ) : (
             <Alert>
