@@ -77,6 +77,17 @@ struct PlexDetectionObject {
     token: Option<String>,
 }
 
+#[derive(SimpleObject)]
+#[graphql(name = "GmailConnectionSummary")]
+struct GmailConnectionSummaryObject {
+    connection_id: i64,
+    sending_addresses: Vec<String>,
+    mailboxes: Vec<String>,
+    labels: Vec<String>,
+    emails: Vec<String>,
+    last_email_received_at: Option<String>,
+}
+
 #[derive(InputObject)]
 #[graphql(name = "SelectGoogleCalendarsInput")]
 struct SelectGoogleCalendarsInput {
@@ -145,6 +156,29 @@ impl ApiQuery {
             base_url: detected.base_url,
             token: detected.token,
         }
+    }
+
+    async fn gmail_connections(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+    ) -> Result<Vec<GoogleCalendarConnectionObject>> {
+        let app = ctx.data::<AppContext>()?;
+        google::list_gmail_connections(app)
+            .await
+            .map(map_google_connections)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn gmail_connection_summary(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        connection_id: i64,
+    ) -> Result<GmailConnectionSummaryObject> {
+        let app = ctx.data::<AppContext>()?;
+        google::gmail_connection_summary(app, connection_id)
+            .await
+            .map(map_gmail_connection_summary)
+            .map_err(async_graphql::Error::new)
     }
 }
 
@@ -349,6 +383,21 @@ fn map_plex_connection(connection: plex::PlexConnection) -> PlexConnectionObject
 
 fn map_plex_connections(connections: Vec<plex::PlexConnection>) -> Vec<PlexConnectionObject> {
     connections.into_iter().map(map_plex_connection).collect()
+}
+
+fn map_gmail_connection_summary(
+    summary: google::GmailConnectionSummary,
+) -> GmailConnectionSummaryObject {
+    GmailConnectionSummaryObject {
+        connection_id: summary.connection_id,
+        sending_addresses: summary.sending_addresses,
+        mailboxes: summary.mailboxes,
+        labels: summary.labels,
+        emails: summary.emails,
+        last_email_received_at: summary
+            .last_email_received_at
+            .map(|value| value.to_rfc3339()),
+    }
 }
 
 #[cfg(test)]

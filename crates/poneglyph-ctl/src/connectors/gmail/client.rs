@@ -4,7 +4,8 @@ use crate::{CtlError, CtlResult};
 
 use super::types::{
     GmailLabel, GmailLabelListResponse, GmailMessage, GmailMessageListResponse,
-    GmailMessageMetadataResponse, GmailProfile, GmailProfileResponse,
+    GmailMessageMetadataResponse, GmailProfile, GmailProfileResponse, GmailSendAsAddress,
+    GmailSendAsListResponse,
 };
 
 #[derive(Debug, Clone)]
@@ -74,6 +75,35 @@ impl GmailClient {
                 name: label.name,
                 label_type: label.label_type,
                 message_list_visibility: label.message_list_visibility,
+            })
+            .collect())
+    }
+
+    pub async fn list_send_as_addresses(
+        &self,
+        access_token: &str,
+    ) -> CtlResult<Vec<GmailSendAsAddress>> {
+        let payload: GmailSendAsListResponse = self
+            .http
+            .get(format!(
+                "{}/gmail/v1/users/me/settings/sendAs",
+                self.base_url.trim_end_matches('/')
+            ))
+            .bearer_auth(access_token)
+            .send()
+            .await
+            .map_err(|error| CtlError::GmailRequest(error.to_string()))?
+            .error_for_status()
+            .map_err(|error| CtlError::GmailUnexpectedStatus(status_code_or_zero(&error)))?
+            .json()
+            .await
+            .map_err(|error| CtlError::GmailResponseDecode(error.to_string()))?;
+
+        Ok(payload
+            .send_as
+            .into_iter()
+            .map(|entry| GmailSendAsAddress {
+                send_as_email: entry.send_as_email,
             })
             .collect())
     }

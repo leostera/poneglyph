@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ipcContext } from "@/ipc/context";
-import { BrowserWindow, app } from "electron";
+import { BrowserWindow, app, nativeImage } from "electron";
 import { REACT_DEVELOPER_TOOLS, installExtension } from "electron-devtools-installer";
 import { ipcMain } from "electron/main";
 import { UpdateSourceType, updateElectronApp } from "update-electron-app";
@@ -29,6 +29,46 @@ type PersistedWindowBounds = {
   x?: number;
   y?: number;
 };
+
+function firstExistingPath(candidates: string[]) {
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function resolveIconAsset(basePath: string, fileName: string) {
+  return firstExistingPath([
+    path.resolve(basePath, "../../../assets", fileName),
+    path.resolve(basePath, "../../assets", fileName),
+    path.resolve(basePath, "../assets", fileName),
+    path.resolve(process.cwd(), "../assets", fileName),
+    path.resolve(process.cwd(), "assets", fileName),
+  ]);
+}
+
+function resolveWindowIcon(basePath: string) {
+  const svgIconPath = resolveIconAsset(basePath, "poneglyph.svg");
+  const pngIconPath = resolveIconAsset(basePath, "poneglyph.png");
+
+  if (svgIconPath) {
+    const iconFromSvg = nativeImage.createFromPath(svgIconPath);
+    if (!iconFromSvg.isEmpty()) {
+      return iconFromSvg;
+    }
+  }
+
+  if (pngIconPath) {
+    const iconFromPng = nativeImage.createFromPath(pngIconPath);
+    if (!iconFromPng.isEmpty()) {
+      return iconFromPng;
+    }
+  }
+
+  return undefined;
+}
 
 function getWindowStatePath() {
   return path.join(app.getPath("userData"), "window-state.json");
@@ -64,12 +104,15 @@ function persistWindowState(mainWindow: BrowserWindow) {
 function createWindow() {
   const basePath = getBasePath();
   const preload = path.join(basePath, "preload.js");
+  const windowIcon = resolveWindowIcon(basePath);
   const initialBounds = loadWindowState();
   const mainWindow = new BrowserWindow({
     width: initialBounds.width,
     height: initialBounds.height,
     x: initialBounds.x,
     y: initialBounds.y,
+    title: "Poneglyph",
+    ...(windowIcon ? { icon: windowIcon } : {}),
     webPreferences: {
       devTools: inDevelopment,
       contextIsolation: true,
@@ -134,6 +177,13 @@ async function setupORPC() {
 
 app.whenReady().then(async () => {
   try {
+    app.setName("Poneglyph");
+    if (process.platform === "darwin") {
+      const dockIcon = resolveWindowIcon(getBasePath());
+      if (dockIcon) {
+        app.dock?.setIcon(dockIcon);
+      }
+    }
     createWindow();
     if (!inEndToEndTest) {
       await installExtensions();

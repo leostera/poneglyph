@@ -16,6 +16,7 @@ use crate::config::PoneglyphApiConfig;
 pub(crate) struct GooglePendingAuth {
     pub verifier: String,
     pub handoff_uri: Option<String>,
+    pub requested_scopes: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -31,7 +32,8 @@ pub(crate) struct GoogleOAuthConfig {
     pub auth_url: String,
     pub token_url: String,
     pub redirect_uri: String,
-    pub scopes: Vec<String>,
+    pub gcal_scopes: Vec<String>,
+    pub gmail_scopes: Vec<String>,
 }
 
 impl Default for GoogleOAuthConfig {
@@ -43,10 +45,8 @@ impl Default for GoogleOAuthConfig {
             auth_url: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
             token_url: "https://oauth2.googleapis.com/token".to_string(),
             redirect_uri: "http://127.0.0.1:8787".to_string(),
-            scopes: vec![
-                "https://www.googleapis.com/auth/calendar.readonly".to_string(),
-                "https://www.googleapis.com/auth/gmail.readonly".to_string(),
-            ],
+            gcal_scopes: vec!["https://www.googleapis.com/auth/calendar.readonly".to_string()],
+            gmail_scopes: vec!["https://www.googleapis.com/auth/gmail.readonly".to_string()],
         }
     }
 }
@@ -72,8 +72,18 @@ impl GoogleOAuthConfig {
         RedirectUrl::new(self.redirect_uri.clone()).expect("google redirect url")
     }
 
-    pub fn scopes(&self) -> Vec<Scope> {
-        self.scopes.iter().cloned().map(Scope::new).collect()
+    pub fn scopes_for_connector(&self, connector: &str) -> Vec<Scope> {
+        match connector {
+            "gmail" => self.gmail_scopes.iter().cloned().map(Scope::new).collect(),
+            "gcal" => self.gcal_scopes.iter().cloned().map(Scope::new).collect(),
+            _ => self
+                .gcal_scopes
+                .iter()
+                .chain(self.gmail_scopes.iter())
+                .cloned()
+                .map(Scope::new)
+                .collect(),
+        }
     }
 }
 
@@ -129,12 +139,14 @@ impl AppContext {
         state: &CsrfToken,
         verifier: PkceCodeVerifier,
         handoff_uri: Option<String>,
+        requested_scopes: Vec<String>,
     ) {
         self.google_auth.lock().await.insert(
             state.secret().to_string(),
             GooglePendingAuth {
                 verifier: verifier.secret().to_string(),
                 handoff_uri,
+                requested_scopes,
             },
         );
     }

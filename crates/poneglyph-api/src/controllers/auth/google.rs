@@ -8,7 +8,7 @@ use oauth2::{
     AuthType, AuthorizationCode, CsrfToken, PkceCodeChallenge, PkceCodeVerifier, TokenResponse,
     basic::{BasicClient, BasicTokenResponse},
 };
-use poneglyph_ctl::SaveGoogleOAuthConnection;
+use poneglyph_ctl::{GmailConnector, SaveGoogleOAuthConnection};
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use url::Url;
@@ -18,6 +18,7 @@ use crate::{context::AppContext, views};
 #[derive(Debug, Deserialize)]
 pub(crate) struct GoogleLoginQuery {
     pub handoff_uri: Option<String>,
+    pub connector: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,18 +79,34 @@ pub(crate) async fn login(
             .set_redirect_uri(context.google_oauth.redirect_url())
     };
     let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
+    let connector = query.connector.as_deref().unwrap_or("gcal");
+    let scopes = context
+        .google_oauth
+        .scopes_for_connector(connector)
+        .into_iter()
+        .collect::<Vec<_>>();
     let mut auth_request = client
         .authorize_url(CsrfToken::new_random)
         .add_extra_param("access_type", "offline")
         .add_extra_param("prompt", "consent")
         .set_pkce_challenge(challenge);
-    for scope in context.google_oauth.scopes() {
+    for scope in scopes {
         auth_request = auth_request.add_scope(scope);
     }
     let (auth_url, state) = auth_request.url();
 
     context
-        .insert_google_auth_state(&state, verifier, query.handoff_uri)
+        .insert_google_auth_state(
+            &state,
+            verifier,
+            query.handoff_uri,
+            context
+                .google_oauth
+                .scopes_for_connector(connector)
+                .into_iter()
+                .map(|scope| scope.to_string())
+                .collect(),
+        )
         .await;
     debug!(
         component = "poneglyph_api",
@@ -147,7 +164,7 @@ async fn callback_with_code_and_state(context: AppContext, query: GoogleCallback
         let scopes = token
             .scopes()
             .map(|scopes| scopes.iter().map(|scope| scope.to_string()).collect())
-            .unwrap_or_else(|| context.google_oauth.scopes.clone());
+            .unwrap_or_else(|| pending.requested_scopes.clone());
         let saved = match context
             .ctl
             .save_google_oauth_connection(SaveGoogleOAuthConnection {
@@ -184,6 +201,9 @@ async fn callback_with_code_and_state(context: AppContext, query: GoogleCallback
             connection_id = saved.id,
             "validated and persisted google oauth callback"
         );
+        if has_gmail_read_scope(&saved.scopes) {
+            bootstrap_gmail_metadata_sync(&context, saved.id).await;
+        }
         if let Some(handoff_uri) = pending.handoff_uri {
             let grant = context.issue_google_auth_grant(saved).await;
             match build_handoff_redirect(&handoff_uri, &grant.grant_id) {
@@ -333,6 +353,9 @@ async fn callback_with_grant(context: AppContext, grant_id: String) -> Response 
         connection_id = saved.id,
         "redeemed and persisted google oauth handoff locally"
     );
+    if has_gmail_read_scope(&saved.scopes) {
+        bootstrap_gmail_metadata_sync(&context, saved.id).await;
+    }
 
     (StatusCode::OK, views::auth::login_successful("Google")).into_response()
 }
@@ -390,6 +413,53 @@ fn build_handoff_redirect(handoff_uri: &str, grant_id: &str) -> Result<String, u
     let mut url = Url::parse(handoff_uri)?;
     url.query_pairs_mut().append_pair("grant", grant_id);
     Ok(url.to_string())
+}
+
+async fn bootstrap_gmail_metadata_sync(context: &AppContext, connection_id: i64) {
+    let config = context.ctl_config.gmail.clone().unwrap_or_default();
+    let connector = match GmailConnector::init(config) {
+        Ok(connector) => connector,
+        Err(error) => {
+            debug!(
+                component = "poneglyph_api",
+                provider = "google",
+                connection_id,
+                %error,
+                "skipping immediate gmail metadata sync: failed to initialize connector"
+            );
+            return;
+        }
+    };
+
+    match connector
+        .sync_connection_once(&context.ctl, context.poneglyph.clone(), connection_id)
+        .await
+    {
+        Ok(fact_count) => {
+            debug!(
+                component = "poneglyph_api",
+                provider = "google",
+                connection_id,
+                fact_count,
+                "completed immediate gmail metadata sync after oauth callback"
+            );
+        }
+        Err(error) => {
+            debug!(
+                component = "poneglyph_api",
+                provider = "google",
+                connection_id,
+                %error,
+                "gmail metadata sync after oauth callback failed"
+            );
+        }
+    }
+}
+
+fn has_gmail_read_scope(scopes: &[String]) -> bool {
+    scopes
+        .iter()
+        .any(|scope| scope == "https://www.googleapis.com/auth/gmail.readonly")
 }
 
 fn build_handoff_redeem_url(base_url: &str, grant_id: &str) -> Result<String, url::ParseError> {

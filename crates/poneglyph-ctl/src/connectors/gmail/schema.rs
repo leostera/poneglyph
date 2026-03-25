@@ -74,6 +74,13 @@ impl GmailSchema {
             false,
         ));
         facts.extend(Self::field(
+            uri!("gmail:sendAsAddress"),
+            "Send As Address",
+            "An address configured for sending mail from this Gmail account.",
+            uri!("gmail:account"),
+            false,
+        ));
+        facts.extend(Self::field(
             uri!("gmail:threadsTotal"),
             "Threads Total",
             "Total threads in the Gmail mailbox.",

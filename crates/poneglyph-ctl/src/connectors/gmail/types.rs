@@ -10,6 +10,11 @@ pub struct GmailProfile {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GmailSendAsAddress {
+    pub send_as_email: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GmailLabel {
     pub id: String,
     pub name: String,
@@ -79,6 +84,18 @@ pub(crate) struct GmailMessageMetadataResponse {
     pub internal_date: Option<String>,
     pub snippet: Option<String>,
     pub payload: Option<GmailPayload>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct GmailSendAsListResponse {
+    #[serde(default, rename = "sendAs")]
+    pub send_as: Vec<GmailSendAsEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+pub(crate) struct GmailSendAsEntry {
+    #[serde(rename = "sendAsEmail")]
+    pub send_as_email: String,
 }
 
 #[derive(Debug, Deserialize)]

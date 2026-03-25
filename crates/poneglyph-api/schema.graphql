@@ -13,6 +13,15 @@ type ConnectorSyncResult {
   message: String!
 }
 
+type GmailConnectionSummary {
+  connectionId: Int!
+  sendingAddresses: [String!]!
+  mailboxes: [String!]!
+  labels: [String!]!
+  emails: [String!]!
+  lastEmailReceivedAt: String
+}
+
 type GoogleCalendarConnection {
   id: Int!
   label: String!
@@ -64,6 +73,8 @@ type Query {
   connectorStatuses: [ConnectorStatus!]!
   plexConnections: [PlexConnection!]!
   detectLocalPlexConnection: PlexDetection!
+  gmailConnections: [GoogleCalendarConnection!]!
+  gmailConnectionSummary(connectionId: Int!): GmailConnectionSummary!
 }
 
 input SavePlexConnectionInput {

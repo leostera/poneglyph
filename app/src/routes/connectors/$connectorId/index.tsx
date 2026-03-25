@@ -18,6 +18,8 @@ import {
   findConnectorStatus,
   invalidateConnectorQueries,
   useConnectorStatusesQuery,
+  useGmailConnectionSummaryQuery,
+  useGmailConnectionsQuery,
   useGoogleCalendarConnectionsQuery,
   usePlexConnectionsQuery,
 } from "@/features/connectors/queries";
@@ -58,9 +60,8 @@ function ConnectorDetailPage() {
   const queryClient = useQueryClient();
   const statusesQuery = useConnectorStatusesQuery();
   const status = findConnectorStatus(statusesQuery.data, connectorName);
-  const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(
-    connectorName === "gcal" || connectorName === "gmail",
-  );
+  const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(connectorName === "gcal");
+  const gmailConnectionsQuery = useGmailConnectionsQuery(connectorName === "gmail");
   const plexConnectionsQuery = usePlexConnectionsQuery(connectorName === "plex");
 
   const [selectedConnectionId, setSelectedConnectionId] = useState<number | null>(null);
@@ -77,7 +78,10 @@ function ConnectorDetailPage() {
     if (connectorName !== "gcal" && connectorName !== "gmail") {
       return null;
     }
-    const connections = googleConnectionsQuery.data ?? [];
+    const connections =
+      connectorName === "gmail"
+        ? (gmailConnectionsQuery.data ?? [])
+        : (googleConnectionsQuery.data ?? []);
     if (connections.length === 0) {
       return null;
     }
@@ -87,9 +91,18 @@ function ConnectorDetailPage() {
     return (
       connections.find((connection) => connection.id === selectedConnectionId) ?? connections[0]
     );
-  }, [connectorName, googleConnectionsQuery.data, selectedConnectionId]);
+  }, [
+    connectorName,
+    gmailConnectionsQuery.data,
+    googleConnectionsQuery.data,
+    selectedConnectionId,
+  ]);
 
   const selectedCalendars = selectedConnection?.calendars ?? [];
+  const gmailSummaryQuery = useGmailConnectionSummaryQuery(
+    connectorName === "gmail" ? (selectedConnection?.id ?? null) : null,
+    connectorName === "gmail" && selectedConnection != null,
+  );
   const selectedPlexConnection = useMemo(() => {
     if (connectorName !== "plex") {
       return null;
@@ -251,7 +264,11 @@ function ConnectorDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             {connectorName === "gcal" || connectorName === "gmail" ? (
               <Button
-                onClick={() => openExternalLink(`${window.poneglyph.apiBaseUrl}/auth/google/login`)}
+                onClick={() =>
+                  openExternalLink(
+                    `${window.poneglyph.apiBaseUrl}/auth/google/login?connector=${connectorName}`,
+                  )
+                }
                 size="sm"
                 variant="ghost"
               >
@@ -530,18 +547,18 @@ function ConnectorDetailPage() {
                     <div className="px-4 py-3 text-xs text-muted-foreground">
                       No connected accounts yet.
                     </div>
-                  ) : googleConnectionsQuery.isLoading ? (
+                  ) : gmailConnectionsQuery.isLoading ? (
                     <div className="space-y-2 px-4 py-3">
                       <Skeleton className="h-8 w-full" />
                       <Skeleton className="h-8 w-full" />
                     </div>
-                  ) : !googleConnectionsQuery.data?.length ? (
+                  ) : !gmailConnectionsQuery.data?.length ? (
                     <div className="px-4 py-3 text-xs text-muted-foreground">
                       No accounts discovered yet.
                     </div>
                   ) : (
                     <div className="divide-y">
-                      {googleConnectionsQuery.data.map((connection) => (
+                      {gmailConnectionsQuery.data.map((connection) => (
                         <button
                           className={`w-full px-4 py-3 text-left ${
                             selectedConnection?.id === connection.id ? "bg-muted/50" : ""
@@ -578,46 +595,101 @@ function ConnectorDetailPage() {
                     </AlertDescription>
                   </Alert>
                 ) : (
-                  <div className="rounded-[3px] border bg-background p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-2">
-                        <h2 className="text-base font-medium">{selectedConnection.label}</h2>
-                        <p className="text-sm text-muted-foreground">
-                          Gmail sync currently ingests account profile, labels, and message metadata
-                          (subject, sender, recipient, snippet, internal date, thread linkage).
-                        </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <Badge variant={status?.connected ? "secondary" : "outline"}>
-                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
-                            {status?.connected ? "Connected" : "Waiting"}
-                          </Badge>
-                          {status?.lastError ? <Badge variant="destructive">Error</Badge> : null}
-                          <span className="text-xs text-muted-foreground">
-                            {formatSyncTimestamp(status?.lastSyncedAt)}
-                          </span>
+                  <div className="space-y-3">
+                    <div className="rounded-[3px] border bg-background p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-2">
+                          <h2 className="text-base font-medium">{selectedConnection.label}</h2>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <Badge variant={status?.connected ? "secondary" : "outline"}>
+                              <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
+                              {status?.connected ? "Connected" : "Waiting"}
+                            </Badge>
+                            {status?.lastError ? <Badge variant="destructive">Error</Badge> : null}
+                            <span className="text-xs text-muted-foreground">
+                              {formatSyncTimestamp(status?.lastSyncedAt)}
+                            </span>
+                          </div>
                         </div>
+                        <Button
+                          disabled={deleteConnectionMutation.isPending}
+                          onClick={() => {
+                            const confirmed = window.confirm(
+                              "Delete this Google account connection? This disconnects Gmail and Google Calendar for the same account.",
+                            );
+                            if (!confirmed) {
+                              return;
+                            }
+                            deleteConnectionMutation.mutate(selectedConnection.id);
+                          }}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          {deleteConnectionMutation.isPending ? (
+                            <LoaderCircle className="animate-spin" />
+                          ) : (
+                            <Trash2 />
+                          )}
+                          Delete connection
+                        </Button>
                       </div>
-                      <Button
-                        disabled={deleteConnectionMutation.isPending}
-                        onClick={() => {
-                          const confirmed = window.confirm(
-                            "Delete this Google account connection? This disconnects Gmail and Google Calendar for the same account.",
-                          );
-                          if (!confirmed) {
-                            return;
-                          }
-                          deleteConnectionMutation.mutate(selectedConnection.id);
-                        }}
-                        size="sm"
-                        variant="destructive"
-                      >
-                        {deleteConnectionMutation.isPending ? (
-                          <LoaderCircle className="animate-spin" />
-                        ) : (
-                          <Trash2 />
-                        )}
-                        Delete connection
-                      </Button>
+                    </div>
+
+                    <div className="rounded-[3px] border bg-background">
+                      {gmailSummaryQuery.isLoading ? (
+                        <div className="space-y-2 px-4 py-3">
+                          <Skeleton className="h-5 w-56" />
+                          <Skeleton className="h-5 w-48" />
+                          <Skeleton className="h-5 w-44" />
+                          <Skeleton className="h-5 w-40" />
+                          <Skeleton className="h-5 w-52" />
+                        </div>
+                      ) : gmailSummaryQuery.error ? (
+                        <Alert variant="destructive">
+                          <AlertTitle>Failed to load Gmail account summary</AlertTitle>
+                          <AlertDescription>{gmailSummaryQuery.error.message}</AlertDescription>
+                        </Alert>
+                      ) : (
+                        <dl className="divide-y">
+                          <div className="flex items-center justify-between gap-4 px-4 py-3">
+                            <dt className="text-sm text-muted-foreground">
+                              Addresses configured for sending
+                            </dt>
+                            <dd className="max-w-[60%] text-right text-sm font-medium">
+                              {(gmailSummaryQuery.data?.sendingAddresses ?? []).join(", ") ||
+                                "None"}
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 px-4 py-3">
+                            <dt className="text-sm text-muted-foreground">Mailboxes</dt>
+                            <dd className="max-w-[60%] text-right text-sm font-medium">
+                              {(gmailSummaryQuery.data?.mailboxes ?? []).join(", ") || "None"}
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 px-4 py-3">
+                            <dt className="text-sm text-muted-foreground">Labels</dt>
+                            <dd className="max-w-[60%] text-right text-sm font-medium">
+                              {(gmailSummaryQuery.data?.labels ?? []).join(", ") || "None"}
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 px-4 py-3">
+                            <dt className="text-sm text-muted-foreground">Emails (recent)</dt>
+                            <dd className="max-w-[60%] text-right text-sm font-medium">
+                              {(gmailSummaryQuery.data?.emails ?? []).join(" • ") || "None"}
+                            </dd>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 px-4 py-3">
+                            <dt className="text-sm text-muted-foreground">
+                              Last email received via poll
+                            </dt>
+                            <dd className="text-sm font-medium">
+                              {formatSyncTimestamp(
+                                gmailSummaryQuery.data?.lastEmailReceivedAt ?? null,
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
+                      )}
                     </div>
                   </div>
                 )}

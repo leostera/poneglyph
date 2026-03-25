@@ -8,6 +8,7 @@ async-graphql.workspace = true
 async-graphql-axum.workspace = true
 axum.workspace = true
 chrono.workspace = true
+datafox.workspace = true
 derive_builder.workspace = true
 oauth2.workspace = true
 poneglyph= { path = "../poneglyph" }

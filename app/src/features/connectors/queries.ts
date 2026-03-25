@@ -2,6 +2,8 @@ import {
   type ConnectorName,
   type ConnectorStatus,
   getConnectorStatuses,
+  getGmailConnectionSummary,
+  getGmailConnections,
   getGoogleCalendarConnections,
   getGoogleCalendars,
   getPlexConnections,
@@ -11,7 +13,10 @@ import { type QueryClient, type UseQueryOptions, useQuery } from "@tanstack/reac
 export const connectorStatusesQueryKey = ["connector-statuses"] as const;
 export const googleCalendarsQueryKey = ["google-calendars"] as const;
 export const googleCalendarConnectionsQueryKey = ["google-calendar-connections"] as const;
+export const gmailConnectionsQueryKey = ["gmail-connections"] as const;
 export const plexConnectionsQueryKey = ["plex-connections"] as const;
+export const gmailConnectionSummaryQueryKey = (connectionId: number | null) =>
+  ["gmail-connection-summary", connectionId] as const;
 
 type ConnectorStatusesQueryOptions = Pick<
   UseQueryOptions<ConnectorStatus[], Error>,
@@ -42,11 +47,27 @@ export function useGoogleCalendarConnectionsQuery(enabled: boolean) {
   });
 }
 
+export function useGmailConnectionsQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: gmailConnectionsQueryKey,
+    queryFn: getGmailConnections,
+    enabled,
+  });
+}
+
 export function usePlexConnectionsQuery(enabled: boolean) {
   return useQuery({
     queryKey: plexConnectionsQueryKey,
     queryFn: getPlexConnections,
     enabled,
+  });
+}
+
+export function useGmailConnectionSummaryQuery(connectionId: number | null, enabled: boolean) {
+  return useQuery({
+    queryKey: gmailConnectionSummaryQueryKey(connectionId),
+    queryFn: () => getGmailConnectionSummary(connectionId as number),
+    enabled: enabled && connectionId != null,
   });
 }
 
@@ -62,6 +83,8 @@ export async function invalidateConnectorQueries(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: connectorStatusesQueryKey }),
     queryClient.invalidateQueries({ queryKey: googleCalendarsQueryKey }),
     queryClient.invalidateQueries({ queryKey: googleCalendarConnectionsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: gmailConnectionsQueryKey }),
     queryClient.invalidateQueries({ queryKey: plexConnectionsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: ["gmail-connection-summary"] }),
   ]);
 }

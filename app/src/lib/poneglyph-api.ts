@@ -6,6 +6,8 @@ import {
   DiscoverGoogleCalendarsDocument,
   DiscoverGoogleCalendarsForConnectionDocument,
   DiscoverPlexLibrariesDocument,
+  GmailConnectionSummaryDocument,
+  GmailConnectionsDocument,
   GoogleCalendarConnectionsDocument,
   GoogleCalendarsDocument,
   PlexConnectionsDocument,
@@ -35,6 +37,10 @@ export type GoogleCalendarResource = ResultOf<
 export type GoogleCalendarConnection = ResultOf<
   typeof GoogleCalendarConnectionsDocument
 >["googleCalendarConnections"][number];
+export type GmailConnection = ResultOf<typeof GmailConnectionsDocument>["gmailConnections"][number];
+export type GmailConnectionSummary = ResultOf<
+  typeof GmailConnectionSummaryDocument
+>["gmailConnectionSummary"];
 export type PlexConnection = ResultOf<typeof PlexConnectionsDocument>["plexConnections"][number];
 export type PlexDetection = ResultOf<
   typeof DetectLocalPlexConnectionDocument
@@ -58,6 +64,16 @@ export async function getGoogleCalendars() {
 export async function getGoogleCalendarConnections() {
   const data = await graphqlRequest(GoogleCalendarConnectionsDocument);
   return data.googleCalendarConnections;
+}
+
+export async function getGmailConnections() {
+  const data = await graphqlRequest(GmailConnectionsDocument);
+  return data.gmailConnections;
+}
+
+export async function getGmailConnectionSummary(connectionId: number) {
+  const data = await graphqlRequest(GmailConnectionSummaryDocument, { connectionId });
+  return data.gmailConnectionSummary;
 }
 
 export async function getPlexConnections() {

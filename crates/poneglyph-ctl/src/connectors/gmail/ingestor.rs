@@ -4,7 +4,7 @@ use poneglyph::{Fact, Poneglyph, Query, QueryResult, Uri, Value, fact, uri};
 
 use crate::{CtlError, CtlResult};
 
-use super::types::{GmailLabel, GmailMessage, GmailProfile};
+use super::types::{GmailLabel, GmailMessage, GmailProfile, GmailSendAsAddress};
 
 #[derive(Clone)]
 pub struct GmailIngestor {
@@ -19,11 +19,12 @@ impl GmailIngestor {
     pub async fn ingest_account_snapshot(
         &self,
         profile: &GmailProfile,
+        send_as_addresses: &[GmailSendAsAddress],
         labels: &[GmailLabel],
         messages: &[GmailMessage],
     ) -> CtlResult<Vec<Fact>> {
         let account_entity = self.account_entity_uri(&profile.email_address).await?;
-        let mut facts = self.account_facts(&account_entity, profile);
+        let mut facts = self.account_facts(&account_entity, profile, send_as_addresses);
 
         for label in labels {
             let label_entity = self.label_entity_uri(&label.id).await?;
@@ -92,7 +93,12 @@ impl GmailIngestor {
             })
     }
 
-    fn account_facts(&self, account_entity: &Uri, profile: &GmailProfile) -> Vec<Fact> {
+    fn account_facts(
+        &self,
+        account_entity: &Uri,
+        profile: &GmailProfile,
+        send_as_addresses: &[GmailSendAsAddress],
+    ) -> Vec<Fact> {
         let mut facts = vec![
             fact!(
                 account_entity.clone(),
@@ -125,6 +131,13 @@ impl GmailIngestor {
                 account_entity.clone(),
                 uri!("gmail:historyId"),
                 Value::text(history_id.clone())
+            ));
+        }
+        for send_as in send_as_addresses {
+            facts.push(fact!(
+                account_entity.clone(),
+                uri!("gmail:sendAsAddress"),
+                Value::text(send_as.send_as_email.clone())
             ));
         }
         facts

@@ -48,6 +48,40 @@ export const GoogleCalendarConnectionsDocument = graphql(`
   }
 `);
 
+export const GmailConnectionsDocument = graphql(`
+  query GmailConnections {
+    gmailConnections {
+      id
+      label
+      selectedResourceCount
+      lastSyncedAt
+      lastError
+      calendars {
+        connectionId
+        calendarId
+        summary
+        description
+        timeZone
+        primary
+        selected
+      }
+    }
+  }
+`);
+
+export const GmailConnectionSummaryDocument = graphql(`
+  query GmailConnectionSummary($connectionId: Int!) {
+    gmailConnectionSummary(connectionId: $connectionId) {
+      connectionId
+      sendingAddresses
+      mailboxes
+      labels
+      emails
+      lastEmailReceivedAt
+    }
+  }
+`);
+
 export const PlexConnectionsDocument = graphql(`
   query PlexConnections {
     plexConnections {

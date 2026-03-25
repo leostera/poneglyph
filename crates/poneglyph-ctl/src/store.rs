@@ -12,6 +12,7 @@ pub struct GoogleOAuthConnection {
     pub access_token: String,
     pub refresh_token: Option<String>,
     pub token_type: String,
+    pub account_email: Option<String>,
     pub scopes: Vec<String>,
     pub expires_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
@@ -154,11 +155,12 @@ impl CtlStore {
                 access_token,
                 refresh_token,
                 token_type,
+                account_email,
                 scopes,
                 expires_at,
                 created_at,
                 updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)
             "#,
         )
         .bind(&connection.access_token)
@@ -185,6 +187,7 @@ impl CtlStore {
                 access_token,
                 refresh_token,
                 token_type,
+                account_email,
                 scopes,
                 expires_at,
                 created_at,
@@ -209,6 +212,7 @@ impl CtlStore {
                 access_token,
                 refresh_token,
                 token_type,
+                account_email,
                 scopes,
                 expires_at,
                 created_at,
@@ -237,6 +241,7 @@ impl CtlStore {
                 access_token,
                 refresh_token,
                 token_type,
+                account_email,
                 scopes,
                 expires_at,
                 created_at,
@@ -266,6 +271,34 @@ impl CtlStore {
         .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
 
         Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn set_google_oauth_connection_account_email(
+        &self,
+        id: i64,
+        account_email: &str,
+    ) -> CtlResult<()> {
+        let result = sqlx::query(
+            r#"
+            UPDATE google_oauth_connections
+            SET account_email = ?, updated_at = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(account_email)
+        .bind(Utc::now().to_rfc3339())
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            return Err(CtlError::StoreQuery(format!(
+                "google oauth connection not found: {id}"
+            )));
+        }
+
+        Ok(())
     }
 
     pub async fn save_google_calendar_resources(
@@ -901,10 +934,40 @@ mod tests {
         assert_eq!(latest.access_token, "access-token");
         assert_eq!(latest.refresh_token.as_deref(), Some("refresh-token"));
         assert_eq!(latest.token_type, "Bearer");
+        assert_eq!(latest.account_email, None);
         assert_eq!(latest.scopes, vec!["scope:a", "scope:b"]);
         assert_eq!(latest.expires_at, Some(expires_at));
         assert_eq!(connections.len(), 1);
         assert_eq!(connections[0].id, saved.id);
+    }
+
+    #[tokio::test]
+    async fn ctl_store_sets_google_oauth_connection_account_email() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+        let connection = store
+            .save_google_oauth_connection(SaveGoogleOAuthConnection {
+                access_token: "access-token".to_string(),
+                refresh_token: Some("refresh-token".to_string()),
+                token_type: "Bearer".to_string(),
+                scopes: vec!["scope:a".to_string()],
+                expires_at: None,
+            })
+            .await
+            .expect("saved connection");
+
+        store
+            .set_google_oauth_connection_account_email(connection.id, "alice@example.com")
+            .await
+            .expect("set account email");
+
+        let updated = store
+            .google_oauth_connection_by_id(connection.id)
+            .await
+            .expect("load updated connection")
+            .expect("connection exists");
+        assert_eq!(updated.account_email.as_deref(), Some("alice@example.com"));
     }
 
     #[tokio::test]
@@ -1254,6 +1317,9 @@ fn decode_google_oauth_connection(
             .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
         token_type: row
             .try_get("token_type")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        account_email: row
+            .try_get("account_email")
             .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
         scopes: if scopes.is_empty() {
             Vec::new()

@@ -116,6 +116,45 @@ impl GmailConnector {
         }
     }
 
+    pub async fn sync_connection_once(
+        &self,
+        store: &CtlStore,
+        poneglyph: Arc<Poneglyph>,
+        connection_id: i64,
+    ) -> CtlResult<usize> {
+        let connection = store
+            .google_oauth_connection_by_id(connection_id)
+            .await?
+            .ok_or_else(|| {
+                crate::CtlError::GmailRequest("google oauth connection not found".into())
+            })?;
+        let client = GmailClient::default();
+        let ingestor = GmailIngestor::new(poneglyph.clone());
+
+        match self
+            .ingest_connection(&client, &ingestor, store, &connection)
+            .await
+        {
+            Ok(Some(facts)) => {
+                let fact_count = facts.len();
+                if fact_count > 0 {
+                    poneglyph
+                        .state_facts(facts)
+                        .await
+                        .map_err(|error| crate::CtlError::GmailRequest(error.to_string()))?;
+                }
+                Ok(fact_count)
+            }
+            Ok(None) => Ok(0),
+            Err(error) => {
+                let _ = store
+                    .save_gmail_sync_failure(connection.id, &error.to_string())
+                    .await;
+                Err(error)
+            }
+        }
+    }
+
     async fn ingest_connection(
         &self,
         client: &GmailClient,
@@ -124,6 +163,23 @@ impl GmailConnector {
         connection: &GoogleOAuthConnection,
     ) -> CtlResult<Option<Vec<Fact>>> {
         let profile = client.profile(&connection.access_token).await?;
+        store
+            .set_google_oauth_connection_account_email(connection.id, &profile.email_address)
+            .await?;
+        let send_as_addresses = match client
+            .list_send_as_addresses(&connection.access_token)
+            .await
+        {
+            Ok(addresses) => addresses,
+            Err(error) => {
+                warn!(
+                    connection_id = connection.id,
+                    %error,
+                    "gmail connector could not list send-as addresses"
+                );
+                Vec::new()
+            }
+        };
         let saved_history_id = store
             .gmail_sync_state(connection.id)
             .await?
@@ -140,7 +196,7 @@ impl GmailConnector {
             .list_messages(&connection.access_token, self.config.max_messages)
             .await?;
         let facts = ingestor
-            .ingest_account_snapshot(&profile, &labels, &messages)
+            .ingest_account_snapshot(&profile, &send_as_addresses, &labels, &messages)
             .await?;
         store
             .save_gmail_sync_success(connection.id, profile.history_id.as_deref())

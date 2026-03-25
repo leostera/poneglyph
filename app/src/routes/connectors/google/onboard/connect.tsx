@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   findConnectorStatus,
   useConnectorStatusesQuery,
+  useGmailConnectionsQuery,
   useGoogleCalendarConnectionsQuery,
 } from "@/features/connectors/queries";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -18,16 +19,20 @@ function GoogleConnectorOnboardingConnectPage() {
   const destination = search.destination ?? "gcal";
   const navigate = useNavigate();
   const statusesQuery = useConnectorStatusesQuery({ refetchInterval: 1_000 });
-  const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(true);
+  const gcalConnectionsQuery = useGoogleCalendarConnectionsQuery(destination === "gcal");
+  const gmailConnectionsQuery = useGmailConnectionsQuery(destination === "gmail");
   const statusConnector = destination === "gmail" ? "gmail" : "gcal";
   const googleStatus = findConnectorStatus(statusesQuery.data, statusConnector);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [knownLatestConnectionId, setKnownLatestConnectionId] = useState<number | null>(null);
 
   const latestConnection = useMemo(() => {
-    const connections = googleConnectionsQuery.data ?? [];
+    const connections =
+      destination === "gmail"
+        ? (gmailConnectionsQuery.data ?? [])
+        : (gcalConnectionsQuery.data ?? []);
     return connections[0] ?? null;
-  }, [googleConnectionsQuery.data]);
+  }, [destination, gcalConnectionsQuery.data, gmailConnectionsQuery.data]);
   const isGmailDestination = destination === "gmail";
 
   useEffect(() => {
@@ -63,11 +68,15 @@ function GoogleConnectorOnboardingConnectPage() {
       return;
     }
     const interval = setInterval(() => {
-      void googleConnectionsQuery.refetch();
+      if (destination === "gmail") {
+        void gmailConnectionsQuery.refetch();
+      } else {
+        void gcalConnectionsQuery.refetch();
+      }
       void statusesQuery.refetch();
     }, 1_000);
     return () => clearInterval(interval);
-  }, [googleConnectionsQuery, isAuthorizing, statusesQuery]);
+  }, [destination, gcalConnectionsQuery, gmailConnectionsQuery, isAuthorizing, statusesQuery]);
 
   return (
     <div className="space-y-6">
@@ -91,7 +100,10 @@ function GoogleConnectorOnboardingConnectPage() {
               onClick={() => {
                 setKnownLatestConnectionId(latestConnection?.id ?? null);
                 setIsAuthorizing(true);
-                openExternalLink(`${window.poneglyph.apiBaseUrl}/auth/google/login`);
+                const connector = destination === "gmail" ? "gmail" : "gcal";
+                openExternalLink(
+                  `${window.poneglyph.apiBaseUrl}/auth/google/login?connector=${connector}`,
+                );
               }}
               size="sm"
             >
