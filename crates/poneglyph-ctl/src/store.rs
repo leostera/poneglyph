@@ -1075,6 +1075,10 @@ mod tests {
             .save_google_calendar_sync_success(connection.id, "primary", Some("sync-token"))
             .await
             .expect("saved sync state");
+        store
+            .save_gmail_sync_success(connection.id, Some("history-1"))
+            .await
+            .expect("saved gmail sync state");
 
         let deleted = store
             .delete_google_oauth_connection(connection.id)

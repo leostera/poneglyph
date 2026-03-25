@@ -4,7 +4,8 @@ use derive_builder::Builder;
 use poneglyph::{Fact, Poneglyph};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing::{info, warn};
+use tokio::time::{Duration, sleep};
+use tracing::{debug, info, warn};
 
 use crate::{CtlResult, CtlStore, GoogleOAuthConnection};
 
@@ -19,6 +20,9 @@ pub struct GmailConfig {
     #[serde(default = "default_max_messages")]
     #[builder(default = "default_max_messages()")]
     pub max_messages: usize,
+    #[serde(default = "default_poll_interval_seconds")]
+    #[builder(default = "default_poll_interval_seconds()")]
+    pub poll_interval_seconds: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -53,65 +57,102 @@ impl GmailConnector {
         poneglyph: Arc<Poneglyph>,
         fact_tx: mpsc::Sender<Vec<Fact>>,
     ) -> CtlResult<()> {
-        let connections = store.list_google_oauth_connections().await?;
-        if connections.is_empty() {
-            info!("gmail connector has no saved google oauth connections");
-            return Ok(());
-        }
-
         let client = GmailClient::default();
         let ingestor = GmailIngestor::new(poneglyph);
-        let mut facts = Vec::new();
+        let poll_interval = Duration::from_secs(self.config.poll_interval_seconds);
+        info!(
+            poll_interval_seconds = self.config.poll_interval_seconds,
+            max_messages = self.config.max_messages,
+            "gmail connector started continuous sync poller"
+        );
 
-        for connection in connections {
-            match self
-                .ingest_connection(&client, &ingestor, &connection)
-                .await
-            {
-                Ok(connection_facts) => {
-                    facts.extend(connection_facts);
-                }
-                Err(error) => {
-                    warn!(
-                        connection_id = connection.id,
-                        %error,
-                        "gmail connector skipped oauth connection due to sync error"
-                    );
+        loop {
+            let connections = store.list_google_oauth_connections().await?;
+            if connections.is_empty() {
+                debug!("gmail connector has no saved google oauth connections");
+                sleep(poll_interval).await;
+                continue;
+            }
+
+            for connection in connections {
+                match self
+                    .ingest_connection(&client, &ingestor, &store, &connection)
+                    .await
+                {
+                    Ok(None) => {
+                        debug!(
+                            connection_id = connection.id,
+                            "gmail connector detected no new mailbox changes"
+                        );
+                    }
+                    Ok(Some(connection_facts)) => {
+                        let fact_count = connection_facts.len();
+                        if fact_count == 0 {
+                            continue;
+                        }
+                        fact_tx
+                            .send(connection_facts)
+                            .await
+                            .map_err(|error| crate::CtlError::GmailRequest(error.to_string()))?;
+                        info!(
+                            connection_id = connection.id,
+                            fact_count, "gmail connector emitted incremental fact batch"
+                        );
+                    }
+                    Err(error) => {
+                        warn!(
+                            connection_id = connection.id,
+                            %error,
+                            "gmail connector skipped oauth connection due to sync error"
+                        );
+                        let _ = store
+                            .save_gmail_sync_failure(connection.id, &error.to_string())
+                            .await;
+                    }
                 }
             }
-        }
 
-        if facts.is_empty() {
-            info!("gmail connector produced no facts");
-            return Ok(());
+            sleep(poll_interval).await;
         }
-
-        let fact_count = facts.len();
-        fact_tx
-            .send(facts)
-            .await
-            .map_err(|error| crate::CtlError::GmailRequest(error.to_string()))?;
-        info!(fact_count, "gmail connector emitted fact batch");
-        Ok(())
     }
 
     async fn ingest_connection(
         &self,
         client: &GmailClient,
         ingestor: &GmailIngestor,
+        store: &CtlStore,
         connection: &GoogleOAuthConnection,
-    ) -> CtlResult<Vec<Fact>> {
+    ) -> CtlResult<Option<Vec<Fact>>> {
         let profile = client.profile(&connection.access_token).await?;
+        let saved_history_id = store
+            .gmail_sync_state(connection.id)
+            .await?
+            .and_then(|state| state.last_history_id);
+        if saved_history_id.is_some() && saved_history_id == profile.history_id {
+            store
+                .save_gmail_sync_success(connection.id, profile.history_id.as_deref())
+                .await?;
+            return Ok(None);
+        }
+
         let labels = client.list_labels(&connection.access_token).await?;
         let messages = client
             .list_messages(&connection.access_token, self.config.max_messages)
             .await?;
-        ingestor
+        let facts = ingestor
             .ingest_account_snapshot(&profile, &labels, &messages)
-            .await
+            .await?;
+        store
+            .save_gmail_sync_success(connection.id, profile.history_id.as_deref())
+            .await?;
+        Ok(Some(facts))
     }
 }
 
 const fn default_max_messages() -> usize {
     200
+}
+
+const fn default_poll_interval_seconds() -> u64 {
+    30
 }
