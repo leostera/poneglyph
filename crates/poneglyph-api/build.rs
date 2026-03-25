@@ -27,6 +27,12 @@ type ConnectorSyncResult {
   message: String!
 }
 
+type EntitySummary {
+  uri: String!
+  namespace: String!
+  kind: String!
+}
+
 type GmailConnectionSummary {
   connectionId: Int!
   sendingAddresses: [String!]!
@@ -53,6 +59,12 @@ type GoogleCalendarResource {
   timeZone: String
   primary: Boolean!
   selected: Boolean!
+}
+
+type KnowledgeGraphSchema {
+  namespaces: [SchemaNamespace!]!
+  kinds: [SchemaKind!]!
+  fields: [SchemaField!]!
 }
 
 type Mutation {
@@ -89,6 +101,9 @@ type Query {
   detectLocalPlexConnection: PlexDetection!
   gmailConnections: [GoogleCalendarConnection!]!
   gmailConnectionSummary(connectionId: Int!): GmailConnectionSummary!
+  entities(limit: Int, offset: Int): [EntitySummary!]!
+  schemaDefinition: KnowledgeGraphSchema!
+  entityKinds: [String!]!
 }
 
 input SavePlexConnectionInput {
@@ -96,6 +111,23 @@ input SavePlexConnectionInput {
   baseUrl: String!
   token: String!
   libraries: [String!]!
+}
+
+type SchemaField {
+  uri: String!
+  name: String
+  domain: String
+  range: String
+}
+
+type SchemaKind {
+  uri: String!
+  name: String
+}
+
+type SchemaNamespace {
+  uri: String!
+  name: String
 }
 
 input SelectGoogleCalendarsInput {

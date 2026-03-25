@@ -80,6 +80,10 @@ impl Poneglyph {
         self.search_projection.search(query, limit)
     }
 
+    pub async fn list_entities(&self, limit: usize, offset: usize) -> PoneResult<Vec<Entity>> {
+        self.entity_store.list_entities(limit, offset).await
+    }
+
     pub async fn get_schema(&self) -> PoneResult<SchemaDefinition> {
         self.fact_service.get_schema().await
     }

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as EntitiesRouteImport } from './routes/entities'
 import { Route as ConnectorsRouteRouteImport } from './routes/connectors/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConnectorsIndexRouteImport } from './routes/connectors/index'
@@ -23,6 +24,11 @@ import { Route as ConnectorsGoogleOnboardSelectRouteImport } from './routes/conn
 import { Route as ConnectorsGoogleOnboardDiscoverRouteImport } from './routes/connectors/google/onboard/discover'
 import { Route as ConnectorsGoogleOnboardConnectRouteImport } from './routes/connectors/google/onboard/connect'
 
+const EntitiesRoute = EntitiesRouteImport.update({
+  id: '/entities',
+  path: '/entities',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConnectorsRouteRoute = ConnectorsRouteRouteImport.update({
   id: '/connectors',
   path: '/connectors',
@@ -100,6 +106,7 @@ const ConnectorsGoogleOnboardConnectRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/connectors': typeof ConnectorsRouteRouteWithChildren
+  '/entities': typeof EntitiesRoute
   '/connectors/$connectorId': typeof ConnectorsConnectorIdRouteRouteWithChildren
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/entities': typeof EntitiesRoute
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
   '/connectors': typeof ConnectorsIndexRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/connectors': typeof ConnectorsRouteRouteWithChildren
+  '/entities': typeof EntitiesRoute
   '/connectors/$connectorId': typeof ConnectorsConnectorIdRouteRouteWithChildren
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/connectors'
+    | '/entities'
     | '/connectors/$connectorId'
     | '/connectors/add'
     | '/connectors/new'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/entities'
     | '/connectors/add'
     | '/connectors/new'
     | '/connectors'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/connectors'
+    | '/entities'
     | '/connectors/$connectorId'
     | '/connectors/add'
     | '/connectors/new'
@@ -188,10 +200,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConnectorsRouteRoute: typeof ConnectorsRouteRouteWithChildren
+  EntitiesRoute: typeof EntitiesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/entities': {
+      id: '/entities'
+      path: '/entities'
+      fullPath: '/entities'
+      preLoaderRoute: typeof EntitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/connectors': {
       id: '/connectors'
       path: '/connectors'
@@ -346,6 +366,7 @@ const ConnectorsRouteRouteWithChildren = ConnectorsRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConnectorsRouteRoute: ConnectorsRouteRouteWithChildren,
+  EntitiesRoute: EntitiesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

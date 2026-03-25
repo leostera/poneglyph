@@ -33,6 +33,13 @@ export type ConnectorSyncResult = {
   synced: Scalars['Boolean']['output'];
 };
 
+export type EntitySummary = {
+  __typename?: 'EntitySummary';
+  kind: Scalars['String']['output'];
+  namespace: Scalars['String']['output'];
+  uri: Scalars['String']['output'];
+};
+
 export type GmailConnectionSummary = {
   __typename?: 'GmailConnectionSummary';
   connectionId: Scalars['Int']['output'];
@@ -62,6 +69,13 @@ export type GoogleCalendarResource = {
   selected: Scalars['Boolean']['output'];
   summary: Scalars['String']['output'];
   timeZone?: Maybe<Scalars['String']['output']>;
+};
+
+export type KnowledgeGraphSchema = {
+  __typename?: 'KnowledgeGraphSchema';
+  fields: Array<SchemaField>;
+  kinds: Array<SchemaKind>;
+  namespaces: Array<SchemaNamespace>;
 };
 
 export type Mutation = {
@@ -139,11 +153,20 @@ export type Query = {
   __typename?: 'Query';
   connectorStatuses: Array<ConnectorStatus>;
   detectLocalPlexConnection: PlexDetection;
+  entities: Array<EntitySummary>;
+  entityKinds: Array<Scalars['String']['output']>;
   gmailConnectionSummary: GmailConnectionSummary;
   gmailConnections: Array<GoogleCalendarConnection>;
   googleCalendarConnections: Array<GoogleCalendarConnection>;
   googleCalendars: Array<GoogleCalendarResource>;
   plexConnections: Array<PlexConnection>;
+  schemaDefinition: KnowledgeGraphSchema;
+};
+
+
+export type QueryEntitiesArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -156,6 +179,26 @@ export type SavePlexConnectionInput = {
   libraries: Array<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   token: Scalars['String']['input'];
+};
+
+export type SchemaField = {
+  __typename?: 'SchemaField';
+  domain?: Maybe<Scalars['String']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+  range?: Maybe<Scalars['String']['output']>;
+  uri: Scalars['String']['output'];
+};
+
+export type SchemaKind = {
+  __typename?: 'SchemaKind';
+  name?: Maybe<Scalars['String']['output']>;
+  uri: Scalars['String']['output'];
+};
+
+export type SchemaNamespace = {
+  __typename?: 'SchemaNamespace';
+  name?: Maybe<Scalars['String']['output']>;
+  uri: Scalars['String']['output'];
 };
 
 export type SelectGoogleCalendarsInput = {
@@ -188,6 +231,24 @@ export type GmailConnectionSummaryQueryVariables = Exact<{
 
 
 export type GmailConnectionSummaryQuery = { __typename?: 'Query', gmailConnectionSummary: { __typename?: 'GmailConnectionSummary', connectionId: number, sendingAddresses: Array<string>, mailboxes: Array<string>, labels: Array<string>, emails: Array<string>, lastEmailReceivedAt?: string | null } };
+
+export type EntitiesQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type EntitiesQuery = { __typename?: 'Query', entities: Array<{ __typename?: 'EntitySummary', uri: string, namespace: string, kind: string }> };
+
+export type KnowledgeGraphSchemaQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type KnowledgeGraphSchemaQuery = { __typename?: 'Query', schemaDefinition: { __typename?: 'KnowledgeGraphSchema', namespaces: Array<{ __typename?: 'SchemaNamespace', uri: string, name?: string | null }>, kinds: Array<{ __typename?: 'SchemaKind', uri: string, name?: string | null }>, fields: Array<{ __typename?: 'SchemaField', uri: string, name?: string | null, domain?: string | null, range?: string | null }> } };
+
+export type EntityKindsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type EntityKindsQuery = { __typename?: 'Query', entityKinds: Array<string> };
 
 export type PlexConnectionsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -268,6 +329,9 @@ export const GoogleCalendarsDocument = {"kind":"Document","definitions":[{"kind"
 export const GoogleCalendarConnectionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GoogleCalendarConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"googleCalendarConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"selectedResourceCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}},{"kind":"Field","name":{"kind":"Name","value":"calendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]}}]} as unknown as DocumentNode<GoogleCalendarConnectionsQuery, GoogleCalendarConnectionsQueryVariables>;
 export const GmailConnectionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GmailConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"gmailConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"selectedResourceCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}},{"kind":"Field","name":{"kind":"Name","value":"calendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]}}]} as unknown as DocumentNode<GmailConnectionsQuery, GmailConnectionsQueryVariables>;
 export const GmailConnectionSummaryDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GmailConnectionSummary"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"gmailConnectionSummary"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"connectionId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"sendingAddresses"}},{"kind":"Field","name":{"kind":"Name","value":"mailboxes"}},{"kind":"Field","name":{"kind":"Name","value":"labels"}},{"kind":"Field","name":{"kind":"Name","value":"emails"}},{"kind":"Field","name":{"kind":"Name","value":"lastEmailReceivedAt"}}]}}]}}]} as unknown as DocumentNode<GmailConnectionSummaryQuery, GmailConnectionSummaryQueryVariables>;
+export const EntitiesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Entities"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"offset"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"entities"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}},{"kind":"Argument","name":{"kind":"Name","value":"offset"},"value":{"kind":"Variable","name":{"kind":"Name","value":"offset"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"namespace"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}}]}}]}}]} as unknown as DocumentNode<EntitiesQuery, EntitiesQueryVariables>;
+export const KnowledgeGraphSchemaDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"KnowledgeGraphSchema"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"schemaDefinition"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"namespaces"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"kinds"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"fields"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"domain"}},{"kind":"Field","name":{"kind":"Name","value":"range"}}]}}]}}]}}]} as unknown as DocumentNode<KnowledgeGraphSchemaQuery, KnowledgeGraphSchemaQueryVariables>;
+export const EntityKindsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"EntityKinds"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"entityKinds"}}]}}]} as unknown as DocumentNode<EntityKindsQuery, EntityKindsQueryVariables>;
 export const PlexConnectionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"PlexConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"plexConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"baseUrl"}},{"kind":"Field","name":{"kind":"Name","value":"libraries"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}}]}}]}}]} as unknown as DocumentNode<PlexConnectionsQuery, PlexConnectionsQueryVariables>;
 export const DetectLocalPlexConnectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"DetectLocalPlexConnection"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"detectLocalPlexConnection"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"baseUrl"}},{"kind":"Field","name":{"kind":"Name","value":"token"}}]}}]}}]} as unknown as DocumentNode<DetectLocalPlexConnectionQuery, DetectLocalPlexConnectionQueryVariables>;
 export const DiscoverGoogleCalendarsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DiscoverGoogleCalendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"discoverGoogleCalendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]} as unknown as DocumentNode<DiscoverGoogleCalendarsMutation, DiscoverGoogleCalendarsMutationVariables>;

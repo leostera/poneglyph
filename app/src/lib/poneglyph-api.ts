@@ -6,10 +6,12 @@ import {
   DiscoverGoogleCalendarsDocument,
   DiscoverGoogleCalendarsForConnectionDocument,
   DiscoverPlexLibrariesDocument,
+  EntitiesDocument,
   GmailConnectionSummaryDocument,
   GmailConnectionsDocument,
   GoogleCalendarConnectionsDocument,
   GoogleCalendarsDocument,
+  KnowledgeGraphSchemaDocument,
   PlexConnectionsDocument,
   SavePlexConnectionDocument,
   SelectGoogleCalendarsDocument,
@@ -25,6 +27,7 @@ type GraphqlEnvelope<TData> = {
   errors?: Array<{ message?: string }>;
 };
 
+const DEFAULT_LOCAL_API_BASE_URL = "http://127.0.0.1:8787";
 const CONNECTOR_NAMES = ["plex", "gcal", "gmail"] as const;
 
 export type ConnectorName = (typeof CONNECTOR_NAMES)[number];
@@ -41,6 +44,10 @@ export type GmailConnection = ResultOf<typeof GmailConnectionsDocument>["gmailCo
 export type GmailConnectionSummary = ResultOf<
   typeof GmailConnectionSummaryDocument
 >["gmailConnectionSummary"];
+export type EntitySummary = ResultOf<typeof EntitiesDocument>["entities"][number];
+export type KnowledgeGraphSchema = ResultOf<
+  typeof KnowledgeGraphSchemaDocument
+>["schemaDefinition"];
 export type PlexConnection = ResultOf<typeof PlexConnectionsDocument>["plexConnections"][number];
 export type PlexDetection = ResultOf<
   typeof DetectLocalPlexConnectionDocument
@@ -79,6 +86,16 @@ export async function getGmailConnectionSummary(connectionId: number) {
 export async function getPlexConnections() {
   const data = await graphqlRequest(PlexConnectionsDocument);
   return data.plexConnections;
+}
+
+export async function getEntities(limit = 250, offset = 0) {
+  const data = await graphqlRequest(EntitiesDocument, { limit, offset });
+  return data.entities;
+}
+
+export async function getKnowledgeGraphSchema() {
+  const data = await graphqlRequest(KnowledgeGraphSchemaDocument);
+  return data.schemaDefinition;
 }
 
 export async function detectLocalPlexConnection() {
@@ -155,7 +172,7 @@ async function graphqlRequest<TData, TVariables>(
   document: TypedDocumentNode<TData, TVariables>,
   variables?: VariablesOf<TypedDocumentNode<TData, TVariables>>,
 ): Promise<TData> {
-  const response = await fetch(`${window.poneglyph.apiBaseUrl}/gql`, {
+  const response = await fetch(`${resolveApiBaseUrl()}/gql`, {
     method: "POST",
     headers: {
       accept: "application/json",
@@ -186,4 +203,12 @@ async function graphqlRequest<TData, TVariables>(
   }
 
   return payload.data;
+}
+
+function resolveApiBaseUrl(): string {
+  if (typeof window === "undefined") {
+    return DEFAULT_LOCAL_API_BASE_URL;
+  }
+
+  return window.poneglyph?.apiBaseUrl ?? DEFAULT_LOCAL_API_BASE_URL;
 }

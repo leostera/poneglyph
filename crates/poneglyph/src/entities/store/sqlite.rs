@@ -116,6 +116,34 @@ impl EntityStore for SqliteEntityStore {
         })
         .transpose()
     }
+
+    async fn list_entities(&self, limit: usize, offset: usize) -> PoneResult<Vec<Entity>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT uri, namespace, kind, fields_json
+            FROM entities
+            ORDER BY uri
+            LIMIT ?1 OFFSET ?2
+            "#,
+        )
+        .bind(limit as i64)
+        .bind(offset as i64)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter()
+            .map(|row| {
+                Ok(Entity {
+                    uri: Uri::parse(row.try_get::<String, _>("uri")?)?,
+                    namespace: row.try_get("namespace")?,
+                    kind: row.try_get("kind")?,
+                    fields: serde_json::from_str(
+                        row.try_get::<String, _>("fields_json")?.as_str(),
+                    )?,
+                })
+            })
+            .collect()
+    }
 }
 
 fn resolve_db_path(path: &Path) -> PathBuf {

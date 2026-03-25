@@ -18,6 +18,13 @@ pub struct SearchHit {
     pub score: f32,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexedEntity {
+    pub entity_uri: Uri,
+    pub namespace: String,
+    pub kind: String,
+}
+
 #[derive(Clone, Copy)]
 struct SearchFields {
     entity_uri: tantivy::schema::Field,
@@ -74,6 +81,41 @@ impl SearchProjection {
             .collect::<PoneResult<Vec<_>>>()?;
         debug!(hit_count = hits.len(), "search query evaluated");
         Ok(hits)
+    }
+
+    pub fn list_entities(&self, limit: usize, offset: usize) -> PoneResult<Vec<IndexedEntity>> {
+        let searcher = self.reader.searcher();
+        let query = tantivy::query::AllQuery;
+        let hits = searcher.search(&query, &TopDocs::with_limit(limit).and_offset(offset))?;
+
+        let entities = hits
+            .into_iter()
+            .map(|(_, address)| {
+                let retrieved = searcher.doc::<TantivyDocument>(address)?;
+                let uri = retrieved
+                    .get_first(self.fields.entity_uri)
+                    .and_then(|value| value.as_str())
+                    .ok_or_else(|| Error::MissingSearchProjectionEntityUri)?;
+                let namespace = retrieved
+                    .get_first(self.fields.namespace)
+                    .and_then(|value| value.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                let kind = retrieved
+                    .get_first(self.fields.kind)
+                    .and_then(|value| value.as_str())
+                    .unwrap_or_default()
+                    .to_string();
+                Ok(IndexedEntity {
+                    entity_uri: Uri::parse(uri)?,
+                    namespace,
+                    kind,
+                })
+            })
+            .collect::<PoneResult<Vec<_>>>()?;
+
+        debug!(entity_count = entities.len(), "listed indexed entities");
+        Ok(entities)
     }
 
     fn open_index(index: Index, fields: SearchFields) -> PoneResult<Self> {

@@ -49,6 +49,17 @@ impl EntityStore for InMemoryEntityStore {
             .get(entity_uri)
             .map(|(entity, _)| entity.clone()))
     }
+
+    async fn list_entities(&self, limit: usize, offset: usize) -> PoneResult<Vec<Entity>> {
+        let state = self.state.lock().expect("entity store lock");
+        Ok(state
+            .entities
+            .values()
+            .map(|(entity, _)| entity.clone())
+            .skip(offset)
+            .take(limit)
+            .collect())
+    }
 }
 
 #[cfg(test)]

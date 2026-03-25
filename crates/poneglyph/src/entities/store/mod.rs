@@ -14,4 +14,5 @@ pub trait EntityStore: Send + Sync {
     -> PoneResult<()>;
     async fn delete_entity(&self, entity_uri: &Uri) -> PoneResult<()>;
     async fn get_entity(&self, entity_uri: &Uri) -> PoneResult<Option<Entity>>;
+    async fn list_entities(&self, limit: usize, offset: usize) -> PoneResult<Vec<Entity>>;
 }

@@ -19,7 +19,7 @@ import {
 import { sidebarConnectorItems } from "@/features/connectors/catalog";
 import { useConnectorStatusesQuery } from "@/features/connectors/queries";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { AppWindow, Cable, MoreHorizontal, Plus, Search } from "lucide-react";
+import { AppWindow, Cable, GitBranch, MoreHorizontal, Plus, Search } from "lucide-react";
 import type React from "react";
 
 export default function BaseLayout({
@@ -61,6 +61,19 @@ export default function BaseLayout({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    className="h-auto rounded-[3px] px-3 py-2 text-sm"
+                    isActive={pathname === "/entities"}
+                    size="lg"
+                  >
+                    <Link to="/entities">
+                      <GitBranch className="size-4" />
+                      <span className="font-medium">Knowledge graph</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild

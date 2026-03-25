@@ -82,6 +82,43 @@ export const GmailConnectionSummaryDocument = graphql(`
   }
 `);
 
+export const EntitiesDocument = graphql(`
+  query Entities($limit: Int, $offset: Int) {
+    entities(limit: $limit, offset: $offset) {
+      uri
+      namespace
+      kind
+    }
+  }
+`);
+
+export const KnowledgeGraphSchemaDocument = graphql(`
+  query KnowledgeGraphSchema {
+    schemaDefinition {
+      namespaces {
+        uri
+        name
+      }
+      kinds {
+        uri
+        name
+      }
+      fields {
+        uri
+        name
+        domain
+        range
+      }
+    }
+  }
+`);
+
+export const EntityKindsDocument = graphql(`
+  query EntityKinds {
+    entityKinds
+  }
+`);
+
 export const PlexConnectionsDocument = graphql(`
   query PlexConnections {
     plexConnections {

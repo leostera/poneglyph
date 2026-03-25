@@ -41,8 +41,8 @@ pub use error::{Error, PoneResult};
 pub use fact::{Builder, Fact, Filter};
 pub use facts::{FactService, FactServiceBuilder, InMemoryFactStore, SqliteFactStore, Store};
 pub use projections::{
-    Projection, ProjectionBatch, ProjectionRunner, ProjectionRunnerBuilder, SearchHit,
-    SearchProjection,
+    IndexedEntity, Projection, ProjectionBatch, ProjectionRunner, ProjectionRunnerBuilder,
+    SearchHit, SearchProjection,
 };
 pub use query::{Query, QueryEngine, QueryResult};
 pub use runtime::{Poneglyph, PoneglyphBuilder};

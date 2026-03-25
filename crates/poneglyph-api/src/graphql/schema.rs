@@ -9,7 +9,7 @@ use axum::{
 
 use crate::{
     context::AppContext,
-    services::{google, plex},
+    services::{entities, google, plex},
 };
 
 pub(crate) type ApiSchema = Schema<ApiQuery, ApiMutation, EmptySubscription>;
@@ -86,6 +86,45 @@ struct GmailConnectionSummaryObject {
     labels: Vec<String>,
     emails: Vec<String>,
     last_email_received_at: Option<String>,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "EntitySummary")]
+struct EntitySummaryObject {
+    uri: String,
+    namespace: String,
+    kind: String,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "SchemaNamespace")]
+struct SchemaNamespaceObject {
+    uri: String,
+    name: Option<String>,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "SchemaKind")]
+struct SchemaKindObject {
+    uri: String,
+    name: Option<String>,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "SchemaField")]
+struct SchemaFieldObject {
+    uri: String,
+    name: Option<String>,
+    domain: Option<String>,
+    range: Option<String>,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "KnowledgeGraphSchema")]
+struct KnowledgeGraphSchemaObject {
+    namespaces: Vec<SchemaNamespaceObject>,
+    kinds: Vec<SchemaKindObject>,
+    fields: Vec<SchemaFieldObject>,
 }
 
 #[derive(InputObject)]
@@ -178,6 +217,42 @@ impl ApiQuery {
         google::gmail_connection_summary(app, connection_id)
             .await
             .map(map_gmail_connection_summary)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn entities(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        limit: Option<i32>,
+        offset: Option<i32>,
+    ) -> Result<Vec<EntitySummaryObject>> {
+        let app = ctx.data::<AppContext>()?;
+        let limit = limit.unwrap_or(250).clamp(1, 1_000) as usize;
+        let offset = offset.unwrap_or(0).max(0) as usize;
+        entities::EntityService::new(app)
+            .list_entities(limit, offset)
+            .await
+            .map(map_entity_summaries)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn schema_definition(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+    ) -> Result<KnowledgeGraphSchemaObject> {
+        let app = ctx.data::<AppContext>()?;
+        entities::EntityService::new(app)
+            .schema_definition()
+            .await
+            .map(map_schema_definition)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn entity_kinds(&self, ctx: &async_graphql::Context<'_>) -> Result<Vec<String>> {
+        let app = ctx.data::<AppContext>()?;
+        entities::EntityService::new(app)
+            .entity_kinds()
+            .await
             .map_err(async_graphql::Error::new)
     }
 }
@@ -397,6 +472,48 @@ fn map_gmail_connection_summary(
         last_email_received_at: summary
             .last_email_received_at
             .map(|value| value.to_rfc3339()),
+    }
+}
+
+fn map_entity_summaries(summaries: Vec<entities::EntitySummary>) -> Vec<EntitySummaryObject> {
+    summaries
+        .into_iter()
+        .map(|summary| EntitySummaryObject {
+            uri: summary.uri,
+            namespace: summary.namespace,
+            kind: summary.kind,
+        })
+        .collect()
+}
+
+fn map_schema_definition(schema: entities::SchemaDefinition) -> KnowledgeGraphSchemaObject {
+    KnowledgeGraphSchemaObject {
+        namespaces: schema
+            .namespaces
+            .into_iter()
+            .map(|namespace| SchemaNamespaceObject {
+                uri: namespace.uri,
+                name: namespace.name,
+            })
+            .collect(),
+        kinds: schema
+            .kinds
+            .into_iter()
+            .map(|kind| SchemaKindObject {
+                uri: kind.uri,
+                name: kind.name,
+            })
+            .collect(),
+        fields: schema
+            .fields
+            .into_iter()
+            .map(|field| SchemaFieldObject {
+                uri: field.uri,
+                name: field.name,
+                domain: field.domain,
+                range: field.range,
+            })
+            .collect(),
     }
 }
 
