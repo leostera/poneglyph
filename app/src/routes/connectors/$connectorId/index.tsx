@@ -662,14 +662,34 @@ function ConnectorDetailPage() {
                           </div>
                           <div className="flex items-center justify-between gap-4 px-4 py-3">
                             <dt className="text-sm text-muted-foreground">Mailboxes</dt>
-                            <dd className="max-w-[60%] text-right text-sm font-medium">
-                              {(gmailSummaryQuery.data?.mailboxes ?? []).join(", ") || "None"}
+                            <dd className="max-w-[60%]">
+                              {gmailSummaryQuery.data?.mailboxes?.length ? (
+                                <div className="flex flex-wrap justify-end gap-1.5">
+                                  {gmailSummaryQuery.data.mailboxes.map((mailbox) => (
+                                    <Badge key={mailbox} variant="secondary">
+                                      {mailbox}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-right text-sm font-medium">None</div>
+                              )}
                             </dd>
                           </div>
                           <div className="flex items-center justify-between gap-4 px-4 py-3">
                             <dt className="text-sm text-muted-foreground">Labels</dt>
-                            <dd className="max-w-[60%] text-right text-sm font-medium">
-                              {(gmailSummaryQuery.data?.labels ?? []).join(", ") || "None"}
+                            <dd className="max-w-[60%]">
+                              {gmailSummaryQuery.data?.labels?.length ? (
+                                <div className="flex flex-wrap justify-end gap-1.5">
+                                  {gmailSummaryQuery.data.labels.map((label) => (
+                                    <Badge key={label} variant="outline">
+                                      {label}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-right text-sm font-medium">None</div>
+                              )}
                             </dd>
                           </div>
                           <div className="flex items-center justify-between gap-4 px-4 py-3">

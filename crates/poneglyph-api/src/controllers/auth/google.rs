@@ -202,7 +202,18 @@ async fn callback_with_code_and_state(context: AppContext, query: GoogleCallback
             "validated and persisted google oauth callback"
         );
         if has_gmail_read_scope(&saved.scopes) {
-            bootstrap_gmail_metadata_sync(&context, saved.id).await;
+            if let Err(error) = bootstrap_gmail_metadata_sync(&context, saved.id).await {
+                let _ = context.ctl.delete_google_oauth_connection(saved.id).await;
+                return (
+                    StatusCode::BAD_GATEWAY,
+                    Json(GoogleCallbackError {
+                        error: format!(
+                            "google oauth callback saved connection but initial gmail sync failed: {error}"
+                        ),
+                    }),
+                )
+                    .into_response();
+            }
         }
         if let Some(handoff_uri) = pending.handoff_uri {
             let grant = context.issue_google_auth_grant(saved).await;
@@ -354,7 +365,18 @@ async fn callback_with_grant(context: AppContext, grant_id: String) -> Response 
         "redeemed and persisted google oauth handoff locally"
     );
     if has_gmail_read_scope(&saved.scopes) {
-        bootstrap_gmail_metadata_sync(&context, saved.id).await;
+        if let Err(error) = bootstrap_gmail_metadata_sync(&context, saved.id).await {
+            let _ = context.ctl.delete_google_oauth_connection(saved.id).await;
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(GoogleCallbackError {
+                    error: format!(
+                        "google oauth handoff persisted connection but initial gmail sync failed: {error}"
+                    ),
+                }),
+            )
+                .into_response();
+        }
     }
 
     (StatusCode::OK, views::auth::login_successful("Google")).into_response()
@@ -415,19 +437,15 @@ fn build_handoff_redirect(handoff_uri: &str, grant_id: &str) -> Result<String, u
     Ok(url.to_string())
 }
 
-async fn bootstrap_gmail_metadata_sync(context: &AppContext, connection_id: i64) {
+async fn bootstrap_gmail_metadata_sync(
+    context: &AppContext,
+    connection_id: i64,
+) -> Result<usize, String> {
     let config = context.ctl_config.gmail.clone().unwrap_or_default();
     let connector = match GmailConnector::init(config) {
         Ok(connector) => connector,
         Err(error) => {
-            debug!(
-                component = "poneglyph_api",
-                provider = "google",
-                connection_id,
-                %error,
-                "skipping immediate gmail metadata sync: failed to initialize connector"
-            );
-            return;
+            return Err(format!("failed to initialize gmail connector: {error}"));
         }
     };
 
@@ -443,16 +461,9 @@ async fn bootstrap_gmail_metadata_sync(context: &AppContext, connection_id: i64)
                 fact_count,
                 "completed immediate gmail metadata sync after oauth callback"
             );
+            Ok(fact_count)
         }
-        Err(error) => {
-            debug!(
-                component = "poneglyph_api",
-                provider = "google",
-                connection_id,
-                %error,
-                "gmail metadata sync after oauth callback failed"
-            );
-        }
+        Err(error) => Err(error.to_string()),
     }
 }
 

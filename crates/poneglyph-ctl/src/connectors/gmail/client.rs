@@ -118,13 +118,14 @@ impl GmailClient {
         access_token: &str,
         max_results: usize,
     ) -> CtlResult<Vec<GmailMessage>> {
+        let bounded_max_results = max_results.clamp(1, 500);
         let payload: GmailMessageListResponse = self
             .http
             .get(format!(
                 "{}/gmail/v1/users/me/messages",
                 self.base_url.trim_end_matches('/')
             ))
-            .query(&[("maxResults", max_results.to_string())])
+            .query(&[("maxResults", bounded_max_results.to_string())])
             .bearer_auth(access_token)
             .send()
             .await

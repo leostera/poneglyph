@@ -230,12 +230,8 @@ pub(crate) async fn gmail_connection_summary(
     context: &AppContext,
     connection_id: i64,
 ) -> std::result::Result<GmailConnectionSummary, String> {
-    let connection = context
-        .ctl
-        .google_oauth_connection_by_id(connection_id)
-        .await
-        .map_err(|error| format!("failed to load google oauth connection: {error}"))?
-        .ok_or_else(|| format!("google oauth connection not found: {connection_id}"))?;
+    ensure_gmail_bootstrap_snapshot(context, connection_id).await?;
+    let connection = load_google_connection(context, connection_id).await?;
 
     let Some(account_email) = connection.account_email.as_deref() else {
         return Ok(GmailConnectionSummary {
@@ -294,6 +290,41 @@ pub(crate) async fn gmail_connection_summary(
         emails,
         last_email_received_at,
     })
+}
+
+async fn ensure_gmail_bootstrap_snapshot(
+    context: &AppContext,
+    connection_id: i64,
+) -> std::result::Result<(), String> {
+    let sync_state = context
+        .ctl
+        .gmail_sync_state(connection_id)
+        .await
+        .map_err(|error| format!("failed to load gmail sync state: {error}"))?;
+    if sync_state.is_some() {
+        return Ok(());
+    }
+
+    let connector = GmailConnector::init(context.ctl_config.gmail.clone().unwrap_or_default())
+        .map_err(|error| format!("failed to initialize gmail connector: {error}"))?;
+    connector
+        .sync_connection_once(&context.ctl, context.poneglyph.clone(), connection_id)
+        .await
+        .map_err(|error| format!("failed to bootstrap gmail snapshot: {error}"))?;
+
+    Ok(())
+}
+
+async fn load_google_connection(
+    context: &AppContext,
+    connection_id: i64,
+) -> std::result::Result<GoogleOAuthConnection, String> {
+    context
+        .ctl
+        .google_oauth_connection_by_id(connection_id)
+        .await
+        .map_err(|error| format!("failed to load google oauth connection: {error}"))?
+        .ok_or_else(|| format!("google oauth connection not found: {connection_id}"))
 }
 
 async fn latest_google_connection(

@@ -192,9 +192,20 @@ impl GmailConnector {
         }
 
         let labels = client.list_labels(&connection.access_token).await?;
-        let messages = client
+        let messages = match client
             .list_messages(&connection.access_token, self.config.max_messages)
-            .await?;
+            .await
+        {
+            Ok(messages) => messages,
+            Err(error) => {
+                warn!(
+                    connection_id = connection.id,
+                    %error,
+                    "gmail connector could not list messages during snapshot; continuing with profile and labels"
+                );
+                Vec::new()
+            }
+        };
         let facts = ingestor
             .ingest_account_snapshot(&profile, &send_as_addresses, &labels, &messages)
             .await?;
