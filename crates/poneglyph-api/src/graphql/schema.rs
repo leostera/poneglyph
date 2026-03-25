@@ -17,12 +17,24 @@ pub(crate) struct ApiMutation;
 #[derive(SimpleObject)]
 #[graphql(name = "GoogleCalendarResource")]
 struct GoogleCalendarResourceObject {
+    connection_id: i64,
     calendar_id: String,
     summary: String,
     description: Option<String>,
     time_zone: Option<String>,
     primary: bool,
     selected: bool,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "GoogleCalendarConnection")]
+struct GoogleCalendarConnectionObject {
+    id: i64,
+    label: String,
+    selected_resource_count: i32,
+    last_synced_at: Option<String>,
+    last_error: Option<String>,
+    calendars: Vec<GoogleCalendarResourceObject>,
 }
 
 #[derive(SimpleObject)]
@@ -52,6 +64,17 @@ struct SelectGoogleCalendarsInput {
 
 #[Object(name = "Query")]
 impl ApiQuery {
+    async fn google_calendar_connections(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+    ) -> Result<Vec<GoogleCalendarConnectionObject>> {
+        let app = ctx.data::<AppContext>()?;
+        google::list_google_connections(app)
+            .await
+            .map(map_google_connections)
+            .map_err(async_graphql::Error::new)
+    }
+
     async fn google_calendars(
         &self,
         ctx: &async_graphql::Context<'_>,
@@ -88,6 +111,18 @@ impl ApiMutation {
             .map_err(async_graphql::Error::new)
     }
 
+    async fn discover_google_calendars_for_connection(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        connection_id: i64,
+    ) -> Result<Vec<GoogleCalendarResourceObject>> {
+        let app = ctx.data::<AppContext>()?;
+        google::discover_calendars_for_connection(app, connection_id)
+            .await
+            .map(map_google_calendars)
+            .map_err(async_graphql::Error::new)
+    }
+
     async fn select_google_calendars(
         &self,
         ctx: &async_graphql::Context<'_>,
@@ -95,6 +130,19 @@ impl ApiMutation {
     ) -> Result<Vec<GoogleCalendarResourceObject>> {
         let app = ctx.data::<AppContext>()?;
         google::select_calendars(app, &input.calendar_ids)
+            .await
+            .map(map_google_calendars)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn select_google_calendars_for_connection(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        connection_id: i64,
+        input: SelectGoogleCalendarsInput,
+    ) -> Result<Vec<GoogleCalendarResourceObject>> {
+        let app = ctx.data::<AppContext>()?;
+        google::select_calendars_for_connection(app, connection_id, &input.calendar_ids)
             .await
             .map(map_google_calendars)
             .map_err(async_graphql::Error::new)
@@ -143,12 +191,29 @@ fn map_google_calendars(
     calendars
         .into_iter()
         .map(|calendar| GoogleCalendarResourceObject {
+            connection_id: calendar.connection_id,
             calendar_id: calendar.calendar_id,
             summary: calendar.summary,
             description: calendar.description,
             time_zone: calendar.time_zone,
             primary: calendar.primary,
             selected: calendar.selected,
+        })
+        .collect()
+}
+
+fn map_google_connections(
+    connections: Vec<google::GoogleCalendarConnection>,
+) -> Vec<GoogleCalendarConnectionObject> {
+    connections
+        .into_iter()
+        .map(|connection| GoogleCalendarConnectionObject {
+            id: connection.id,
+            label: connection.label,
+            selected_resource_count: connection.selected_resource_count,
+            last_synced_at: connection.last_synced_at.map(|value| value.to_rfc3339()),
+            last_error: connection.last_error,
+            calendars: map_google_calendars(connection.calendars),
         })
         .collect()
 }

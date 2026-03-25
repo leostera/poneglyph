@@ -27,7 +27,17 @@ type ConnectorSyncResult {
   message: String!
 }
 
+type GoogleCalendarConnection {
+  id: Int!
+  label: String!
+  selectedResourceCount: Int!
+  lastSyncedAt: String
+  lastError: String
+  calendars: [GoogleCalendarResource!]!
+}
+
 type GoogleCalendarResource {
+  connectionId: Int!
   calendarId: String!
   summary: String!
   description: String
@@ -38,11 +48,14 @@ type GoogleCalendarResource {
 
 type Mutation {
   discoverGoogleCalendars: [GoogleCalendarResource!]!
+  discoverGoogleCalendarsForConnection(connectionId: Int!): [GoogleCalendarResource!]!
   selectGoogleCalendars(input: SelectGoogleCalendarsInput!): [GoogleCalendarResource!]!
+  selectGoogleCalendarsForConnection(connectionId: Int!, input: SelectGoogleCalendarsInput!): [GoogleCalendarResource!]!
   syncConnector(name: String!): ConnectorSyncResult!
 }
 
 type Query {
+  googleCalendarConnections: [GoogleCalendarConnection!]!
   googleCalendars: [GoogleCalendarResource!]!
   connectorStatuses: [ConnectorStatus!]!
 }

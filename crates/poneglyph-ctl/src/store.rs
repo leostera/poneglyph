@@ -169,7 +169,32 @@ impl CtlStore {
         row.map(decode_google_oauth_connection).transpose()
     }
 
-    async fn google_oauth_connection_by_id(
+    pub async fn list_google_oauth_connections(&self) -> CtlResult<Vec<GoogleOAuthConnection>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                id,
+                access_token,
+                refresh_token,
+                token_type,
+                scopes,
+                expires_at,
+                created_at,
+                updated_at
+            FROM google_oauth_connections
+            ORDER BY id DESC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        rows.into_iter()
+            .map(decode_google_oauth_connection)
+            .collect()
+    }
+
+    pub async fn google_oauth_connection_by_id(
         &self,
         id: i64,
     ) -> CtlResult<Option<GoogleOAuthConnection>> {
@@ -584,6 +609,10 @@ mod tests {
             .await
             .expect("latest")
             .expect("connection");
+        let connections = store
+            .list_google_oauth_connections()
+            .await
+            .expect("connections");
 
         assert_eq!(latest.id, saved.id);
         assert_eq!(latest.access_token, "access-token");
@@ -591,6 +620,8 @@ mod tests {
         assert_eq!(latest.token_type, "Bearer");
         assert_eq!(latest.scopes, vec!["scope:a", "scope:b"]);
         assert_eq!(latest.expires_at, Some(expires_at));
+        assert_eq!(connections.len(), 1);
+        assert_eq!(connections[0].id, saved.id);
     }
 
     #[tokio::test]

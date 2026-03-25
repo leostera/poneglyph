@@ -6,12 +6,23 @@ use crate::context::AppContext;
 
 #[derive(Debug, Clone)]
 pub(crate) struct GoogleCalendarResource {
+    pub connection_id: i64,
     pub calendar_id: String,
     pub summary: String,
     pub description: Option<String>,
     pub time_zone: Option<String>,
     pub primary: bool,
     pub selected: bool,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct GoogleCalendarConnection {
+    pub id: i64,
+    pub label: String,
+    pub selected_resource_count: i32,
+    pub last_synced_at: Option<DateTime<Utc>>,
+    pub last_error: Option<String>,
+    pub calendars: Vec<GoogleCalendarResource>,
 }
 
 #[derive(Debug, Clone)]
@@ -34,13 +45,26 @@ pub(crate) struct ConnectorSyncResult {
 pub(crate) async fn discover_calendars(
     context: &AppContext,
 ) -> std::result::Result<Vec<GoogleCalendarResource>, String> {
+    let connection = latest_google_connection(&context.ctl).await?;
+    discover_calendars_for_connection(context, connection.id).await
+}
+
+pub(crate) async fn discover_calendars_for_connection(
+    context: &AppContext,
+    connection_id: i64,
+) -> std::result::Result<Vec<GoogleCalendarResource>, String> {
     let connector = GcalConnector::init(Default::default())
         .map_err(|error| format!("failed to initialize gcal connector: {error}"))?;
 
     connector
-        .discover_calendars(&context.ctl)
+        .discover_calendars_for_connection_id(&context.ctl, connection_id)
         .await
-        .map(|calendars| calendars.into_iter().map(map_connector_calendar).collect())
+        .map(|calendars| {
+            calendars
+                .into_iter()
+                .map(|calendar| map_connector_calendar(connection_id, calendar))
+                .collect()
+        })
         .map_err(|error| format!("failed to discover google calendars: {error}"))
 }
 
@@ -48,14 +72,22 @@ pub(crate) async fn list_calendars(
     context: &AppContext,
 ) -> std::result::Result<Vec<GoogleCalendarResource>, String> {
     let connection = latest_google_connection(&context.ctl).await?;
+    list_calendars_for_connection(context, connection.id).await
+}
+
+pub(crate) async fn list_calendars_for_connection(
+    context: &AppContext,
+    connection_id: i64,
+) -> std::result::Result<Vec<GoogleCalendarResource>, String> {
     context
         .ctl
-        .list_google_calendar_resources(connection.id)
+        .list_google_calendar_resources(connection_id)
         .await
         .map(|calendars| {
             calendars
                 .into_iter()
                 .map(|calendar| GoogleCalendarResource {
+                    connection_id: calendar.connection_id,
                     calendar_id: calendar.calendar_id,
                     summary: calendar.summary,
                     description: calendar.description,
@@ -73,14 +105,23 @@ pub(crate) async fn select_calendars(
     calendar_ids: &[String],
 ) -> std::result::Result<Vec<GoogleCalendarResource>, String> {
     let connection = latest_google_connection(&context.ctl).await?;
+    select_calendars_for_connection(context, connection.id, calendar_ids).await
+}
+
+pub(crate) async fn select_calendars_for_connection(
+    context: &AppContext,
+    connection_id: i64,
+    calendar_ids: &[String],
+) -> std::result::Result<Vec<GoogleCalendarResource>, String> {
     context
         .ctl
-        .set_google_calendar_selection(connection.id, calendar_ids)
+        .set_google_calendar_selection(connection_id, calendar_ids)
         .await
         .map(|calendars| {
             calendars
                 .into_iter()
                 .map(|calendar| GoogleCalendarResource {
+                    connection_id: calendar.connection_id,
                     calendar_id: calendar.calendar_id,
                     summary: calendar.summary,
                     description: calendar.description,
@@ -91,6 +132,52 @@ pub(crate) async fn select_calendars(
                 .collect()
         })
         .map_err(|error| format!("failed to update google calendar selection: {error}"))
+}
+
+pub(crate) async fn list_google_connections(
+    context: &AppContext,
+) -> std::result::Result<Vec<GoogleCalendarConnection>, String> {
+    let connections = context
+        .ctl
+        .list_google_oauth_connections()
+        .await
+        .map_err(|error| format!("failed to list google oauth connections: {error}"))?;
+
+    let mut result = Vec::with_capacity(connections.len());
+    for connection in connections {
+        let calendars = list_calendars_for_connection(context, connection.id).await?;
+        let mut selected_resource_count = 0;
+        let mut last_synced_at = None;
+        let mut last_error = None;
+
+        for calendar in calendars.iter().filter(|calendar| calendar.selected) {
+            selected_resource_count += 1;
+            let sync_state = context
+                .ctl
+                .google_calendar_sync_state(connection.id, &calendar.calendar_id)
+                .await
+                .map_err(|error| format!("failed to load google calendar sync state: {error}"))?;
+            if let Some(sync_state) = sync_state {
+                update_latest_sync(
+                    &mut last_synced_at,
+                    &mut last_error,
+                    sync_state.last_synced_at,
+                    sync_state.last_error,
+                );
+            }
+        }
+
+        result.push(GoogleCalendarConnection {
+            id: connection.id,
+            label: connection_label(connection.id, &calendars),
+            selected_resource_count,
+            last_synced_at,
+            last_error,
+            calendars,
+        });
+    }
+
+    Ok(result)
 }
 
 async fn latest_google_connection(
@@ -109,17 +196,17 @@ pub(crate) async fn connector_statuses(
     let mut statuses = Vec::new();
 
     if let Some(config) = context.ctl_config.gcal.as_ref() {
-        let connection = context
+        let connections = context
             .ctl
-            .latest_google_oauth_connection()
+            .list_google_oauth_connections()
             .await
-            .map_err(|error| format!("failed to load google oauth connection: {error}"))?;
-        let connected = connection.is_some();
+            .map_err(|error| format!("failed to load google oauth connections: {error}"))?;
+        let connected = !connections.is_empty();
         let mut selected_resource_count = 0;
         let mut last_synced_at = None;
         let mut last_error = None;
 
-        if let Some(connection) = connection {
+        for connection in connections {
             let calendars = context
                 .ctl
                 .list_google_calendar_resources(connection.id)
@@ -245,9 +332,11 @@ fn update_latest_sync(
 }
 
 fn map_connector_calendar(
+    connection_id: i64,
     calendar: poneglyph_ctl::GoogleCalendarResource,
 ) -> GoogleCalendarResource {
     GoogleCalendarResource {
+        connection_id,
         calendar_id: calendar.calendar_id,
         summary: calendar.summary,
         description: calendar.description,
@@ -255,4 +344,13 @@ fn map_connector_calendar(
         primary: calendar.primary,
         selected: false,
     }
+}
+
+fn connection_label(connection_id: i64, calendars: &[GoogleCalendarResource]) -> String {
+    calendars
+        .iter()
+        .find(|calendar| calendar.primary)
+        .or_else(|| calendars.first())
+        .map(|calendar| calendar.summary.clone())
+        .unwrap_or_else(|| format!("Google account {connection_id}"))
 }

@@ -242,7 +242,6 @@ impl ConnectorRuntimeBuilder {
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
-    use std::sync::{Mutex, OnceLock};
 
     use axum::{Json, Router, routing::get};
     use tempfile::tempdir;
@@ -252,11 +251,6 @@ mod tests {
         PlexConnector, SaveGoogleOAuthConnection,
     };
     use poneglyph::{Poneglyph, Query, QueryResult, Workspace};
-
-    fn env_lock() -> &'static Mutex<()> {
-        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-        LOCK.get_or_init(|| Mutex::new(()))
-    }
 
     fn next_http_bind_addr() -> String {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("ephemeral tcp listener");
@@ -299,7 +293,9 @@ mod tests {
 
     #[tokio::test]
     async fn runtime_does_not_fail_when_gcal_connector_returns_401() {
-        let _guard = env_lock().lock().unwrap_or_else(|error| error.into_inner());
+        let _guard = crate::test_env_lock()
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
         let bind_addr = next_http_bind_addr();
         let listener = tokio::net::TcpListener::bind(&bind_addr)
             .await
