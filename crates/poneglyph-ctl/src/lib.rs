@@ -13,8 +13,8 @@ pub use connectors::plex::{PlexConfig, PlexConnector};
 pub use error::{CtlError, CtlResult};
 pub use runtime::{ConnectorRuntime, ConnectorRuntimeBuilder};
 pub use store::{
-    CtlStore, GoogleCalendarSyncState, GoogleOAuthConnection, PlexLibrarySyncState,
-    SaveGoogleOAuthConnection,
+    CtlStore, GoogleCalendarSyncState, GoogleOAuthConnection, PlexConnection, PlexLibrarySyncState,
+    SaveGoogleOAuthConnection, SavePlexConnection,
 };
 
 #[cfg(test)]

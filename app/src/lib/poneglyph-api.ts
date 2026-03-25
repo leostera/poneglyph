@@ -1,10 +1,15 @@
 import {
   ConnectorStatusesDocument,
   DeleteGoogleConnectionDocument,
+  DeletePlexConnectionDocument,
+  DetectLocalPlexConnectionDocument,
   DiscoverGoogleCalendarsDocument,
   DiscoverGoogleCalendarsForConnectionDocument,
+  DiscoverPlexLibrariesDocument,
   GoogleCalendarConnectionsDocument,
   GoogleCalendarsDocument,
+  PlexConnectionsDocument,
+  SavePlexConnectionDocument,
   SelectGoogleCalendarsDocument,
   SelectGoogleCalendarsForConnectionDocument,
   SyncConnectorDocument,
@@ -30,6 +35,10 @@ export type GoogleCalendarResource = ResultOf<
 export type GoogleCalendarConnection = ResultOf<
   typeof GoogleCalendarConnectionsDocument
 >["googleCalendarConnections"][number];
+export type PlexConnection = ResultOf<typeof PlexConnectionsDocument>["plexConnections"][number];
+export type PlexDetection = ResultOf<
+  typeof DetectLocalPlexConnectionDocument
+>["detectLocalPlexConnection"];
 export type ConnectorSyncResult = ResultOf<typeof SyncConnectorDocument>["syncConnector"];
 
 export function isConnectorName(value: string): value is ConnectorName {
@@ -49,6 +58,16 @@ export async function getGoogleCalendars() {
 export async function getGoogleCalendarConnections() {
   const data = await graphqlRequest(GoogleCalendarConnectionsDocument);
   return data.googleCalendarConnections;
+}
+
+export async function getPlexConnections() {
+  const data = await graphqlRequest(PlexConnectionsDocument);
+  return data.plexConnections;
+}
+
+export async function detectLocalPlexConnection() {
+  const data = await graphqlRequest(DetectLocalPlexConnectionDocument);
+  return data.detectLocalPlexConnection;
 }
 
 export async function discoverGoogleCalendars() {
@@ -92,6 +111,23 @@ export async function syncConnector(name: ConnectorName) {
 export async function deleteGoogleConnection(connectionId: number) {
   const data = await graphqlRequest(DeleteGoogleConnectionDocument, { connectionId });
   return data.deleteGoogleConnection;
+}
+
+export async function savePlexConnection(baseUrl: string, token: string, libraries: string[]) {
+  const data = await graphqlRequest(SavePlexConnectionDocument, {
+    input: { baseUrl, token, libraries },
+  });
+  return data.savePlexConnection;
+}
+
+export async function deletePlexConnection(connectionId: number) {
+  const data = await graphqlRequest(DeletePlexConnectionDocument, { connectionId });
+  return data.deletePlexConnection;
+}
+
+export async function discoverPlexLibraries(baseUrl: string, token: string) {
+  const data = await graphqlRequest(DiscoverPlexLibrariesDocument, { baseUrl, token });
+  return data.discoverPlexLibraries;
 }
 
 async function graphqlRequest<TData, TVariables>(

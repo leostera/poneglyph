@@ -10,6 +10,7 @@ use crate::{CtlError, CtlResult, CtlStore};
 use super::client::PlexClient;
 use super::ingestor::{item_facts, library_facts, section_snapshot_fingerprint, select_sections};
 use super::schema::schema_facts;
+use super::types::{PlexLibrarySection, PlexMetadataItem};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
 #[builder(pattern = "owned")]
@@ -31,18 +32,20 @@ pub struct PlexConfig {
 #[derive(Debug)]
 pub struct PlexConnector {
     config: PlexConfig,
-    client: PlexClient,
 }
 
 impl PlexConnector {
     pub fn init(config: PlexConfig) -> CtlResult<Self> {
-        let client = PlexClient::new(&config)?;
-
-        if config.enabled && config.base_url.is_none() {
-            return Err(CtlError::MissingPlexBaseUrl);
+        if config.enabled {
+            if config.base_url.is_some() && config.token.is_none() {
+                return Err(CtlError::MissingPlexToken);
+            }
+            if config.base_url.is_none() && config.token.is_some() {
+                return Err(CtlError::MissingPlexBaseUrl);
+            }
         }
 
-        Ok(Self { config, client })
+        Ok(Self { config })
     }
 
     pub fn name(&self) -> &'static str {
@@ -67,73 +70,130 @@ impl PlexConnector {
             return Ok(());
         }
 
-        let sections = self.client.fetch_library_sections().await?;
-        let selected_sections = select_sections(&self.config.libraries, sections);
-        let libraries_url = self.client.redacted_library_sections_url()?;
-        let base_url = self
-            .client
-            .base_url()
-            .map(ToString::to_string)
-            .unwrap_or_else(|| "<missing>".to_string());
-        info!(
-            base_url = %base_url,
-            libraries_url = %libraries_url,
-            configured_library_count = self.config.libraries.len(),
-            selected_library_count = selected_sections.len(),
-            "plex connector initialized"
-        );
+        let mut facts = Vec::new();
+        let mut connections = ctl
+            .list_plex_connections()
+            .await?
+            .into_iter()
+            .map(|connection| PlexRunConnection {
+                scope: format!("store-{}", connection.id),
+                base_url: connection.base_url,
+                token: connection.token,
+                libraries: connection.libraries,
+            })
+            .collect::<Vec<_>>();
 
-        if !self.config.libraries.is_empty() {
-            debug!(libraries = ?self.config.libraries, "plex connector configured libraries");
+        if connections.is_empty() {
+            if let (Some(base_url), Some(token)) =
+                (self.config.base_url.clone(), self.config.token.clone())
+            {
+                connections.push(PlexRunConnection {
+                    scope: "config".to_string(),
+                    base_url,
+                    token,
+                    libraries: self.config.libraries.clone(),
+                });
+            }
         }
-        if selected_sections.is_empty() {
-            warn!("plex connector selected no libraries");
-        } else {
-            let library_titles = selected_sections
-                .iter()
-                .map(|section| section.title.as_str())
-                .collect::<Vec<_>>();
-            info!(libraries = ?library_titles, "plex connector selected libraries");
+
+        if connections.is_empty() {
+            info!("plex connector has no configured servers");
+            return Ok(());
         }
 
         sleep(Duration::from_millis(10)).await;
-        let mut facts = Vec::new();
 
-        for section in &selected_sections {
-            let items = match self.client.fetch_library_items(section.key.as_str()).await {
-                Ok(items) => items,
-                Err(error) => {
-                    let _ = ctl
-                        .save_plex_library_sync_failure(section.key.as_str(), &error.to_string())
-                        .await;
-                    return Err(error);
-                }
+        for connection in connections {
+            let connection_config = PlexConfig {
+                enabled: true,
+                base_url: Some(connection.base_url.clone()),
+                token: Some(connection.token.clone()),
+                libraries: connection.libraries.clone(),
             };
-            let fingerprint = section_snapshot_fingerprint(section, &items);
-            let previous = ctl
-                .plex_library_sync_state(section.key.as_str())
-                .await?
-                .and_then(|state| state.content_fingerprint);
-            if previous.as_deref() == Some(fingerprint.as_str()) {
+            let client = PlexClient::new(&connection_config)?;
+            let sections = client.fetch_library_sections().await?;
+            let selected_sections = select_sections(&connection.libraries, sections);
+            let libraries_url = client.redacted_library_sections_url()?;
+            let base_url = client
+                .base_url()
+                .map(ToString::to_string)
+                .unwrap_or_else(|| "<missing>".to_string());
+            info!(
+                scope = %connection.scope,
+                base_url = %base_url,
+                libraries_url = %libraries_url,
+                configured_library_count = connection.libraries.len(),
+                selected_library_count = selected_sections.len(),
+                "plex connector initialized"
+            );
+
+            if !connection.libraries.is_empty() {
                 debug!(
+                    scope = %connection.scope,
+                    libraries = ?connection.libraries,
+                    "plex connector configured libraries"
+                );
+            }
+            if selected_sections.is_empty() {
+                warn!(scope = %connection.scope, "plex connector selected no libraries");
+            } else {
+                let library_titles = selected_sections
+                    .iter()
+                    .map(|section| section.title.as_str())
+                    .collect::<Vec<_>>();
+                info!(
+                    scope = %connection.scope,
+                    libraries = ?library_titles,
+                    "plex connector selected libraries"
+                );
+            }
+
+            for section in &selected_sections {
+                let items = match client.fetch_library_items(section.key.as_str()).await {
+                    Ok(items) => items,
+                    Err(error) => {
+                        let state_key = format!("{}:{}", connection.scope, section.key);
+                        let _ = ctl
+                            .save_plex_library_sync_failure(state_key.as_str(), &error.to_string())
+                            .await;
+                        return Err(error);
+                    }
+                };
+                let fingerprint = section_snapshot_fingerprint(section, &items);
+                let state_key = format!("{}:{}", connection.scope, section.key);
+                let previous = ctl
+                    .plex_library_sync_state(state_key.as_str())
+                    .await?
+                    .and_then(|state| state.content_fingerprint);
+                if previous.as_deref() == Some(fingerprint.as_str()) {
+                    debug!(
+                        scope = %connection.scope,
+                        library = %section.title,
+                        section_key = %section.key,
+                        "plex connector skipped unchanged library"
+                    );
+                    ctl.save_plex_library_sync_success(state_key.as_str(), &fingerprint)
+                        .await?;
+                    continue;
+                }
+
+                let scoped_section = scoped_section(section, connection.scope.as_str());
+                let scoped_items = items
+                    .iter()
+                    .map(|item| scoped_item(item, connection.scope.as_str()))
+                    .collect::<Vec<_>>();
+                debug!(
+                    scope = %connection.scope,
                     library = %section.title,
                     section_key = %section.key,
-                    "plex connector skipped unchanged library"
+                    item_count = items.len(),
+                    "plex connector fetched library items"
                 );
-                ctl.save_plex_library_sync_success(section.key.as_str(), &fingerprint)
+                facts.extend(library_facts(std::slice::from_ref(&scoped_section)));
+                facts.extend(item_facts(&scoped_section, &scoped_items));
+                ctl.save_plex_library_sync_success(state_key.as_str(), &fingerprint)
                     .await?;
-                continue;
             }
-            debug!(
-                library = %section.title,
-                section_key = %section.key,
-                item_count = items.len(),
-                "plex connector fetched library items"
-            );
-            facts.extend(library_facts(std::slice::from_ref(section)));
-            facts.extend(item_facts(section, &items));
-            ctl.save_plex_library_sync_success(section.key.as_str(), &fingerprint)
-                .await?;
         }
 
         if facts.is_empty() {
@@ -152,6 +212,26 @@ impl PlexConnector {
         debug!("plex connector fact batch sent");
         Ok(())
     }
+}
+
+#[derive(Debug, Clone)]
+struct PlexRunConnection {
+    scope: String,
+    base_url: String,
+    token: String,
+    libraries: Vec<String>,
+}
+
+fn scoped_section(section: &PlexLibrarySection, scope: &str) -> PlexLibrarySection {
+    let mut scoped = section.clone();
+    scoped.key = format!("{scope}:{}", section.key);
+    scoped
+}
+
+fn scoped_item(item: &PlexMetadataItem, scope: &str) -> PlexMetadataItem {
+    let mut scoped = item.clone();
+    scoped.rating_key = format!("{scope}:{}", item.rating_key);
+    scoped
 }
 
 #[cfg(test)]
@@ -490,7 +570,7 @@ mod tests {
         assert!(fact_stream.recv().await.is_none());
 
         let sync_state = ctl
-            .plex_library_sync_state("1")
+            .plex_library_sync_state("config:1")
             .await
             .expect("sync state")
             .expect("saved sync state");

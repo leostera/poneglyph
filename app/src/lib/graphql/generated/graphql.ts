@@ -57,8 +57,11 @@ export type GoogleCalendarResource = {
 export type Mutation = {
   __typename?: 'Mutation';
   deleteGoogleConnection: Scalars['Boolean']['output'];
+  deletePlexConnection: Scalars['Boolean']['output'];
   discoverGoogleCalendars: Array<GoogleCalendarResource>;
   discoverGoogleCalendarsForConnection: Array<GoogleCalendarResource>;
+  discoverPlexLibraries: Array<Scalars['String']['output']>;
+  savePlexConnection: PlexConnection;
   selectGoogleCalendars: Array<GoogleCalendarResource>;
   selectGoogleCalendarsForConnection: Array<GoogleCalendarResource>;
   syncConnector: ConnectorSyncResult;
@@ -70,8 +73,24 @@ export type MutationDeleteGoogleConnectionArgs = {
 };
 
 
+export type MutationDeletePlexConnectionArgs = {
+  connectionId: Scalars['Int']['input'];
+};
+
+
 export type MutationDiscoverGoogleCalendarsForConnectionArgs = {
   connectionId: Scalars['Int']['input'];
+};
+
+
+export type MutationDiscoverPlexLibrariesArgs = {
+  baseUrl: Scalars['String']['input'];
+  token: Scalars['String']['input'];
+};
+
+
+export type MutationSavePlexConnectionArgs = {
+  input: SavePlexConnectionInput;
 };
 
 
@@ -90,11 +109,34 @@ export type MutationSyncConnectorArgs = {
   name: Scalars['String']['input'];
 };
 
+export type PlexConnection = {
+  __typename?: 'PlexConnection';
+  baseUrl: Scalars['String']['output'];
+  id: Scalars['Int']['output'];
+  lastError?: Maybe<Scalars['String']['output']>;
+  lastSyncedAt?: Maybe<Scalars['String']['output']>;
+  libraries: Array<Scalars['String']['output']>;
+};
+
+export type PlexDetection = {
+  __typename?: 'PlexDetection';
+  baseUrl: Scalars['String']['output'];
+  token?: Maybe<Scalars['String']['output']>;
+};
+
 export type Query = {
   __typename?: 'Query';
   connectorStatuses: Array<ConnectorStatus>;
+  detectLocalPlexConnection: PlexDetection;
   googleCalendarConnections: Array<GoogleCalendarConnection>;
   googleCalendars: Array<GoogleCalendarResource>;
+  plexConnections: Array<PlexConnection>;
+};
+
+export type SavePlexConnectionInput = {
+  baseUrl: Scalars['String']['input'];
+  libraries: Array<Scalars['String']['input']>;
+  token: Scalars['String']['input'];
 };
 
 export type SelectGoogleCalendarsInput = {
@@ -115,6 +157,16 @@ export type GoogleCalendarConnectionsQueryVariables = Exact<{ [key: string]: nev
 
 
 export type GoogleCalendarConnectionsQuery = { __typename?: 'Query', googleCalendarConnections: Array<{ __typename?: 'GoogleCalendarConnection', id: number, label: string, selectedResourceCount: number, lastSyncedAt?: string | null, lastError?: string | null, calendars: Array<{ __typename?: 'GoogleCalendarResource', connectionId: number, calendarId: string, summary: string, description?: string | null, timeZone?: string | null, primary: boolean, selected: boolean }> }> };
+
+export type PlexConnectionsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type PlexConnectionsQuery = { __typename?: 'Query', plexConnections: Array<{ __typename?: 'PlexConnection', id: number, baseUrl: string, libraries: Array<string>, lastSyncedAt?: string | null, lastError?: string | null }> };
+
+export type DetectLocalPlexConnectionQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DetectLocalPlexConnectionQuery = { __typename?: 'Query', detectLocalPlexConnection: { __typename?: 'PlexDetection', baseUrl: string, token?: string | null } };
 
 export type DiscoverGoogleCalendarsMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -150,6 +202,28 @@ export type DeleteGoogleConnectionMutationVariables = Exact<{
 
 export type DeleteGoogleConnectionMutation = { __typename?: 'Mutation', deleteGoogleConnection: boolean };
 
+export type SavePlexConnectionMutationVariables = Exact<{
+  input: SavePlexConnectionInput;
+}>;
+
+
+export type SavePlexConnectionMutation = { __typename?: 'Mutation', savePlexConnection: { __typename?: 'PlexConnection', id: number, baseUrl: string, libraries: Array<string>, lastSyncedAt?: string | null, lastError?: string | null } };
+
+export type DeletePlexConnectionMutationVariables = Exact<{
+  connectionId: Scalars['Int']['input'];
+}>;
+
+
+export type DeletePlexConnectionMutation = { __typename?: 'Mutation', deletePlexConnection: boolean };
+
+export type DiscoverPlexLibrariesMutationVariables = Exact<{
+  baseUrl: Scalars['String']['input'];
+  token: Scalars['String']['input'];
+}>;
+
+
+export type DiscoverPlexLibrariesMutation = { __typename?: 'Mutation', discoverPlexLibraries: Array<string> };
+
 export type SyncConnectorMutationVariables = Exact<{
   name: Scalars['String']['input'];
 }>;
@@ -161,9 +235,14 @@ export type SyncConnectorMutation = { __typename?: 'Mutation', syncConnector: { 
 export const ConnectorStatusesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ConnectorStatuses"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectorStatuses"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"enabled"}},{"kind":"Field","name":{"kind":"Name","value":"connected"}},{"kind":"Field","name":{"kind":"Name","value":"selectedResourceCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}}]}}]}}]} as unknown as DocumentNode<ConnectorStatusesQuery, ConnectorStatusesQueryVariables>;
 export const GoogleCalendarsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GoogleCalendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"googleCalendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]} as unknown as DocumentNode<GoogleCalendarsQuery, GoogleCalendarsQueryVariables>;
 export const GoogleCalendarConnectionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GoogleCalendarConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"googleCalendarConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"selectedResourceCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}},{"kind":"Field","name":{"kind":"Name","value":"calendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]}}]} as unknown as DocumentNode<GoogleCalendarConnectionsQuery, GoogleCalendarConnectionsQueryVariables>;
+export const PlexConnectionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"PlexConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"plexConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"baseUrl"}},{"kind":"Field","name":{"kind":"Name","value":"libraries"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}}]}}]}}]} as unknown as DocumentNode<PlexConnectionsQuery, PlexConnectionsQueryVariables>;
+export const DetectLocalPlexConnectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"DetectLocalPlexConnection"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"detectLocalPlexConnection"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"baseUrl"}},{"kind":"Field","name":{"kind":"Name","value":"token"}}]}}]}}]} as unknown as DocumentNode<DetectLocalPlexConnectionQuery, DetectLocalPlexConnectionQueryVariables>;
 export const DiscoverGoogleCalendarsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DiscoverGoogleCalendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"discoverGoogleCalendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]} as unknown as DocumentNode<DiscoverGoogleCalendarsMutation, DiscoverGoogleCalendarsMutationVariables>;
 export const DiscoverGoogleCalendarsForConnectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DiscoverGoogleCalendarsForConnection"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"discoverGoogleCalendarsForConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"connectionId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]} as unknown as DocumentNode<DiscoverGoogleCalendarsForConnectionMutation, DiscoverGoogleCalendarsForConnectionMutationVariables>;
 export const SelectGoogleCalendarsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SelectGoogleCalendars"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"SelectGoogleCalendarsInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"selectGoogleCalendars"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]} as unknown as DocumentNode<SelectGoogleCalendarsMutation, SelectGoogleCalendarsMutationVariables>;
 export const SelectGoogleCalendarsForConnectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SelectGoogleCalendarsForConnection"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"SelectGoogleCalendarsInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"selectGoogleCalendarsForConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"connectionId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]} as unknown as DocumentNode<SelectGoogleCalendarsForConnectionMutation, SelectGoogleCalendarsForConnectionMutationVariables>;
 export const DeleteGoogleConnectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteGoogleConnection"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteGoogleConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"connectionId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}}}]}]}}]} as unknown as DocumentNode<DeleteGoogleConnectionMutation, DeleteGoogleConnectionMutationVariables>;
+export const SavePlexConnectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SavePlexConnection"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"SavePlexConnectionInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"savePlexConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"baseUrl"}},{"kind":"Field","name":{"kind":"Name","value":"libraries"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}}]}}]}}]} as unknown as DocumentNode<SavePlexConnectionMutation, SavePlexConnectionMutationVariables>;
+export const DeletePlexConnectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeletePlexConnection"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deletePlexConnection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"connectionId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}}}]}]}}]} as unknown as DocumentNode<DeletePlexConnectionMutation, DeletePlexConnectionMutationVariables>;
+export const DiscoverPlexLibrariesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DiscoverPlexLibraries"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"baseUrl"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"token"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"discoverPlexLibraries"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"baseUrl"},"value":{"kind":"Variable","name":{"kind":"Name","value":"baseUrl"}}},{"kind":"Argument","name":{"kind":"Name","value":"token"},"value":{"kind":"Variable","name":{"kind":"Name","value":"token"}}}]}]}}]} as unknown as DocumentNode<DiscoverPlexLibrariesMutation, DiscoverPlexLibrariesMutationVariables>;
 export const SyncConnectorDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SyncConnector"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"name"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"syncConnector"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"name"},"value":{"kind":"Variable","name":{"kind":"Name","value":"name"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"synced"}},{"kind":"Field","name":{"kind":"Name","value":"message"}}]}}]}}]} as unknown as DocumentNode<SyncConnectorMutation, SyncConnectorMutationVariables>;

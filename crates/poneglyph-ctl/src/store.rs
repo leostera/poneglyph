@@ -64,6 +64,23 @@ pub struct PlexLibrarySyncState {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlexConnection {
+    pub id: i64,
+    pub base_url: String,
+    pub token: String,
+    pub libraries: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SavePlexConnection {
+    pub base_url: String,
+    pub token: String,
+    pub libraries: Vec<String>,
+}
+
 #[derive(Clone)]
 pub struct CtlStore {
     pool: SqlitePool,
@@ -572,6 +589,126 @@ impl CtlStore {
             .await?
             .ok_or_else(|| CtlError::StoreQuery("saved plex library sync failure missing".into()))
     }
+
+    pub async fn save_plex_connection(
+        &self,
+        connection: SavePlexConnection,
+    ) -> CtlResult<PlexConnection> {
+        let now = Utc::now().to_rfc3339();
+        let base_url = connection.base_url.clone();
+        let libraries = connection.libraries.join("\n");
+
+        sqlx::query(
+            r#"
+            INSERT INTO plex_connections (
+                base_url,
+                token,
+                libraries,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(base_url) DO UPDATE SET
+                token = excluded.token,
+                libraries = excluded.libraries,
+                updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(connection.base_url)
+        .bind(connection.token)
+        .bind(libraries)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.plex_connection_by_base_url(base_url.as_str())
+            .await?
+            .ok_or_else(|| CtlError::StoreQuery("saved plex connection missing".into()))
+    }
+
+    pub async fn list_plex_connections(&self) -> CtlResult<Vec<PlexConnection>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                id,
+                base_url,
+                token,
+                libraries,
+                created_at,
+                updated_at
+            FROM plex_connections
+            ORDER BY id DESC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        rows.into_iter().map(decode_plex_connection).collect()
+    }
+
+    pub async fn plex_connection_by_id(&self, id: i64) -> CtlResult<Option<PlexConnection>> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                id,
+                base_url,
+                token,
+                libraries,
+                created_at,
+                updated_at
+            FROM plex_connections
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        row.map(decode_plex_connection).transpose()
+    }
+
+    pub async fn plex_connection_by_base_url(
+        &self,
+        base_url: &str,
+    ) -> CtlResult<Option<PlexConnection>> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                id,
+                base_url,
+                token,
+                libraries,
+                created_at,
+                updated_at
+            FROM plex_connections
+            WHERE base_url = ?
+            "#,
+        )
+        .bind(base_url)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        row.map(decode_plex_connection).transpose()
+    }
+
+    pub async fn delete_plex_connection(&self, id: i64) -> CtlResult<bool> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM plex_connections
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        Ok(result.rows_affected() > 0)
+    }
 }
 
 fn resolve_db_path(path: &Path) -> PathBuf {
@@ -586,7 +723,7 @@ fn resolve_db_path(path: &Path) -> PathBuf {
 mod tests {
     use tempfile::tempdir;
 
-    use super::{CtlStore, SaveGoogleOAuthConnection};
+    use super::{CtlStore, SaveGoogleOAuthConnection, SavePlexConnection};
     use crate::connectors::gcal::GoogleCalendarResource as DiscoveredGoogleCalendarResource;
     use chrono::Utc;
 
@@ -834,6 +971,58 @@ mod tests {
         );
         assert_eq!(failure.last_error.as_deref(), Some("boom"));
     }
+
+    #[tokio::test]
+    async fn ctl_store_persists_plex_connections() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+
+        let first = store
+            .save_plex_connection(SavePlexConnection {
+                base_url: "http://127.0.0.1:32400".to_string(),
+                token: "token-a".to_string(),
+                libraries: vec!["Movies".to_string(), "Shows".to_string()],
+            })
+            .await
+            .expect("saved first");
+        let second = store
+            .save_plex_connection(SavePlexConnection {
+                base_url: "http://127.0.0.2:32400".to_string(),
+                token: "token-b".to_string(),
+                libraries: vec!["Anime".to_string()],
+            })
+            .await
+            .expect("saved second");
+
+        let all = store.list_plex_connections().await.expect("list");
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].id, second.id);
+        assert_eq!(all[0].libraries, vec!["Anime"]);
+        assert_eq!(all[1].id, first.id);
+        assert_eq!(all[1].libraries, vec!["Movies", "Shows"]);
+
+        let updated = store
+            .save_plex_connection(SavePlexConnection {
+                base_url: "http://127.0.0.1:32400".to_string(),
+                token: "token-c".to_string(),
+                libraries: vec!["Movies".to_string()],
+            })
+            .await
+            .expect("updated");
+        assert_eq!(updated.id, first.id);
+        assert_eq!(updated.token, "token-c");
+        assert_eq!(updated.libraries, vec!["Movies"]);
+
+        let deleted = store
+            .delete_plex_connection(second.id)
+            .await
+            .expect("delete");
+        assert!(deleted);
+        let remaining = store.list_plex_connections().await.expect("remaining");
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, first.id);
+    }
 }
 
 fn decode_google_oauth_connection(
@@ -1020,6 +1209,45 @@ fn decode_plex_library_sync_state(row: sqlx::sqlite::SqliteRow) -> CtlResult<Ple
         last_error: row
             .try_get("last_error")
             .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        created_at,
+        updated_at,
+    })
+}
+
+fn decode_plex_connection(row: sqlx::sqlite::SqliteRow) -> CtlResult<PlexConnection> {
+    use sqlx::Row;
+
+    let created_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("created_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let updated_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("updated_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let libraries = row
+        .try_get::<String, _>("libraries")
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+    Ok(PlexConnection {
+        id: row
+            .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        base_url: row
+            .try_get("base_url")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        token: row
+            .try_get("token")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        libraries: if libraries.is_empty() {
+            Vec::new()
+        } else {
+            libraries.lines().map(str::to_string).collect()
+        },
         created_at,
         updated_at,
     })

@@ -56,10 +56,35 @@ struct ConnectorSyncResultObject {
     message: String,
 }
 
+#[derive(SimpleObject)]
+#[graphql(name = "PlexConnection")]
+struct PlexConnectionObject {
+    id: i64,
+    base_url: String,
+    libraries: Vec<String>,
+    last_synced_at: Option<String>,
+    last_error: Option<String>,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "PlexDetection")]
+struct PlexDetectionObject {
+    base_url: String,
+    token: Option<String>,
+}
+
 #[derive(InputObject)]
 #[graphql(name = "SelectGoogleCalendarsInput")]
 struct SelectGoogleCalendarsInput {
     calendar_ids: Vec<String>,
+}
+
+#[derive(InputObject)]
+#[graphql(name = "SavePlexConnectionInput")]
+struct SavePlexConnectionInput {
+    base_url: String,
+    token: String,
+    libraries: Vec<String>,
 }
 
 #[Object(name = "Query")]
@@ -95,6 +120,25 @@ impl ApiQuery {
             .await
             .map(map_connector_statuses)
             .map_err(async_graphql::Error::new)
+    }
+
+    async fn plex_connections(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+    ) -> Result<Vec<PlexConnectionObject>> {
+        let app = ctx.data::<AppContext>()?;
+        google::list_plex_connections(app)
+            .await
+            .map(map_plex_connections)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn detect_local_plex_connection(&self) -> PlexDetectionObject {
+        let detected = google::detect_local_plex_connection();
+        PlexDetectionObject {
+            base_url: detected.base_url,
+            token: detected.token,
+        }
     }
 }
 
@@ -167,6 +211,39 @@ impl ApiMutation {
     ) -> Result<bool> {
         let app = ctx.data::<AppContext>()?;
         google::delete_google_connection(app, connection_id)
+            .await
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn save_plex_connection(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        input: SavePlexConnectionInput,
+    ) -> Result<PlexConnectionObject> {
+        let app = ctx.data::<AppContext>()?;
+        google::save_plex_connection(app, input.base_url, input.token, input.libraries)
+            .await
+            .map(map_plex_connection)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn delete_plex_connection(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        connection_id: i64,
+    ) -> Result<bool> {
+        let app = ctx.data::<AppContext>()?;
+        google::delete_plex_connection(app, connection_id)
+            .await
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn discover_plex_libraries(
+        &self,
+        base_url: String,
+        token: String,
+    ) -> Result<Vec<String>> {
+        google::discover_plex_libraries(base_url.as_str(), token.as_str())
             .await
             .map_err(async_graphql::Error::new)
     }
@@ -249,6 +326,20 @@ fn map_connector_sync_result(result: google::ConnectorSyncResult) -> ConnectorSy
         synced: result.synced,
         message: result.message,
     }
+}
+
+fn map_plex_connection(connection: google::PlexConnection) -> PlexConnectionObject {
+    PlexConnectionObject {
+        id: connection.id,
+        base_url: connection.base_url,
+        libraries: connection.libraries,
+        last_synced_at: connection.last_synced_at.map(|value| value.to_rfc3339()),
+        last_error: connection.last_error,
+    }
+}
+
+fn map_plex_connections(connections: Vec<google::PlexConnection>) -> Vec<PlexConnectionObject> {
+    connections.into_iter().map(map_plex_connection).collect()
 }
 
 #[cfg(test)]

@@ -53,12 +53,36 @@ type Mutation {
   selectGoogleCalendarsForConnection(connectionId: Int!, input: SelectGoogleCalendarsInput!): [GoogleCalendarResource!]!
   syncConnector(name: String!): ConnectorSyncResult!
   deleteGoogleConnection(connectionId: Int!): Boolean!
+  savePlexConnection(input: SavePlexConnectionInput!): PlexConnection!
+  deletePlexConnection(connectionId: Int!): Boolean!
+  discoverPlexLibraries(baseUrl: String!, token: String!): [String!]!
+}
+
+type PlexConnection {
+  id: Int!
+  baseUrl: String!
+  libraries: [String!]!
+  lastSyncedAt: String
+  lastError: String
+}
+
+type PlexDetection {
+  baseUrl: String!
+  token: String
 }
 
 type Query {
   googleCalendarConnections: [GoogleCalendarConnection!]!
   googleCalendars: [GoogleCalendarResource!]!
   connectorStatuses: [ConnectorStatus!]!
+  plexConnections: [PlexConnection!]!
+  detectLocalPlexConnection: PlexDetection!
+}
+
+input SavePlexConnectionInput {
+  baseUrl: String!
+  token: String!
+  libraries: [String!]!
 }
 
 input SelectGoogleCalendarsInput {

@@ -48,6 +48,27 @@ export const GoogleCalendarConnectionsDocument = graphql(`
   }
 `);
 
+export const PlexConnectionsDocument = graphql(`
+  query PlexConnections {
+    plexConnections {
+      id
+      baseUrl
+      libraries
+      lastSyncedAt
+      lastError
+    }
+  }
+`);
+
+export const DetectLocalPlexConnectionDocument = graphql(`
+  query DetectLocalPlexConnection {
+    detectLocalPlexConnection {
+      baseUrl
+      token
+    }
+  }
+`);
+
 export const DiscoverGoogleCalendarsDocument = graphql(`
   mutation DiscoverGoogleCalendars {
     discoverGoogleCalendars {
@@ -110,6 +131,30 @@ export const SelectGoogleCalendarsForConnectionDocument = graphql(`
 export const DeleteGoogleConnectionDocument = graphql(`
   mutation DeleteGoogleConnection($connectionId: Int!) {
     deleteGoogleConnection(connectionId: $connectionId)
+  }
+`);
+
+export const SavePlexConnectionDocument = graphql(`
+  mutation SavePlexConnection($input: SavePlexConnectionInput!) {
+    savePlexConnection(input: $input) {
+      id
+      baseUrl
+      libraries
+      lastSyncedAt
+      lastError
+    }
+  }
+`);
+
+export const DeletePlexConnectionDocument = graphql(`
+  mutation DeletePlexConnection($connectionId: Int!) {
+    deletePlexConnection(connectionId: $connectionId)
+  }
+`);
+
+export const DiscoverPlexLibrariesDocument = graphql(`
+  mutation DiscoverPlexLibraries($baseUrl: String!, $token: String!) {
+    discoverPlexLibraries(baseUrl: $baseUrl, token: $token)
   }
 `);
 

@@ -4,12 +4,14 @@ import {
   getConnectorStatuses,
   getGoogleCalendarConnections,
   getGoogleCalendars,
+  getPlexConnections,
 } from "@/lib/poneglyph-api";
 import { type QueryClient, type UseQueryOptions, useQuery } from "@tanstack/react-query";
 
 export const connectorStatusesQueryKey = ["connector-statuses"] as const;
 export const googleCalendarsQueryKey = ["google-calendars"] as const;
 export const googleCalendarConnectionsQueryKey = ["google-calendar-connections"] as const;
+export const plexConnectionsQueryKey = ["plex-connections"] as const;
 
 type ConnectorStatusesQueryOptions = Pick<
   UseQueryOptions<ConnectorStatus[], Error>,
@@ -40,6 +42,14 @@ export function useGoogleCalendarConnectionsQuery(enabled: boolean) {
   });
 }
 
+export function usePlexConnectionsQuery(enabled: boolean) {
+  return useQuery({
+    queryKey: plexConnectionsQueryKey,
+    queryFn: getPlexConnections,
+    enabled,
+  });
+}
+
 export function findConnectorStatus(
   statuses: ConnectorStatus[] | undefined,
   connectorName: ConnectorName,
@@ -52,5 +62,6 @@ export async function invalidateConnectorQueries(queryClient: QueryClient) {
     queryClient.invalidateQueries({ queryKey: connectorStatusesQueryKey }),
     queryClient.invalidateQueries({ queryKey: googleCalendarsQueryKey }),
     queryClient.invalidateQueries({ queryKey: googleCalendarConnectionsQueryKey }),
+    queryClient.invalidateQueries({ queryKey: plexConnectionsQueryKey }),
   ]);
 }
