@@ -52,6 +52,7 @@ type Mutation {
   selectGoogleCalendars(input: SelectGoogleCalendarsInput!): [GoogleCalendarResource!]!
   selectGoogleCalendarsForConnection(connectionId: Int!, input: SelectGoogleCalendarsInput!): [GoogleCalendarResource!]!
   syncConnector(name: String!): ConnectorSyncResult!
+  deleteGoogleConnection(connectionId: Int!): Boolean!
 }
 
 type Query {

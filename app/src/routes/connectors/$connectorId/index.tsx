@@ -20,6 +20,7 @@ import {
   useGoogleCalendarConnectionsQuery,
 } from "@/features/connectors/queries";
 import {
+  deleteGoogleConnection,
   discoverGoogleCalendarsForConnection,
   isConnectorName,
   selectGoogleCalendarsForConnection,
@@ -128,6 +129,14 @@ function ConnectorDetailPage() {
     },
   });
 
+  const deleteConnectionMutation = useMutation({
+    mutationFn: (connectionId: number) => deleteGoogleConnection(connectionId),
+    onSuccess: async () => {
+      setSelectedConnectionId(null);
+      await invalidateConnectorQueries(queryClient);
+    },
+  });
+
   const syncPending = syncMutation.isPending && syncMutation.variables === connectorName;
 
   return (
@@ -214,43 +223,23 @@ function ConnectorDetailPage() {
 
         <div className="space-y-6">
           {connectorName !== "gcal" ? (
-            <div className="overflow-hidden rounded-[3px] border bg-background">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[220px]">Field</TableHead>
-                    <TableHead>Value</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">Runtime state</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1.5">
-                        <Badge variant={status?.enabled ? "secondary" : "outline"}>
-                          {status?.enabled ? "Enabled" : "Disabled"}
-                        </Badge>
-                        <Badge variant={status?.connected ? "secondary" : "outline"}>
-                          {status?.connected ? "Connected" : "Waiting"}
-                        </Badge>
-                        {status?.lastError ? <Badge variant="destructive">Error</Badge> : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">Selected resources</TableCell>
-                    <TableCell>{status?.selectedResourceCount ?? 0}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">Last sync</TableCell>
-                    <TableCell>{formatSyncTimestamp(status?.lastSyncedAt)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="text-muted-foreground">Last error</TableCell>
-                    <TableCell>{status?.lastError ?? "No connector errors recorded"}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+            <div className="rounded-[3px] border bg-background px-4 py-3">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <Badge variant={status?.enabled ? "secondary" : "outline"}>
+                  <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-500" />
+                  {status?.enabled ? "Enabled" : "Disabled"}
+                </Badge>
+                <Badge variant={status?.connected ? "secondary" : "outline"}>
+                  <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
+                  {status?.connected ? "Connected" : "Waiting"}
+                </Badge>
+                {status?.lastError ? <Badge variant="destructive">Error</Badge> : null}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {(status?.selectedResourceCount ?? 0).toString()} resources ·{" "}
+                {formatSyncTimestamp(status?.lastSyncedAt)}. This connector is currently
+                configuration-driven. Use actions above to sync and inspect logs.
+              </div>
             </div>
           ) : null}
 
@@ -320,75 +309,66 @@ function ConnectorDetailPage() {
                   </Alert>
                 ) : (
                   <>
-                    <div className="overflow-hidden rounded-[3px] border bg-background">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[220px]">Field</TableHead>
-                            <TableHead>Value</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell className="text-muted-foreground">Runtime state</TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1.5">
-                                <Badge variant={status?.enabled ? "secondary" : "outline"}>
-                                  {status?.enabled ? "Enabled" : "Disabled"}
-                                </Badge>
-                                <Badge variant={status?.connected ? "secondary" : "outline"}>
-                                  {status?.connected ? "Connected" : "Waiting"}
-                                </Badge>
-                                {status?.lastError ? (
-                                  <Badge variant="destructive">Error</Badge>
-                                ) : null}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="text-muted-foreground">
-                              Selected resources
-                            </TableCell>
-                            <TableCell>{status?.selectedResourceCount ?? 0}</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="text-muted-foreground">Last sync</TableCell>
-                            <TableCell>{formatSyncTimestamp(status?.lastSyncedAt)}</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="text-muted-foreground">Last error</TableCell>
-                            <TableCell>
-                              {status?.lastError ?? "No connector errors recorded"}
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-base font-medium">{selectedConnection.label}</h2>
                         <p className="mt-1 text-sm text-muted-foreground">
                           Manage which calendars from this account should stay in sync.
                         </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge variant={status?.enabled ? "secondary" : "outline"}>
+                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-500" />
+                            {status?.enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                          <Badge variant={status?.connected ? "secondary" : "outline"}>
+                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
+                            {status?.connected ? "Connected" : "Waiting"}
+                          </Badge>
+                          {status?.lastError ? <Badge variant="destructive">Error</Badge> : null}
+                          <span className="text-xs text-muted-foreground">
+                            {status?.selectedResourceCount ?? 0} resources ·{" "}
+                            {formatSyncTimestamp(status?.lastSyncedAt)}
+                          </span>
+                        </div>
                       </div>
-                      <Button
-                        disabled={selectMutation.isPending}
-                        onClick={() =>
-                          selectMutation.mutate({
-                            connectionId: selectedConnection.id,
-                            calendarIds: selectedCalendarIds,
-                          })
-                        }
-                        size="sm"
-                      >
-                        {selectMutation.isPending ? (
-                          <LoaderCircle className="animate-spin" />
-                        ) : (
-                          <CheckCircle2 />
-                        )}
-                        Save selection
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          disabled={deleteConnectionMutation.isPending}
+                          onClick={() => {
+                            const confirmed = window.confirm(
+                              "Delete this Google account connection? This removes its calendars and sync state.",
+                            );
+                            if (!confirmed) {
+                              return;
+                            }
+                            deleteConnectionMutation.mutate(selectedConnection.id);
+                          }}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          {deleteConnectionMutation.isPending ? (
+                            <LoaderCircle className="animate-spin" />
+                          ) : null}
+                          Delete connection
+                        </Button>
+                        <Button
+                          disabled={selectMutation.isPending}
+                          onClick={() =>
+                            selectMutation.mutate({
+                              connectionId: selectedConnection.id,
+                              calendarIds: selectedCalendarIds,
+                            })
+                          }
+                          size="sm"
+                        >
+                          {selectMutation.isPending ? (
+                            <LoaderCircle className="animate-spin" />
+                          ) : (
+                            <CheckCircle2 />
+                          )}
+                          Save selection
+                        </Button>
+                      </div>
                     </div>
 
                     {selectedCalendars.length === 0 ? (

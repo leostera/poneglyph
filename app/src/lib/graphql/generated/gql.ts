@@ -21,6 +21,7 @@ type Documents = {
     "\n  mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {\n    discoverGoogleCalendarsForConnection(connectionId: $connectionId) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.DiscoverGoogleCalendarsForConnectionDocument,
     "\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.SelectGoogleCalendarsDocument,
     "\n  mutation SelectGoogleCalendarsForConnection(\n    $connectionId: Int!\n    $input: SelectGoogleCalendarsInput!\n  ) {\n    selectGoogleCalendarsForConnection(connectionId: $connectionId, input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.SelectGoogleCalendarsForConnectionDocument,
+    "\n  mutation DeleteGoogleConnection($connectionId: Int!) {\n    deleteGoogleConnection(connectionId: $connectionId)\n  }\n": typeof types.DeleteGoogleConnectionDocument,
     "\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n": typeof types.SyncConnectorDocument,
 };
 const documents: Documents = {
@@ -31,6 +32,7 @@ const documents: Documents = {
     "\n  mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {\n    discoverGoogleCalendarsForConnection(connectionId: $connectionId) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.DiscoverGoogleCalendarsForConnectionDocument,
     "\n  mutation SelectGoogleCalendars($input: SelectGoogleCalendarsInput!) {\n    selectGoogleCalendars(input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.SelectGoogleCalendarsDocument,
     "\n  mutation SelectGoogleCalendarsForConnection(\n    $connectionId: Int!\n    $input: SelectGoogleCalendarsInput!\n  ) {\n    selectGoogleCalendarsForConnection(connectionId: $connectionId, input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.SelectGoogleCalendarsForConnectionDocument,
+    "\n  mutation DeleteGoogleConnection($connectionId: Int!) {\n    deleteGoogleConnection(connectionId: $connectionId)\n  }\n": types.DeleteGoogleConnectionDocument,
     "\n  mutation SyncConnector($name: String!) {\n    syncConnector(name: $name) {\n      name\n      synced\n      message\n    }\n  }\n": types.SyncConnectorDocument,
 };
 
@@ -76,6 +78,10 @@ export function graphql(source: "\n  mutation SelectGoogleCalendars($input: Sele
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation SelectGoogleCalendarsForConnection(\n    $connectionId: Int!\n    $input: SelectGoogleCalendarsInput!\n  ) {\n    selectGoogleCalendarsForConnection(connectionId: $connectionId, input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"): (typeof documents)["\n  mutation SelectGoogleCalendarsForConnection(\n    $connectionId: Int!\n    $input: SelectGoogleCalendarsInput!\n  ) {\n    selectGoogleCalendarsForConnection(connectionId: $connectionId, input: $input) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteGoogleConnection($connectionId: Int!) {\n    deleteGoogleConnection(connectionId: $connectionId)\n  }\n"): (typeof documents)["\n  mutation DeleteGoogleConnection($connectionId: Int!) {\n    deleteGoogleConnection(connectionId: $connectionId)\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

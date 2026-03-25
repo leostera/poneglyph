@@ -107,6 +107,12 @@ export const SelectGoogleCalendarsForConnectionDocument = graphql(`
   }
 `);
 
+export const DeleteGoogleConnectionDocument = graphql(`
+  mutation DeleteGoogleConnection($connectionId: Int!) {
+    deleteGoogleConnection(connectionId: $connectionId)
+  }
+`);
+
 export const SyncConnectorDocument = graphql(`
   mutation SyncConnector($name: String!) {
     syncConnector(name: $name) {

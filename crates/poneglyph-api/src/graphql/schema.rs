@@ -159,6 +159,17 @@ impl ApiMutation {
             .map(map_connector_sync_result)
             .map_err(async_graphql::Error::new)
     }
+
+    async fn delete_google_connection(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        connection_id: i64,
+    ) -> Result<bool> {
+        let app = ctx.data::<AppContext>()?;
+        google::delete_google_connection(app, connection_id)
+            .await
+            .map_err(async_graphql::Error::new)
+    }
 }
 
 pub(crate) async fn graphql(

@@ -1,5 +1,6 @@
 import {
   ConnectorStatusesDocument,
+  DeleteGoogleConnectionDocument,
   DiscoverGoogleCalendarsDocument,
   DiscoverGoogleCalendarsForConnectionDocument,
   GoogleCalendarConnectionsDocument,
@@ -86,6 +87,11 @@ export async function selectGoogleCalendarsForConnection(
 export async function syncConnector(name: ConnectorName) {
   const data = await graphqlRequest(SyncConnectorDocument, { name });
   return data.syncConnector;
+}
+
+export async function deleteGoogleConnection(connectionId: number) {
+  const data = await graphqlRequest(DeleteGoogleConnectionDocument, { connectionId });
+  return data.deleteGoogleConnection;
 }
 
 async function graphqlRequest<TData, TVariables>(

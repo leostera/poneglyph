@@ -180,6 +180,17 @@ pub(crate) async fn list_google_connections(
     Ok(result)
 }
 
+pub(crate) async fn delete_google_connection(
+    context: &AppContext,
+    connection_id: i64,
+) -> std::result::Result<bool, String> {
+    context
+        .ctl
+        .delete_google_oauth_connection(connection_id)
+        .await
+        .map_err(|error| format!("failed to delete google oauth connection: {error}"))
+}
+
 async fn latest_google_connection(
     ctl: &CtlStore,
 ) -> std::result::Result<GoogleOAuthConnection, String> {

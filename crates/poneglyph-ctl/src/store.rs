@@ -221,6 +221,21 @@ impl CtlStore {
         row.map(decode_google_oauth_connection).transpose()
     }
 
+    pub async fn delete_google_oauth_connection(&self, id: i64) -> CtlResult<bool> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM google_oauth_connections
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
     pub async fn save_google_calendar_resources(
         &self,
         connection_id: i64,
@@ -722,6 +737,71 @@ mod tests {
 
         assert_eq!(failure.next_sync_token.as_deref(), Some("next-sync-token"));
         assert_eq!(failure.last_error.as_deref(), Some("boom"));
+    }
+
+    #[tokio::test]
+    async fn ctl_store_deletes_google_oauth_connection_cascade() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+        let connection = store
+            .save_google_oauth_connection(SaveGoogleOAuthConnection {
+                access_token: "access-token".to_string(),
+                refresh_token: Some("refresh-token".to_string()),
+                token_type: "Bearer".to_string(),
+                scopes: vec!["scope:a".to_string()],
+                expires_at: None,
+            })
+            .await
+            .expect("saved connection");
+
+        store
+            .save_google_calendar_resources(
+                connection.id,
+                vec![DiscoveredGoogleCalendarResource {
+                    calendar_id: "primary".to_string(),
+                    summary: "Primary".to_string(),
+                    description: None,
+                    time_zone: Some("Europe/Prague".to_string()),
+                    primary: true,
+                    selected: false,
+                }],
+            )
+            .await
+            .expect("saved calendar resources");
+        store
+            .save_google_calendar_sync_success(connection.id, "primary", Some("sync-token"))
+            .await
+            .expect("saved sync state");
+
+        let deleted = store
+            .delete_google_oauth_connection(connection.id)
+            .await
+            .expect("deleted connection");
+
+        assert!(deleted);
+        assert!(
+            store
+                .google_oauth_connection_by_id(connection.id)
+                .await
+                .expect("load deleted connection")
+                .is_none()
+        );
+        assert_eq!(
+            store
+                .list_google_calendar_resources(connection.id)
+                .await
+                .expect("list resources after delete")
+                .len(),
+            0
+        );
+        assert!(
+            store
+                .google_calendar_sync_state(connection.id, "primary")
+                .await
+                .expect("sync state after delete")
+                .is_none()
+        );
     }
 
     #[tokio::test]
