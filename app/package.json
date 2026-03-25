@@ -18,8 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:unit": "vitest",
-    "test:e2e": "playwright test",
-    "test:all": "vitest run && playwright test"
+    "test:e2e": "electron-forge package && playwright test",
+    "test:all": "vitest run && electron-forge package && playwright test"
   },
   "author": "ROG <luanroger.dev@gmail.com>",
   "license": "MIT",

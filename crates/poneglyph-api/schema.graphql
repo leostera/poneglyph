@@ -1,0 +1,53 @@
+type ConnectorStatus {
+  name: String!
+  enabled: Boolean!
+  connected: Boolean!
+  selectedResourceCount: Int!
+  lastSyncedAt: String
+  lastError: String
+}
+
+type ConnectorSyncResult {
+  name: String!
+  synced: Boolean!
+  message: String!
+}
+
+type GoogleCalendarResource {
+  calendarId: String!
+  summary: String!
+  description: String
+  timeZone: String
+  primary: Boolean!
+  selected: Boolean!
+}
+
+type Mutation {
+  discoverGoogleCalendars: [GoogleCalendarResource!]!
+  selectGoogleCalendars(input: SelectGoogleCalendarsInput!): [GoogleCalendarResource!]!
+  syncConnector(name: String!): ConnectorSyncResult!
+}
+
+type Query {
+  googleCalendars: [GoogleCalendarResource!]!
+  connectorStatuses: [ConnectorStatus!]!
+}
+
+input SelectGoogleCalendarsInput {
+  calendarIds: [String!]!
+}
+
+"""
+Directs the executor to include this field or fragment only when the `if` argument is true.
+"""
+directive @include(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+"""
+Directs the executor to skip this field or fragment when the `if` argument is true.
+"""
+directive @skip(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
+
+schema {
+  query: Query
+  mutation: Mutation
+}

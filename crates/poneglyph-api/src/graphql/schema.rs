@@ -15,6 +15,7 @@ pub(crate) struct ApiQuery;
 pub(crate) struct ApiMutation;
 
 #[derive(SimpleObject)]
+#[graphql(name = "GoogleCalendarResource")]
 struct GoogleCalendarResourceObject {
     calendar_id: String,
     summary: String,
@@ -25,6 +26,7 @@ struct GoogleCalendarResourceObject {
 }
 
 #[derive(SimpleObject)]
+#[graphql(name = "ConnectorStatus")]
 struct ConnectorStatusObject {
     name: String,
     enabled: bool,
@@ -35,6 +37,7 @@ struct ConnectorStatusObject {
 }
 
 #[derive(SimpleObject)]
+#[graphql(name = "ConnectorSyncResult")]
 struct ConnectorSyncResultObject {
     name: String,
     synced: bool,
@@ -42,11 +45,12 @@ struct ConnectorSyncResultObject {
 }
 
 #[derive(InputObject)]
+#[graphql(name = "SelectGoogleCalendarsInput")]
 struct SelectGoogleCalendarsInput {
     calendar_ids: Vec<String>,
 }
 
-#[Object]
+#[Object(name = "Query")]
 impl ApiQuery {
     async fn google_calendars(
         &self,
@@ -71,7 +75,7 @@ impl ApiQuery {
     }
 }
 
-#[Object]
+#[Object(name = "Mutation")]
 impl ApiMutation {
     async fn discover_google_calendars(
         &self,
@@ -120,6 +124,13 @@ pub(crate) async fn graphiql() -> impl IntoResponse {
     Html(GraphiQLSource::build().endpoint("/gql").finish())
 }
 
+#[cfg(test)]
+pub(crate) fn schema_sdl() -> String {
+    Schema::build(ApiQuery, ApiMutation, EmptySubscription)
+        .finish()
+        .sdl()
+}
+
 fn schema(context: AppContext) -> ApiSchema {
     Schema::build(ApiQuery, ApiMutation, EmptySubscription)
         .data(context)
@@ -161,5 +172,26 @@ fn map_connector_sync_result(result: google::ConnectorSyncResult) -> ConnectorSy
         name: result.name,
         synced: result.synced,
         message: result.message,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::schema_sdl;
+
+    #[test]
+    fn generated_schema_matches_checked_in_schema_file() {
+        let generated = schema_sdl();
+        let checked_in = include_str!("../../schema.graphql");
+
+        assert_eq!(normalize_sdl(&generated), normalize_sdl(checked_in));
+    }
+
+    fn normalize_sdl(sdl: &str) -> String {
+        sdl.lines()
+            .map(str::trim)
+            .filter(|line| !line.trim().is_empty())
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
