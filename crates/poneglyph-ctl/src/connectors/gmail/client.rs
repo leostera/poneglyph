@@ -74,7 +74,12 @@ impl GmailClient {
                 id: label.id,
                 name: label.name,
                 label_type: label.label_type,
+                label_list_visibility: label.label_list_visibility,
                 message_list_visibility: label.message_list_visibility,
+                messages_total: label.messages_total,
+                messages_unread: label.messages_unread,
+                threads_total: label.threads_total,
+                threads_unread: label.threads_unread,
             })
             .collect())
     }

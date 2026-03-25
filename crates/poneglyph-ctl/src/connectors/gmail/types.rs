@@ -19,7 +19,12 @@ pub struct GmailLabel {
     pub id: String,
     pub name: String,
     pub label_type: Option<String>,
+    pub label_list_visibility: Option<String>,
     pub message_list_visibility: Option<String>,
+    pub messages_total: Option<i64>,
+    pub messages_unread: Option<i64>,
+    pub threads_total: Option<i64>,
+    pub threads_unread: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -58,8 +63,18 @@ pub(crate) struct GmailLabelEntry {
     pub name: String,
     #[serde(rename = "type")]
     pub label_type: Option<String>,
+    #[serde(rename = "labelListVisibility")]
+    pub label_list_visibility: Option<String>,
     #[serde(rename = "messageListVisibility")]
     pub message_list_visibility: Option<String>,
+    #[serde(rename = "messagesTotal")]
+    pub messages_total: Option<i64>,
+    #[serde(rename = "messagesUnread")]
+    pub messages_unread: Option<i64>,
+    #[serde(rename = "threadsTotal")]
+    pub threads_total: Option<i64>,
+    #[serde(rename = "threadsUnread")]
+    pub threads_unread: Option<i64>,
 }
 
 #[derive(Debug, Deserialize)]

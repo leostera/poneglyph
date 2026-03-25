@@ -109,6 +109,41 @@ impl GmailSchema {
             false,
         ));
         facts.extend(Self::field(
+            uri!("gmail:labelListVisibility"),
+            "Label List Visibility",
+            "How the label appears in the Gmail label list.",
+            uri!("gmail:label"),
+            false,
+        ));
+        facts.extend(Self::field(
+            uri!("gmail:labelMessagesTotal"),
+            "Label Messages Total",
+            "Total number of messages under this Gmail label.",
+            uri!("gmail:label"),
+            false,
+        ));
+        facts.extend(Self::field(
+            uri!("gmail:labelMessagesUnread"),
+            "Label Messages Unread",
+            "Unread messages under this Gmail label.",
+            uri!("gmail:label"),
+            false,
+        ));
+        facts.extend(Self::field(
+            uri!("gmail:labelThreadsTotal"),
+            "Label Threads Total",
+            "Total number of threads under this Gmail label.",
+            uri!("gmail:label"),
+            false,
+        ));
+        facts.extend(Self::field(
+            uri!("gmail:labelThreadsUnread"),
+            "Label Threads Unread",
+            "Unread threads under this Gmail label.",
+            uri!("gmail:label"),
+            false,
+        ));
+        facts.extend(Self::field(
             uri!("gmail:messageId"),
             "Message ID",
             "The Gmail message identifier.",

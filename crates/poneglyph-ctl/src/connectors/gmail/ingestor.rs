@@ -178,11 +178,46 @@ impl GmailIngestor {
                 Value::text(label_type.clone())
             ));
         }
+        if let Some(label_list_visibility) = &label.label_list_visibility {
+            facts.push(fact!(
+                label_entity.clone(),
+                uri!("gmail:labelListVisibility"),
+                Value::text(label_list_visibility.clone())
+            ));
+        }
         if let Some(message_list_visibility) = &label.message_list_visibility {
             facts.push(fact!(
                 label_entity.clone(),
                 uri!("gmail:messageListVisibility"),
                 Value::text(message_list_visibility.clone())
+            ));
+        }
+        if let Some(messages_total) = label.messages_total {
+            facts.push(fact!(
+                label_entity.clone(),
+                uri!("gmail:labelMessagesTotal"),
+                Value::integer(messages_total)
+            ));
+        }
+        if let Some(messages_unread) = label.messages_unread {
+            facts.push(fact!(
+                label_entity.clone(),
+                uri!("gmail:labelMessagesUnread"),
+                Value::integer(messages_unread)
+            ));
+        }
+        if let Some(threads_total) = label.threads_total {
+            facts.push(fact!(
+                label_entity.clone(),
+                uri!("gmail:labelThreadsTotal"),
+                Value::integer(threads_total)
+            ));
+        }
+        if let Some(threads_unread) = label.threads_unread {
+            facts.push(fact!(
+                label_entity.clone(),
+                uri!("gmail:labelThreadsUnread"),
+                Value::integer(threads_unread)
             ));
         }
         facts
