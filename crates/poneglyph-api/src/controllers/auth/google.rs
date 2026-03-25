@@ -78,13 +78,15 @@ pub(crate) async fn login(
             .set_redirect_uri(context.google_oauth.redirect_url())
     };
     let (challenge, verifier) = PkceCodeChallenge::new_random_sha256();
-    let (auth_url, state) = client
+    let mut auth_request = client
         .authorize_url(CsrfToken::new_random)
-        .add_scope(context.google_oauth.scope())
         .add_extra_param("access_type", "offline")
         .add_extra_param("prompt", "consent")
-        .set_pkce_challenge(challenge)
-        .url();
+        .set_pkce_challenge(challenge);
+    for scope in context.google_oauth.scopes() {
+        auth_request = auth_request.add_scope(scope);
+    }
+    let (auth_url, state) = auth_request.url();
 
     context
         .insert_google_auth_state(&state, verifier, query.handoff_uri)
@@ -145,7 +147,7 @@ async fn callback_with_code_and_state(context: AppContext, query: GoogleCallback
         let scopes = token
             .scopes()
             .map(|scopes| scopes.iter().map(|scope| scope.to_string()).collect())
-            .unwrap_or_else(|| vec![context.google_oauth.scope.to_string()]);
+            .unwrap_or_else(|| context.google_oauth.scopes.clone());
         let saved = match context
             .ctl
             .save_google_oauth_connection(SaveGoogleOAuthConnection {

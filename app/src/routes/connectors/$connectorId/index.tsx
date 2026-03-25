@@ -59,7 +59,7 @@ function ConnectorDetailPage() {
   const statusesQuery = useConnectorStatusesQuery();
   const status = findConnectorStatus(statusesQuery.data, connectorName);
   const googleConnectionsQuery = useGoogleCalendarConnectionsQuery(
-    connectorName === "gcal" && Boolean(status?.enabled),
+    (connectorName === "gcal" || connectorName === "gmail") && Boolean(status?.enabled),
   );
   const plexConnectionsQuery = usePlexConnectionsQuery(
     connectorName === "plex" && Boolean(status?.enabled),
@@ -76,7 +76,7 @@ function ConnectorDetailPage() {
   const [selectedPlexConnectionId, setSelectedPlexConnectionId] = useState<number | null>(null);
 
   const selectedConnection = useMemo(() => {
-    if (connectorName !== "gcal") {
+    if (connectorName !== "gcal" && connectorName !== "gmail") {
       return null;
     }
     const connections = googleConnectionsQuery.data ?? [];
@@ -251,7 +251,7 @@ function ConnectorDetailPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {connectorName === "gcal" ? (
+            {connectorName === "gcal" || connectorName === "gmail" ? (
               <Button
                 onClick={() => openExternalLink(`${window.poneglyph.apiBaseUrl}/auth/google/login`)}
                 size="sm"
@@ -517,6 +517,119 @@ function ConnectorDetailPage() {
                       </div>
                     )}
                   </>
+                )}
+              </section>
+            </div>
+          ) : connectorName === "gmail" ? (
+            <div className="flex flex-col gap-8 lg:h-[calc(100vh-260px)] lg:flex-row lg:items-start">
+              <aside className="space-y-3 lg:h-fit lg:w-[320px] lg:shrink-0 lg:sticky lg:top-7">
+                <div className="space-y-1.5">
+                  <div className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                    Google accounts
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Select the Google account connection you want Gmail to sync.
+                  </p>
+                </div>
+                <div className="w-full rounded-[3px] border bg-background">
+                  {!status?.connected ? (
+                    <div className="px-4 py-3 text-xs text-muted-foreground">
+                      No connected accounts yet.
+                    </div>
+                  ) : googleConnectionsQuery.isLoading ? (
+                    <div className="space-y-2 px-4 py-3">
+                      <Skeleton className="h-8 w-full" />
+                      <Skeleton className="h-8 w-full" />
+                    </div>
+                  ) : !googleConnectionsQuery.data?.length ? (
+                    <div className="px-4 py-3 text-xs text-muted-foreground">
+                      No accounts discovered yet.
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {googleConnectionsQuery.data.map((connection) => (
+                        <button
+                          className={`w-full px-4 py-3 text-left ${
+                            selectedConnection?.id === connection.id ? "bg-muted/50" : ""
+                          }`}
+                          key={connection.id}
+                          onClick={() => setSelectedConnectionId(connection.id)}
+                          type="button"
+                        >
+                          <div className="text-sm font-medium">{connection.label}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {connection.calendars.length} calendars discovered
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </aside>
+
+              <section className="min-w-0 flex-1 space-y-3 pb-6 lg:pr-2">
+                {!status?.connected ? (
+                  <Alert>
+                    <AlertTitle>Gmail is not connected</AlertTitle>
+                    <AlertDescription>
+                      Start the browser auth flow, then return here and press Sync now to ingest
+                      Gmail labels and message metadata.
+                    </AlertDescription>
+                  </Alert>
+                ) : selectedConnection == null ? (
+                  <Alert>
+                    <AlertTitle>Select an account</AlertTitle>
+                    <AlertDescription>
+                      Choose a Google account from the left column to manage this Gmail connection.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="rounded-[3px] border bg-background p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-2">
+                        <h2 className="text-base font-medium">{selectedConnection.label}</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Gmail sync currently ingests account profile, labels, and message metadata
+                          (subject, sender, recipient, snippet, internal date, thread linkage).
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <Badge variant={status?.enabled ? "secondary" : "outline"}>
+                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-emerald-500" />
+                            {status?.enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                          <Badge variant={status?.connected ? "secondary" : "outline"}>
+                            <span className="mr-1.5 inline-block size-1.5 rounded-full bg-sky-500" />
+                            {status?.connected ? "Connected" : "Waiting"}
+                          </Badge>
+                          {status?.lastError ? <Badge variant="destructive">Error</Badge> : null}
+                          <span className="text-xs text-muted-foreground">
+                            {formatSyncTimestamp(status?.lastSyncedAt)}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        disabled={deleteConnectionMutation.isPending}
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            "Delete this Google account connection? This disconnects Gmail and Google Calendar for the same account.",
+                          );
+                          if (!confirmed) {
+                            return;
+                          }
+                          deleteConnectionMutation.mutate(selectedConnection.id);
+                        }}
+                        size="sm"
+                        variant="destructive"
+                      >
+                        {deleteConnectionMutation.isPending ? (
+                          <LoaderCircle className="animate-spin" />
+                        ) : (
+                          <Trash2 />
+                        )}
+                        Delete connection
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </section>
             </div>

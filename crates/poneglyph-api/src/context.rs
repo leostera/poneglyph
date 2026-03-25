@@ -31,7 +31,7 @@ pub(crate) struct GoogleOAuthConfig {
     pub auth_url: String,
     pub token_url: String,
     pub redirect_uri: String,
-    pub scope: String,
+    pub scopes: Vec<String>,
 }
 
 impl Default for GoogleOAuthConfig {
@@ -43,7 +43,10 @@ impl Default for GoogleOAuthConfig {
             auth_url: "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
             token_url: "https://oauth2.googleapis.com/token".to_string(),
             redirect_uri: "http://127.0.0.1:8787".to_string(),
-            scope: "https://www.googleapis.com/auth/calendar.readonly".to_string(),
+            scopes: vec![
+                "https://www.googleapis.com/auth/calendar.readonly".to_string(),
+                "https://www.googleapis.com/auth/gmail.readonly".to_string(),
+            ],
         }
     }
 }
@@ -69,8 +72,8 @@ impl GoogleOAuthConfig {
         RedirectUrl::new(self.redirect_uri.clone()).expect("google redirect url")
     }
 
-    pub fn scope(&self) -> Scope {
-        Scope::new(self.scope.clone())
+    pub fn scopes(&self) -> Vec<Scope> {
+        self.scopes.iter().cloned().map(Scope::new).collect()
     }
 }
 

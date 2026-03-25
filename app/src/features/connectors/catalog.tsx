@@ -141,7 +141,7 @@ export const connectorCatalogCategories = [
 
 export type ConnectorCatalogCategory = (typeof connectorCatalogCategories)[number]["id"];
 
-export const connectorOrder: ConnectorName[] = ["gcal", "plex"];
+export const connectorOrder: ConnectorName[] = ["gcal", "gmail", "plex"];
 
 export const connectorCatalog: Record<ConnectorName, ConnectorMeta> = {
   gcal: {
@@ -149,6 +149,12 @@ export const connectorCatalog: Record<ConnectorName, ConnectorMeta> = {
     summary:
       "Authorize Google Calendar, choose which calendars should stay in sync, and ingest events into the local graph.",
     icon: brandIcon(SiGooglecalendar, SiGooglecalendarHex, "Google Calendar"),
+  },
+  gmail: {
+    title: "Gmail",
+    summary:
+      "Authorize Gmail access and ingest mailbox metadata like labels, messages, senders, and threads.",
+    icon: brandIcon(SiGmail, SiGmailHex, "Gmail"),
   },
   plex: {
     title: "Plex",
@@ -174,6 +180,7 @@ export const connectorOfferings: ConnectorOffering[] = [
     title: "Gmail",
     summary: "Pull message metadata, threads, senders, and conversation structure into Poneglyph.",
     icon: brandIcon(SiGmail, SiGmailHex, "Gmail"),
+    href: "/connectors/gmail",
   },
   {
     category: "communication",
@@ -523,7 +530,8 @@ export function sidebarConnectorItems(statuses: ConnectorStatus[] | undefined) {
       const shouldShow =
         status.connected ||
         status.selectedResourceCount > 0 ||
-        (status.name === "plex" && status.enabled);
+        (status.name === "plex" && status.enabled) ||
+        (status.name === "gmail" && status.enabled);
 
       if (!shouldShow) {
         return null;

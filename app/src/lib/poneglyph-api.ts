@@ -23,7 +23,7 @@ type GraphqlEnvelope<TData> = {
   errors?: Array<{ message?: string }>;
 };
 
-const CONNECTOR_NAMES = ["plex", "gcal"] as const;
+const CONNECTOR_NAMES = ["plex", "gcal", "gmail"] as const;
 
 export type ConnectorName = (typeof CONNECTOR_NAMES)[number];
 export type ConnectorStatus = ResultOf<
