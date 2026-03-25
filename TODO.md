@@ -3,7 +3,7 @@
 This file tracks connector integrations we want in Poneglyph and the repeatable playbook to build them.
 
 ## Status legend
-- `[ ]` not started
+- [ ] not started
 - `[-]` in progress
 - `[x]` implemented
 
@@ -11,71 +11,71 @@ This file tracks connector integrations we want in Poneglyph and the repeatable 
 - `[x]` Plex
 - `[x]` Google Calendar
 - `[x]` Gmail
-- `[ ]` File System
+- [ ] File System
 
 ## Backlog (requested)
 ### Communication & Messaging
-- `[ ]` Slack
-- `[ ]` Discord
-- `[ ]` Apple Messages
-- `[ ]` WhatsApp
-- `[ ]` Telegram
-- `[ ]` Signal
+- [ ] Slack
+- [ ] Discord
+- [ ] Apple Messages
+- [ ] WhatsApp
+- [ ] Telegram
+- [ ] Signal
 
 ### Email
-- `[ ]` Email (IMAP/POP3/SMTP generic)
+- [ ] Email (IMAP/POP3/SMTP generic)
 
 ### Code & Work
-- `[ ]` GitHub
-- `[ ]` Linear
-- `[ ]` ChatGPT
+- [ ] GitHub
+- [ ] Linear
+- [ ] ChatGPT
 
 ### Storage & Databases
-- `[ ]` S3 / MinIO / Hetzner / Cloudflare R2 (object storage family)
-- `[ ]` Google Drive
-- `[ ]` Postgres
-- `[ ]` SQLite
-- `[ ]` File System
-- `[ ]` iCloud
+- [ ] S3 / MinIO / Hetzner / Cloudflare R2 (object storage family)
+- [ ] Google Drive
+- [ ] Postgres
+- [ ] SQLite
+- [ ] File System
+- [ ] iCloud
 
 ### Browser & Knowledge
-- `[ ]` Browser History (Chrome-first)
-- `[ ]` Obsidian
+- [ ] Browser History (Chrome-first)
+- [ ] Obsidian
 
 ### Social
-- `[ ]` LinkedIn
-- `[ ]` X (Twitter)
-- `[ ]` Instagram
-- `[ ]` TikTok
-- `[ ]` Facebook
-- `[ ]` YouTube
-- `[ ]` Reddit
-- `[ ]` Substack
-- `[ ]` BlueSky
-- `[ ]` Threads
+- [ ] LinkedIn
+- [ ] X (Twitter)
+- [ ] Instagram
+- [ ] TikTok
+- [ ] Facebook
+- [ ] YouTube
+- [ ] Reddit
+- [ ] Substack
+- [ ] BlueSky
+- [ ] Threads
 
 ### Media & Entertainment
-- `[ ]` Spotify
-- `[ ]` Netflix
-- `[ ]` Crunchyroll
-- `[ ]` Adobe Lightroom
+- [ ] Spotify
+- [ ] Netflix
+- [ ] Crunchyroll
+- [ ] Adobe Lightroom
 
 ### Health & Fitness
-- `[ ]` Strava
-- `[ ]` Withings
-- `[ ]` Apple Fitness / Health
-- `[ ]` Duolingo
+- [ ] Strava
+- [ ] Withings
+- [ ] Apple Fitness / Health
+- [ ] Duolingo
 
 ### Finance & Commerce
-- `[ ]` Wise
-- `[ ]` Raiffeisen
-- `[ ]` Airbnb
-- `[ ]` Alza
+- [ ] Wise
+- [ ] Raiffeisen
+- [ ] Airbnb
+- [ ] Alza
 
 ### Infra / Network / Domains
-- `[ ]` Cloudflare
-- `[ ]` Name.com
-- `[ ]` Unifi / Ubiquiti
+- [ ] Cloudflare
+- [ ] Name.com
+- [ ] Unifi / Ubiquiti
 
 ## Integration playbook
 
@@ -145,11 +145,11 @@ This file tracks connector integrations we want in Poneglyph and the repeatable 
 - Tests pass (`cargo test`, app checks, and e2e where present).
 
 ## Suggested implementation order (high leverage first)
-- `[ ]` File System
-- `[ ]` Spotify
-- `[ ]` Postgres
-- `[ ]` SQLite
-- `[ ]` GitHub
-- `[ ]` Telegram
-- `[ ]` Google Drive
-- `[ ]` Slack
+- [ ] File System
+- [ ] Spotify
+- [ ] Postgres
+- [ ] SQLite
+- [ ] GitHub
+- [ ] Telegram
+- [ ] Google Drive
+- [ ] Slack
