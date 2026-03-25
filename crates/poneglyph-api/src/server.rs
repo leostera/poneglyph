@@ -4,6 +4,7 @@ use axum::{Router, routing::get};
 use derive_builder::Builder;
 use poneglyph::Poneglyph;
 use poneglyph_ctl::{CtlStore, PoneglyphCtlConfig};
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::{
     DefaultMakeSpan, DefaultOnFailure, DefaultOnRequest, DefaultOnResponse, TraceLayer,
 };
@@ -59,6 +60,12 @@ impl PoneglyphApiServer {
             .route("/auth/google/grant", get(google::grant))
             .route("/auth/google/redeem", get(google::redeem))
             .nest_service("/mcp", context.mcp.router())
+            .layer(
+                CorsLayer::new()
+                    .allow_origin(Any)
+                    .allow_methods(Any)
+                    .allow_headers(Any),
+            )
             .layer(
                 TraceLayer::new_for_http()
                     .make_span_with(DefaultMakeSpan::new().level(tracing::Level::INFO))
