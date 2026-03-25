@@ -2,6 +2,7 @@ import type { EntityListRow } from "@/components/entities/list";
 import { resolveEntityListView } from "@/components/entities/list-registry";
 import type { EntityViewModel } from "@/components/entities/types";
 import { resolveEntityView } from "@/components/entities/view-registry";
+import { TwoColumnLayout } from "@/components/layout/two-column-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,10 +184,12 @@ export function EntitiesExplorerPage({ scope }: EntitiesExplorerPageProps) {
     : null;
 
   return (
-    <div className="min-h-full px-6 py-7">
-      <div className="w-full">
-        <div className="flex h-[calc(100vh-128px)] overflow-hidden">
-          <aside className="w-[220px] shrink-0 overflow-y-auto border-r pr-4">
+    <div className="flex min-h-full flex-1 px-6 py-7">
+      <div className="flex w-full min-h-0 flex-1">
+        <TwoColumnLayout
+          className="h-full"
+          contentClassName="pl-5"
+          nav={
             <div className="space-y-1">
               <div className="pb-2">
                 <Input
@@ -252,164 +255,166 @@ export function EntitiesExplorerPage({ scope }: EntitiesExplorerPageProps) {
                 </div>
               ))}
             </div>
-          </aside>
+          }
+          navClassName="w-[220px] border-r pr-4"
+          content={
+            <>
+              <div className="mb-4 flex items-start justify-between gap-6">
+                <h1 className="text-[26px] font-semibold tracking-tight">{contentTitle}</h1>
+                <Button
+                  onClick={() => {
+                    void query.refetch();
+                    void schemaQuery.refetch();
+                    if (selection.entityUri) {
+                      void entityQuery.refetch();
+                    }
+                  }}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <RefreshCw
+                    className={
+                      query.isFetching || schemaQuery.isFetching || entityQuery.isFetching
+                        ? "animate-spin"
+                        : undefined
+                    }
+                  />
+                  Refresh
+                </Button>
+              </div>
 
-          <section className="min-w-0 flex-1 overflow-y-auto pl-5">
-            <div className="mb-4 flex items-start justify-between gap-6">
-              <h1 className="text-[26px] font-semibold tracking-tight">{contentTitle}</h1>
-              <Button
-                onClick={() => {
-                  void query.refetch();
-                  void schemaQuery.refetch();
-                  if (selection.entityUri) {
-                    void entityQuery.refetch();
-                  }
-                }}
-                size="sm"
-                variant="ghost"
-              >
-                <RefreshCw
-                  className={
-                    query.isFetching || schemaQuery.isFetching || entityQuery.isFetching
-                      ? "animate-spin"
-                      : undefined
-                  }
-                />
-                Refresh
-              </Button>
-            </div>
+              {!selection.valid ? (
+                <Alert className="mb-4" variant="destructive">
+                  <AlertTitle>Invalid entity scope</AlertTitle>
+                  <AlertDescription>
+                    The URL scope is not valid. Use `/entities`, `/entities/ns:`,
+                    `/entities/ns:kind`, or `/entities/ns:kind:id`.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
-            {!selection.valid ? (
-              <Alert className="mb-4" variant="destructive">
-                <AlertTitle>Invalid entity scope</AlertTitle>
-                <AlertDescription>
-                  The URL scope is not valid. Use `/entities`, `/entities/ns:`, `/entities/ns:kind`,
-                  or `/entities/ns:kind:id`.
-                </AlertDescription>
-              </Alert>
-            ) : null}
+              {selection.entityUri ? (
+                <>
+                  {entityQuery.error ? (
+                    <Alert className="mb-4" variant="destructive">
+                      <AlertTitle>Unable to load entity</AlertTitle>
+                      <AlertDescription>{entityQuery.error.message}</AlertDescription>
+                    </Alert>
+                  ) : null}
 
-            {selection.entityUri ? (
-              <>
-                {entityQuery.error ? (
-                  <Alert className="mb-4" variant="destructive">
-                    <AlertTitle>Unable to load entity</AlertTitle>
-                    <AlertDescription>{entityQuery.error.message}</AlertDescription>
-                  </Alert>
-                ) : null}
+                  {entityQuery.isLoading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-6 w-72" />
+                      <Skeleton className="h-24 w-full" />
+                      <Skeleton className="h-64 w-full" />
+                    </div>
+                  ) : viewEntity && View ? (
+                    <View entity={viewEntity} />
+                  ) : (
+                    <Alert>
+                      <AlertTitle>Entity not found</AlertTitle>
+                      <AlertDescription>
+                        No entity exists for URI{" "}
+                        <span className="font-mono">{selection.entityUri}</span>.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </>
+              ) : (
+                <>
+                  {query.error ? (
+                    <Alert className="mb-4" variant="destructive">
+                      <AlertTitle>Unable to load entities</AlertTitle>
+                      <AlertDescription>{query.error.message}</AlertDescription>
+                    </Alert>
+                  ) : null}
 
-                {entityQuery.isLoading ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-6 w-72" />
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-64 w-full" />
-                  </div>
-                ) : viewEntity && View ? (
-                  <View entity={viewEntity} />
-                ) : (
-                  <Alert>
-                    <AlertTitle>Entity not found</AlertTitle>
-                    <AlertDescription>
-                      No entity exists for URI{" "}
-                      <span className="font-mono">{selection.entityUri}</span>.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </>
-            ) : (
-              <>
-                {query.error ? (
-                  <Alert className="mb-4" variant="destructive">
-                    <AlertTitle>Unable to load entities</AlertTitle>
-                    <AlertDescription>{query.error.message}</AlertDescription>
-                  </Alert>
-                ) : null}
-
-                <div className="overflow-hidden rounded-[3px] border bg-background">
-                  {query.isLoading ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[16%]">Namespace</TableHead>
-                          <TableHead className="w-[16%]">Kind</TableHead>
-                          <TableHead className="w-[36%]">URI</TableHead>
-                          <TableHead className="w-[20%]">Label</TableHead>
-                          <TableHead>Last updated at</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {SKELETON_ROWS.map((rowId) => (
-                          <TableRow key={rowId}>
-                            <TableCell>
-                              <Skeleton className="h-4 w-20" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-20" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-full max-w-[320px]" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-28" />
-                            </TableCell>
-                            <TableCell>
-                              <Skeleton className="h-4 w-24" />
+                  <div className="overflow-hidden rounded-[3px] border bg-background">
+                    {query.isLoading ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[16%]">Namespace</TableHead>
+                            <TableHead className="w-[16%]">Kind</TableHead>
+                            <TableHead className="w-[36%]">URI</TableHead>
+                            <TableHead className="w-[20%]">Label</TableHead>
+                            <TableHead>Last updated at</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {SKELETON_ROWS.map((rowId) => (
+                            <TableRow key={rowId}>
+                              <TableCell>
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-20" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-full max-w-[320px]" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-28" />
+                              </TableCell>
+                              <TableCell>
+                                <Skeleton className="h-4 w-24" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : listRows.length === 0 ? (
+                      <Table>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="py-6 text-sm text-muted-foreground" colSpan={5}>
+                              No entities in this namespace/kind scope on the current page.
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : listRows.length === 0 ? (
-                    <Table>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className="py-6 text-sm text-muted-foreground" colSpan={5}>
-                            No entities in this namespace/kind scope on the current page.
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <ListView
-                      onSelect={(row) => {
-                        void navigate({
-                          to: "/entities/$scope",
-                          params: { scope: row.uri },
-                        });
-                      }}
-                      rows={listRows}
-                      selectedUri={selection.entityUri}
-                    />
-                  )}
-                </div>
-
-                <div className="mt-3 flex items-center justify-between px-1 py-2">
-                  <div className="text-sm text-muted-foreground">Page {page}</div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      disabled={offset === 0 || query.isFetching}
-                      onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <ChevronLeft />
-                      Previous
-                    </Button>
-                    <Button
-                      disabled={!hasNextPage || query.isFetching}
-                      onClick={() => setOffset((current) => current + PAGE_SIZE)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      Next
-                      <ChevronRight />
-                    </Button>
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <ListView
+                        onSelect={(row) => {
+                          void navigate({
+                            to: "/entities/$scope",
+                            params: { scope: row.uri },
+                          });
+                        }}
+                        rows={listRows}
+                        selectedUri={selection.entityUri}
+                      />
+                    )}
                   </div>
-                </div>
-              </>
-            )}
-          </section>
-        </div>
+
+                  <div className="mt-3 flex items-center justify-between px-1 py-2">
+                    <div className="text-sm text-muted-foreground">Page {page}</div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        disabled={offset === 0 || query.isFetching}
+                        onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <ChevronLeft />
+                        Previous
+                      </Button>
+                      <Button
+                        disabled={!hasNextPage || query.isFetching}
+                        onClick={() => setOffset((current) => current + PAGE_SIZE)}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Next
+                        <ChevronRight />
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          }
+        />
       </div>
     </div>
   );
