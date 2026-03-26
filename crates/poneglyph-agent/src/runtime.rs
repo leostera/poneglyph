@@ -11,25 +11,106 @@ use serde::{Deserialize, Serialize};
 
 use crate::tool::{PoneglyphTool, PoneglyphToolRunner};
 
-const ROBIN_IDENTITY_PROMPT: &str = r#"You are Robin, the built-in expert operator for the Poneglyph knowledge graph.
+const ROBIN_SYSTEM_PROMPT: &str = r#"You are Robin, the built-in expert operator for the Poneglyph knowledge graph.
 
-Your job is to help humans and other agents extract, query, and structure graph knowledge safely."#;
+Your job is to help humans and other agents extract, query, and structure graph knowledge safely.
 
-const ROBIN_OPERATING_RULES_PROMPT: &str = r#"Operating rules:
+Operating rules:
 - You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.
-- For read/query tasks, you MUST call `get_schema` before the first graph query in a conversation.
-- The only graph read tools available are `get_schema`, `query_facts`, `search_entities`, and `read_entity`.
-- There is NO `query_entities` tool. There is NO SPARQL support. There is NO SQL support.
-- Never emit fake JSON for tool calls in assistant text. Call the actual tool directly.
-- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.
+- For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.
+- The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.
+- Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.
+- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.
 - If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.
-- Prefer schema and graph tools over unsupported assumptions.
-- Search before write. If a thing may already exist, use search_entities first.
+- Search before write. If a thing may already exist, use `search_entities` first.
 - Facts are append-only truth. Do not describe mutable updates as if records are overwritten.
-- When you need a new entity, prefer create_entity before state_facts.
+- When you need a new entity, prefer `create_entity` before `state_facts`.
 - Keep answers concise and concrete.
 - Never expose secrets or tokens in replies.
-"#;
+
+<examples>
+  <example name="schema-first-read">
+    <user>Do I have any concerts this month?</user>
+    <assistant>
+      I must inspect the graph schema first, then query only with predicates that exist in the schema.
+    </assistant>
+    <tool_call name="get_schema">{}</tool_call>
+    <tool_result name="get_schema">
+      {
+        "kinds": [
+          { "uri": "demo:event", "name": "Event" }
+        ],
+        "fields": [
+          { "uri": "demo:startAt", "domain": "demo:event", "name": "Start At" },
+          { "uri": "schema:name", "domain": null, "name": "Name" }
+        ]
+      }
+    </tool_result>
+    <tool_call name="query_facts">
+      {
+        "query": "demo:startAt(Event, Start), Start >= \"2026-04-01\", Start <= \"2026-04-30\", schema:name(Event, Name)"
+      }
+    </tool_call>
+    <tool_result name="query_facts">
+      {
+        "substitutions": [
+          {
+            "bindings": {
+              "Event": { "String": "demo:event:april-concert" },
+              "Name": { "String": "April Concert" },
+              "Start": { "String": "2026-04-12T20:00:00+00:00" }
+            }
+          }
+        ]
+      }
+    </tool_result>
+    <assistant>
+      Yes. You have one concert this month: "April Concert" on April 12, 2026 at 8:00 PM UTC.
+    </assistant>
+  </example>
+  <example name="query-repair">
+    <user>What meetings do I have next week?</user>
+    <assistant>
+      I must inspect schema first. If my first query is wrong, I must repair it with another real tool call instead of answering or printing fake tool-call text.
+    </assistant>
+    <tool_call name="get_schema">{}</tool_call>
+    <tool_result name="get_schema">
+      {
+        "kinds": [
+          { "uri": "demo:event", "name": "Event" }
+        ],
+        "fields": [
+          { "uri": "demo:startsAt", "domain": "demo:event", "name": "Starts At" },
+          { "uri": "demo:category", "domain": "demo:event", "name": "Category" },
+          { "uri": "schema:name", "domain": null, "name": "Name" }
+        ]
+      }
+    </tool_result>
+    <tool_call name="query_entities">
+      {
+        "type": "demo:event",
+        "filter": "demo:category = \"meeting\" AND demo:startsAt >= \"2026-04-20\" AND demo:startsAt <= \"2026-04-26\"",
+        "limit": 20
+      }
+    </tool_call>
+    <tool_result name="query_entities">
+      {
+        "entities": [
+          {
+            "entityUri": "demo:event:staff-sync",
+            "label": "Staff Sync",
+            "entity": {
+              "uri": "demo:event:staff-sync"
+            }
+          }
+        ]
+      }
+    </tool_result>
+    <assistant>
+      You have one meeting next week: Staff Sync.
+    </assistant>
+  </example>
+</examples>"#;
 
 pub type PoneglyphSessionAgent = SessionAgent<String, PoneglyphTool, serde_json::Value, String>;
 pub type PoneglyphAgentEvent = AgentEvent<PoneglyphTool, serde_json::Value, String>;
@@ -67,9 +148,8 @@ impl PoneglyphAgent {
 
     pub fn new_with_runner(poneglyph: Arc<Poneglyph>, llm_runner: Arc<LlmRunner>) -> Result<Self> {
         let context_manager = ContextManager::builder()
-            .add_provider(RobinIdentityContextProvider)
+            .add_provider(RobinSystemPromptProvider)
             .add_provider(RobinRuntimeContextProvider)
-            .add_provider(RobinSchemaFirstExampleProvider)
             .build();
         let inner = SessionAgent::builder()
             .with_llm_runner(llm_runner)
@@ -106,16 +186,16 @@ impl PoneglyphAgent {
     }
 }
 
-struct RobinIdentityContextProvider;
+struct RobinSystemPromptProvider;
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl ContextProvider for RobinIdentityContextProvider {
+impl ContextProvider for RobinSystemPromptProvider {
     async fn provide(&self) -> agents::AgentResult<Vec<ContextChunk>> {
-        Ok(vec![
-            ContextChunk::system_text(ContextStrategy::Pinnable, ROBIN_IDENTITY_PROMPT),
-            ContextChunk::system_text(ContextStrategy::Pinnable, ROBIN_OPERATING_RULES_PROMPT),
-        ])
+        Ok(vec![ContextChunk::system_text(
+            ContextStrategy::Pinnable,
+            ROBIN_SYSTEM_PROMPT,
+        )])
     }
 }
 
@@ -130,68 +210,6 @@ impl ContextProvider for RobinRuntimeContextProvider {
             ContextStrategy::Pinnable,
             format_runtime_context(now),
         )])
-    }
-}
-
-struct RobinSchemaFirstExampleProvider;
-
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl ContextProvider for RobinSchemaFirstExampleProvider {
-    async fn provide(&self) -> agents::AgentResult<Vec<ContextChunk>> {
-        Ok(vec![
-            ContextChunk::user_text(ContextStrategy::Pinnable, "Do I have any events this week?"),
-            ContextChunk::assistant_text(
-                ContextStrategy::Pinnable,
-                "I will inspect the schema first, then query the graph with the exact field names I find there.",
-            ),
-            ContextChunk::ToolCall {
-                strategy: ContextStrategy::Pinnable,
-                id: "example_get_schema".to_string(),
-                name: "get_schema".to_string(),
-                args: serde_json::json!({}),
-            },
-            ContextChunk::ToolResult {
-                strategy: ContextStrategy::Pinnable,
-                id: "example_get_schema".to_string(),
-                result: serde_json::json!({
-                    "kinds": [
-                        { "uri": "gcal:event", "name": "Event" }
-                    ],
-                    "fields": [
-                        { "uri": "gcal:startAt", "domain": "gcal:event", "name": "Start At" },
-                        { "uri": "schema:name", "domain": null, "name": "Name" }
-                    ]
-                }),
-            },
-            ContextChunk::ToolCall {
-                strategy: ContextStrategy::Pinnable,
-                id: "example_query_facts".to_string(),
-                name: "query_facts".to_string(),
-                args: serde_json::json!({
-                    "query": r#"gcal:startAt(Event, Start), Start >= "2026-03-23", Start <= "2026-03-29", schema:name(Event, Name)"#
-                }),
-            },
-            ContextChunk::ToolResult {
-                strategy: ContextStrategy::Pinnable,
-                id: "example_query_facts".to_string(),
-                result: serde_json::json!({
-                    "substitutions": [
-                        {
-                            "bindings": {
-                                "Event": { "String": "gcal:event:design-review" },
-                                "Name": { "String": "Design Review" },
-                                "Start": { "String": "2026-03-25T10:00:00+00:00" }
-                            }
-                        }
-                    ]
-                }),
-            },
-            ContextChunk::assistant_text(
-                ContextStrategy::Pinnable,
-                "Yes, you have an event this week. The event is named \"Design Review\" and starts on March 25, 2026 at 10:00 AM.",
-            ),
-        ])
     }
 }
 
