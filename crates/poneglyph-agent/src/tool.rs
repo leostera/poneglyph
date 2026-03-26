@@ -12,6 +12,85 @@ use schemars::generate::SchemaSettings;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue, json};
 
+pub const CREATE_ENTITY_TOOL_DESCRIPTION: &str = r#"Create a new entity URI and immediately state its `schema:name`.
+
+Use this only after you have searched first and confirmed the entity does not already exist.
+
+Example:
+{
+  "namespace": "dev",
+  "kind": "project",
+  "name": "poneglyph"
+}
+
+Returns:
+{
+  "entityUri": "dev:project:032HJb6y7SlDSWhok7W2QC",
+  "txId": "poneglyph:tx:..."
+}"#;
+
+pub const STATE_FACTS_TOOL_DESCRIPTION: &str = r#"Append one atomic batch of facts.
+
+All entity URIs used by `facts[*].entity` must also appear in `entities`.
+Use `get_schema` first when you need to discover or extend the graph vocabulary.
+Use `create_entity` or `search_entities` to find or create entities before writing facts.
+
+Example:
+{
+  "entities": ["spotify:artist:rush"],
+  "facts": [
+    {
+      "entity": "spotify:artist:rush",
+      "field": "spotify:displayName",
+      "value": { "type": "text", "text": "Rush" }
+    }
+  ]
+}"#;
+
+pub const QUERY_FACTS_TOOL_DESCRIPTION: &str = r#"Run a Datafox query over the active graph facts.
+
+Supported grammar:
+query        = clause , { "," , clause } ;
+clause       = [ "!" ] , predicate , "(" , term , { "," , term } , ")" ;
+predicate    = identifier | quoted_predicate ;
+identifier   = ? unquoted predicate like spotify:displayName ? ;
+quoted_predicate = "'" , { character } , "'" | '"' , { character } , '"' ;
+term         = variable | "_" | string | integer ;
+variable     = ? identifier starting with uppercase letter ? ;
+
+Examples:
+spotify:displayName(Album, "2112")
+spotify:byArtist(Album, Artist), spotify:displayName(Artist, "Rush")
+'local://schema/name'(Entity, Name)"#;
+
+pub const GET_SCHEMA_TOOL_DESCRIPTION: &str = r#"Fetch the effective schema definition built from ordinary schema facts and observed data.
+
+Use this before querying or writing new schema so you can discover:
+- namespaces
+- kinds
+- fields
+- field domains, ranges, and value types when available
+
+Example:
+{}"#;
+
+pub const READ_ENTITY_TOOL_DESCRIPTION: &str = r#"Fetch a consolidated entity by URI.
+
+Example:
+{
+  "entity_uri": "spotify:artist:rush"
+}"#;
+
+pub const SEARCH_ENTITIES_TOOL_DESCRIPTION: &str = r#"Search the projected entity index for existing entities.
+
+Use this before inventing new URIs or stating facts about a thing that may already exist.
+
+Example:
+{
+  "query": "rush",
+  "limit": 5
+}"#;
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CreateEntityArgs {
@@ -108,16 +187,12 @@ impl agents::tools::TypedTool for PoneglyphTool {
         vec![
             RawToolDefinition::function(
                 "create_entity",
-                Some(
-                    "Create a new entity URI and state its schema:name. Use this only after searching first and failing to find an existing entity.",
-                ),
+                Some(CREATE_ENTITY_TOOL_DESCRIPTION),
                 schema_for::<CreateEntityArgs>(),
             ),
             RawToolDefinition::function(
                 "get_schema",
-                Some(
-                    "Fetch the effective schema definition from Poneglyph. Use this before reasoning about namespaces, kinds, or fields you are unsure about.",
-                ),
+                Some(GET_SCHEMA_TOOL_DESCRIPTION),
                 json!({
                     "type": "object",
                     "properties": {},
@@ -126,26 +201,22 @@ impl agents::tools::TypedTool for PoneglyphTool {
             ),
             RawToolDefinition::function(
                 "search_entities",
-                Some(
-                    "Search the knowledge graph for existing entities. Use this before inventing new URIs or stating facts about a thing that may already exist.",
-                ),
+                Some(SEARCH_ENTITIES_TOOL_DESCRIPTION),
                 schema_for::<SearchEntitiesArgs>(),
             ),
             RawToolDefinition::function(
                 "read_entity",
-                Some("Read one consolidated entity by URI."),
+                Some(READ_ENTITY_TOOL_DESCRIPTION),
                 schema_for::<ReadEntityArgs>(),
             ),
             RawToolDefinition::function(
                 "query_facts",
-                Some("Run a Datafox query over the active graph facts."),
+                Some(QUERY_FACTS_TOOL_DESCRIPTION),
                 schema_for::<QueryFactsArgs>(),
             ),
             RawToolDefinition::function(
                 "state_facts",
-                Some(
-                    "Append one atomic batch of facts. Prefer create_entity or search_entities before using this when the entity identity is not already known.",
-                ),
+                Some(STATE_FACTS_TOOL_DESCRIPTION),
                 schema_for::<StateFactsArgs>(),
             ),
         ]

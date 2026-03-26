@@ -6,6 +6,7 @@ use derive_builder::Builder;
 use poneglyph::{
     Entity, Fact, Poneglyph, Query, SearchHit, Uri, Value as PoneglyphValue, fact, uri,
 };
+use poneglyph_agent::GET_SCHEMA_TOOL_DESCRIPTION;
 use schemars::{JsonSchema, schema_for};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -22,76 +23,6 @@ const TOOL_GET_SCHEMA: &str = "getSchema";
 const TOOL_GET_ENTITY: &str = "getEntity";
 const TOOL_SEARCH: &str = "search";
 const TOOL_MESSAGE_AGENT: &str = "messageAgent";
-const CREATE_ENTITY_DESCRIPTION: &str = r#"Create a new entity URI and immediately state its `schema:name`.
-
-Example:
-{
-  "namespace": "dev",
-  "kind": "project",
-  "name": "poneglyph"
-}
-
-Returns:
-{
-  "entityUri": "dev:project:032HJb6y7SlDSWhok7W2QC",
-  "txId": "poneglyph:tx:..."
-}"#;
-const STATE_FACTS_DESCRIPTION: &str = r#"Append one atomic batch of facts.
-
-All entity URIs used by `facts[*].entity` must also appear in `entities`.
-Use `getSchema` first when you need to discover or extend the graph vocabulary.
-Use `createEntity` or `search` to find/create entities before writing facts.
-
-Example:
-{
-  "entities": ["spotify:artist:rush"],
-  "facts": [
-    {
-      "entity": "spotify:artist:rush",
-      "field": "spotify:displayName",
-      "value": { "type": "text", "value": "Rush" }
-    }
-  ]
-}"#;
-const QUERY_DESCRIPTION: &str = r#"Run a Datalog query over the active graph.
-
-Supported grammar:
-query        = clause , { "," , clause } ;
-clause       = [ "!" ] , predicate , "(" , term , { "," , term } , ")" ;
-predicate    = identifier | quoted_predicate ;
-identifier   = ? unquoted predicate like spotify:displayName ? ;
-quoted_predicate = "'" , { character } , "'" | '"' , { character } , '"' ;
-term         = variable | "_" | string | integer ;
-variable     = ? identifier starting with uppercase letter ? ;
-
-Examples:
-spotify:displayName(Album, "2112")
-spotify:byArtist(Album, Artist), spotify:displayName(Artist, "Rush")
-'local://schema/name'(Entity, Name)"#;
-
-const GET_SCHEMA_DESCRIPTION: &str = r#"Fetch the effective schema definition built from ordinary schema facts and observed data.
-
-Use this before querying or writing new schema so you can discover:
-- namespaces
-- kinds
-- fields
-- field domains, ranges, and value types when available
-
-Example:
-{}"#;
-const GET_ENTITY_DESCRIPTION: &str = r#"Fetch a consolidated entity by URI.
-
-Example:
-{
-  "entityUri": "spotify:artist:rush"
-}"#;
-const SEARCH_DESCRIPTION: &str = r#"Search the projected entity index.
-
-Example:
-{
-  "query": "rush",
-  "limit": 5
-}"#;
 const MESSAGE_AGENT_DESCRIPTION: &str = r#"Send a message to the built-in poneglyph-agent.
 
 Use this when you want Poneglyph's own graph expert to inspect schema, search for existing entities, or extract facts for you.
@@ -140,7 +71,7 @@ impl PoneglyphMcpServer {
     pub fn list_tools(&self) -> Vec<Tool> {
         let mut tools = vec![tool(
             TOOL_GET_SCHEMA,
-            GET_SCHEMA_DESCRIPTION,
+            GET_SCHEMA_TOOL_DESCRIPTION,
             json_schema_for::<GetSchemaInput>(),
         )];
         if self.agent_handler.is_some() {
