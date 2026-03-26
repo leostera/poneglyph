@@ -56,7 +56,7 @@ impl ServerHandler for RmcpHandler {
                 .build(),
         )
         .with_instructions(
-            "Use Poneglyph tools to state facts, query the active graph, fetch entities, and search the projected index.",
+            "Use Poneglyph's built-in agent via messageAgent, or inspect the effective graph schema with getSchema.",
         )
     }
 
@@ -242,8 +242,7 @@ mod tests {
             .iter()
             .filter_map(|tool| tool["name"].as_str())
             .collect::<Vec<_>>();
-        assert!(names.contains(&"query"));
-        assert!(names.contains(&"stateFacts"));
+        assert_eq!(names, vec!["getSchema"]);
 
         server_task.abort();
     }

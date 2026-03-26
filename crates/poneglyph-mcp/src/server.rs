@@ -138,38 +138,11 @@ impl PoneglyphMcpServer {
     }
 
     pub fn list_tools(&self) -> Vec<Tool> {
-        let mut tools = vec![
-            tool(
-                TOOL_CREATE_ENTITY,
-                CREATE_ENTITY_DESCRIPTION,
-                json_schema_for::<CreateEntityInput>(),
-            ),
-            tool(
-                TOOL_STATE_FACTS,
-                STATE_FACTS_DESCRIPTION,
-                json_schema_for::<StateFactsInput>(),
-            ),
-            tool(
-                TOOL_QUERY,
-                QUERY_DESCRIPTION,
-                json_schema_for::<QueryInput>(),
-            ),
-            tool(
-                TOOL_GET_SCHEMA,
-                GET_SCHEMA_DESCRIPTION,
-                json_schema_for::<GetSchemaInput>(),
-            ),
-            tool(
-                TOOL_GET_ENTITY,
-                GET_ENTITY_DESCRIPTION,
-                json_schema_for::<GetEntityInput>(),
-            ),
-            tool(
-                TOOL_SEARCH,
-                SEARCH_DESCRIPTION,
-                json_schema_for::<SearchInput>(),
-            ),
-        ];
+        let mut tools = vec![tool(
+            TOOL_GET_SCHEMA,
+            GET_SCHEMA_DESCRIPTION,
+            json_schema_for::<GetSchemaInput>(),
+        )];
         if self.agent_handler.is_some() {
             tools.push(tool(
                 TOOL_MESSAGE_AGENT,
@@ -565,12 +538,10 @@ mod tests {
     use serde_json::json;
     use tempfile::{TempDir, tempdir};
     use tokio::task::JoinHandle;
-    use tokio::task::yield_now;
-    use tokio::time::{Duration, timeout};
 
     use super::{
-        GetSchemaOutput, PoneglyphMcpServer, TOOL_GET_ENTITY, TOOL_GET_SCHEMA, TOOL_QUERY,
-        TOOL_SEARCH, TOOL_STATE_FACTS, ToolCall, json_schema_for,
+        AgentMessageHandler, AgentMessageRequest, AgentMessageResponse, GetSchemaOutput,
+        PoneglyphMcpServer, TOOL_GET_SCHEMA, TOOL_MESSAGE_AGENT, ToolCall, json_schema_for,
     };
     use poneglyph::{Poneglyph, Workspace};
 
@@ -607,69 +578,26 @@ mod tests {
         }
     }
 
-    async fn wait_for_entity(server: &PoneglyphMcpServer, entity_uri: &str) -> serde_json::Value {
-        timeout(Duration::from_secs(1), async {
-            loop {
-                let result = server
-                    .call_tool(ToolCall {
-                        name: TOOL_GET_ENTITY.to_string(),
-                        arguments: json!({ "entityUri": entity_uri }),
-                    })
-                    .await
-                    .expect("get entity");
-                if result.content["entity"].is_object() {
-                    return result.content;
-                }
-                yield_now().await;
-            }
-        })
-        .await
-        .expect("entity eventually materializes")
-    }
+    struct StubAgentHandler;
 
-    async fn wait_for_search_hit(server: &PoneglyphMcpServer, query: &str) -> serde_json::Value {
-        timeout(Duration::from_secs(1), async {
-            loop {
-                let result = server
-                    .call_tool(ToolCall {
-                        name: TOOL_SEARCH.to_string(),
-                        arguments: json!({ "query": query, "limit": 5 }),
-                    })
-                    .await
-                    .expect("search");
-                if result.content["hits"]
-                    .as_array()
-                    .is_some_and(|hits| !hits.is_empty())
-                {
-                    return result.content;
-                }
-                yield_now().await;
-            }
-        })
-        .await
-        .expect("search eventually finds hit")
-    }
-
-    fn text_fact(entity: &str, field: &str, value: &str) -> serde_json::Value {
-        json!({
-            "entity": entity,
-            "field": field,
-            "value": {
-                "type": "text",
-                "value": value,
-            }
-        })
-    }
-
-    fn state_facts_args(entities: &[&str], facts: Vec<serde_json::Value>) -> serde_json::Value {
-        json!({
-            "entities": entities,
-            "facts": facts,
-        })
+    #[async_trait::async_trait]
+    impl AgentMessageHandler for StubAgentHandler {
+        async fn send_message(
+            &self,
+            request: AgentMessageRequest,
+        ) -> std::result::Result<AgentMessageResponse, String> {
+            Ok(AgentMessageResponse {
+                session_id: request
+                    .session_id
+                    .unwrap_or_else(|| "stub-session".to_string()),
+                run_id: "stub-run".to_string(),
+                reply: format!("echo: {}", request.message),
+            })
+        }
     }
 
     #[tokio::test]
-    async fn server_lists_expected_tools() {
+    async fn server_lists_only_schema_tool_without_agent_handler() {
         let test_server = build_server().await.expect("server");
         let server = &test_server.server;
 
@@ -679,11 +607,38 @@ mod tests {
             .map(|tool| tool.name.as_str())
             .collect::<Vec<_>>();
 
-        assert!(names.contains(&TOOL_STATE_FACTS));
-        assert!(names.contains(&TOOL_QUERY));
+        assert_eq!(names.len(), 1);
         assert!(names.contains(&TOOL_GET_SCHEMA));
-        assert!(names.contains(&TOOL_GET_ENTITY));
-        assert!(names.contains(&TOOL_SEARCH));
+    }
+
+    #[tokio::test]
+    async fn server_lists_schema_and_agent_tools_when_handler_is_present() {
+        let test_server = build_server().await.expect("server");
+        let server = PoneglyphMcpServer::builder()
+            .with_poneglyph_arc(test_server.server.poneglyph.clone())
+            .with_agent_handler(Arc::new(StubAgentHandler))
+            .build()
+            .expect("server");
+
+        let names = server
+            .list_tools()
+            .into_iter()
+            .map(|tool| tool.name)
+            .collect::<Vec<_>>();
+
+        assert_eq!(names.len(), 2);
+        assert!(names.iter().any(|name| name == TOOL_GET_SCHEMA));
+        assert!(names.iter().any(|name| name == TOOL_MESSAGE_AGENT));
+    }
+
+    #[test]
+    fn server_get_schema_output_schema_exposes_structured_shape() {
+        let schema = json_schema_for::<GetSchemaOutput>();
+
+        assert_eq!(schema["type"], "object");
+        assert!(schema["properties"]["schema"].is_object());
+        assert!(schema["$defs"]["SchemaDefinition"]["properties"]["base"].is_object());
+        assert!(schema["$defs"]["SchemaDefinition"]["properties"]["fields"].is_object());
     }
 
     #[tokio::test]
@@ -703,198 +658,6 @@ mod tests {
             result.content["schema"]["base"]["kinds"]
                 .as_array()
                 .is_some_and(|kinds| kinds.iter().any(|kind| kind["uri"] == "schema:field"))
-        );
-    }
-
-    #[tokio::test]
-    async fn server_get_schema_tool_infers_observed_schema_from_data() {
-        let test_server = build_server().await.expect("server");
-        let server = &test_server.server;
-
-        server
-            .call_tool(ToolCall {
-                name: TOOL_STATE_FACTS.to_string(),
-                arguments: state_facts_args(
-                    &["spotify:artist:rush"],
-                    vec![text_fact(
-                        "spotify:artist:rush",
-                        "spotify:displayName",
-                        "Rush",
-                    )],
-                ),
-            })
-            .await
-            .expect("state facts");
-
-        let result = server
-            .call_tool(ToolCall {
-                name: TOOL_GET_SCHEMA.to_string(),
-                arguments: json!({}),
-            })
-            .await
-            .expect("get schema");
-
-        assert!(
-            result.content["schema"]["kinds"]
-                .as_array()
-                .is_some_and(|kinds| kinds.iter().any(|kind| kind["uri"] == "spotify:artist"))
-        );
-        assert!(
-            result.content["schema"]["fields"]
-                .as_array()
-                .is_some_and(|fields| fields
-                    .iter()
-                    .any(|field| field["uri"] == "spotify:displayName"))
-        );
-    }
-
-    #[tokio::test]
-    async fn server_state_facts_tool_schema_uses_wire_fact_shape() {
-        let test_server = build_server().await.expect("server");
-        let tool = test_server
-            .server
-            .list_tools()
-            .into_iter()
-            .find(|tool| tool.name == TOOL_STATE_FACTS)
-            .expect("state facts tool");
-
-        let item_ref = tool.input_schema["properties"]["facts"]["items"]["$ref"]
-            .as_str()
-            .expect("fact schema ref");
-        let definition_name = item_ref.strip_prefix("#/$defs/").expect("defs ref");
-        let item_properties = &tool.input_schema["$defs"][definition_name]["properties"];
-
-        assert!(item_properties.get("fact_id").is_none());
-        assert!(item_properties.get("stated_at").is_none());
-        assert!(item_properties.get("tx_id").is_none());
-        assert!(item_properties.get("entity").is_some());
-        assert!(item_properties.get("field").is_some());
-        assert!(item_properties.get("value").is_some());
-    }
-
-    #[test]
-    fn server_get_schema_output_schema_exposes_structured_shape() {
-        let schema = json_schema_for::<GetSchemaOutput>();
-
-        assert_eq!(schema["type"], "object");
-        assert!(schema["properties"]["schema"].is_object());
-        assert!(schema["$defs"]["SchemaDefinition"]["properties"]["base"].is_object());
-        assert!(schema["$defs"]["SchemaDefinition"]["properties"]["fields"].is_object());
-    }
-
-    #[tokio::test]
-    async fn server_state_facts_tool_returns_tx_id() {
-        let test_server = build_server().await.expect("server");
-        let server = &test_server.server;
-
-        let result = server
-            .call_tool(ToolCall {
-                name: TOOL_STATE_FACTS.to_string(),
-                arguments: state_facts_args(
-                    &["spotify:album:2112"],
-                    vec![text_fact(
-                        "spotify:album:2112",
-                        "spotify:displayName",
-                        "2112",
-                    )],
-                ),
-            })
-            .await
-            .expect("state facts");
-
-        assert!(result.content["txId"].as_str().is_some());
-    }
-
-    #[tokio::test]
-    async fn server_query_tool_returns_substitutions() {
-        let test_server = build_server().await.expect("server");
-        let server = &test_server.server;
-
-        server
-            .call_tool(ToolCall {
-                name: TOOL_STATE_FACTS.to_string(),
-                arguments: state_facts_args(
-                    &["spotify:album:2112"],
-                    vec![text_fact(
-                        "spotify:album:2112",
-                        "spotify:displayName",
-                        "2112",
-                    )],
-                ),
-            })
-            .await
-            .expect("state facts");
-
-        let result = server
-            .call_tool(ToolCall {
-                name: TOOL_QUERY.to_string(),
-                arguments: json!({
-                    "query": r#"spotify:displayName(Album, "2112")"#
-                }),
-            })
-            .await
-            .expect("query");
-
-        assert_eq!(
-            result.content["substitutions"].as_array().map(Vec::len),
-            Some(1)
-        );
-    }
-
-    #[tokio::test]
-    async fn server_get_entity_tool_reads_materialized_entities() {
-        let test_server = build_server().await.expect("server");
-        let server = &test_server.server;
-        let entity_uri = "spotify:album:signals";
-
-        server
-            .call_tool(ToolCall {
-                name: TOOL_STATE_FACTS.to_string(),
-                arguments: state_facts_args(
-                    &[entity_uri],
-                    vec![text_fact(entity_uri, "spotify:displayName", "Signals")],
-                ),
-            })
-            .await
-            .expect("state facts");
-
-        let result = wait_for_entity(&server, entity_uri).await;
-
-        assert_eq!(result["entity"]["uri"], json!(entity_uri));
-        assert_eq!(
-            result["entity"]["fields"]["spotify:displayName"],
-            json!({
-                "type": "text",
-                "value": "Signals"
-            })
-        );
-    }
-
-    #[tokio::test]
-    async fn server_search_tool_reads_projected_index() {
-        let test_server = build_server().await.expect("server");
-        let server = &test_server.server;
-
-        server
-            .call_tool(ToolCall {
-                name: TOOL_STATE_FACTS.to_string(),
-                arguments: state_facts_args(
-                    &["spotify:album:grace-under-pressure"],
-                    vec![text_fact(
-                        "spotify:album:grace-under-pressure",
-                        "spotify:displayName",
-                        "Grace Under Pressure",
-                    )],
-                ),
-            })
-            .await
-            .expect("state facts");
-
-        let result = wait_for_search_hit(&server, "Grace").await;
-        let first_hit = &result["hits"][0];
-        assert_eq!(
-            first_hit["entity_uri"],
-            json!("spotify:album:grace-under-pressure")
         );
     }
 }
