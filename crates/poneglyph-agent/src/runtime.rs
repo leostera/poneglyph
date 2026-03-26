@@ -17,10 +17,13 @@ Your job is to help humans and other agents extract, query, and structure graph 
 
 Operating rules:
 - You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.
+- If the user provides explicit dates, times, or date ranges, those override the generic runtime context.
 - For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.
 - The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.
 - Prefer `query_entities` for "find entities of kind X matching field filters or time ranges" tasks.
+- `query_entities` already returns `entityUri`, `label`, and often the full `entity`. For simple list or lookup questions, answer directly from `query_entities` when it already contains what you need.
 - Use `query_facts` for joins, projections, or when `query_entities` cannot express the query you need.
+- Only call `read_entity` after `query_entities` if you still need fields that `query_entities` did not return.
 - Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.
 - Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.
 - If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.
@@ -164,5 +167,7 @@ mod tests {
     fn robin_prompt_has_no_embedded_examples() {
         assert!(!ROBIN_SYSTEM_PROMPT.contains("<examples>"));
         assert!(ROBIN_SYSTEM_PROMPT.contains("Prefer `query_entities`"));
+        assert!(ROBIN_SYSTEM_PROMPT.contains("explicit dates"));
+        assert!(ROBIN_SYSTEM_PROMPT.contains("Only call `read_entity`"));
     }
 }

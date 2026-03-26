@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
 use agents::error::{Error as LlmError, LlmResult};
@@ -7,7 +7,9 @@ use agents::{AgentResult, ToolCallEnvelope, ToolExecutionResult, ToolResultEnvel
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use datafox::Value as DatafoxValue;
-use poneglyph::{Entity, Fact, Poneglyph, Uri, Value, fact, uri};
+use poneglyph::{
+    ActiveFilter, BaseSchema, Entity, Fact, Poneglyph, SchemaDefinition, Uri, Value, fact, uri,
+};
 use schemars::JsonSchema;
 use schemars::generate::SchemaSettings;
 use serde::{Deserialize, Serialize};
@@ -80,6 +82,7 @@ pub const QUERY_ENTITIES_TOOL_DESCRIPTION: &str = r#"Query entities of a specifi
 
 Prefer this after `get_schema` when the task is "find entities of kind X whose field values fall in a range".
 This tool is easier than raw `query_facts` for common lookups.
+It returns each matching `entityUri`, and when available also returns `label` and the hydrated `entity`.
 
 Supported filter format:
 - clauses joined with `AND`
@@ -103,11 +106,17 @@ Use this before querying or writing new schema so you can discover:
 - fields
 - field domains, ranges, and value types when available
 
+By default this returns the observed app schema only, without the verbose built-in base schema.
+Set `include_base` to true only if you specifically need the built-in schema metadata.
+You can also scope by namespace or kind to keep the result small.
+
 After reading schema, use the real field URIs you found there with `query_facts` or `query_entities`.
 Do not invent other query tools or query languages.
 
 Example:
-{}"#;
+{
+  "namespace_uri": "gcal:namespace"
+}"#;
 
 pub const READ_ENTITY_TOOL_DESCRIPTION: &str = r#"Fetch a consolidated entity by URI.
 
@@ -146,6 +155,14 @@ pub struct SearchEntitiesArgs {
 #[serde(deny_unknown_fields)]
 pub struct ReadEntityArgs {
     pub entity_uri: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GetSchemaArgs {
+    pub namespace_uri: Option<String>,
+    pub kind_uri: Option<String>,
+    pub include_base: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -220,7 +237,7 @@ pub struct ValueInput {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum PoneglyphTool {
     CreateEntity(CreateEntityArgs),
-    GetSchema,
+    GetSchema(GetSchemaArgs),
     SearchEntities(SearchEntitiesArgs),
     ReadEntity(ReadEntityArgs),
     QueryFacts(QueryFactsArgs),
@@ -239,11 +256,7 @@ impl agents::tools::TypedTool for PoneglyphTool {
             RawToolDefinition::function(
                 "get_schema",
                 Some(GET_SCHEMA_TOOL_DESCRIPTION),
-                json!({
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": false
-                }),
+                schema_for::<GetSchemaArgs>(),
             ),
             RawToolDefinition::function(
                 "search_entities",
@@ -276,7 +289,7 @@ impl agents::tools::TypedTool for PoneglyphTool {
     fn decode_tool_call(name: &str, arguments: JsonValue) -> LlmResult<Self> {
         match name {
             "create_entity" => decode::<CreateEntityArgs>(name, arguments).map(Self::CreateEntity),
-            "get_schema" => Ok(Self::GetSchema),
+            "get_schema" => decode::<GetSchemaArgs>(name, arguments).map(Self::GetSchema),
             "search_entities" => {
                 decode::<SearchEntitiesArgs>(name, arguments).map(Self::SearchEntities)
             }
@@ -312,7 +325,7 @@ impl ToolRunner<PoneglyphTool, JsonValue> for PoneglyphToolRunner {
     ) -> AgentResult<ToolResultEnvelope<JsonValue>> {
         let result = match call.call.clone() {
             PoneglyphTool::CreateEntity(args) => self.create_entity(args).await,
-            PoneglyphTool::GetSchema => self.get_schema().await,
+            PoneglyphTool::GetSchema(args) => self.get_schema(args).await,
             PoneglyphTool::SearchEntities(args) => self.search_entities(args).await,
             PoneglyphTool::ReadEntity(args) => self.read_entity(args).await,
             PoneglyphTool::QueryFacts(args) => self.query_facts(args).await,
@@ -350,8 +363,9 @@ impl PoneglyphToolRunner {
         }))
     }
 
-    async fn get_schema(&self) -> anyhow::Result<JsonValue> {
-        Ok(serde_json::to_value(self.poneglyph.get_schema().await?)?)
+    async fn get_schema(&self, args: GetSchemaArgs) -> anyhow::Result<JsonValue> {
+        let schema = self.poneglyph.get_schema().await?;
+        Ok(serde_json::to_value(select_schema_view(schema, &args)?)?)
     }
 
     async fn search_entities(&self, args: SearchEntitiesArgs) -> anyhow::Result<JsonValue> {
@@ -359,7 +373,7 @@ impl PoneglyphToolRunner {
         let mut hits = Vec::new();
 
         for hit in self.poneglyph.search(&args.query, limit)? {
-            let entity = self.poneglyph.get_entity(&hit.entity_uri).await?;
+            let entity = self.hydrate_entity(&hit.entity_uri).await?;
             hits.push(json!({
                 "entityUri": hit.entity_uri.to_string(),
                 "score": hit.score,
@@ -375,7 +389,7 @@ impl PoneglyphToolRunner {
     async fn read_entity(&self, args: ReadEntityArgs) -> anyhow::Result<JsonValue> {
         let entity_uri = Uri::parse(args.entity_uri)?;
         Ok(json!({
-            "entity": self.poneglyph.get_entity(&entity_uri).await?,
+            "entity": self.hydrate_entity(&entity_uri).await?,
         }))
     }
 
@@ -394,7 +408,7 @@ impl PoneglyphToolRunner {
 
         for entity_uri in entity_uris_from_substitutions(&substitutions.into_substitutions(), limit)
         {
-            let entity = self.poneglyph.get_entity(&entity_uri).await?;
+            let entity = self.hydrate_entity(&entity_uri).await?;
             entities.push(json!({
                 "entityUri": entity_uri.to_string(),
                 "label": entity.as_ref().and_then(entity_label),
@@ -431,6 +445,35 @@ impl PoneglyphToolRunner {
 
         let tx_id = self.poneglyph.state_facts(facts).await?;
         Ok(json!({ "txId": tx_id.to_string() }))
+    }
+
+    async fn hydrate_entity(&self, entity_uri: &Uri) -> anyhow::Result<Option<Entity>> {
+        if let Some(entity) = self.poneglyph.get_entity(entity_uri).await? {
+            return Ok(Some(entity));
+        }
+
+        let mut facts = self
+            .poneglyph
+            .fact_service()
+            .get_active_facts(ActiveFilter::ByEntity(entity_uri.clone()))
+            .await?;
+        let mut fields = BTreeMap::new();
+
+        while let Some(active_fact) = facts.recv().await {
+            let active_fact = active_fact?;
+            fields.insert(active_fact.field, active_fact.value);
+        }
+
+        if fields.is_empty() {
+            return Ok(None);
+        }
+
+        Ok(Some(Entity {
+            uri: entity_uri.clone(),
+            namespace: entity_uri.namespace().to_string(),
+            kind: entity_uri.kind()?.to_string(),
+            fields,
+        }))
     }
 }
 
@@ -603,6 +646,77 @@ fn entity_label(entity: &Entity) -> Option<String> {
         })
 }
 
+fn select_schema_view(
+    mut schema: SchemaDefinition,
+    args: &GetSchemaArgs,
+) -> anyhow::Result<SchemaDefinition> {
+    if !args.include_base.unwrap_or(false) {
+        schema.base = BaseSchema::default();
+    }
+
+    let namespace_key = args
+        .namespace_uri
+        .as_deref()
+        .map(namespace_key_from_uri)
+        .transpose()?;
+    let kind_uri = args.kind_uri.as_deref().map(Uri::parse).transpose()?;
+    let kind_namespace_key = kind_uri.as_ref().map(|uri| uri.namespace().to_string());
+
+    if let Some(namespace_key) = namespace_key.as_deref() {
+        schema
+            .namespaces
+            .retain(|namespace| namespace.uri.namespace() == namespace_key);
+        schema
+            .kinds
+            .retain(|kind| kind.uri.namespace() == namespace_key);
+        schema
+            .fields
+            .retain(|field| field.uri.namespace() == namespace_key);
+    }
+
+    if let Some(kind_uri) = kind_uri.as_ref() {
+        schema.kinds.retain(|kind| &kind.uri == kind_uri);
+        schema.fields.retain(|field| {
+            field.domain.as_ref() == Some(kind_uri) || field.range.as_ref() == Some(kind_uri)
+        });
+
+        if let Some(kind_namespace_key) = kind_namespace_key.as_deref() {
+            schema
+                .namespaces
+                .retain(|namespace| namespace.uri.namespace() == kind_namespace_key);
+        }
+    }
+
+    sort_schema_view(&mut schema);
+    Ok(schema)
+}
+
+fn sort_schema_view(schema: &mut SchemaDefinition) {
+    schema
+        .base
+        .namespaces
+        .sort_by(|left, right| left.uri.cmp(&right.uri));
+    schema
+        .base
+        .kinds
+        .sort_by(|left, right| left.uri.cmp(&right.uri));
+    schema
+        .base
+        .fields
+        .sort_by(|left, right| left.uri.cmp(&right.uri));
+    schema
+        .namespaces
+        .sort_by(|left, right| left.uri.cmp(&right.uri));
+    schema.kinds.sort_by(|left, right| left.uri.cmp(&right.uri));
+    schema
+        .fields
+        .sort_by(|left, right| left.uri.cmp(&right.uri));
+}
+
+fn namespace_key_from_uri(input: &str) -> anyhow::Result<String> {
+    Ok(Uri::parse(input)?.namespace().to_string())
+}
+
 fn schema_for<T: JsonSchema>() -> JsonValue {
     let schema = SchemaSettings::draft07()
         .with(|settings| {
@@ -655,9 +769,13 @@ fn sanitize_openai_schema(value: &mut JsonValue) {
 #[cfg(test)]
 mod tests {
     use agents::tools::TypedTool;
+    use poneglyph::{BaseSchema, FieldSchema, KindSchema, NamespaceSchema, SchemaDefinition, uri};
     use serde_json::Value as JsonValue;
 
-    use super::{PoneglyphTool, QUERY_FACTS_TOOL_DESCRIPTION, ValueInput, ValueInputKind};
+    use super::{
+        GetSchemaArgs, PoneglyphTool, QUERY_FACTS_TOOL_DESCRIPTION, ValueInput, ValueInputKind,
+        select_schema_view,
+    };
 
     #[test]
     fn state_facts_schema_avoids_one_of() {
@@ -757,5 +875,117 @@ mod tests {
         assert!(names.contains(&"query_entities"));
         assert!(QUERY_FACTS_TOOL_DESCRIPTION.contains("prefer `query_entities`"));
         assert!(!QUERY_FACTS_TOOL_DESCRIPTION.contains("There is no `query_entities` tool"));
+    }
+
+    #[test]
+    fn get_schema_defaults_to_observed_schema_only() {
+        let selected = select_schema_view(sample_schema_definition(), &GetSchemaArgs::default())
+            .expect("schema view");
+
+        assert!(selected.base.namespaces.is_empty());
+        assert!(selected.base.kinds.is_empty());
+        assert!(selected.base.fields.is_empty());
+        assert_eq!(selected.namespaces.len(), 2);
+        assert_eq!(selected.kinds.len(), 2);
+        assert_eq!(selected.fields.len(), 2);
+    }
+
+    #[test]
+    fn get_schema_can_filter_to_one_namespace() {
+        let selected = select_schema_view(
+            sample_schema_definition(),
+            &GetSchemaArgs {
+                namespace_uri: Some("gcal:namespace".to_string()),
+                kind_uri: None,
+                include_base: Some(false),
+            },
+        )
+        .expect("schema view");
+
+        assert_eq!(selected.namespaces.len(), 1);
+        assert_eq!(selected.namespaces[0].uri.as_str(), "gcal:namespace");
+        assert_eq!(selected.kinds.len(), 1);
+        assert_eq!(selected.kinds[0].uri.as_str(), "gcal:event");
+        assert_eq!(selected.fields.len(), 1);
+        assert_eq!(selected.fields[0].uri.as_str(), "gcal:startAt");
+    }
+
+    fn sample_schema_definition() -> SchemaDefinition {
+        SchemaDefinition {
+            base: BaseSchema {
+                namespaces: vec![NamespaceSchema {
+                    uri: uri!("schema:namespace"),
+                    name: Some("Namespace".to_string()),
+                    doc: None,
+                }],
+                kinds: vec![KindSchema {
+                    uri: uri!("schema:kind"),
+                    name: Some("Kind".to_string()),
+                    doc: None,
+                }],
+                fields: vec![FieldSchema {
+                    uri: uri!("schema:name"),
+                    name: Some("Name".to_string()),
+                    doc: None,
+                    same_as: None,
+                    domain: None,
+                    range: None,
+                    value_type: None,
+                    cardinality: None,
+                    deprecated: None,
+                    identity: None,
+                }],
+            },
+            namespaces: vec![
+                NamespaceSchema {
+                    uri: uri!("gcal:namespace"),
+                    name: Some("Google Calendar".to_string()),
+                    doc: None,
+                },
+                NamespaceSchema {
+                    uri: uri!("gmail:namespace"),
+                    name: Some("Gmail".to_string()),
+                    doc: None,
+                },
+            ],
+            kinds: vec![
+                KindSchema {
+                    uri: uri!("gcal:event"),
+                    name: Some("Event".to_string()),
+                    doc: None,
+                },
+                KindSchema {
+                    uri: uri!("gmail:message"),
+                    name: Some("Message".to_string()),
+                    doc: None,
+                },
+            ],
+            fields: vec![
+                FieldSchema {
+                    uri: uri!("gcal:startAt"),
+                    name: Some("Start At".to_string()),
+                    doc: None,
+                    same_as: None,
+                    domain: Some(uri!("gcal:event")),
+                    range: None,
+                    value_type: None,
+                    cardinality: None,
+                    deprecated: None,
+                    identity: None,
+                },
+                FieldSchema {
+                    uri: uri!("gmail:receivedAt"),
+                    name: Some("Received At".to_string()),
+                    doc: None,
+                    same_as: None,
+                    domain: Some(uri!("gmail:message")),
+                    range: None,
+                    value_type: None,
+                    cardinality: None,
+                    deprecated: None,
+                    identity: None,
+                },
+            ],
+        }
     }
 }
