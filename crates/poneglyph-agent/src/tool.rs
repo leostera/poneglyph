@@ -6,6 +6,7 @@ use agents::tools::RawToolDefinition;
 use agents::{AgentResult, ToolCallEnvelope, ToolExecutionResult, ToolResultEnvelope, ToolRunner};
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
+use datafox::Value as DatafoxValue;
 use poneglyph::{Entity, Fact, Poneglyph, Uri, Value, fact, uri};
 use schemars::JsonSchema;
 use schemars::generate::SchemaSettings;
@@ -51,6 +52,8 @@ pub const QUERY_FACTS_TOOL_DESCRIPTION: &str = r#"Run a Datafox query over the a
 
 Use `get_schema` first to discover the real namespaces, kinds, and field URIs.
 Never invent predicates like `spotify:event:week` or other helper functions that are not present in schema.
+This is the only free-form graph query tool. There is no `query_entities` tool, no SPARQL, and no SQL.
+Do not emit tool-call JSON in assistant text. Call `query_facts` directly.
 
 Supported grammar:
 query        = clause , { "," , clause } ;
@@ -72,6 +75,25 @@ If the question is about a time window:
 2. filter it with `>`, `>=`, `<`, or `<=`
 3. project names or identifiers with ordinary field clauses"#;
 
+pub const QUERY_ENTITIES_TOOL_DESCRIPTION: &str = r#"Query entities of a specific kind with a simple structured filter.
+
+Prefer this after `get_schema` when the task is "find entities of kind X whose field values fall in a range".
+This tool is easier than raw `query_facts` for common lookups.
+
+Supported filter format:
+- clauses joined with `AND`
+- each clause is `field OP "value"`
+- supported operators are `=`, `>`, `>=`, `<`, `<=`
+
+Example:
+{
+  "type": "gcal:event",
+  "filter": "gcal:startAt >= \"2026-03-23\" AND gcal:startAt <= \"2026-03-29\"",
+  "limit": 10
+}
+
+Do not use SPARQL or SQL here. Use real field URIs from `get_schema`."#;
+
 pub const GET_SCHEMA_TOOL_DESCRIPTION: &str = r#"Fetch the effective schema definition built from ordinary schema facts and observed data.
 
 Use this before querying or writing new schema so you can discover:
@@ -79,6 +101,9 @@ Use this before querying or writing new schema so you can discover:
 - kinds
 - fields
 - field domains, ranges, and value types when available
+
+After reading schema, use the real field URIs you found there with `query_facts`.
+Do not invent other query tools.
 
 Example:
 {}"#;
@@ -93,6 +118,7 @@ Example:
 pub const SEARCH_ENTITIES_TOOL_DESCRIPTION: &str = r#"Search the projected entity index for existing entities.
 
 Use this before inventing new URIs or stating facts about a thing that may already exist.
+This is text search over projected entities, not a structured date/filter query tool.
 
 Example:
 {
@@ -125,6 +151,15 @@ pub struct ReadEntityArgs {
 #[serde(deny_unknown_fields)]
 pub struct QueryFactsArgs {
     pub query: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct QueryEntitiesArgs {
+    #[serde(rename = "type", alias = "kind")]
+    pub entity_type: String,
+    pub filter: Option<String>,
+    pub limit: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -188,6 +223,7 @@ pub enum PoneglyphTool {
     SearchEntities(SearchEntitiesArgs),
     ReadEntity(ReadEntityArgs),
     QueryFacts(QueryFactsArgs),
+    QueryEntities(QueryEntitiesArgs),
     StateFacts(StateFactsArgs),
 }
 
@@ -224,6 +260,11 @@ impl agents::tools::TypedTool for PoneglyphTool {
                 schema_for::<QueryFactsArgs>(),
             ),
             RawToolDefinition::function(
+                "query_entities",
+                Some(QUERY_ENTITIES_TOOL_DESCRIPTION),
+                schema_for::<QueryEntitiesArgs>(),
+            ),
+            RawToolDefinition::function(
                 "state_facts",
                 Some(STATE_FACTS_TOOL_DESCRIPTION),
                 schema_for::<StateFactsArgs>(),
@@ -240,6 +281,9 @@ impl agents::tools::TypedTool for PoneglyphTool {
             }
             "read_entity" => decode::<ReadEntityArgs>(name, arguments).map(Self::ReadEntity),
             "query_facts" => decode::<QueryFactsArgs>(name, arguments).map(Self::QueryFacts),
+            "query_entities" => {
+                decode::<QueryEntitiesArgs>(name, arguments).map(Self::QueryEntities)
+            }
             "state_facts" => decode::<StateFactsArgs>(name, arguments).map(Self::StateFacts),
             other => Err(LlmError::InvalidResponse {
                 reason: format!("unexpected tool name: {other}"),
@@ -271,6 +315,7 @@ impl ToolRunner<PoneglyphTool, JsonValue> for PoneglyphToolRunner {
             PoneglyphTool::SearchEntities(args) => self.search_entities(args).await,
             PoneglyphTool::ReadEntity(args) => self.read_entity(args).await,
             PoneglyphTool::QueryFacts(args) => self.query_facts(args).await,
+            PoneglyphTool::QueryEntities(args) => self.query_entities(args).await,
             PoneglyphTool::StateFacts(args) => self.state_facts(args).await,
         };
 
@@ -337,6 +382,28 @@ impl PoneglyphToolRunner {
         let substitutions = self.poneglyph.query_str(&args.query).await?;
         Ok(json!({
             "substitutions": substitutions.into_substitutions(),
+        }))
+    }
+
+    async fn query_entities(&self, args: QueryEntitiesArgs) -> anyhow::Result<JsonValue> {
+        let query = build_query_entities_query(&args)?;
+        let substitutions = self.poneglyph.query_str(&query).await?;
+        let limit = args.limit.unwrap_or(10).max(1);
+        let mut entities = Vec::new();
+
+        for entity_uri in entity_uris_from_substitutions(&substitutions.into_substitutions(), limit)
+        {
+            let entity = self.poneglyph.get_entity(&entity_uri).await?;
+            entities.push(json!({
+                "entityUri": entity_uri.to_string(),
+                "label": entity.as_ref().and_then(entity_label),
+                "entity": entity,
+            }));
+        }
+
+        Ok(json!({
+            "query": query,
+            "entities": entities,
         }))
     }
 
@@ -414,6 +481,103 @@ where
     T: for<'de> Deserialize<'de>,
 {
     serde_json::from_value(arguments).map_err(|error| LlmError::parse(subject, error))
+}
+
+fn build_query_entities_query(args: &QueryEntitiesArgs) -> anyhow::Result<String> {
+    let mut clauses = vec![format!(
+        r#"schema:type(Entity, {})"#,
+        serde_json::to_string(&args.entity_type)?
+    )];
+
+    if let Some(filter) = &args.filter {
+        for (index, clause) in parse_filter_clauses(filter)?.into_iter().enumerate() {
+            let binding = format!("Value{index}");
+            clauses.push(format!("{}(Entity, {binding})", clause.field));
+            clauses.push(format!(
+                r#"{binding} {} {}"#,
+                clause.operator,
+                serde_json::to_string(&clause.value)?
+            ));
+        }
+    }
+
+    clauses.push("schema:name(Entity, Name)".to_string());
+
+    Ok(clauses.join(", "))
+}
+
+fn parse_filter_clauses(filter: &str) -> anyhow::Result<Vec<FilterClause>> {
+    let normalized = filter.trim().trim_start_matches('{').trim_end_matches('}');
+    if normalized.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    normalized
+        .split("AND")
+        .map(str::trim)
+        .filter(|clause| !clause.is_empty())
+        .map(parse_filter_clause)
+        .collect()
+}
+
+fn parse_filter_clause(clause: &str) -> anyhow::Result<FilterClause> {
+    for operator in [">=", "<=", ">", "<", "="] {
+        if let Some((field, value)) = clause.split_once(operator) {
+            let field = field.trim().to_string();
+            let value = value
+                .trim()
+                .trim_matches('"')
+                .trim_matches('\'')
+                .to_string();
+
+            if field.is_empty() || value.is_empty() {
+                anyhow::bail!("invalid filter clause `{clause}`");
+            }
+
+            return Ok(FilterClause {
+                field,
+                operator: operator.to_string(),
+                value,
+            });
+        }
+    }
+
+    anyhow::bail!("unsupported filter clause `{clause}`")
+}
+
+fn entity_uris_from_substitutions(
+    substitutions: &[datafox::Substitution],
+    limit: usize,
+) -> Vec<Uri> {
+    let mut seen = HashSet::new();
+    let mut entities = Vec::new();
+
+    for substitution in substitutions {
+        let Some(DatafoxValue::String(entity_uri)) = substitution.lookup("Entity") else {
+            continue;
+        };
+
+        let Ok(uri) = Uri::parse(entity_uri.clone()) else {
+            continue;
+        };
+
+        if seen.insert(uri.clone()) {
+            entities.push(uri);
+        }
+
+        if entities.len() >= limit {
+            break;
+        }
+    }
+
+    entities
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct FilterClause {
+    field: String,
+    operator: String,
+    value: String,
 }
 
 fn entity_label(entity: &Entity) -> Option<String> {

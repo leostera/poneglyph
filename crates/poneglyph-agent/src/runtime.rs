@@ -18,6 +18,9 @@ Your job is to help humans and other agents extract, query, and structure graph 
 const ROBIN_OPERATING_RULES_PROMPT: &str = r#"Operating rules:
 - You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.
 - For read/query tasks, you MUST call `get_schema` before the first graph query in a conversation.
+- The only graph read tools available are `get_schema`, `query_facts`, `search_entities`, and `read_entity`.
+- There is NO `query_entities` tool. There is NO SPARQL support. There is NO SQL support.
+- Never emit fake JSON for tool calls in assistant text. Call the actual tool directly.
 - Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.
 - If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.
 - Prefer schema and graph tools over unsupported assumptions.
@@ -66,6 +69,7 @@ impl PoneglyphAgent {
         let context_manager = ContextManager::builder()
             .add_provider(RobinIdentityContextProvider)
             .add_provider(RobinRuntimeContextProvider)
+            .add_provider(RobinSchemaFirstExampleProvider)
             .build();
         let inner = SessionAgent::builder()
             .with_llm_runner(llm_runner)
@@ -126,6 +130,68 @@ impl ContextProvider for RobinRuntimeContextProvider {
             ContextStrategy::Pinnable,
             format_runtime_context(now),
         )])
+    }
+}
+
+struct RobinSchemaFirstExampleProvider;
+
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl ContextProvider for RobinSchemaFirstExampleProvider {
+    async fn provide(&self) -> agents::AgentResult<Vec<ContextChunk>> {
+        Ok(vec![
+            ContextChunk::user_text(ContextStrategy::Pinnable, "Do I have any events this week?"),
+            ContextChunk::assistant_text(
+                ContextStrategy::Pinnable,
+                "I will inspect the schema first, then query the graph with the exact field names I find there.",
+            ),
+            ContextChunk::ToolCall {
+                strategy: ContextStrategy::Pinnable,
+                id: "example_get_schema".to_string(),
+                name: "get_schema".to_string(),
+                args: serde_json::json!({}),
+            },
+            ContextChunk::ToolResult {
+                strategy: ContextStrategy::Pinnable,
+                id: "example_get_schema".to_string(),
+                result: serde_json::json!({
+                    "kinds": [
+                        { "uri": "gcal:event", "name": "Event" }
+                    ],
+                    "fields": [
+                        { "uri": "gcal:startAt", "domain": "gcal:event", "name": "Start At" },
+                        { "uri": "schema:name", "domain": null, "name": "Name" }
+                    ]
+                }),
+            },
+            ContextChunk::ToolCall {
+                strategy: ContextStrategy::Pinnable,
+                id: "example_query_facts".to_string(),
+                name: "query_facts".to_string(),
+                args: serde_json::json!({
+                    "query": r#"gcal:startAt(Event, Start), Start >= "2026-03-23", Start <= "2026-03-29", schema:name(Event, Name)"#
+                }),
+            },
+            ContextChunk::ToolResult {
+                strategy: ContextStrategy::Pinnable,
+                id: "example_query_facts".to_string(),
+                result: serde_json::json!({
+                    "substitutions": [
+                        {
+                            "bindings": {
+                                "Event": { "String": "gcal:event:design-review" },
+                                "Name": { "String": "Design Review" },
+                                "Start": { "String": "2026-03-25T10:00:00+00:00" }
+                            }
+                        }
+                    ]
+                }),
+            },
+            ContextChunk::assistant_text(
+                ContextStrategy::Pinnable,
+                "Yes, you have an event this week. The event is named \"Design Review\" and starts on March 25, 2026 at 10:00 AM.",
+            ),
+        ])
     }
 }
 

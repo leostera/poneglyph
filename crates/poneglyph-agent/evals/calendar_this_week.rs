@@ -47,7 +47,15 @@ async fn answers_events_this_week(_ctx: EvalContext<()>) -> Result<Trajectory<Po
                 let query_index = trial
                     .tool_trace
                     .iter()
-                    .position(|call| call.id == "query_facts" || call.name == "query_facts");
+                    .position(|call| {
+                        matches!(
+                            call.id.as_str(),
+                            "query_facts" | "query_entities"
+                        ) || matches!(
+                            call.name.as_str(),
+                            "query_facts" | "query_entities"
+                        )
+                    });
 
                 let (score, summary) = match (schema_index, query_index) {
                     (Some(schema_index), Some(query_index)) if schema_index < query_index => (
