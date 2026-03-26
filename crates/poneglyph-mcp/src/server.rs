@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use derive_builder::Builder;
 use poneglyph::{
     Entity, Fact, Poneglyph, Query, SearchHit, Uri, Value as PoneglyphValue, fact, uri,
@@ -20,6 +21,7 @@ const TOOL_QUERY: &str = "query";
 const TOOL_GET_SCHEMA: &str = "getSchema";
 const TOOL_GET_ENTITY: &str = "getEntity";
 const TOOL_SEARCH: &str = "search";
+const TOOL_MESSAGE_AGENT: &str = "messageAgent";
 const CREATE_ENTITY_DESCRIPTION: &str = r#"Create a new entity URI and immediately state its `schema:name`.
 
 Example:
@@ -90,11 +92,40 @@ Example:
   "query": "rush",
   "limit": 5
 }"#;
+const MESSAGE_AGENT_DESCRIPTION: &str = r#"Send a message to the built-in poneglyph-agent.
+
+Use this when you want Poneglyph's own graph expert to inspect schema, search for existing entities, or extract facts for you.
+
+If `sessionId` is omitted, a new session is created."#;
+
+#[async_trait]
+pub trait AgentMessageHandler: Send + Sync {
+    async fn send_message(
+        &self,
+        request: AgentMessageRequest,
+    ) -> std::result::Result<AgentMessageResponse, String>;
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentMessageRequest {
+    pub message: String,
+    pub session_id: Option<String>,
+    pub source: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentMessageResponse {
+    pub session_id: String,
+    pub run_id: String,
+    pub reply: String,
+}
 
 #[derive(Clone, Builder)]
 #[builder(pattern = "owned", build_fn(private, name = "fallible_build"))]
 pub struct PoneglyphMcpServer {
     poneglyph: Arc<Poneglyph>,
+    #[builder(default)]
+    agent_handler: Option<Arc<dyn AgentMessageHandler>>,
 }
 
 impl PoneglyphMcpServer {
@@ -107,7 +138,7 @@ impl PoneglyphMcpServer {
     }
 
     pub fn list_tools(&self) -> Vec<Tool> {
-        vec![
+        let mut tools = vec![
             tool(
                 TOOL_CREATE_ENTITY,
                 CREATE_ENTITY_DESCRIPTION,
@@ -138,7 +169,15 @@ impl PoneglyphMcpServer {
                 SEARCH_DESCRIPTION,
                 json_schema_for::<SearchInput>(),
             ),
-        ]
+        ];
+        if self.agent_handler.is_some() {
+            tools.push(tool(
+                TOOL_MESSAGE_AGENT,
+                MESSAGE_AGENT_DESCRIPTION,
+                json_schema_for::<MessageAgentInput>(),
+            ));
+        }
+        tools
     }
 
     pub async fn call_tool(&self, call: ToolCall) -> Result<CallToolResult> {
@@ -155,6 +194,7 @@ impl PoneglyphMcpServer {
             TOOL_GET_SCHEMA => self.handle_get_schema(call.arguments).await,
             TOOL_GET_ENTITY => self.handle_get_entity(call.arguments).await,
             TOOL_SEARCH => self.handle_search(call.arguments).await,
+            TOOL_MESSAGE_AGENT => self.handle_message_agent(call.arguments).await,
             _ => Err(Error::UnknownTool { name: call.name }),
         }
     }
@@ -283,6 +323,32 @@ impl PoneglyphMcpServer {
         })?;
         Ok(CallToolResult { content })
     }
+
+    async fn handle_message_agent(&self, arguments: Value) -> Result<CallToolResult> {
+        let input: MessageAgentInput =
+            serde_json::from_value(arguments).map_err(|source| Error::InvalidToolInput {
+                tool: TOOL_MESSAGE_AGENT,
+                source,
+            })?;
+        let handler = self
+            .agent_handler
+            .as_ref()
+            .ok_or(Error::MissingAgentHandler)?;
+        let response = handler
+            .send_message(AgentMessageRequest {
+                message: input.message,
+                session_id: input.session_id,
+                source: "mcp".to_string(),
+            })
+            .await
+            .map_err(Error::AgentMessage)?;
+        let content =
+            serde_json::to_value(response).map_err(|source| Error::InvalidToolOutput {
+                tool: TOOL_MESSAGE_AGENT,
+                source,
+            })?;
+        Ok(CallToolResult { content })
+    }
 }
 
 impl PoneglyphMcpServerBuilder {
@@ -292,6 +358,10 @@ impl PoneglyphMcpServerBuilder {
 
     pub fn with_poneglyph_arc(self, poneglyph: Arc<Poneglyph>) -> Self {
         self.poneglyph(poneglyph)
+    }
+
+    pub fn with_agent_handler(self, agent_handler: Arc<dyn AgentMessageHandler>) -> Self {
+        self.agent_handler(Some(agent_handler))
     }
 
     pub fn build(self) -> Result<PoneglyphMcpServer> {
@@ -400,6 +470,14 @@ struct SearchInput {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct SearchOutput {
     hits: Vec<SearchHitOutput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+struct MessageAgentInput {
+    #[schemars(length(min = 1))]
+    message: String,
+    session_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

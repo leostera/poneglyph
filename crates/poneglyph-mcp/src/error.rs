@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("mcp server builder requires a poneglyph runtime")]
     MissingServerPoneglyph,
+    #[error("poneglyph-agent handler is not configured")]
+    MissingAgentHandler,
     #[error("unknown tool `{name}`")]
     UnknownTool { name: String },
     #[error("tool input deserialization failed for `{tool}`")]
@@ -29,6 +31,8 @@ pub enum Error {
     RmcpService(#[from] rmcp::ServiceError),
     #[error(transparent)]
     InvalidToolCallResult(#[from] serde_json::Error),
+    #[error("agent message failed: {0}")]
+    AgentMessage(String),
     #[error("when stating facts, the following fact did not match the provided entities: {fact:?}")]
     StatingFactsOfUnknownEntities { fact: Fact },
 }

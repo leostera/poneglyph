@@ -10,5 +10,8 @@ mod server;
 mod tool;
 
 pub use error::{Error, Result};
-pub use server::{PoneglyphMcpServer, PoneglyphMcpServerBuilder};
+pub use server::{
+    AgentMessageHandler, AgentMessageRequest, AgentMessageResponse, PoneglyphMcpServer,
+    PoneglyphMcpServerBuilder,
+};
 pub use tool::{CallToolResult, Tool, ToolCall};

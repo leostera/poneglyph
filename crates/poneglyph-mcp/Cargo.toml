@@ -5,10 +5,12 @@ edition = "2024"
 
 [dependencies]
 axum.workspace = true
+async-trait.workspace = true
 chrono.workspace = true
 config.workspace = true
 datafox.workspace = true
 derive_builder.workspace = true
+poneglyph-agent = { path = "../poneglyph-agent" }
 poneglyph = { path = "../poneglyph"} 
 rmcp.workspace = true
 schemars.workspace = true

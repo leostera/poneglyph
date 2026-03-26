@@ -19,7 +19,16 @@ import {
 import { sidebarConnectorItems } from "@/features/connectors/catalog";
 import { useConnectorStatusesQuery } from "@/features/connectors/queries";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Cable, GitBranch, MoreHorizontal, Plus, Search } from "lucide-react";
+import {
+  Cable,
+  GitBranch,
+  MessageSquare,
+  MoreHorizontal,
+  Plus,
+  ScrollText,
+  Search,
+  Settings,
+} from "lucide-react";
 import type React from "react";
 
 export default function BaseLayout({
@@ -62,6 +71,19 @@ export default function BaseLayout({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="h-auto rounded-[3px] px-3 py-2 text-sm"
+                    isActive={pathname === "/chat" || pathname.startsWith("/chat/")}
+                    onClick={() => {
+                      void navigate({ to: "/chat" });
+                    }}
+                    size="lg"
+                  >
+                    <MessageSquare className="size-4" />
+                    <span className="font-medium">Chat</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     className="h-auto rounded-[3px] px-3 py-2 text-sm"
@@ -132,6 +154,42 @@ export default function BaseLayout({
                     ) : null}
                   </SidebarMenuSub>
                 ) : null}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="h-auto rounded-[3px] px-3 py-2 text-sm"
+                    isActive={pathname === "/audits" || pathname.startsWith("/audits/")}
+                    onClick={() => {
+                      void navigate({ to: "/audits" });
+                    }}
+                    size="lg"
+                  >
+                    <ScrollText className="size-4" />
+                    <span className="font-medium">Audits</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarGroup className="mt-auto px-1 py-0">
+            <SidebarGroupLabel className="px-3 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              System
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="h-auto rounded-[3px] px-3 py-2 text-sm"
+                    isActive={pathname === "/settings" || pathname.startsWith("/settings/")}
+                    onClick={() => {
+                      void navigate({ to: "/settings" });
+                    }}
+                    size="lg"
+                  >
+                    <Settings className="size-4" />
+                    <span className="font-medium">Settings</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

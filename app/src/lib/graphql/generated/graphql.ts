@@ -16,6 +16,41 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+export type AgentAuditEvent = {
+  __typename?: 'AgentAuditEvent';
+  eventType: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  occurredAt: Scalars['String']['output'];
+  payloadJson: Scalars['String']['output'];
+  runId: Scalars['String']['output'];
+  seq: Scalars['Int']['output'];
+};
+
+export type AgentAuditRun = {
+  __typename?: 'AgentAuditRun';
+  agentKey: Scalars['String']['output'];
+  errorSummary?: Maybe<Scalars['String']['output']>;
+  finishedAt?: Maybe<Scalars['String']['output']>;
+  id: Scalars['String']['output'];
+  inputSummary?: Maybe<Scalars['String']['output']>;
+  replySummary?: Maybe<Scalars['String']['output']>;
+  sessionId?: Maybe<Scalars['String']['output']>;
+  source: Scalars['String']['output'];
+  startedAt: Scalars['String']['output'];
+  status: Scalars['String']['output'];
+};
+
+export type AiProvider = {
+  __typename?: 'AiProvider';
+  baseUrl: Scalars['String']['output'];
+  defaultModel: Scalars['String']['output'];
+  displayName: Scalars['String']['output'];
+  enabled: Scalars['Boolean']['output'];
+  hasApiKey: Scalars['Boolean']['output'];
+  id: Scalars['Int']['output'];
+  providerKey: Scalars['String']['output'];
+};
+
 export type ConnectorStatus = {
   __typename?: 'ConnectorStatus';
   connected: Scalars['Boolean']['output'];
@@ -101,17 +136,25 @@ export type KnowledgeGraphSchema = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  deleteAiProvider: Scalars['Boolean']['output'];
   deleteFilesystemConnection: Scalars['Boolean']['output'];
   deleteGoogleConnection: Scalars['Boolean']['output'];
   deletePlexConnection: Scalars['Boolean']['output'];
   discoverGoogleCalendars: Array<GoogleCalendarResource>;
   discoverGoogleCalendarsForConnection: Array<GoogleCalendarResource>;
   discoverPlexLibraries: Array<PlexLibraryOption>;
+  saveAiProvider: AiProvider;
   saveFilesystemConnection: FilesystemConnection;
   savePlexConnection: PlexConnection;
   selectGoogleCalendars: Array<GoogleCalendarResource>;
   selectGoogleCalendarsForConnection: Array<GoogleCalendarResource>;
+  sendPoneglyphAgentMessage: PoneglyphAgentReply;
   syncConnector: ConnectorSyncResult;
+};
+
+
+export type MutationDeleteAiProviderArgs = {
+  id: Scalars['Int']['input'];
 };
 
 
@@ -141,6 +184,11 @@ export type MutationDiscoverPlexLibrariesArgs = {
 };
 
 
+export type MutationSaveAiProviderArgs = {
+  input: SaveAiProviderInput;
+};
+
+
 export type MutationSaveFilesystemConnectionArgs = {
   input: SaveFilesystemConnectionInput;
 };
@@ -159,6 +207,11 @@ export type MutationSelectGoogleCalendarsArgs = {
 export type MutationSelectGoogleCalendarsForConnectionArgs = {
   connectionId: Scalars['Int']['input'];
   input: SelectGoogleCalendarsInput;
+};
+
+
+export type MutationSendPoneglyphAgentMessageArgs = {
+  input: SendPoneglyphAgentMessageInput;
 };
 
 
@@ -190,8 +243,18 @@ export type PlexLibraryOption = {
   name: Scalars['String']['output'];
 };
 
+export type PoneglyphAgentReply = {
+  __typename?: 'PoneglyphAgentReply';
+  reply: Scalars['String']['output'];
+  runId: Scalars['String']['output'];
+  sessionId: Scalars['String']['output'];
+};
+
 export type Query = {
   __typename?: 'Query';
+  agentAuditEvents: Array<AgentAuditEvent>;
+  agentAuditRuns: Array<AgentAuditRun>;
+  aiProviders: Array<AiProvider>;
   connectorStatuses: Array<ConnectorStatus>;
   detectLocalPlexConnection: PlexDetection;
   entities: Array<EntitySummary>;
@@ -204,6 +267,17 @@ export type Query = {
   googleCalendars: Array<GoogleCalendarResource>;
   plexConnections: Array<PlexConnection>;
   schemaDefinition: KnowledgeGraphSchema;
+};
+
+
+export type QueryAgentAuditEventsArgs = {
+  runId: Scalars['String']['input'];
+};
+
+
+export type QueryAgentAuditRunsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -220,6 +294,15 @@ export type QueryEntityArgs = {
 
 export type QueryGmailConnectionSummaryArgs = {
   connectionId: Scalars['Int']['input'];
+};
+
+export type SaveAiProviderInput = {
+  apiKey: Scalars['String']['input'];
+  baseUrl: Scalars['String']['input'];
+  defaultModel: Scalars['String']['input'];
+  displayName: Scalars['String']['input'];
+  enabled: Scalars['Boolean']['input'];
+  providerKey: Scalars['String']['input'];
 };
 
 export type SaveFilesystemConnectionInput = {
@@ -258,6 +341,11 @@ export type SelectGoogleCalendarsInput = {
   calendarIds: Array<Scalars['String']['input']>;
 };
 
+export type SendPoneglyphAgentMessageInput = {
+  message: Scalars['String']['input'];
+  sessionId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type ConnectorStatusesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -284,6 +372,47 @@ export type GmailConnectionSummaryQueryVariables = Exact<{
 
 
 export type GmailConnectionSummaryQuery = { __typename?: 'Query', gmailConnectionSummary: { __typename?: 'GmailConnectionSummary', connectionId: number, sendingAddresses: Array<string>, mailboxes: Array<string>, labels: Array<string>, emails: Array<string>, lastEmailReceivedAt?: string | null } };
+
+export type AiProvidersQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AiProvidersQuery = { __typename?: 'Query', aiProviders: Array<{ __typename?: 'AiProvider', id: number, providerKey: string, displayName: string, baseUrl: string, defaultModel: string, enabled: boolean, hasApiKey: boolean }> };
+
+export type AgentAuditRunsQueryVariables = Exact<{
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type AgentAuditRunsQuery = { __typename?: 'Query', agentAuditRuns: Array<{ __typename?: 'AgentAuditRun', id: string, agentKey: string, sessionId?: string | null, source: string, status: string, inputSummary?: string | null, replySummary?: string | null, errorSummary?: string | null, startedAt: string, finishedAt?: string | null }> };
+
+export type AgentAuditEventsQueryVariables = Exact<{
+  runId: Scalars['String']['input'];
+}>;
+
+
+export type AgentAuditEventsQuery = { __typename?: 'Query', agentAuditEvents: Array<{ __typename?: 'AgentAuditEvent', id: string, runId: string, seq: number, eventType: string, payloadJson: string, occurredAt: string }> };
+
+export type SaveAiProviderMutationVariables = Exact<{
+  input: SaveAiProviderInput;
+}>;
+
+
+export type SaveAiProviderMutation = { __typename?: 'Mutation', saveAiProvider: { __typename?: 'AiProvider', id: number, providerKey: string, displayName: string, baseUrl: string, defaultModel: string, enabled: boolean, hasApiKey: boolean } };
+
+export type DeleteAiProviderMutationVariables = Exact<{
+  id: Scalars['Int']['input'];
+}>;
+
+
+export type DeleteAiProviderMutation = { __typename?: 'Mutation', deleteAiProvider: boolean };
+
+export type SendPoneglyphAgentMessageMutationVariables = Exact<{
+  input: SendPoneglyphAgentMessageInput;
+}>;
+
+
+export type SendPoneglyphAgentMessageMutation = { __typename?: 'Mutation', sendPoneglyphAgentMessage: { __typename?: 'PoneglyphAgentReply', sessionId: string, runId: string, reply: string } };
 
 export type EntitiesQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -408,6 +537,12 @@ export const GoogleCalendarsDocument = {"kind":"Document","definitions":[{"kind"
 export const GoogleCalendarConnectionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GoogleCalendarConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"googleCalendarConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"selectedResourceCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}},{"kind":"Field","name":{"kind":"Name","value":"calendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]}}]} as unknown as DocumentNode<GoogleCalendarConnectionsQuery, GoogleCalendarConnectionsQueryVariables>;
 export const GmailConnectionsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GmailConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"gmailConnections"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"selectedResourceCount"}},{"kind":"Field","name":{"kind":"Name","value":"lastSyncedAt"}},{"kind":"Field","name":{"kind":"Name","value":"lastError"}},{"kind":"Field","name":{"kind":"Name","value":"calendars"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"calendarId"}},{"kind":"Field","name":{"kind":"Name","value":"summary"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"timeZone"}},{"kind":"Field","name":{"kind":"Name","value":"primary"}},{"kind":"Field","name":{"kind":"Name","value":"selected"}}]}}]}}]}}]} as unknown as DocumentNode<GmailConnectionsQuery, GmailConnectionsQueryVariables>;
 export const GmailConnectionSummaryDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GmailConnectionSummary"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"gmailConnectionSummary"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"connectionId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"connectionId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectionId"}},{"kind":"Field","name":{"kind":"Name","value":"sendingAddresses"}},{"kind":"Field","name":{"kind":"Name","value":"mailboxes"}},{"kind":"Field","name":{"kind":"Name","value":"labels"}},{"kind":"Field","name":{"kind":"Name","value":"emails"}},{"kind":"Field","name":{"kind":"Name","value":"lastEmailReceivedAt"}}]}}]}}]} as unknown as DocumentNode<GmailConnectionSummaryQuery, GmailConnectionSummaryQueryVariables>;
+export const AiProvidersDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"AiProviders"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"aiProviders"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"providerKey"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"baseUrl"}},{"kind":"Field","name":{"kind":"Name","value":"defaultModel"}},{"kind":"Field","name":{"kind":"Name","value":"enabled"}},{"kind":"Field","name":{"kind":"Name","value":"hasApiKey"}}]}}]}}]} as unknown as DocumentNode<AiProvidersQuery, AiProvidersQueryVariables>;
+export const AgentAuditRunsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"AgentAuditRuns"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"offset"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"agentAuditRuns"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}},{"kind":"Argument","name":{"kind":"Name","value":"offset"},"value":{"kind":"Variable","name":{"kind":"Name","value":"offset"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"agentKey"}},{"kind":"Field","name":{"kind":"Name","value":"sessionId"}},{"kind":"Field","name":{"kind":"Name","value":"source"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"inputSummary"}},{"kind":"Field","name":{"kind":"Name","value":"replySummary"}},{"kind":"Field","name":{"kind":"Name","value":"errorSummary"}},{"kind":"Field","name":{"kind":"Name","value":"startedAt"}},{"kind":"Field","name":{"kind":"Name","value":"finishedAt"}}]}}]}}]} as unknown as DocumentNode<AgentAuditRunsQuery, AgentAuditRunsQueryVariables>;
+export const AgentAuditEventsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"AgentAuditEvents"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"runId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"agentAuditEvents"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"runId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"runId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"runId"}},{"kind":"Field","name":{"kind":"Name","value":"seq"}},{"kind":"Field","name":{"kind":"Name","value":"eventType"}},{"kind":"Field","name":{"kind":"Name","value":"payloadJson"}},{"kind":"Field","name":{"kind":"Name","value":"occurredAt"}}]}}]}}]} as unknown as DocumentNode<AgentAuditEventsQuery, AgentAuditEventsQueryVariables>;
+export const SaveAiProviderDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SaveAiProvider"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"SaveAiProviderInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"saveAiProvider"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"providerKey"}},{"kind":"Field","name":{"kind":"Name","value":"displayName"}},{"kind":"Field","name":{"kind":"Name","value":"baseUrl"}},{"kind":"Field","name":{"kind":"Name","value":"defaultModel"}},{"kind":"Field","name":{"kind":"Name","value":"enabled"}},{"kind":"Field","name":{"kind":"Name","value":"hasApiKey"}}]}}]}}]} as unknown as DocumentNode<SaveAiProviderMutation, SaveAiProviderMutationVariables>;
+export const DeleteAiProviderDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteAiProvider"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteAiProvider"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}]}]}}]} as unknown as DocumentNode<DeleteAiProviderMutation, DeleteAiProviderMutationVariables>;
+export const SendPoneglyphAgentMessageDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SendPoneglyphAgentMessage"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"SendPoneglyphAgentMessageInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sendPoneglyphAgentMessage"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"sessionId"}},{"kind":"Field","name":{"kind":"Name","value":"runId"}},{"kind":"Field","name":{"kind":"Name","value":"reply"}}]}}]}}]} as unknown as DocumentNode<SendPoneglyphAgentMessageMutation, SendPoneglyphAgentMessageMutationVariables>;
 export const EntitiesDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Entities"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"limit"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"offset"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"entities"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"limit"},"value":{"kind":"Variable","name":{"kind":"Name","value":"limit"}}},{"kind":"Argument","name":{"kind":"Name","value":"offset"},"value":{"kind":"Variable","name":{"kind":"Name","value":"offset"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"namespace"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}}]}}]}}]} as unknown as DocumentNode<EntitiesQuery, EntitiesQueryVariables>;
 export const EntityDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"Entity"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"uri"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"entity"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"uri"},"value":{"kind":"Variable","name":{"kind":"Name","value":"uri"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"namespace"}},{"kind":"Field","name":{"kind":"Name","value":"kind"}},{"kind":"Field","name":{"kind":"Name","value":"fields"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"field"}},{"kind":"Field","name":{"kind":"Name","value":"value"}}]}}]}}]}}]} as unknown as DocumentNode<EntityQuery, EntityQueryVariables>;
 export const KnowledgeGraphSchemaDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"KnowledgeGraphSchema"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"schemaDefinition"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"namespaces"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"kinds"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"fields"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uri"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"domain"}},{"kind":"Field","name":{"kind":"Name","value":"range"}}]}}]}}]}}]} as unknown as DocumentNode<KnowledgeGraphSchemaQuery, KnowledgeGraphSchemaQueryVariables>;

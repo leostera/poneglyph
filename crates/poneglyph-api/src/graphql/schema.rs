@@ -9,7 +9,7 @@ use axum::{
 
 use crate::{
     context::AppContext,
-    services::{entities, filesystem, google, plex},
+    services::{agent, entities, filesystem, google, plex},
 };
 
 pub(crate) type ApiSchema = Schema<ApiQuery, ApiMutation, EmptySubscription>;
@@ -106,6 +106,52 @@ struct GmailConnectionSummaryObject {
 }
 
 #[derive(SimpleObject)]
+#[graphql(name = "AiProvider")]
+struct AiProviderObject {
+    id: i64,
+    provider_key: String,
+    display_name: String,
+    base_url: String,
+    default_model: String,
+    enabled: bool,
+    has_api_key: bool,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "PoneglyphAgentReply")]
+struct PoneglyphAgentReplyObject {
+    session_id: String,
+    run_id: String,
+    reply: String,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "AgentAuditRun")]
+struct AgentAuditRunObject {
+    id: String,
+    agent_key: String,
+    session_id: Option<String>,
+    source: String,
+    status: String,
+    input_summary: Option<String>,
+    reply_summary: Option<String>,
+    error_summary: Option<String>,
+    started_at: String,
+    finished_at: Option<String>,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "AgentAuditEvent")]
+struct AgentAuditEventObject {
+    id: String,
+    run_id: String,
+    seq: i64,
+    event_type: String,
+    payload_json: String,
+    occurred_at: String,
+}
+
+#[derive(SimpleObject)]
 #[graphql(name = "EntitySummary")]
 struct EntitySummaryObject {
     uri: String,
@@ -180,6 +226,24 @@ struct SavePlexConnectionInput {
 struct SaveFilesystemConnectionInput {
     name: String,
     root_path: String,
+}
+
+#[derive(InputObject)]
+#[graphql(name = "SaveAiProviderInput")]
+struct SaveAiProviderInputObject {
+    provider_key: String,
+    display_name: String,
+    base_url: String,
+    default_model: String,
+    api_key: String,
+    enabled: bool,
+}
+
+#[derive(InputObject)]
+#[graphql(name = "SendPoneglyphAgentMessageInput")]
+struct SendPoneglyphAgentMessageInput {
+    message: String,
+    session_id: Option<String>,
 }
 
 #[Object(name = "Query")]
@@ -275,6 +339,48 @@ impl ApiQuery {
         google::gmail_connection_summary(app, connection_id)
             .await
             .map(map_gmail_connection_summary)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn ai_providers(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+    ) -> Result<Vec<AiProviderObject>> {
+        let app = ctx.data::<AppContext>()?;
+        app.agent
+            .list_ai_providers()
+            .await
+            .map(map_ai_providers)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn agent_audit_runs(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        limit: Option<i32>,
+        offset: Option<i32>,
+    ) -> Result<Vec<AgentAuditRunObject>> {
+        let app = ctx.data::<AppContext>()?;
+        app.agent
+            .list_audit_runs(
+                limit.unwrap_or(50).clamp(1, 500) as usize,
+                offset.unwrap_or(0).max(0) as usize,
+            )
+            .await
+            .map(map_audit_runs)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn agent_audit_events(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        run_id: String,
+    ) -> Result<Vec<AgentAuditEventObject>> {
+        let app = ctx.data::<AppContext>()?;
+        app.agent
+            .list_audit_events(run_id.as_str())
+            .await
+            .map(map_audit_events)
             .map_err(async_graphql::Error::new)
     }
 
@@ -461,6 +567,47 @@ impl ApiMutation {
             .await
             .map_err(async_graphql::Error::new)
     }
+
+    async fn save_ai_provider(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        input: SaveAiProviderInputObject,
+    ) -> Result<AiProviderObject> {
+        let app = ctx.data::<AppContext>()?;
+        app.agent
+            .save_ai_provider(agent::SaveAiProviderInput {
+                provider_key: input.provider_key,
+                display_name: input.display_name,
+                base_url: input.base_url,
+                default_model: input.default_model,
+                api_key: input.api_key,
+                enabled: input.enabled,
+            })
+            .await
+            .map(map_ai_provider)
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn delete_ai_provider(&self, ctx: &async_graphql::Context<'_>, id: i64) -> Result<bool> {
+        let app = ctx.data::<AppContext>()?;
+        app.agent
+            .delete_ai_provider(id)
+            .await
+            .map_err(async_graphql::Error::new)
+    }
+
+    async fn send_poneglyph_agent_message(
+        &self,
+        ctx: &async_graphql::Context<'_>,
+        input: SendPoneglyphAgentMessageInput,
+    ) -> Result<PoneglyphAgentReplyObject> {
+        let app = ctx.data::<AppContext>()?;
+        app.agent
+            .send_message(input.message, input.session_id, "app_chat")
+            .await
+            .map(map_poneglyph_agent_reply)
+            .map_err(async_graphql::Error::new)
+    }
 }
 
 pub(crate) async fn graphql(
@@ -600,6 +747,61 @@ fn map_gmail_connection_summary(
             .last_email_received_at
             .map(|value| value.to_rfc3339()),
     }
+}
+
+fn map_ai_provider(provider: agent::AiProviderSummary) -> AiProviderObject {
+    AiProviderObject {
+        id: provider.id,
+        provider_key: provider.provider_key,
+        display_name: provider.display_name,
+        base_url: provider.base_url,
+        default_model: provider.default_model,
+        enabled: provider.enabled,
+        has_api_key: provider.has_api_key,
+    }
+}
+
+fn map_ai_providers(providers: Vec<agent::AiProviderSummary>) -> Vec<AiProviderObject> {
+    providers.into_iter().map(map_ai_provider).collect()
+}
+
+fn map_poneglyph_agent_reply(reply: agent::AgentChatReply) -> PoneglyphAgentReplyObject {
+    PoneglyphAgentReplyObject {
+        session_id: reply.session_id,
+        run_id: reply.run_id,
+        reply: reply.reply,
+    }
+}
+
+fn map_audit_runs(runs: Vec<agent::AgentAuditRunSummary>) -> Vec<AgentAuditRunObject> {
+    runs.into_iter()
+        .map(|run| AgentAuditRunObject {
+            id: run.id,
+            agent_key: run.agent_key,
+            session_id: run.session_id,
+            source: run.source,
+            status: run.status,
+            input_summary: run.input_summary,
+            reply_summary: run.reply_summary,
+            error_summary: run.error_summary,
+            started_at: run.started_at,
+            finished_at: run.finished_at,
+        })
+        .collect()
+}
+
+fn map_audit_events(events: Vec<agent::AgentAuditEventRecord>) -> Vec<AgentAuditEventObject> {
+    events
+        .into_iter()
+        .map(|event| AgentAuditEventObject {
+            id: event.id,
+            run_id: event.run_id,
+            seq: event.seq,
+            event_type: event.event_type,
+            payload_json: event.payload_json,
+            occurred_at: event.occurred_at,
+        })
+        .collect()
 }
 
 fn map_entity_summaries(summaries: Vec<entities::EntitySummary>) -> Vec<EntitySummaryObject> {

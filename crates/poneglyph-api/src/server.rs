@@ -853,4 +853,164 @@ mod tests {
         server_task.abort();
         plex_task.abort();
     }
+
+    #[tokio::test]
+    async fn graphql_ai_provider_settings_can_be_saved_listed_and_deleted() {
+        let TestApiServer { _tempdir, server } = build_server().await.expect("server");
+        let bind_addr = next_http_bind_addr();
+        let base_url = format!("http://{bind_addr}");
+        let server = PoneglyphApiServer {
+            bind_addr: bind_addr.clone(),
+            ..server
+        };
+        let server_task = tokio::spawn(server.run());
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let client = Client::builder().build().expect("client");
+
+        let saved = client
+            .post(format!("{base_url}/gql"))
+            .json(&json!({
+                "query": r#"
+                    mutation SaveAiProvider($input: SaveAiProviderInput!) {
+                        saveAiProvider(input: $input) {
+                            id
+                            providerKey
+                            displayName
+                            baseUrl
+                            defaultModel
+                            enabled
+                            hasApiKey
+                        }
+                    }
+                "#,
+                "variables": {
+                    "input": {
+                        "providerKey": "openai",
+                        "displayName": "ChatGPT",
+                        "baseUrl": "https://api.openai.com/v1",
+                        "defaultModel": "gpt-5.4",
+                        "apiKey": "secret-test-key",
+                        "enabled": true
+                    }
+                }
+            }))
+            .send()
+            .await
+            .expect("save ai provider");
+        assert_eq!(saved.status(), 200);
+        let saved: serde_json::Value = saved.json().await.expect("saved body");
+        assert_eq!(saved["data"]["saveAiProvider"]["displayName"], "ChatGPT");
+        assert_eq!(saved["data"]["saveAiProvider"]["hasApiKey"], true);
+
+        let listed = client
+            .post(format!("{base_url}/gql"))
+            .json(&json!({
+                "query": r#"
+                    {
+                        aiProviders {
+                            id
+                            providerKey
+                            displayName
+                            enabled
+                            hasApiKey
+                        }
+                        agentAuditRuns {
+                            id
+                        }
+                    }
+                "#
+            }))
+            .send()
+            .await
+            .expect("list ai providers");
+        assert_eq!(listed.status(), 200);
+        let listed: serde_json::Value = listed.json().await.expect("listed body");
+        let providers = listed["data"]["aiProviders"]
+            .as_array()
+            .expect("providers array");
+        assert_eq!(providers.len(), 1);
+        assert_eq!(providers[0]["providerKey"], "openai");
+        assert_eq!(providers[0]["enabled"], true);
+        assert_eq!(
+            listed["data"]["agentAuditRuns"]
+                .as_array()
+                .expect("audit runs")
+                .len(),
+            0
+        );
+
+        let provider_id = providers[0]["id"].as_i64().expect("provider id");
+        let deleted = client
+            .post(format!("{base_url}/gql"))
+            .json(&json!({
+                "query": r#"
+                    mutation DeleteAiProvider($id: Int!) {
+                        deleteAiProvider(id: $id)
+                    }
+                "#,
+                "variables": {
+                    "id": provider_id
+                }
+            }))
+            .send()
+            .await
+            .expect("delete ai provider");
+        assert_eq!(deleted.status(), 200);
+        let deleted: serde_json::Value = deleted.json().await.expect("deleted body");
+        assert_eq!(deleted["data"]["deleteAiProvider"], true);
+
+        server_task.abort();
+    }
+
+    #[tokio::test]
+    async fn graphql_agent_chat_requires_configured_provider() {
+        let TestApiServer { _tempdir, server } = build_server().await.expect("server");
+        let bind_addr = next_http_bind_addr();
+        let base_url = format!("http://{bind_addr}");
+        let server = PoneglyphApiServer {
+            bind_addr: bind_addr.clone(),
+            ..server
+        };
+        let server_task = tokio::spawn(server.run());
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let client = Client::builder().build().expect("client");
+
+        let response = client
+            .post(format!("{base_url}/gql"))
+            .json(&json!({
+                "query": r#"
+                    mutation SendAgentMessage($input: SendPoneglyphAgentMessageInput!) {
+                        sendPoneglyphAgentMessage(input: $input) {
+                            sessionId
+                            runId
+                            reply
+                        }
+                    }
+                "#,
+                "variables": {
+                    "input": {
+                        "message": "What entities do I have?"
+                    }
+                }
+            }))
+            .send()
+            .await
+            .expect("send agent message");
+        assert_eq!(response.status(), 200);
+        let response: serde_json::Value = response.json().await.expect("response body");
+        assert!(response["data"]["sendPoneglyphAgentMessage"].is_null());
+        assert!(
+            response["errors"]
+                .as_array()
+                .expect("errors")
+                .iter()
+                .any(|error| error["message"]
+                    .as_str()
+                    .is_some_and(|message| message.contains("No AI provider configured")))
+        );
+
+        server_task.abort();
+    }
 }

@@ -11,6 +11,7 @@ use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::config::PoneglyphApiConfig;
+use crate::services::agent::AgentService;
 
 #[derive(Debug, Clone)]
 pub(crate) struct GooglePendingAuth {
@@ -93,6 +94,7 @@ pub(crate) struct AppContext {
     pub ctl_config: PoneglyphCtlConfig,
     pub poneglyph: Arc<Poneglyph>,
     pub ctl: CtlStore,
+    pub agent: AgentService,
     pub mcp: PoneglyphMcpServer,
     pub google_oauth: GoogleOAuthConfig,
     pub google_auth: Arc<Mutex<HashMap<String, GooglePendingAuth>>>,
@@ -118,8 +120,10 @@ impl AppContext {
         ctl: CtlStore,
         google_oauth: GoogleOAuthConfig,
     ) -> Self {
+        let agent = AgentService::new(poneglyph.clone(), ctl.clone());
         let mcp = PoneglyphMcpServer::builder()
             .with_poneglyph_arc(poneglyph.clone())
+            .with_agent_handler(Arc::new(agent.clone()))
             .build()
             .expect("mcp server");
         Self {
@@ -127,6 +131,7 @@ impl AppContext {
             ctl_config,
             poneglyph,
             ctl,
+            agent,
             mcp,
             google_oauth,
             google_auth: Arc::new(Mutex::new(HashMap::new())),

@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Utc};
+use serde_json::Value as JsonValue;
 use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 
@@ -122,6 +123,53 @@ pub struct FilesystemPathState {
     pub last_seen_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AiProviderConfig {
+    pub id: i64,
+    pub provider_key: String,
+    pub display_name: String,
+    pub base_url: String,
+    pub default_model: String,
+    pub api_key: String,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SaveAiProviderConfig {
+    pub provider_key: String,
+    pub display_name: String,
+    pub base_url: String,
+    pub default_model: String,
+    pub api_key: String,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AgentAuditRun {
+    pub id: String,
+    pub agent_key: String,
+    pub session_id: Option<String>,
+    pub source: String,
+    pub status: String,
+    pub input_summary: Option<String>,
+    pub reply_summary: Option<String>,
+    pub error_summary: Option<String>,
+    pub started_at: DateTime<Utc>,
+    pub finished_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AgentAuditEvent {
+    pub id: String,
+    pub run_id: String,
+    pub seq: i64,
+    pub event_type: String,
+    pub payload: JsonValue,
+    pub occurred_at: DateTime<Utc>,
 }
 
 #[derive(Clone)]
@@ -1070,6 +1118,346 @@ impl CtlStore {
             .await?
             .ok_or_else(|| CtlError::StoreQuery("saved filesystem path state missing".into()))
     }
+
+    pub async fn save_ai_provider_config(
+        &self,
+        config: SaveAiProviderConfig,
+    ) -> CtlResult<AiProviderConfig> {
+        if config.provider_key.trim().is_empty() {
+            return Err(CtlError::StoreQuery(
+                "ai provider key is required".to_string(),
+            ));
+        }
+        if config.display_name.trim().is_empty() {
+            return Err(CtlError::StoreQuery(
+                "ai provider display name is required".to_string(),
+            ));
+        }
+        if config.base_url.trim().is_empty() {
+            return Err(CtlError::StoreQuery(
+                "ai provider base url is required".to_string(),
+            ));
+        }
+        if config.default_model.trim().is_empty() {
+            return Err(CtlError::StoreQuery(
+                "ai provider default model is required".to_string(),
+            ));
+        }
+        if config.api_key.trim().is_empty() {
+            return Err(CtlError::StoreQuery(
+                "ai provider api key is required".to_string(),
+            ));
+        }
+
+        let now = Utc::now().to_rfc3339();
+        sqlx::query(
+            r#"
+            INSERT INTO ai_provider_configs (
+                provider_key,
+                display_name,
+                base_url,
+                default_model,
+                api_key,
+                enabled,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(provider_key) DO UPDATE SET
+                display_name = excluded.display_name,
+                base_url = excluded.base_url,
+                default_model = excluded.default_model,
+                api_key = excluded.api_key,
+                enabled = excluded.enabled,
+                updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(config.provider_key.as_str())
+        .bind(config.display_name.as_str())
+        .bind(config.base_url.as_str())
+        .bind(config.default_model.as_str())
+        .bind(config.api_key.as_str())
+        .bind(if config.enabled { 1_i64 } else { 0_i64 })
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.ai_provider_config_by_key(config.provider_key.as_str())
+            .await?
+            .ok_or_else(|| CtlError::StoreQuery("saved ai provider missing".into()))
+    }
+
+    pub async fn list_ai_provider_configs(&self) -> CtlResult<Vec<AiProviderConfig>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                id,
+                provider_key,
+                display_name,
+                base_url,
+                default_model,
+                api_key,
+                enabled,
+                created_at,
+                updated_at
+            FROM ai_provider_configs
+            ORDER BY id ASC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        rows.into_iter().map(decode_ai_provider_config).collect()
+    }
+
+    pub async fn ai_provider_config_by_key(
+        &self,
+        provider_key: &str,
+    ) -> CtlResult<Option<AiProviderConfig>> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                id,
+                provider_key,
+                display_name,
+                base_url,
+                default_model,
+                api_key,
+                enabled,
+                created_at,
+                updated_at
+            FROM ai_provider_configs
+            WHERE provider_key = ?
+            "#,
+        )
+        .bind(provider_key)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        row.map(decode_ai_provider_config).transpose()
+    }
+
+    pub async fn enabled_ai_provider_config(&self) -> CtlResult<Option<AiProviderConfig>> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                id,
+                provider_key,
+                display_name,
+                base_url,
+                default_model,
+                api_key,
+                enabled,
+                created_at,
+                updated_at
+            FROM ai_provider_configs
+            WHERE enabled = 1
+            ORDER BY id ASC
+            LIMIT 1
+            "#,
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        row.map(decode_ai_provider_config).transpose()
+    }
+
+    pub async fn delete_ai_provider_config(&self, id: i64) -> CtlResult<bool> {
+        let result = sqlx::query(
+            r#"
+            DELETE FROM ai_provider_configs
+            WHERE id = ?
+            "#,
+        )
+        .bind(id)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn create_agent_audit_run(&self, run: &AgentAuditRun) -> CtlResult<AgentAuditRun> {
+        sqlx::query(
+            r#"
+            INSERT INTO agent_audit_runs (
+                id,
+                agent_key,
+                session_id,
+                source,
+                status,
+                input_summary,
+                reply_summary,
+                error_summary,
+                started_at,
+                finished_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&run.id)
+        .bind(&run.agent_key)
+        .bind(&run.session_id)
+        .bind(&run.source)
+        .bind(&run.status)
+        .bind(&run.input_summary)
+        .bind(&run.reply_summary)
+        .bind(&run.error_summary)
+        .bind(run.started_at.to_rfc3339())
+        .bind(run.finished_at.map(|value| value.to_rfc3339()))
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.agent_audit_run_by_id(run.id.as_str())
+            .await?
+            .ok_or_else(|| CtlError::StoreQuery("created agent audit run missing".to_string()))
+    }
+
+    pub async fn finish_agent_audit_run(
+        &self,
+        run_id: &str,
+        status: &str,
+        reply_summary: Option<&str>,
+        error_summary: Option<&str>,
+    ) -> CtlResult<Option<AgentAuditRun>> {
+        let finished_at = Utc::now().to_rfc3339();
+        sqlx::query(
+            r#"
+            UPDATE agent_audit_runs
+            SET status = ?,
+                reply_summary = ?,
+                error_summary = ?,
+                finished_at = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(status)
+        .bind(reply_summary)
+        .bind(error_summary)
+        .bind(&finished_at)
+        .bind(run_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.agent_audit_run_by_id(run_id).await
+    }
+
+    pub async fn list_agent_audit_runs(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> CtlResult<Vec<AgentAuditRun>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                id,
+                agent_key,
+                session_id,
+                source,
+                status,
+                input_summary,
+                reply_summary,
+                error_summary,
+                started_at,
+                finished_at
+            FROM agent_audit_runs
+            ORDER BY started_at DESC
+            LIMIT ? OFFSET ?
+            "#,
+        )
+        .bind(limit as i64)
+        .bind(offset as i64)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        rows.into_iter().map(decode_agent_audit_run).collect()
+    }
+
+    pub async fn agent_audit_run_by_id(&self, run_id: &str) -> CtlResult<Option<AgentAuditRun>> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                id,
+                agent_key,
+                session_id,
+                source,
+                status,
+                input_summary,
+                reply_summary,
+                error_summary,
+                started_at,
+                finished_at
+            FROM agent_audit_runs
+            WHERE id = ?
+            "#,
+        )
+        .bind(run_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        row.map(decode_agent_audit_run).transpose()
+    }
+
+    pub async fn append_agent_audit_event(
+        &self,
+        event: &AgentAuditEvent,
+    ) -> CtlResult<AgentAuditEvent> {
+        let payload = serde_json::to_string(&event.payload)
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+        sqlx::query(
+            r#"
+            INSERT INTO agent_audit_events (
+                id,
+                run_id,
+                seq,
+                event_type,
+                payload_json,
+                occurred_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&event.id)
+        .bind(&event.run_id)
+        .bind(event.seq)
+        .bind(&event.event_type)
+        .bind(payload)
+        .bind(event.occurred_at.to_rfc3339())
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        Ok(event.clone())
+    }
+
+    pub async fn agent_audit_events(&self, run_id: &str) -> CtlResult<Vec<AgentAuditEvent>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                id,
+                run_id,
+                seq,
+                event_type,
+                payload_json,
+                occurred_at
+            FROM agent_audit_events
+            WHERE run_id = ?
+            ORDER BY seq ASC
+            "#,
+        )
+        .bind(run_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        rows.into_iter().map(decode_agent_audit_event).collect()
+    }
 }
 
 fn resolve_db_path(path: &Path) -> PathBuf {
@@ -1116,10 +1504,12 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        CtlStore, SaveFilesystemConnection, SaveGoogleOAuthConnection, SavePlexConnection,
+        AgentAuditEvent, AgentAuditRun, CtlStore, SaveAiProviderConfig, SaveFilesystemConnection,
+        SaveGoogleOAuthConnection, SavePlexConnection,
     };
     use crate::connectors::gcal::GoogleCalendarResource as DiscoveredGoogleCalendarResource;
     use chrono::Utc;
+    use serde_json::json;
 
     #[tokio::test]
     async fn ctl_store_open_creates_control_db_file() {
@@ -1595,6 +1985,96 @@ mod tests {
         assert_eq!(loaded.id, first.id);
         assert_eq!(loaded.last_content_hash.as_deref(), Some("hash-b"));
     }
+
+    #[tokio::test]
+    async fn ctl_store_persists_ai_provider_configs() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+
+        let saved = store
+            .save_ai_provider_config(SaveAiProviderConfig {
+                provider_key: "openai".to_string(),
+                display_name: "ChatGPT".to_string(),
+                base_url: "https://api.openai.com".to_string(),
+                default_model: "gpt-test".to_string(),
+                api_key: "sk-test".to_string(),
+                enabled: true,
+            })
+            .await
+            .expect("save ai provider");
+
+        let listed = store
+            .list_ai_provider_configs()
+            .await
+            .expect("list ai providers");
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].id, saved.id);
+        assert_eq!(listed[0].provider_key, "openai");
+
+        let loaded = store
+            .enabled_ai_provider_config()
+            .await
+            .expect("enabled provider")
+            .expect("provider exists");
+        assert_eq!(loaded.id, saved.id);
+        assert_eq!(loaded.default_model, "gpt-test");
+    }
+
+    #[tokio::test]
+    async fn ctl_store_tracks_agent_audit_runs_and_events() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+        let started_at = Utc::now();
+
+        let run = store
+            .create_agent_audit_run(&AgentAuditRun {
+                id: "run-1".to_string(),
+                agent_key: "poneglyph-agent".to_string(),
+                session_id: Some("session-1".to_string()),
+                source: "app_chat".to_string(),
+                status: "running".to_string(),
+                input_summary: Some("hello".to_string()),
+                reply_summary: None,
+                error_summary: None,
+                started_at,
+                finished_at: None,
+            })
+            .await
+            .expect("create run");
+
+        let event = store
+            .append_agent_audit_event(&AgentAuditEvent {
+                id: "event-1".to_string(),
+                run_id: run.id.clone(),
+                seq: 1,
+                event_type: "input_received".to_string(),
+                payload: json!({ "message": "hello" }),
+                occurred_at: started_at,
+            })
+            .await
+            .expect("append event");
+        assert_eq!(event.run_id, run.id);
+
+        let finished = store
+            .finish_agent_audit_run(&run.id, "succeeded", Some("hi there"), None)
+            .await
+            .expect("finish run")
+            .expect("run exists");
+        assert_eq!(finished.status, "succeeded");
+        assert_eq!(finished.reply_summary.as_deref(), Some("hi there"));
+
+        let runs = store.list_agent_audit_runs(50, 0).await.expect("list runs");
+        assert_eq!(runs.len(), 1);
+        let events = store
+            .agent_audit_events(&run.id)
+            .await
+            .expect("list events");
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].event_type, "input_received");
+        assert_eq!(events[0].payload, json!({ "message": "hello" }));
+    }
 }
 
 fn decode_google_oauth_connection(
@@ -1948,5 +2428,130 @@ fn decode_filesystem_path_state(row: sqlx::sqlite::SqliteRow) -> CtlResult<Files
         last_seen_at,
         created_at,
         updated_at,
+    })
+}
+
+fn decode_ai_provider_config(row: sqlx::sqlite::SqliteRow) -> CtlResult<AiProviderConfig> {
+    use sqlx::Row;
+
+    let created_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("created_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let updated_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("updated_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+
+    Ok(AiProviderConfig {
+        id: row
+            .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        provider_key: row
+            .try_get("provider_key")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        display_name: row
+            .try_get("display_name")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        base_url: row
+            .try_get("base_url")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        default_model: row
+            .try_get("default_model")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        api_key: row
+            .try_get("api_key")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        enabled: row
+            .try_get::<i64, _>("enabled")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+            != 0,
+        created_at,
+        updated_at,
+    })
+}
+
+fn decode_agent_audit_run(row: sqlx::sqlite::SqliteRow) -> CtlResult<AgentAuditRun> {
+    use sqlx::Row;
+
+    let started_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("started_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let finished_at = row
+        .try_get::<Option<String>, _>("finished_at")
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+        .map(|value| DateTime::parse_from_rfc3339(&value))
+        .transpose()
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+        .map(|value| value.with_timezone(&Utc));
+
+    Ok(AgentAuditRun {
+        id: row
+            .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        agent_key: row
+            .try_get("agent_key")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        session_id: row
+            .try_get("session_id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        source: row
+            .try_get("source")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        status: row
+            .try_get("status")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        input_summary: row
+            .try_get("input_summary")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        reply_summary: row
+            .try_get("reply_summary")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        error_summary: row
+            .try_get("error_summary")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        started_at,
+        finished_at,
+    })
+}
+
+fn decode_agent_audit_event(row: sqlx::sqlite::SqliteRow) -> CtlResult<AgentAuditEvent> {
+    use sqlx::Row;
+
+    let occurred_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("occurred_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let payload = row
+        .try_get::<String, _>("payload_json")
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))
+        .and_then(|value| {
+            serde_json::from_str(&value).map_err(|error| CtlError::StoreQuery(error.to_string()))
+        })?;
+
+    Ok(AgentAuditEvent {
+        id: row
+            .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        run_id: row
+            .try_get("run_id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        seq: row
+            .try_get("seq")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        event_type: row
+            .try_get("event_type")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        payload,
+        occurred_at,
     })
 }

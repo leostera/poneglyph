@@ -4,14 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow.workspace = true
 async-graphql.workspace = true
 async-graphql-axum.workspace = true
+async-trait.workspace = true
 axum.workspace = true
 chrono.workspace = true
 datafox.workspace = true
 derive_builder.workspace = true
 oauth2.workspace = true
 poneglyph= { path = "../poneglyph" }
+poneglyph-agent = { path = "../poneglyph-agent" }
 poneglyph-ctl = { path = "../poneglyph-ctl" }
 poneglyph-mcp = { path = "../poneglyph-mcp" }
 serde.workspace = true

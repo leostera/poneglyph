@@ -9,7 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as EntitiesRouteImport } from './routes/entities'
+import { Route as ChatRouteImport } from './routes/chat'
+import { Route as AuditsRouteImport } from './routes/audits'
 import { Route as ConnectorsRouteRouteImport } from './routes/connectors/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConnectorsIndexRouteImport } from './routes/connectors/index'
@@ -25,9 +28,24 @@ import { Route as ConnectorsGoogleOnboardSelectRouteImport } from './routes/conn
 import { Route as ConnectorsGoogleOnboardDiscoverRouteImport } from './routes/connectors/google/onboard/discover'
 import { Route as ConnectorsGoogleOnboardConnectRouteImport } from './routes/connectors/google/onboard/connect'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EntitiesRoute = EntitiesRouteImport.update({
   id: '/entities',
   path: '/entities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditsRoute = AuditsRouteImport.update({
+  id: '/audits',
+  path: '/audits',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectorsRouteRoute = ConnectorsRouteRouteImport.update({
@@ -112,7 +130,10 @@ const ConnectorsGoogleOnboardConnectRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/connectors': typeof ConnectorsRouteRouteWithChildren
+  '/audits': typeof AuditsRoute
+  '/chat': typeof ChatRoute
   '/entities': typeof EntitiesRouteWithChildren
+  '/settings': typeof SettingsRoute
   '/connectors/$connectorId': typeof ConnectorsConnectorIdRouteRouteWithChildren
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
@@ -128,7 +149,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/audits': typeof AuditsRoute
+  '/chat': typeof ChatRoute
   '/entities': typeof EntitiesRouteWithChildren
+  '/settings': typeof SettingsRoute
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
   '/entities/$scope': typeof EntitiesScopeRoute
@@ -144,7 +168,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/connectors': typeof ConnectorsRouteRouteWithChildren
+  '/audits': typeof AuditsRoute
+  '/chat': typeof ChatRoute
   '/entities': typeof EntitiesRouteWithChildren
+  '/settings': typeof SettingsRoute
   '/connectors/$connectorId': typeof ConnectorsConnectorIdRouteRouteWithChildren
   '/connectors/add': typeof ConnectorsAddRoute
   '/connectors/new': typeof ConnectorsNewRoute
@@ -163,7 +190,10 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/connectors'
+    | '/audits'
+    | '/chat'
     | '/entities'
+    | '/settings'
     | '/connectors/$connectorId'
     | '/connectors/add'
     | '/connectors/new'
@@ -179,7 +209,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/audits'
+    | '/chat'
     | '/entities'
+    | '/settings'
     | '/connectors/add'
     | '/connectors/new'
     | '/entities/$scope'
@@ -194,7 +227,10 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/connectors'
+    | '/audits'
+    | '/chat'
     | '/entities'
+    | '/settings'
     | '/connectors/$connectorId'
     | '/connectors/add'
     | '/connectors/new'
@@ -212,16 +248,40 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConnectorsRouteRoute: typeof ConnectorsRouteRouteWithChildren
+  AuditsRoute: typeof AuditsRoute
+  ChatRoute: typeof ChatRoute
   EntitiesRoute: typeof EntitiesRouteWithChildren
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/entities': {
       id: '/entities'
       path: '/entities'
       fullPath: '/entities'
       preLoaderRoute: typeof EntitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audits': {
+      id: '/audits'
+      path: '/audits'
+      fullPath: '/audits'
+      preLoaderRoute: typeof AuditsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connectors': {
@@ -397,7 +457,10 @@ const EntitiesRouteWithChildren = EntitiesRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConnectorsRouteRoute: ConnectorsRouteRouteWithChildren,
+  AuditsRoute: AuditsRoute,
+  ChatRoute: ChatRoute,
   EntitiesRoute: EntitiesRouteWithChildren,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

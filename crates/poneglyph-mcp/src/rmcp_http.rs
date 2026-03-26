@@ -142,10 +142,14 @@ fn to_rmcp_error(error: Error) -> ::rmcp::ErrorData {
         Error::MissingServerPoneglyph => {
             ::rmcp::ErrorData::internal_error("missing poneglyph runtime", None)
         }
+        Error::MissingAgentHandler => {
+            ::rmcp::ErrorData::internal_error("missing poneglyph-agent handler", None)
+        }
         Error::RmcpService(source) => ::rmcp::ErrorData::internal_error(source.to_string(), None),
         Error::InvalidToolCallResult(error) => {
             ::rmcp::ErrorData::internal_error(error.to_string(), None)
         }
+        Error::AgentMessage(message) => ::rmcp::ErrorData::internal_error(message, None),
         error @ Error::StatingFactsOfUnknownEntities { .. } => {
             ::rmcp::ErrorData::internal_error(error.to_string(), None)
         }

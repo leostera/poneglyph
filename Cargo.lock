@@ -2752,17 +2752,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "poneglyph-agent"
+version = "0.1.0"
+dependencies = [
+ "agents",
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "datafox",
+ "evals",
+ "poneglyph",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "poneglyph-api"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-graphql",
  "async-graphql-axum",
+ "async-trait",
  "axum",
  "chrono",
  "datafox",
  "derive_builder",
  "oauth2",
  "poneglyph",
+ "poneglyph-agent",
  "poneglyph-ctl",
  "poneglyph-mcp",
  "reqwest",
@@ -2805,12 +2826,14 @@ dependencies = [
 name = "poneglyph-mcp"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "axum",
  "chrono",
  "config",
  "datafox",
  "derive_builder",
  "poneglyph",
+ "poneglyph-agent",
  "reqwest",
  "rmcp",
  "schemars",

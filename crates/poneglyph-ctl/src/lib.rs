@@ -15,9 +15,10 @@ pub use connectors::plex::{PlexConfig, PlexConnector};
 pub use error::{CtlError, CtlResult};
 pub use runtime::{ConnectorRuntime, ConnectorRuntimeBuilder};
 pub use store::{
-    CtlStore, FilesystemConnection, GmailSyncState, GoogleCalendarSyncState, GoogleOAuthConnection,
-    PlexConnection, PlexLibrarySyncState, SaveFilesystemConnection, SaveGoogleOAuthConnection,
-    SavePlexConnection,
+    AgentAuditEvent, AgentAuditRun, AiProviderConfig, CtlStore, FilesystemConnection,
+    GmailSyncState, GoogleCalendarSyncState, GoogleOAuthConnection, PlexConnection,
+    PlexLibrarySyncState, SaveAiProviderConfig, SaveFilesystemConnection,
+    SaveGoogleOAuthConnection, SavePlexConnection,
 };
 
 #[cfg(test)]

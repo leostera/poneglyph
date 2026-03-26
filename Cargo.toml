@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/datafox",
+    "crates/poneglyph-agent",
     "crates/poneglyph-api",
     "crates/poneglyph-ctl",
     "crates/poneglyph-mcp",

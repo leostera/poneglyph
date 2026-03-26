@@ -1,5 +1,9 @@
 import {
+  AgentAuditEventsDocument,
+  AgentAuditRunsDocument,
+  AiProvidersDocument,
   ConnectorStatusesDocument,
+  DeleteAiProviderDocument,
   DeleteFilesystemConnectionDocument,
   DeleteGoogleConnectionDocument,
   DeletePlexConnectionDocument,
@@ -16,10 +20,12 @@ import {
   GoogleCalendarsDocument,
   KnowledgeGraphSchemaDocument,
   PlexConnectionsDocument,
+  SaveAiProviderDocument,
   SaveFilesystemConnectionDocument,
   SavePlexConnectionDocument,
   SelectGoogleCalendarsDocument,
   SelectGoogleCalendarsForConnectionDocument,
+  SendPoneglyphAgentMessageDocument,
   SyncConnectorDocument,
 } from "@/lib/graphql/documents";
 import type { ResultOf, VariablesOf } from "@graphql-typed-document-node/core";
@@ -48,6 +54,12 @@ export type GmailConnection = ResultOf<typeof GmailConnectionsDocument>["gmailCo
 export type GmailConnectionSummary = ResultOf<
   typeof GmailConnectionSummaryDocument
 >["gmailConnectionSummary"];
+export type AiProvider = ResultOf<typeof AiProvidersDocument>["aiProviders"][number];
+export type AgentAuditRun = ResultOf<typeof AgentAuditRunsDocument>["agentAuditRuns"][number];
+export type AgentAuditEvent = ResultOf<typeof AgentAuditEventsDocument>["agentAuditEvents"][number];
+export type PoneglyphAgentReply = ResultOf<
+  typeof SendPoneglyphAgentMessageDocument
+>["sendPoneglyphAgentMessage"];
 export type EntitySummary = ResultOf<typeof EntitiesDocument>["entities"][number];
 export type EntityDetail = ResultOf<typeof EntityDocument>["entity"];
 export type KnowledgeGraphSchema = ResultOf<
@@ -89,6 +101,21 @@ export async function getGmailConnections() {
 export async function getGmailConnectionSummary(connectionId: number) {
   const data = await graphqlRequest(GmailConnectionSummaryDocument, { connectionId });
   return data.gmailConnectionSummary;
+}
+
+export async function getAiProviders() {
+  const data = await graphqlRequest(AiProvidersDocument);
+  return data.aiProviders;
+}
+
+export async function getAgentAuditRuns(limit = 50, offset = 0) {
+  const data = await graphqlRequest(AgentAuditRunsDocument, { limit, offset });
+  return data.agentAuditRuns;
+}
+
+export async function getAgentAuditEvents(runId: string) {
+  const data = await graphqlRequest(AgentAuditEventsDocument, { runId });
+  return data.agentAuditEvents;
 }
 
 export async function getPlexConnections() {
@@ -191,6 +218,42 @@ export async function saveFilesystemConnection(name: string, rootPath: string) {
 export async function deleteFilesystemConnection(connectionId: number) {
   const data = await graphqlRequest(DeleteFilesystemConnectionDocument, { connectionId });
   return data.deleteFilesystemConnection;
+}
+
+export async function saveAiProvider(
+  providerKey: string,
+  displayName: string,
+  baseUrl: string,
+  defaultModel: string,
+  apiKey: string,
+  enabled: boolean,
+) {
+  const data = await graphqlRequest(SaveAiProviderDocument, {
+    input: {
+      providerKey,
+      displayName,
+      baseUrl,
+      defaultModel,
+      apiKey,
+      enabled,
+    },
+  });
+  return data.saveAiProvider;
+}
+
+export async function deleteAiProvider(id: number) {
+  const data = await graphqlRequest(DeleteAiProviderDocument, { id });
+  return data.deleteAiProvider;
+}
+
+export async function sendPoneglyphAgentMessage(message: string, sessionId?: string | null) {
+  const data = await graphqlRequest(SendPoneglyphAgentMessageDocument, {
+    input: {
+      message,
+      sessionId: sessionId ?? null,
+    },
+  });
+  return data.sendPoneglyphAgentMessage;
 }
 
 export async function discoverPlexLibraries(baseUrl: string, token: string) {

@@ -19,6 +19,12 @@ type Documents = {
     "\n  query GoogleCalendarConnections {\n    googleCalendarConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n": typeof types.GoogleCalendarConnectionsDocument,
     "\n  query GmailConnections {\n    gmailConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n": typeof types.GmailConnectionsDocument,
     "\n  query GmailConnectionSummary($connectionId: Int!) {\n    gmailConnectionSummary(connectionId: $connectionId) {\n      connectionId\n      sendingAddresses\n      mailboxes\n      labels\n      emails\n      lastEmailReceivedAt\n    }\n  }\n": typeof types.GmailConnectionSummaryDocument,
+    "\n  query AiProviders {\n    aiProviders {\n      id\n      providerKey\n      displayName\n      baseUrl\n      defaultModel\n      enabled\n      hasApiKey\n    }\n  }\n": typeof types.AiProvidersDocument,
+    "\n  query AgentAuditRuns($limit: Int, $offset: Int) {\n    agentAuditRuns(limit: $limit, offset: $offset) {\n      id\n      agentKey\n      sessionId\n      source\n      status\n      inputSummary\n      replySummary\n      errorSummary\n      startedAt\n      finishedAt\n    }\n  }\n": typeof types.AgentAuditRunsDocument,
+    "\n  query AgentAuditEvents($runId: String!) {\n    agentAuditEvents(runId: $runId) {\n      id\n      runId\n      seq\n      eventType\n      payloadJson\n      occurredAt\n    }\n  }\n": typeof types.AgentAuditEventsDocument,
+    "\n  mutation SaveAiProvider($input: SaveAiProviderInput!) {\n    saveAiProvider(input: $input) {\n      id\n      providerKey\n      displayName\n      baseUrl\n      defaultModel\n      enabled\n      hasApiKey\n    }\n  }\n": typeof types.SaveAiProviderDocument,
+    "\n  mutation DeleteAiProvider($id: Int!) {\n    deleteAiProvider(id: $id)\n  }\n": typeof types.DeleteAiProviderDocument,
+    "\n  mutation SendPoneglyphAgentMessage($input: SendPoneglyphAgentMessageInput!) {\n    sendPoneglyphAgentMessage(input: $input) {\n      sessionId\n      runId\n      reply\n    }\n  }\n": typeof types.SendPoneglyphAgentMessageDocument,
     "\n  query Entities($limit: Int, $offset: Int) {\n    entities(limit: $limit, offset: $offset) {\n      uri\n      namespace\n      kind\n    }\n  }\n": typeof types.EntitiesDocument,
     "\n  query Entity($uri: String!) {\n    entity(uri: $uri) {\n      uri\n      namespace\n      kind\n      fields {\n        field\n        value\n      }\n    }\n  }\n": typeof types.EntityDocument,
     "\n  query KnowledgeGraphSchema {\n    schemaDefinition {\n      namespaces {\n        uri\n        name\n      }\n      kinds {\n        uri\n        name\n      }\n      fields {\n        uri\n        name\n        domain\n        range\n      }\n    }\n  }\n": typeof types.KnowledgeGraphSchemaDocument,
@@ -44,6 +50,12 @@ const documents: Documents = {
     "\n  query GoogleCalendarConnections {\n    googleCalendarConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n": types.GoogleCalendarConnectionsDocument,
     "\n  query GmailConnections {\n    gmailConnections {\n      id\n      label\n      selectedResourceCount\n      lastSyncedAt\n      lastError\n      calendars {\n        connectionId\n        calendarId\n        summary\n        description\n        timeZone\n        primary\n        selected\n      }\n    }\n  }\n": types.GmailConnectionsDocument,
     "\n  query GmailConnectionSummary($connectionId: Int!) {\n    gmailConnectionSummary(connectionId: $connectionId) {\n      connectionId\n      sendingAddresses\n      mailboxes\n      labels\n      emails\n      lastEmailReceivedAt\n    }\n  }\n": types.GmailConnectionSummaryDocument,
+    "\n  query AiProviders {\n    aiProviders {\n      id\n      providerKey\n      displayName\n      baseUrl\n      defaultModel\n      enabled\n      hasApiKey\n    }\n  }\n": types.AiProvidersDocument,
+    "\n  query AgentAuditRuns($limit: Int, $offset: Int) {\n    agentAuditRuns(limit: $limit, offset: $offset) {\n      id\n      agentKey\n      sessionId\n      source\n      status\n      inputSummary\n      replySummary\n      errorSummary\n      startedAt\n      finishedAt\n    }\n  }\n": types.AgentAuditRunsDocument,
+    "\n  query AgentAuditEvents($runId: String!) {\n    agentAuditEvents(runId: $runId) {\n      id\n      runId\n      seq\n      eventType\n      payloadJson\n      occurredAt\n    }\n  }\n": types.AgentAuditEventsDocument,
+    "\n  mutation SaveAiProvider($input: SaveAiProviderInput!) {\n    saveAiProvider(input: $input) {\n      id\n      providerKey\n      displayName\n      baseUrl\n      defaultModel\n      enabled\n      hasApiKey\n    }\n  }\n": types.SaveAiProviderDocument,
+    "\n  mutation DeleteAiProvider($id: Int!) {\n    deleteAiProvider(id: $id)\n  }\n": types.DeleteAiProviderDocument,
+    "\n  mutation SendPoneglyphAgentMessage($input: SendPoneglyphAgentMessageInput!) {\n    sendPoneglyphAgentMessage(input: $input) {\n      sessionId\n      runId\n      reply\n    }\n  }\n": types.SendPoneglyphAgentMessageDocument,
     "\n  query Entities($limit: Int, $offset: Int) {\n    entities(limit: $limit, offset: $offset) {\n      uri\n      namespace\n      kind\n    }\n  }\n": types.EntitiesDocument,
     "\n  query Entity($uri: String!) {\n    entity(uri: $uri) {\n      uri\n      namespace\n      kind\n      fields {\n        field\n        value\n      }\n    }\n  }\n": types.EntityDocument,
     "\n  query KnowledgeGraphSchema {\n    schemaDefinition {\n      namespaces {\n        uri\n        name\n      }\n      kinds {\n        uri\n        name\n      }\n      fields {\n        uri\n        name\n        domain\n        range\n      }\n    }\n  }\n": types.KnowledgeGraphSchemaDocument,
@@ -98,6 +110,30 @@ export function graphql(source: "\n  query GmailConnections {\n    gmailConnecti
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  query GmailConnectionSummary($connectionId: Int!) {\n    gmailConnectionSummary(connectionId: $connectionId) {\n      connectionId\n      sendingAddresses\n      mailboxes\n      labels\n      emails\n      lastEmailReceivedAt\n    }\n  }\n"): (typeof documents)["\n  query GmailConnectionSummary($connectionId: Int!) {\n    gmailConnectionSummary(connectionId: $connectionId) {\n      connectionId\n      sendingAddresses\n      mailboxes\n      labels\n      emails\n      lastEmailReceivedAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query AiProviders {\n    aiProviders {\n      id\n      providerKey\n      displayName\n      baseUrl\n      defaultModel\n      enabled\n      hasApiKey\n    }\n  }\n"): (typeof documents)["\n  query AiProviders {\n    aiProviders {\n      id\n      providerKey\n      displayName\n      baseUrl\n      defaultModel\n      enabled\n      hasApiKey\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query AgentAuditRuns($limit: Int, $offset: Int) {\n    agentAuditRuns(limit: $limit, offset: $offset) {\n      id\n      agentKey\n      sessionId\n      source\n      status\n      inputSummary\n      replySummary\n      errorSummary\n      startedAt\n      finishedAt\n    }\n  }\n"): (typeof documents)["\n  query AgentAuditRuns($limit: Int, $offset: Int) {\n    agentAuditRuns(limit: $limit, offset: $offset) {\n      id\n      agentKey\n      sessionId\n      source\n      status\n      inputSummary\n      replySummary\n      errorSummary\n      startedAt\n      finishedAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query AgentAuditEvents($runId: String!) {\n    agentAuditEvents(runId: $runId) {\n      id\n      runId\n      seq\n      eventType\n      payloadJson\n      occurredAt\n    }\n  }\n"): (typeof documents)["\n  query AgentAuditEvents($runId: String!) {\n    agentAuditEvents(runId: $runId) {\n      id\n      runId\n      seq\n      eventType\n      payloadJson\n      occurredAt\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SaveAiProvider($input: SaveAiProviderInput!) {\n    saveAiProvider(input: $input) {\n      id\n      providerKey\n      displayName\n      baseUrl\n      defaultModel\n      enabled\n      hasApiKey\n    }\n  }\n"): (typeof documents)["\n  mutation SaveAiProvider($input: SaveAiProviderInput!) {\n    saveAiProvider(input: $input) {\n      id\n      providerKey\n      displayName\n      baseUrl\n      defaultModel\n      enabled\n      hasApiKey\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation DeleteAiProvider($id: Int!) {\n    deleteAiProvider(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteAiProvider($id: Int!) {\n    deleteAiProvider(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation SendPoneglyphAgentMessage($input: SendPoneglyphAgentMessageInput!) {\n    sendPoneglyphAgentMessage(input: $input) {\n      sessionId\n      runId\n      reply\n    }\n  }\n"): (typeof documents)["\n  mutation SendPoneglyphAgentMessage($input: SendPoneglyphAgentMessageInput!) {\n    sendPoneglyphAgentMessage(input: $input) {\n      sessionId\n      runId\n      reply\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

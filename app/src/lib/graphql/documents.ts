@@ -82,6 +82,80 @@ export const GmailConnectionSummaryDocument = graphql(`
   }
 `);
 
+export const AiProvidersDocument = graphql(`
+  query AiProviders {
+    aiProviders {
+      id
+      providerKey
+      displayName
+      baseUrl
+      defaultModel
+      enabled
+      hasApiKey
+    }
+  }
+`);
+
+export const AgentAuditRunsDocument = graphql(`
+  query AgentAuditRuns($limit: Int, $offset: Int) {
+    agentAuditRuns(limit: $limit, offset: $offset) {
+      id
+      agentKey
+      sessionId
+      source
+      status
+      inputSummary
+      replySummary
+      errorSummary
+      startedAt
+      finishedAt
+    }
+  }
+`);
+
+export const AgentAuditEventsDocument = graphql(`
+  query AgentAuditEvents($runId: String!) {
+    agentAuditEvents(runId: $runId) {
+      id
+      runId
+      seq
+      eventType
+      payloadJson
+      occurredAt
+    }
+  }
+`);
+
+export const SaveAiProviderDocument = graphql(`
+  mutation SaveAiProvider($input: SaveAiProviderInput!) {
+    saveAiProvider(input: $input) {
+      id
+      providerKey
+      displayName
+      baseUrl
+      defaultModel
+      enabled
+      hasApiKey
+    }
+  }
+`);
+
+export const DeleteAiProviderDocument = graphql(`
+  mutation DeleteAiProvider($id: Int!) {
+    deleteAiProvider(id: $id)
+  }
+`);
+
+export const SendPoneglyphAgentMessageDocument = graphql(`
+  mutation SendPoneglyphAgentMessage($input: SendPoneglyphAgentMessageInput!) {
+    sendPoneglyphAgentMessage(input: $input) {
+      sessionId
+      runId
+      reply
+    }
+  }
+`);
+
 export const EntitiesDocument = graphql(`
   query Entities($limit: Int, $offset: Int) {
     entities(limit: $limit, offset: $offset) {
