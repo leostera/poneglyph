@@ -18,6 +18,8 @@ pub(crate) struct PlexConnection {
 pub(crate) struct PlexDetection {
     pub base_url: String,
     pub token: Option<String>,
+    pub machine_identifier: Option<String>,
+    pub libraries: Vec<String>,
 }
 
 pub(crate) struct PlexService<'a> {
@@ -120,18 +122,33 @@ pub(crate) async fn discover_libraries(
     base_url: &str,
     token: &str,
 ) -> std::result::Result<Vec<String>, String> {
-    discover_plex_server(base_url, token)
+    fetch_library_sections(base_url, token)
         .await
-        .map(|server| server.libraries)
+        .map(|sections| extract_libraries(&sections))
 }
 
-pub(crate) fn detect_local_connection() -> PlexDetection {
+pub(crate) async fn detect_local_connection() -> PlexDetection {
     let base_url = "http://127.0.0.1:32400".to_string();
     let token = std::env::var("PONEGLYPH_PLEX_TOKEN")
         .ok()
         .or_else(read_plex_token_from_preferences);
 
-    PlexDetection { base_url, token }
+    let mut machine_identifier = None;
+    let mut libraries = Vec::new();
+
+    if let Some(token_value) = token.as_deref() {
+        if let Ok(sections) = fetch_library_sections(base_url.as_str(), token_value).await {
+            machine_identifier = sections.machine_identifier.clone();
+            libraries = extract_libraries(&sections);
+        }
+    }
+
+    PlexDetection {
+        base_url,
+        token,
+        machine_identifier,
+        libraries,
+    }
 }
 
 fn read_plex_token_from_preferences() -> Option<String> {
@@ -186,13 +203,28 @@ struct PlexMediaContainer {
 #[derive(Debug, Clone)]
 struct DiscoveredPlexServer {
     machine_identifier: String,
-    libraries: Vec<String>,
 }
 
 async fn discover_plex_server(
     base_url: &str,
     token: &str,
 ) -> std::result::Result<DiscoveredPlexServer, String> {
+    let sections = fetch_library_sections(base_url, token).await?;
+    let machine_identifier = sections
+        .machine_identifier
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| {
+            "plex server discovery did not include a machineIdentifier; cannot save connection"
+                .to_string()
+        })?;
+
+    Ok(DiscoveredPlexServer { machine_identifier })
+}
+
+async fn fetch_library_sections(
+    base_url: &str,
+    token: &str,
+) -> std::result::Result<PlexLibrarySections, String> {
     let response = reqwest::Client::new()
         .get(format!(
             "{}/library/sections/all",
@@ -216,29 +248,18 @@ async fn discover_plex_server(
         .await
         .map_err(|error| format!("failed to decode plex libraries response: {error}"))?;
 
-    let mut libraries = payload
-        .media_container
+    Ok(payload.media_container)
+}
+
+fn extract_libraries(sections: &PlexLibrarySections) -> Vec<String> {
+    let mut libraries: Vec<String> = sections
         .directory
-        .unwrap_or_default()
-        .into_iter()
-        .map(|section| section.title)
-        .collect::<Vec<_>>();
+        .as_ref()
+        .map(|values| values.iter().map(|section| section.title.clone()).collect())
+        .unwrap_or_default();
     libraries.sort();
     libraries.dedup();
-
-    let machine_identifier = payload
-        .media_container
-        .machine_identifier
-        .filter(|value| !value.trim().is_empty())
-        .ok_or_else(|| {
-            "plex server discovery did not include a machineIdentifier; cannot save connection"
-                .to_string()
-        })?;
-
-    Ok(DiscoveredPlexServer {
-        machine_identifier,
-        libraries,
-    })
+    libraries
 }
 
 fn update_latest_sync(

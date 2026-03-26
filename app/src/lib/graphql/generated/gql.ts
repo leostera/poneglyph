@@ -24,7 +24,7 @@ type Documents = {
     "\n  query KnowledgeGraphSchema {\n    schemaDefinition {\n      namespaces {\n        uri\n        name\n      }\n      kinds {\n        uri\n        name\n      }\n      fields {\n        uri\n        name\n        domain\n        range\n      }\n    }\n  }\n": typeof types.KnowledgeGraphSchemaDocument,
     "\n  query EntityKinds {\n    entityKinds\n  }\n": typeof types.EntityKindsDocument,
     "\n  query PlexConnections {\n    plexConnections {\n      id\n      name\n      baseUrl\n      libraries\n      lastSyncedAt\n      lastError\n    }\n  }\n": typeof types.PlexConnectionsDocument,
-    "\n  query DetectLocalPlexConnection {\n    detectLocalPlexConnection {\n      baseUrl\n      token\n    }\n  }\n": typeof types.DetectLocalPlexConnectionDocument,
+    "\n  query DetectLocalPlexConnection {\n    detectLocalPlexConnection {\n      baseUrl\n      token\n      machineIdentifier\n      libraries\n    }\n  }\n": typeof types.DetectLocalPlexConnectionDocument,
     "\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.DiscoverGoogleCalendarsDocument,
     "\n  query FilesystemConnections {\n    filesystemConnections {\n      id\n      name\n      rootPath\n    }\n  }\n": typeof types.FilesystemConnectionsDocument,
     "\n  mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {\n    discoverGoogleCalendarsForConnection(connectionId: $connectionId) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": typeof types.DiscoverGoogleCalendarsForConnectionDocument,
@@ -49,7 +49,7 @@ const documents: Documents = {
     "\n  query KnowledgeGraphSchema {\n    schemaDefinition {\n      namespaces {\n        uri\n        name\n      }\n      kinds {\n        uri\n        name\n      }\n      fields {\n        uri\n        name\n        domain\n        range\n      }\n    }\n  }\n": types.KnowledgeGraphSchemaDocument,
     "\n  query EntityKinds {\n    entityKinds\n  }\n": types.EntityKindsDocument,
     "\n  query PlexConnections {\n    plexConnections {\n      id\n      name\n      baseUrl\n      libraries\n      lastSyncedAt\n      lastError\n    }\n  }\n": types.PlexConnectionsDocument,
-    "\n  query DetectLocalPlexConnection {\n    detectLocalPlexConnection {\n      baseUrl\n      token\n    }\n  }\n": types.DetectLocalPlexConnectionDocument,
+    "\n  query DetectLocalPlexConnection {\n    detectLocalPlexConnection {\n      baseUrl\n      token\n      machineIdentifier\n      libraries\n    }\n  }\n": types.DetectLocalPlexConnectionDocument,
     "\n  mutation DiscoverGoogleCalendars {\n    discoverGoogleCalendars {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.DiscoverGoogleCalendarsDocument,
     "\n  query FilesystemConnections {\n    filesystemConnections {\n      id\n      name\n      rootPath\n    }\n  }\n": types.FilesystemConnectionsDocument,
     "\n  mutation DiscoverGoogleCalendarsForConnection($connectionId: Int!) {\n    discoverGoogleCalendarsForConnection(connectionId: $connectionId) {\n      connectionId\n      calendarId\n      summary\n      description\n      timeZone\n      primary\n      selected\n    }\n  }\n": types.DiscoverGoogleCalendarsForConnectionDocument,
@@ -121,7 +121,7 @@ export function graphql(source: "\n  query PlexConnections {\n    plexConnection
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query DetectLocalPlexConnection {\n    detectLocalPlexConnection {\n      baseUrl\n      token\n    }\n  }\n"): (typeof documents)["\n  query DetectLocalPlexConnection {\n    detectLocalPlexConnection {\n      baseUrl\n      token\n    }\n  }\n"];
+export function graphql(source: "\n  query DetectLocalPlexConnection {\n    detectLocalPlexConnection {\n      baseUrl\n      token\n      machineIdentifier\n      libraries\n    }\n  }\n"): (typeof documents)["\n  query DetectLocalPlexConnection {\n    detectLocalPlexConnection {\n      baseUrl\n      token\n      machineIdentifier\n      libraries\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

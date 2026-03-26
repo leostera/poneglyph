@@ -151,6 +151,8 @@ export const DetectLocalPlexConnectionDocument = graphql(`
     detectLocalPlexConnection {
       baseUrl
       token
+      machineIdentifier
+      libraries
     }
   }
 `);

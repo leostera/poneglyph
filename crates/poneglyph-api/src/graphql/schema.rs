@@ -75,6 +75,8 @@ struct PlexConnectionObject {
 struct PlexDetectionObject {
     base_url: String,
     token: Option<String>,
+    machine_identifier: Option<String>,
+    libraries: Vec<String>,
 }
 
 #[derive(SimpleObject)]
@@ -221,10 +223,12 @@ impl ApiQuery {
     }
 
     async fn detect_local_plex_connection(&self) -> PlexDetectionObject {
-        let detected = plex::detect_local_connection();
+        let detected = plex::detect_local_connection().await;
         PlexDetectionObject {
             base_url: detected.base_url,
             token: detected.token,
+            machine_identifier: detected.machine_identifier,
+            libraries: detected.libraries,
         }
     }
 

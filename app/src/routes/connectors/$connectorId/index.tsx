@@ -284,6 +284,11 @@ function ConnectorDetailPage() {
       if (detected.token) {
         setPlexToken(detected.token);
       }
+      if (detected.libraries.length > 0) {
+        setDiscoveredPlexLibraries(detected.libraries);
+        setSelectedPlexLibraries(detected.libraries);
+        setPlexLibraryCandidate(detected.libraries[0] ?? "");
+      }
     },
   });
 

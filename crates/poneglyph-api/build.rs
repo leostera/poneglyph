@@ -112,6 +112,8 @@ type PlexConnection {
 type PlexDetection {
   baseUrl: String!
   token: String
+  machineIdentifier: String
+  libraries: [String!]!
 }
 
 type Query {
