@@ -118,7 +118,7 @@ impl agents::tools::TypedTool for PoneglyphTool {
                 Some(
                     "Append one atomic batch of facts. Prefer create_entity or search_entities before using this when the entity identity is not already known.",
                 ),
-                schema_for::<StateFactsArgs>(),
+                state_facts_schema(),
             ),
         ]
     }
@@ -340,4 +340,106 @@ fn entity_label(entity: &Entity) -> Option<String> {
 
 fn schema_for<T: JsonSchema>() -> JsonValue {
     serde_json::to_value(schemars::schema_for!(T)).expect("json schema")
+}
+
+fn state_facts_schema() -> JsonValue {
+    json!({
+        "type": "object",
+        "properties": {
+            "entities": {
+                "type": "array",
+                "description": "Entity URIs that this fact batch is allowed to reference.",
+                "items": { "type": "string" }
+            },
+            "facts": {
+                "type": "array",
+                "description": "Facts to append in one atomic batch.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "source": {
+                            "type": "string",
+                            "description": "Optional source URI. If omitted, poneglyph:agent is used."
+                        },
+                        "entity": {
+                            "type": "string",
+                            "description": "Entity URI receiving the fact."
+                        },
+                        "field": {
+                            "type": "string",
+                            "description": "Field URI for the fact."
+                        },
+                        "value": {
+                            "type": "object",
+                            "description": "Poneglyph value encoded as { type, value }. Supported types: null, text, number, boolean, bytes, reference, date, date_time, list, map. For null, omit value. For list, value is an array of nested encoded values. For map, value is an object whose property values are nested encoded values.",
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "null",
+                                        "text",
+                                        "number",
+                                        "boolean",
+                                        "bytes",
+                                        "reference",
+                                        "date",
+                                        "date_time",
+                                        "list",
+                                        "map"
+                                    ]
+                                },
+                                "value": {
+                                    "description": "Variant payload. Use a string for text, number, reference, date, and date_time; a boolean for boolean; an array of integers for bytes; an array of nested values for list; and an object whose values are nested values for map."
+                                }
+                            },
+                            "required": ["type"],
+                            "additionalProperties": false
+                        },
+                        "retraction": {
+                            "type": "boolean",
+                            "description": "When true, the fact is appended as a retraction.",
+                            "default": false
+                        }
+                    },
+                    "required": ["entity", "field", "value"],
+                    "additionalProperties": false
+                }
+            }
+        },
+        "required": ["entities", "facts"],
+        "additionalProperties": false
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use agents::tools::TypedTool;
+    use serde_json::Value as JsonValue;
+
+    use super::PoneglyphTool;
+
+    #[test]
+    fn state_facts_schema_avoids_one_of() {
+        let schema = PoneglyphTool::tool_definitions()
+            .into_iter()
+            .find(|definition| definition.function.name == "state_facts")
+            .expect("state_facts tool definition")
+            .function
+            .parameters;
+
+        assert!(
+            !contains_one_of(&schema),
+            "state_facts schema must not use oneOf because OpenAI function schemas reject it"
+        );
+    }
+
+    fn contains_one_of(value: &JsonValue) -> bool {
+        match value {
+            JsonValue::Object(object) => {
+                object.contains_key("oneOf") || object.values().any(contains_one_of)
+            }
+            JsonValue::Array(values) => values.iter().any(contains_one_of),
+            _ => false,
+        }
+    }
 }
