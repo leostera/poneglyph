@@ -1,0 +1,53 @@
+{
+  "trial_id": "019d29d0-0c60-7e40-aac9-be58306ed8a5",
+  "suite_id": "test_eval",
+  "eval_id": "dummy_eval",
+  "target": {
+    "label": "ollama/llama3.3:70b"
+  },
+  "timing": {
+    "started_at_ms": 1774522993760,
+    "finished_at_ms": 1774522996581,
+    "duration_ms": 2821
+  },
+  "grading": {
+    "passed": true,
+    "mean_score": 1.0,
+    "error": null
+  },
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 27,
+    "total_tokens": 39
+  },
+  "transcript": [
+    {
+      "type": "user",
+      "value": "hello world",
+      "step": 0
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 1,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": false,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "assistant",
+      "value": "Hello World! It's great to meet you! Is there something I can help you with, or would you like to chat?"
+    },
+    {
+      "type": "assistant",
+      "value": "Hello World! It's great to meet you! Is there something I can help you with, or would you like to chat?"
+    }
+  ]
+}

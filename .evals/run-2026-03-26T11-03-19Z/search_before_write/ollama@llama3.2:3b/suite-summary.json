@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T11-03-19Z",
+  "suite_id": "search_before_write",
+  "target": {
+    "label": "ollama/llama3.2:3b",
+    "provider": "ollama",
+    "model": "llama3.2:3b",
+    "max_in_flight": 1
+  },
+  "total_evals": 1,
+  "total_trials": 25,
+  "passed_trials": 0,
+  "pass_rate": 0.0,
+  "mean_score": 0.0,
+  "mean_duration": {
+    "secs": 1,
+    "nanos": 801523943
+  },
+  "usage": {
+    "prompt_tokens": 29498,
+    "completion_tokens": 2573,
+    "total_tokens": 32071
+  },
+  "evals": [
+    {
+      "eval_id": "search_before_write",
+      "trial_count": 25,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.0,
+      "mean_duration": {
+        "secs": 1,
+        "nanos": 801523943
+      },
+      "usage": {
+        "prompt_tokens": 29498,
+        "completion_tokens": 2573,
+        "total_tokens": 32071
+      },
+      "grader_means": [
+        {
+          "name": "searches-before-write",
+          "mean_score": 0.0,
+          "pass_rate": 0.0
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T11-01-01Z",
+  "suite_id": "test_eval",
+  "target": {
+    "label": "ollama/llama3.2:3b",
+    "provider": "ollama",
+    "model": "llama3.2:3b",
+    "max_in_flight": 1
+  },
+  "total_evals": 1,
+  "total_trials": 25,
+  "passed_trials": 25,
+  "pass_rate": 1.0,
+  "mean_score": 1.0,
+  "mean_duration": {
+    "secs": 0,
+    "nanos": 229843381
+  },
+  "usage": {
+    "prompt_tokens": 675,
+    "completion_tokens": 387,
+    "total_tokens": 1062
+  },
+  "evals": [
+    {
+      "eval_id": "dummy_eval",
+      "trial_count": 25,
+      "passed_trials": 25,
+      "pass_rate": 1.0,
+      "mean_score": 1.0,
+      "mean_duration": {
+        "secs": 0,
+        "nanos": 229843381
+      },
+      "usage": {
+        "prompt_tokens": 675,
+        "completion_tokens": 387,
+        "total_tokens": 1062
+      },
+      "grader_means": []
+    }
+  ]
+}

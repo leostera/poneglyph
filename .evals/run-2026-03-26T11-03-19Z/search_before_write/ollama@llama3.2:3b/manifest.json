@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T11-03-19Z",
+  "started_at": {
+    "secs": 1774522999,
+    "nanos": 208820000
+  },
+  "finished_at": {
+    "secs": 1774522999,
+    "nanos": 208820000
+  },
+  "suites": [
+    "search_before_write"
+  ],
+  "targets": [
+    {
+      "label": "ollama/llama3.2:3b",
+      "provider": "ollama",
+      "model": "llama3.2:3b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T11-03-19Z/search_before_write/ollama@llama3.2:3b/manifest.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-001__search_before_write__019d29d0-21a9-7dd1-88b2-ef0cc8508af2.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-002__search_before_write__019d29d0-27cb-7a21-a51e-8670f5f819d4.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-003__search_before_write__019d29d0-30c1-7963-a3c7-ec31706ceae5.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-004__search_before_write__019d29d0-3ba1-7fc1-a9b7-b77c28134c90.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-005__search_before_write__019d29d0-45de-7ae3-8d2a-7cff73087665.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-006__search_before_write__019d29d0-4b70-7370-9e90-4e37cd5cd83b.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-007__search_before_write__019d29d0-5256-7fc2-ab23-8d39b8064d15.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-008__search_before_write__019d29d0-582b-7222-97a4-235175a41f55.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-009__search_before_write__019d29d0-5bc7-7712-99da-4dde7539eb0f.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-010__search_before_write__019d29d0-5f31-7dc3-b640-c4f65e2dcb67.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-011__search_before_write__019d29d0-6b56-7752-91c8-3995d32c4083.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-012__search_before_write__019d29d0-7252-7c31-88fa-f9ded17b854a.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-013__search_before_write__019d29d0-7cbd-7233-a121-d8d06e39ba4f.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-014__search_before_write__019d29d0-81dc-7023-80c7-f695de538a5e.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-015__search_before_write__019d29d0-85f5-7c52-846d-926d9b0a3f96.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-016__search_before_write__019d29d0-8a74-7f73-aa55-39bbc2a99b36.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-017__search_before_write__019d29d0-9564-7570-a7b5-3d7372bbda73.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-018__search_before_write__019d29d0-9b61-7500-bc2f-57b3de5d9ad4.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-019__search_before_write__019d29d0-9f89-7e42-baa4-41e6ccf74bdf.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-020__search_before_write__019d29d0-a6b9-7131-8e67-06d7ead7e4ab.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-021__search_before_write__019d29d0-af8f-7d10-be72-28114988176f.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-022__search_before_write__019d29d0-b582-7c73-9058-e4314b9228ad.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-023__search_before_write__019d29d0-bb69-7dc1-94c9-33150d21a704.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-024__search_before_write__019d29d0-bf74-7a70-b51b-a6cf8592d967.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/search_before_write/ollama@llama3.2:3b/trial-025__search_before_write__019d29d0-c4a5-7a11-a609-521bea2c7421.json",
+    "run-2026-03-26T11-03-19Z/search_before_write/ollama@llama3.2:3b/suite-summary.json"
+  ]
+}

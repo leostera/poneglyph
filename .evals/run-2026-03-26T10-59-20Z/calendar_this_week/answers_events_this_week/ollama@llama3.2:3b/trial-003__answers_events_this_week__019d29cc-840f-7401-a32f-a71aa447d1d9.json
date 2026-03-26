@@ -1,0 +1,156 @@
+{
+  "trial_id": "019d29cc-840f-7401-a32f-a71aa447d1d9",
+  "suite_id": "calendar_this_week",
+  "eval_id": "answers_events_this_week",
+  "target": {
+    "label": "ollama/llama3.2:3b"
+  },
+  "timing": {
+    "started_at_ms": 1774522762255,
+    "finished_at_ms": 1774522763681,
+    "duration_ms": 1425
+  },
+  "grading": {
+    "passed": false,
+    "mean_score": 0.0,
+    "error": {
+      "kind": "eval_error",
+      "error": {
+        "MessageWithTrial": {
+          "message": "LLM error: Failed to parse response: failed to parse JSON: unknown field `get_schema`, expected `query`\nraw value:\nquery_facts",
+          "trial": {
+            "final_reply": null,
+            "grader_failures": [],
+            "grades": {},
+            "metadata": null,
+            "tool_trace": [],
+            "transcript": [
+              {
+                "input": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?",
+                "kind": "step_started",
+                "step_index": 0
+              },
+              {
+                "content": "\"Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?\"",
+                "kind": "message",
+                "role": "user"
+              },
+              {
+                "chunks": [
+                  {
+                    "Message": {
+                      "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before the first graph query in a conversation.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n",
+                      "role": "System",
+                      "strategy": "Pinnable"
+                    }
+                  },
+                  {
+                    "Message": {
+                      "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?",
+                      "role": "User",
+                      "strategy": "Compactable"
+                    }
+                  }
+                ],
+                "kind": "context_window"
+              },
+              {
+                "kind": "request_prepared",
+                "request": {
+                  "expects_typed_response": false,
+                  "has_tools": true,
+                  "input_items": 2,
+                  "model": "any",
+                  "response_mode": "Buffered",
+                  "temperature": "ProviderDefault",
+                  "token_limit": "ProviderDefault",
+                  "tool_choice": "ProviderDefault",
+                  "top_k": "ProviderDefault",
+                  "top_p": "ProviderDefault"
+                }
+              },
+              {
+                "error": {
+                  "error": {
+                    "Llm": {
+                      "Parse": {
+                        "source": {
+                          "error": "unknown field `get_schema`, expected `query`",
+                          "value": "query_facts"
+                        }
+                      }
+                    }
+                  },
+                  "kind": "agent_error"
+                },
+                "kind": "error"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "transcript": [
+    {
+      "type": "user",
+      "value": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?",
+      "step": 0
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before the first graph query in a conversation.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n"
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?"
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 2,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "error",
+      "error": {
+        "kind": "agent_error",
+        "error": {
+          "Llm": {
+            "Parse": {
+              "source": {
+                "value": "query_facts",
+                "error": "unknown field `get_schema`, expected `query`"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

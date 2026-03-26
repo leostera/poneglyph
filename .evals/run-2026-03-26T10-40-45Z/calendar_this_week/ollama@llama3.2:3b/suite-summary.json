@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T10-40-45Z",
+  "suite_id": "calendar_this_week",
+  "target": {
+    "label": "ollama/llama3.2:3b",
+    "provider": "ollama",
+    "model": "llama3.2:3b",
+    "max_in_flight": 1
+  },
+  "total_evals": 1,
+  "total_trials": 50,
+  "passed_trials": 0,
+  "pass_rate": 0.0,
+  "mean_score": 0.03,
+  "mean_duration": {
+    "secs": 1,
+    "nanos": 862938928
+  },
+  "usage": {
+    "prompt_tokens": 68410,
+    "completion_tokens": 5761,
+    "total_tokens": 74171
+  },
+  "evals": [
+    {
+      "eval_id": "answers_events_this_week",
+      "trial_count": 50,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.03,
+      "mean_duration": {
+        "secs": 1,
+        "nanos": 862938928
+      },
+      "usage": {
+        "prompt_tokens": 68410,
+        "completion_tokens": 5761,
+        "total_tokens": 74171
+      },
+      "grader_means": [
+        {
+          "name": "identifies-in-week-event",
+          "mean_score": 0.06,
+          "pass_rate": 0.06
+        },
+        {
+          "name": "uses-schema-then-query",
+          "mean_score": 0.0,
+          "pass_rate": 0.0
+        }
+      ]
+    }
+  ]
+}

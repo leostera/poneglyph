@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T10-57-28Z",
+  "started_at": {
+    "secs": 1774522648,
+    "nanos": 483199000
+  },
+  "finished_at": {
+    "secs": 1774522648,
+    "nanos": 483199000
+  },
+  "suites": [
+    "test_eval"
+  ],
+  "targets": [
+    {
+      "label": "ollama/llama3.2:3b",
+      "provider": "ollama",
+      "model": "llama3.2:3b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T10-57-28Z/test_eval/ollama@llama3.2:3b/manifest.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-001__dummy_eval__019d29ca-c7a4-70b1-95d2-508d311bd550.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-002__dummy_eval__019d29ca-cf3c-7bc1-af76-fd4be89d1e78.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-003__dummy_eval__019d29ca-d062-7431-9c89-1e1b48bd7753.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-004__dummy_eval__019d29ca-d1cb-7340-86fd-6c16474f0815.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-005__dummy_eval__019d29ca-d284-7dc0-aa09-781c69851680.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-006__dummy_eval__019d29ca-d339-7bb3-8b46-941699c62da1.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-007__dummy_eval__019d29ca-d45a-7ed3-946c-70a2b6233a1c.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-008__dummy_eval__019d29ca-d500-7761-8edd-b7fd0f8e2a51.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-009__dummy_eval__019d29ca-d5e2-7d90-ae25-b3084d9cd995.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-010__dummy_eval__019d29ca-d703-7df0-a943-85b09ecf7c93.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-011__dummy_eval__019d29ca-d7ef-7cb1-a7f8-1cd0c0b06f8c.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-012__dummy_eval__019d29ca-d8a5-70f0-baad-17f1961049d4.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-013__dummy_eval__019d29ca-d955-7720-aa45-9681be0ee4cf.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-014__dummy_eval__019d29ca-da77-7801-b3a2-7fab4c6792cf.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-015__dummy_eval__019d29ca-db96-71d0-ace2-7c24fbcf69d6.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-016__dummy_eval__019d29ca-dcac-7d50-bc95-f41b976b34c3.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-017__dummy_eval__019d29ca-de13-7952-bd0d-45605a0da3d0.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-018__dummy_eval__019d29ca-decb-7192-8ed1-8693d7daa954.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-019__dummy_eval__019d29ca-df73-7da3-93d9-713bd025ca77.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-020__dummy_eval__019d29ca-e021-7e60-8f5f-23ccbe1690f1.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-021__dummy_eval__019d29ca-e0c5-7563-bcee-64713f1525ce.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-022__dummy_eval__019d29ca-e16f-7630-9ca4-a96f4106887d.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-023__dummy_eval__019d29ca-e22c-7713-a75c-cf17e1deee5c.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-024__dummy_eval__019d29ca-e347-79c1-b933-ff48f9719de6.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-025__dummy_eval__019d29ca-e45b-7931-9bea-ff71bf32ac28.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-026__dummy_eval__019d29ca-e579-7ff2-bd06-84f0199814ee.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-027__dummy_eval__019d29ca-e68f-7071-907e-bea2637fe012.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-028__dummy_eval__019d29ca-e7af-7583-9669-d52c5b89131d.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-029__dummy_eval__019d29ca-e852-7830-a841-c668d067a936.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-030__dummy_eval__019d29ca-e96a-7312-b08b-d7a02e6aedf9.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-031__dummy_eval__019d29ca-ea7e-75c1-9742-8768d1c0637b.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-032__dummy_eval__019d29ca-eb96-7e13-be29-f70a89d84c1d.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-033__dummy_eval__019d29ca-ecb8-73a2-bb79-5ee65da1ad1b.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-034__dummy_eval__019d29ca-ed5f-7641-9ed7-4ab2044e3a7b.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-035__dummy_eval__019d29ca-ee03-7c82-b398-601c57e0f30d.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-036__dummy_eval__019d29ca-ef1f-7003-ae6d-2f467b24e331.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-037__dummy_eval__019d29ca-f082-7d82-89c6-fd10c62e4493.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-038__dummy_eval__019d29ca-f139-79e0-a017-96db8222cb19.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-039__dummy_eval__019d29ca-f1e9-7e83-9f62-3854fb1f6492.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-040__dummy_eval__019d29ca-f2fe-75b2-bc9c-17246a3e71b6.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-041__dummy_eval__019d29ca-f416-76d3-b086-af46e0fce2d7.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-042__dummy_eval__019d29ca-f52f-70b2-92f7-34ea44b4cbf1.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-043__dummy_eval__019d29ca-f5d3-7462-a28d-042244e42db3.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-044__dummy_eval__019d29ca-f6e7-7af2-a966-e6a2945d27f3.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-045__dummy_eval__019d29ca-f78f-7183-806d-8356edf43e94.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-046__dummy_eval__019d29ca-f833-7ef1-85af-e271a2f800c6.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-047__dummy_eval__019d29ca-f94e-7061-acb9-efaa4ff5dc17.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-048__dummy_eval__019d29ca-f9f0-7912-8f02-e60522ef4779.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-049__dummy_eval__019d29ca-fabf-7341-bb2b-8eed5435fbf9.json",
+    "run-2026-03-26T10-57-28Z/test_eval/dummy_eval/ollama@llama3.2:3b/trial-050__dummy_eval__019d29ca-fbe2-74c2-b414-2e1d06b5c49f.json",
+    "run-2026-03-26T10-57-28Z/test_eval/ollama@llama3.2:3b/suite-summary.json"
+  ]
+}

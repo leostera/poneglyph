@@ -1,0 +1,413 @@
+{
+  "trial_id": "019d29cb-e29f-7651-a483-fd94736461b4",
+  "suite_id": "search_before_write",
+  "eval_id": "search_before_write",
+  "target": {
+    "label": "ollama/llama3.2:3b"
+  },
+  "timing": {
+    "started_at_ms": 1774522720927,
+    "finished_at_ms": 1774522722637,
+    "duration_ms": 1710
+  },
+  "grading": {
+    "passed": false,
+    "mean_score": 0.0,
+    "error": {
+      "kind": "eval_error",
+      "error": {
+        "MessageWithTrial": {
+          "message": "trajectory grading failed at step 0",
+          "trial": {
+            "final_reply": "Since the entity \"Dune\" does not exist, we create it:\n```sql\ncreate_entity(\n  id=\"dune:movie\",\n  label=\"Dune (2021)\",\n  type=\"Movie\",\n  description=\"Science fiction film directed by Denis Villeneuve.\"\n)\n```\n\n{\"name\": \"search_entities\", \"parameters\": {\"limit\":null,\"query\":\"Dune movie\"}}",
+            "grader_failures": [],
+            "grades": {
+              "searches-before-write": {
+                "evidence": {
+                  "reply": "Since the entity \"Dune\" does not exist, we create it:\n```sql\ncreate_entity(\n  id=\"dune:movie\",\n  label=\"Dune (2021)\",\n  type=\"Movie\",\n  description=\"Science fiction film directed by Denis Villeneuve.\"\n)\n```\n\n{\"name\": \"search_entities\", \"parameters\": {\"limit\":null,\"query\":\"Dune movie\"}}",
+                  "toolTrace": [
+                    {
+                      "arguments": {
+                        "limit": null,
+                        "query": "Dune movie"
+                      },
+                      "error": null,
+                      "id": "search_entities",
+                      "name": "unknown_tool",
+                      "result": {
+                        "hits": []
+                      }
+                    }
+                  ]
+                },
+                "score": 0.0,
+                "summary": "agent searched but did not attempt the requested write"
+              }
+            },
+            "metadata": null,
+            "tool_trace": [
+              {
+                "arguments": {
+                  "limit": null,
+                  "query": "Dune movie"
+                },
+                "error": null,
+                "id": "search_entities",
+                "name": "unknown_tool",
+                "result": {
+                  "hits": []
+                }
+              }
+            ],
+            "transcript": [
+              {
+                "input": "Record the movie Dune in the graph. Reuse an existing entity if it already exists; otherwise create one.",
+                "kind": "step_started",
+                "step_index": 0
+              },
+              {
+                "content": "\"Record the movie Dune in the graph. Reuse an existing entity if it already exists; otherwise create one.\"",
+                "kind": "message",
+                "role": "user"
+              },
+              {
+                "chunks": [
+                  {
+                    "Message": {
+                      "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before the first graph query in a conversation.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n",
+                      "role": "System",
+                      "strategy": "Pinnable"
+                    }
+                  },
+                  {
+                    "Message": {
+                      "content": "Record the movie Dune in the graph. Reuse an existing entity if it already exists; otherwise create one.",
+                      "role": "User",
+                      "strategy": "Compactable"
+                    }
+                  }
+                ],
+                "kind": "context_window"
+              },
+              {
+                "kind": "request_prepared",
+                "request": {
+                  "expects_typed_response": false,
+                  "has_tools": true,
+                  "input_items": 2,
+                  "model": "any",
+                  "response_mode": "Buffered",
+                  "temperature": "ProviderDefault",
+                  "token_limit": "ProviderDefault",
+                  "tool_choice": "ProviderDefault",
+                  "top_k": "ProviderDefault",
+                  "top_p": "ProviderDefault"
+                }
+              },
+              {
+                "arguments": {
+                  "limit": null,
+                  "query": "Dune movie"
+                },
+                "id": "search_entities",
+                "kind": "tool_call_requested",
+                "name": "search_entities",
+                "usage_metrics": {
+                  "finishReason": "ToolCalls",
+                  "model": "llama3.2:3b",
+                  "provider": "Ollama",
+                  "responseId": 1,
+                  "usage": {
+                    "completionTokens": 24,
+                    "promptTokens": 1300,
+                    "totalTokens": 1324
+                  }
+                }
+              },
+              {
+                "id": "search_entities",
+                "kind": "tool_execution_completed",
+                "name": "unknown_tool",
+                "result": {
+                  "hits": []
+                }
+              },
+              {
+                "chunks": [
+                  {
+                    "Message": {
+                      "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before the first graph query in a conversation.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n",
+                      "role": "System",
+                      "strategy": "Pinnable"
+                    }
+                  },
+                  {
+                    "Message": {
+                      "content": "Record the movie Dune in the graph. Reuse an existing entity if it already exists; otherwise create one.",
+                      "role": "User",
+                      "strategy": "Compactable"
+                    }
+                  },
+                  {
+                    "ToolCall": {
+                      "args": {
+                        "limit": null,
+                        "query": "Dune movie"
+                      },
+                      "id": "search_entities",
+                      "name": "search_entities",
+                      "strategy": "Compactable"
+                    }
+                  },
+                  {
+                    "ToolResult": {
+                      "id": "search_entities",
+                      "result": {
+                        "call_id": "search_entities",
+                        "data": {
+                          "hits": []
+                        },
+                        "status": "ok"
+                      },
+                      "strategy": "Compactable"
+                    }
+                  }
+                ],
+                "kind": "context_window"
+              },
+              {
+                "kind": "request_prepared",
+                "request": {
+                  "expects_typed_response": false,
+                  "has_tools": true,
+                  "input_items": 4,
+                  "model": "any",
+                  "response_mode": "Buffered",
+                  "temperature": "ProviderDefault",
+                  "token_limit": "ProviderDefault",
+                  "tool_choice": "ProviderDefault",
+                  "top_k": "ProviderDefault",
+                  "top_p": "ProviderDefault"
+                }
+              },
+              {
+                "content": "Since the entity \"Dune\" does not exist, we create it:\n```sql\ncreate_entity(\n  id=\"dune:movie\",\n  label=\"Dune (2021)\",\n  type=\"Movie\",\n  description=\"Science fiction film directed by Denis Villeneuve.\"\n)\n```\n\n{\"name\": \"search_entities\", \"parameters\": {\"limit\":null,\"query\":\"Dune movie\"}}",
+                "kind": "message",
+                "role": "assistant"
+              },
+              {
+                "kind": "completed",
+                "reply": "Since the entity \"Dune\" does not exist, we create it:\n```sql\ncreate_entity(\n  id=\"dune:movie\",\n  label=\"Dune (2021)\",\n  type=\"Movie\",\n  description=\"Science fiction film directed by Denis Villeneuve.\"\n)\n```\n\n{\"name\": \"search_entities\", \"parameters\": {\"limit\":null,\"query\":\"Dune movie\"}}",
+                "usage_metrics": {
+                  "finishReason": "Stop",
+                  "model": "llama3.2:3b",
+                  "provider": "Ollama",
+                  "responseId": 2,
+                  "usage": {
+                    "completionTokens": 81,
+                    "promptTokens": 309,
+                    "totalTokens": 390
+                  }
+                }
+              },
+              {
+                "kind": "step_completed",
+                "step_index": 0
+              },
+              {
+                "grader": "searches-before-write",
+                "kind": "grader_started",
+                "scope": {
+                  "scope": "trajectory_step",
+                  "step_index": 0
+                }
+              },
+              {
+                "evidence": {
+                  "reply": "Since the entity \"Dune\" does not exist, we create it:\n```sql\ncreate_entity(\n  id=\"dune:movie\",\n  label=\"Dune (2021)\",\n  type=\"Movie\",\n  description=\"Science fiction film directed by Denis Villeneuve.\"\n)\n```\n\n{\"name\": \"search_entities\", \"parameters\": {\"limit\":null,\"query\":\"Dune movie\"}}",
+                  "toolTrace": [
+                    {
+                      "arguments": {
+                        "limit": null,
+                        "query": "Dune movie"
+                      },
+                      "error": null,
+                      "id": "search_entities",
+                      "name": "unknown_tool",
+                      "result": {
+                        "hits": []
+                      }
+                    }
+                  ]
+                },
+                "grader": "searches-before-write",
+                "kind": "grader_completed",
+                "scope": {
+                  "scope": "trajectory_step",
+                  "step_index": 0
+                },
+                "score": 0.0,
+                "summary": "agent searched but did not attempt the requested write"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "usage": {
+    "prompt_tokens": 1609,
+    "completion_tokens": 105,
+    "total_tokens": 1714
+  },
+  "transcript": [
+    {
+      "type": "user",
+      "value": "Record the movie Dune in the graph. Reuse an existing entity if it already exists; otherwise create one.",
+      "step": 0
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before the first graph query in a conversation.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n"
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Record the movie Dune in the graph. Reuse an existing entity if it already exists; otherwise create one."
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 2,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "search_entities",
+      "name": "search_entities",
+      "arguments": {
+        "limit": null,
+        "query": "Dune movie"
+      }
+    },
+    {
+      "type": "tool_result",
+      "id": "search_entities",
+      "name": "unknown_tool",
+      "result": {
+        "hits": []
+      }
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before the first graph query in a conversation.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n"
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Record the movie Dune in the graph. Reuse an existing entity if it already exists; otherwise create one."
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "search_entities",
+            "name": "search_entities",
+            "args": {
+              "limit": null,
+              "query": "Dune movie"
+            }
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "search_entities",
+            "result": {
+              "call_id": "search_entities",
+              "data": {
+                "hits": []
+              },
+              "status": "ok"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 4,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "assistant",
+      "value": "Since the entity \"Dune\" does not exist, we create it:\n```sql\ncreate_entity(\n  id=\"dune:movie\",\n  label=\"Dune (2021)\",\n  type=\"Movie\",\n  description=\"Science fiction film directed by Denis Villeneuve.\"\n)\n```\n\n{\"name\": \"search_entities\", \"parameters\": {\"limit\":null,\"query\":\"Dune movie\"}}"
+    },
+    {
+      "type": "assistant",
+      "value": "Since the entity \"Dune\" does not exist, we create it:\n```sql\ncreate_entity(\n  id=\"dune:movie\",\n  label=\"Dune (2021)\",\n  type=\"Movie\",\n  description=\"Science fiction film directed by Denis Villeneuve.\"\n)\n```\n\n{\"name\": \"search_entities\", \"parameters\": {\"limit\":null,\"query\":\"Dune movie\"}}"
+    },
+    {
+      "type": "grade",
+      "name": "searches-before-write",
+      "score": 0.0,
+      "summary": "agent searched but did not attempt the requested write",
+      "evidence": {
+        "reply": "Since the entity \"Dune\" does not exist, we create it:\n```sql\ncreate_entity(\n  id=\"dune:movie\",\n  label=\"Dune (2021)\",\n  type=\"Movie\",\n  description=\"Science fiction film directed by Denis Villeneuve.\"\n)\n```\n\n{\"name\": \"search_entities\", \"parameters\": {\"limit\":null,\"query\":\"Dune movie\"}}",
+        "toolTrace": [
+          {
+            "arguments": {
+              "limit": null,
+              "query": "Dune movie"
+            },
+            "error": null,
+            "id": "search_entities",
+            "name": "unknown_tool",
+            "result": {
+              "hits": []
+            }
+          }
+        ]
+      },
+      "failed": false,
+      "error": null,
+      "step": 0
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 [evals]
-trials = 50
+trials = 25
 targets = [
   { provider = "ollama", model = "llama3.2:3b" },
+  { provider = "ollama", model = "llama3.3:70b" },
 ]
 
 [provider.ollama]

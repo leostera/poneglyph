@@ -1,0 +1,433 @@
+{
+  "trial_id": "019d29bc-0b46-7082-acd4-1af8a5f07c75",
+  "suite_id": "calendar_this_week",
+  "eval_id": "answers_events_this_week",
+  "target": {
+    "label": "ollama/llama3.2:3b"
+  },
+  "timing": {
+    "started_at_ms": 1774521682758,
+    "finished_at_ms": 1774521684711,
+    "duration_ms": 1953
+  },
+  "grading": {
+    "passed": false,
+    "mean_score": 0.0,
+    "error": {
+      "kind": "eval_error",
+      "error": {
+        "MessageWithTrial": {
+          "message": "trajectory grading failed at step 0",
+          "trial": {
+            "final_reply": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}",
+            "grader_failures": [],
+            "grades": {
+              "identifies-in-week-event": {
+                "evidence": {
+                  "reply": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}"
+                },
+                "score": 0.0,
+                "summary": "agent did not mention the event that actually occurs this week"
+              },
+              "uses-schema-then-query": {
+                "evidence": {
+                  "reply": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}",
+                  "toolTrace": [
+                    {
+                      "arguments": {
+                        "query": "[gcal:startAt(Event, Start), Start >= \"2026-03-23\", Start < \"2026-03-30\", schema:name(Event, Name)]"
+                      },
+                      "error": "query parse failed",
+                      "id": "query_facts",
+                      "name": "unknown_tool",
+                      "result": null
+                    }
+                  ]
+                },
+                "score": 0.0,
+                "summary": "agent neither inspected schema nor queried the graph"
+              }
+            },
+            "metadata": null,
+            "tool_trace": [
+              {
+                "arguments": {
+                  "query": "[gcal:startAt(Event, Start), Start >= \"2026-03-23\", Start < \"2026-03-30\", schema:name(Event, Name)]"
+                },
+                "error": "query parse failed",
+                "id": "query_facts",
+                "name": "unknown_tool",
+                "result": null
+              }
+            ],
+            "transcript": [
+              {
+                "input": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?",
+                "kind": "step_started",
+                "step_index": 0
+              },
+              {
+                "content": "\"Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?\"",
+                "kind": "message",
+                "role": "user"
+              },
+              {
+                "chunks": [
+                  {
+                    "Message": {
+                      "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before you write a graph query unless the exact field names are already known in this session.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n",
+                      "role": "System",
+                      "strategy": "Pinnable"
+                    }
+                  },
+                  {
+                    "Message": {
+                      "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?",
+                      "role": "User",
+                      "strategy": "Compactable"
+                    }
+                  }
+                ],
+                "kind": "context_window"
+              },
+              {
+                "kind": "request_prepared",
+                "request": {
+                  "expects_typed_response": false,
+                  "has_tools": true,
+                  "input_items": 2,
+                  "model": "any",
+                  "response_mode": "Buffered",
+                  "temperature": "ProviderDefault",
+                  "token_limit": "ProviderDefault",
+                  "tool_choice": "ProviderDefault",
+                  "top_k": "ProviderDefault",
+                  "top_p": "ProviderDefault"
+                }
+              },
+              {
+                "arguments": {
+                  "query": "[gcal:startAt(Event, Start), Start >= \"2026-03-23\", Start < \"2026-03-30\", schema:name(Event, Name)]"
+                },
+                "id": "query_facts",
+                "kind": "tool_call_requested",
+                "name": "query_facts",
+                "usage_metrics": {
+                  "finishReason": "ToolCalls",
+                  "model": "llama3.2:3b",
+                  "provider": "Ollama",
+                  "responseId": 1,
+                  "usage": {
+                    "completionTokens": 51,
+                    "promptTokens": 1336,
+                    "totalTokens": 1387
+                  }
+                }
+              },
+              {
+                "id": "query_facts",
+                "kind": "tool_execution_completed",
+                "name": "unknown_tool",
+                "result": {
+                  "error": "query parse failed"
+                }
+              },
+              {
+                "chunks": [
+                  {
+                    "Message": {
+                      "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before you write a graph query unless the exact field names are already known in this session.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n",
+                      "role": "System",
+                      "strategy": "Pinnable"
+                    }
+                  },
+                  {
+                    "Message": {
+                      "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?",
+                      "role": "User",
+                      "strategy": "Compactable"
+                    }
+                  },
+                  {
+                    "ToolCall": {
+                      "args": {
+                        "query": "[gcal:startAt(Event, Start), Start >= \"2026-03-23\", Start < \"2026-03-30\", schema:name(Event, Name)]"
+                      },
+                      "id": "query_facts",
+                      "name": "query_facts",
+                      "strategy": "Compactable"
+                    }
+                  },
+                  {
+                    "ToolResult": {
+                      "id": "query_facts",
+                      "result": {
+                        "call_id": "query_facts",
+                        "message": "query parse failed",
+                        "status": "error"
+                      },
+                      "strategy": "Compactable"
+                    }
+                  }
+                ],
+                "kind": "context_window"
+              },
+              {
+                "kind": "request_prepared",
+                "request": {
+                  "expects_typed_response": false,
+                  "has_tools": true,
+                  "input_items": 4,
+                  "model": "any",
+                  "response_mode": "Buffered",
+                  "temperature": "ProviderDefault",
+                  "token_limit": "ProviderDefault",
+                  "tool_choice": "ProviderDefault",
+                  "top_k": "ProviderDefault",
+                  "top_p": "ProviderDefault"
+                }
+              },
+              {
+                "content": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}",
+                "kind": "message",
+                "role": "assistant"
+              },
+              {
+                "kind": "completed",
+                "reply": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}",
+                "usage_metrics": {
+                  "finishReason": "Stop",
+                  "model": "llama3.2:3b",
+                  "provider": "Ollama",
+                  "responseId": 2,
+                  "usage": {
+                    "completionTokens": 70,
+                    "promptTokens": 382,
+                    "totalTokens": 452
+                  }
+                }
+              },
+              {
+                "kind": "step_completed",
+                "step_index": 0
+              },
+              {
+                "grader": "uses-schema-then-query",
+                "kind": "grader_started",
+                "scope": {
+                  "scope": "trajectory_step",
+                  "step_index": 0
+                }
+              },
+              {
+                "evidence": {
+                  "reply": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}",
+                  "toolTrace": [
+                    {
+                      "arguments": {
+                        "query": "[gcal:startAt(Event, Start), Start >= \"2026-03-23\", Start < \"2026-03-30\", schema:name(Event, Name)]"
+                      },
+                      "error": "query parse failed",
+                      "id": "query_facts",
+                      "name": "unknown_tool",
+                      "result": null
+                    }
+                  ]
+                },
+                "grader": "uses-schema-then-query",
+                "kind": "grader_completed",
+                "scope": {
+                  "scope": "trajectory_step",
+                  "step_index": 0
+                },
+                "score": 0.0,
+                "summary": "agent neither inspected schema nor queried the graph"
+              },
+              {
+                "grader": "identifies-in-week-event",
+                "kind": "grader_started",
+                "scope": {
+                  "scope": "trajectory_step",
+                  "step_index": 0
+                }
+              },
+              {
+                "evidence": {
+                  "reply": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}"
+                },
+                "grader": "identifies-in-week-event",
+                "kind": "grader_completed",
+                "scope": {
+                  "scope": "trajectory_step",
+                  "step_index": 0
+                },
+                "score": 0.0,
+                "summary": "agent did not mention the event that actually occurs this week"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "usage": {
+    "prompt_tokens": 1718,
+    "completion_tokens": 121,
+    "total_tokens": 1839
+  },
+  "transcript": [
+    {
+      "type": "user",
+      "value": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?",
+      "step": 0
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before you write a graph query unless the exact field names are already known in this session.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n"
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?"
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 2,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "query_facts",
+      "name": "query_facts",
+      "arguments": {
+        "query": "[gcal:startAt(Event, Start), Start >= \"2026-03-23\", Start < \"2026-03-30\", schema:name(Event, Name)]"
+      }
+    },
+    {
+      "type": "tool_result",
+      "id": "query_facts",
+      "name": "unknown_tool",
+      "result": {
+        "error": "query parse failed"
+      }
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are poneglyph-agent, the built-in expert operator for the Poneglyph knowledge graph.\n\nOperating rules:\n- Prefer schema and graph tools over unsupported assumptions.\n- For read/query tasks, inspect `get_schema` before you write a graph query unless the exact field names are already known in this session.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates or namespace-specific shortcuts.\n- If a graph query fails to parse or returns an unexpected shape, correct the query or inspect schema again. Do not answer from world knowledge when the graph lookup failed.\n- Search before write. If a thing may already exist, use search_entities first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer create_entity before state_facts.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.\n"
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?"
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "query_facts",
+            "name": "query_facts",
+            "args": {
+              "query": "[gcal:startAt(Event, Start), Start >= \"2026-03-23\", Start < \"2026-03-30\", schema:name(Event, Name)]"
+            }
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "query_facts",
+            "result": {
+              "call_id": "query_facts",
+              "message": "query parse failed",
+              "status": "error"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 4,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "assistant",
+      "value": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}"
+    },
+    {
+      "type": "assistant",
+      "value": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}"
+    },
+    {
+      "type": "grade",
+      "name": "uses-schema-then-query",
+      "score": 0.0,
+      "summary": "agent neither inspected schema nor queried the graph",
+      "evidence": {
+        "reply": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}",
+        "toolTrace": [
+          {
+            "arguments": {
+              "query": "[gcal:startAt(Event, Start), Start >= \"2026-03-23\", Start < \"2026-03-30\", schema:name(Event, Name)]"
+            },
+            "error": "query parse failed",
+            "id": "query_facts",
+            "name": "unknown_tool",
+            "result": null
+          }
+        ]
+      },
+      "failed": false,
+      "error": null,
+      "step": 0
+    },
+    {
+      "type": "grade",
+      "name": "identifies-in-week-event",
+      "score": 0.0,
+      "summary": "agent did not mention the event that actually occurs this week",
+      "evidence": {
+        "reply": "Since the query parse failed, let me inspect the schema again to see if I can find any relevant events this week. {\"name\": \"get_schema\", \"parameters\": {}}; {\"name\": \"search_entities\", \"parameters\": {\"q\": \"Event\", \"schema_uri\": \"http://www.ponglyph.org/ontology/event\"}}"
+      },
+      "failed": false,
+      "error": null,
+      "step": 0
+    }
+  ]
+}
