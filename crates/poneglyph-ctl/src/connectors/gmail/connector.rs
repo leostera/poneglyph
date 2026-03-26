@@ -59,9 +59,11 @@ impl GmailConnector {
     ) -> CtlResult<()> {
         let client = GmailClient::default();
         let ingestor = GmailIngestor::new(poneglyph);
-        let poll_interval = Duration::from_secs(self.config.poll_interval_seconds);
+        let poll_interval = Duration::from_secs(self.config.poll_interval_seconds)
+            .max(min_poll_throttle_interval());
         info!(
             poll_interval_seconds = self.config.poll_interval_seconds,
+            poll_interval_ms = poll_interval.as_millis(),
             max_messages = self.config.max_messages,
             "gmail connector started continuous sync poller"
         );
@@ -110,6 +112,7 @@ impl GmailConnector {
                             .await;
                     }
                 }
+                sleep(min_poll_throttle_interval()).await;
             }
 
             sleep(poll_interval).await;
@@ -222,4 +225,8 @@ const fn default_max_messages() -> usize {
 
 const fn default_poll_interval_seconds() -> u64 {
     30
+}
+
+const fn min_poll_throttle_interval() -> Duration {
+    Duration::from_millis(500)
 }

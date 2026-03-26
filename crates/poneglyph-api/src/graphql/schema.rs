@@ -65,7 +65,7 @@ struct PlexConnectionObject {
     id: i64,
     name: String,
     base_url: String,
-    libraries: Vec<String>,
+    libraries: Vec<PlexLibraryOptionObject>,
     last_synced_at: Option<String>,
     last_error: Option<String>,
 }
@@ -76,7 +76,14 @@ struct PlexDetectionObject {
     base_url: String,
     token: Option<String>,
     machine_identifier: Option<String>,
-    libraries: Vec<String>,
+    libraries: Vec<PlexLibraryOptionObject>,
+}
+
+#[derive(SimpleObject)]
+#[graphql(name = "PlexLibraryOption")]
+struct PlexLibraryOptionObject {
+    id: String,
+    name: String,
 }
 
 #[derive(SimpleObject)]
@@ -228,7 +235,11 @@ impl ApiQuery {
             base_url: detected.base_url,
             token: detected.token,
             machine_identifier: detected.machine_identifier,
-            libraries: detected.libraries,
+            libraries: detected
+                .libraries
+                .into_iter()
+                .map(map_plex_library_option)
+                .collect(),
         }
     }
 
@@ -419,9 +430,10 @@ impl ApiMutation {
         &self,
         base_url: String,
         token: String,
-    ) -> Result<Vec<String>> {
+    ) -> Result<Vec<PlexLibraryOptionObject>> {
         plex::discover_libraries(base_url.as_str(), token.as_str())
             .await
+            .map(|libraries| libraries.into_iter().map(map_plex_library_option).collect())
             .map_err(async_graphql::Error::new)
     }
 
@@ -535,7 +547,11 @@ fn map_plex_connection(connection: plex::PlexConnection) -> PlexConnectionObject
         id: connection.id,
         name: connection.name,
         base_url: connection.base_url,
-        libraries: connection.libraries,
+        libraries: connection
+            .libraries
+            .into_iter()
+            .map(map_plex_library_option)
+            .collect(),
         last_synced_at: connection.last_synced_at.map(|value| value.to_rfc3339()),
         last_error: connection.last_error,
     }
@@ -543,6 +559,13 @@ fn map_plex_connection(connection: plex::PlexConnection) -> PlexConnectionObject
 
 fn map_plex_connections(connections: Vec<plex::PlexConnection>) -> Vec<PlexConnectionObject> {
     connections.into_iter().map(map_plex_connection).collect()
+}
+
+fn map_plex_library_option(option: plex::PlexLibraryOption) -> PlexLibraryOptionObject {
+    PlexLibraryOptionObject {
+        id: option.id,
+        name: option.name,
+    }
 }
 
 fn map_filesystem_connection(

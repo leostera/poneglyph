@@ -95,7 +95,7 @@ type Mutation {
   deleteGoogleConnection(connectionId: Int!): Boolean!
   savePlexConnection(input: SavePlexConnectionInput!): PlexConnection!
   deletePlexConnection(connectionId: Int!): Boolean!
-  discoverPlexLibraries(baseUrl: String!, token: String!): [String!]!
+  discoverPlexLibraries(baseUrl: String!, token: String!): [PlexLibraryOption!]!
   saveFilesystemConnection(input: SaveFilesystemConnectionInput!): FilesystemConnection!
   deleteFilesystemConnection(connectionId: Int!): Boolean!
 }
@@ -104,7 +104,7 @@ type PlexConnection {
   id: Int!
   name: String!
   baseUrl: String!
-  libraries: [String!]!
+  libraries: [PlexLibraryOption!]!
   lastSyncedAt: String
   lastError: String
 }
@@ -113,7 +113,12 @@ type PlexDetection {
   baseUrl: String!
   token: String
   machineIdentifier: String
-  libraries: [String!]!
+  libraries: [PlexLibraryOption!]!
+}
+
+type PlexLibraryOption {
+  id: String!
+  name: String!
 }
 
 type Query {

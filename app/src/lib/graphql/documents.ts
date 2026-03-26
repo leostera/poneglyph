@@ -139,7 +139,10 @@ export const PlexConnectionsDocument = graphql(`
       id
       name
       baseUrl
-      libraries
+      libraries {
+        id
+        name
+      }
       lastSyncedAt
       lastError
     }
@@ -152,7 +155,10 @@ export const DetectLocalPlexConnectionDocument = graphql(`
       baseUrl
       token
       machineIdentifier
-      libraries
+      libraries {
+        id
+        name
+      }
     }
   }
 `);
@@ -238,7 +244,10 @@ export const SavePlexConnectionDocument = graphql(`
       id
       name
       baseUrl
-      libraries
+      libraries {
+        id
+        name
+      }
       lastSyncedAt
       lastError
     }
@@ -269,7 +278,10 @@ export const DeleteFilesystemConnectionDocument = graphql(`
 
 export const DiscoverPlexLibrariesDocument = graphql(`
   mutation DiscoverPlexLibraries($baseUrl: String!, $token: String!) {
-    discoverPlexLibraries(baseUrl: $baseUrl, token: $token)
+    discoverPlexLibraries(baseUrl: $baseUrl, token: $token) {
+      id
+      name
+    }
   }
 `);
 

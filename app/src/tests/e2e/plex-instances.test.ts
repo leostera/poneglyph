@@ -104,6 +104,12 @@ async function startMockPoneglyphApi(): Promise<MockServer> {
                     __typename: "PlexDetection",
                     baseUrl: "http://127.0.0.1:32400",
                     token: "detected-token",
+                    machineIdentifier: "machine-1",
+                    libraries: [
+                      { __typename: "PlexLibraryOption", id: "1", name: "Movies" },
+                      { __typename: "PlexLibraryOption", id: "2", name: "Shows" },
+                      { __typename: "PlexLibraryOption", id: "3", name: "Anime" },
+                    ],
                   },
                 },
               }),
@@ -115,7 +121,11 @@ async function startMockPoneglyphApi(): Promise<MockServer> {
             response.end(
               JSON.stringify({
                 data: {
-                  discoverPlexLibraries: ["Movies", "Shows", "Anime"],
+                  discoverPlexLibraries: [
+                    { __typename: "PlexLibraryOption", id: "1", name: "Movies" },
+                    { __typename: "PlexLibraryOption", id: "2", name: "Shows" },
+                    { __typename: "PlexLibraryOption", id: "3", name: "Anime" },
+                  ],
                 },
               }),
             );

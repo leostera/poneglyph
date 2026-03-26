@@ -24,7 +24,7 @@ type EntityListProps = {
 export function EntityList({ rows, onSelect, selectedUri }: EntityListProps) {
   return (
     <Table>
-      <TableHeader>
+      <TableHeader className="sticky top-0 z-10 bg-background">
         <TableRow>
           <TableHead className="w-[16%]">Namespace</TableHead>
           <TableHead className="w-[16%]">Kind</TableHead>

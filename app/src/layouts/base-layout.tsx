@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/sidebar";
 import { sidebarConnectorItems } from "@/features/connectors/catalog";
 import { useConnectorStatusesQuery } from "@/features/connectors/queries";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { AppWindow, Cable, GitBranch, MoreHorizontal, Plus, Search } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Cable, GitBranch, MoreHorizontal, Plus, Search } from "lucide-react";
 import type React from "react";
 
 export default function BaseLayout({
@@ -30,6 +30,7 @@ export default function BaseLayout({
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const navigate = useNavigate();
   const connectorStatusesQuery = useConnectorStatusesQuery();
   const connectedConnectors = sidebarConnectorItems(connectorStatusesQuery.data);
   const visibleConnectors = connectedConnectors.slice(0, 5);
@@ -63,28 +64,28 @@ export default function BaseLayout({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    asChild
                     className="h-auto rounded-[3px] px-3 py-2 text-sm"
                     isActive={pathname === "/entities" || pathname.startsWith("/entities/")}
+                    onClick={() => {
+                      void navigate({ to: "/entities" });
+                    }}
                     size="lg"
                   >
-                    <Link to="/entities">
-                      <GitBranch className="size-4" />
-                      <span className="font-medium">Knowledge graph</span>
-                    </Link>
+                    <GitBranch className="size-4" />
+                    <span className="font-medium">Knowledge graph</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    asChild
                     className="h-auto rounded-[3px] px-3 py-2 text-sm"
-                    isActive={pathname === "/connectors"}
+                    isActive={pathname === "/connectors" || pathname.startsWith("/connectors/")}
+                    onClick={() => {
+                      void navigate({ to: "/connectors" });
+                    }}
                     size="lg"
                   >
-                    <Link to="/connectors">
-                      <Cable className="size-4" />
-                      <span className="font-medium">Connectors</span>
-                    </Link>
+                    <Cable className="size-4" />
+                    <span className="font-medium">Connectors</span>
                   </SidebarMenuButton>
                   <SidebarMenuAction asChild showOnHover>
                     <Link aria-label="Add connector" to="/connectors/add">
@@ -100,30 +101,32 @@ export default function BaseLayout({
                       return (
                         <SidebarMenuSubItem key={connector.name}>
                           <SidebarMenuSubButton
-                            asChild
                             isActive={
                               pathname === connector.href ||
                               pathname.startsWith(`${connector.href}/`)
                             }
+                            onClick={() => {
+                              void navigate({
+                                to: "/connectors/$connectorId",
+                                params: { connectorId: connector.name },
+                              });
+                            }}
                           >
-                            <Link
-                              params={{ connectorId: connector.name }}
-                              to="/connectors/$connectorId"
-                            >
-                              <Icon className="size-4" />
-                              <span>{connector.title}</span>
-                            </Link>
+                            <Icon className="size-4" />
+                            <span>{connector.title}</span>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       );
                     })}
                     {hiddenConnectorCount > 0 ? (
                       <SidebarMenuSubItem>
-                        <SidebarMenuSubButton asChild>
-                          <Link to="/connectors">
-                            <MoreHorizontal className="size-4" />
-                            <span>More connectors</span>
-                          </Link>
+                        <SidebarMenuSubButton
+                          onClick={() => {
+                            void navigate({ to: "/connectors" });
+                          }}
+                        >
+                          <MoreHorizontal className="size-4" />
+                          <span>More connectors</span>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     ) : null}

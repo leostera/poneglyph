@@ -15,8 +15,19 @@ export function parsePoneglyphUri(input: string): PoneglyphUriParts | null {
   }
 
   const segments = raw.split(":");
-  if (segments.length < 2) {
-    return null;
+  if (segments.length === 1) {
+    const namespace = segments[0]?.trim() ?? "";
+    if (namespace.length === 0) {
+      return null;
+    }
+
+    return {
+      raw,
+      namespace,
+      kind: null,
+      id: null,
+      scope: "namespace",
+    };
   }
 
   const namespace = segments[0]?.trim() ?? "";
@@ -64,7 +75,7 @@ export function parsePoneglyphUri(input: string): PoneglyphUriParts | null {
 }
 
 export function formatNamespaceScope(namespace: string): string {
-  return `${namespace.trim()}:`;
+  return namespace.trim();
 }
 
 export function formatKindScope(namespace: string, kind: string): string {

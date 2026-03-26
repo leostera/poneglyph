@@ -17,7 +17,9 @@ pub(super) fn select_sections(
 
     sections
         .into_iter()
-        .filter(|section| configured.contains(section.title.as_str()))
+        .filter(|section| {
+            configured.contains(section.key.as_str()) || configured.contains(section.title.as_str())
+        })
         .collect()
 }
 
@@ -202,16 +204,29 @@ mod tests {
     }
 
     #[test]
-    fn select_sections_filters_to_configured_titles() {
+    fn select_sections_filters_to_configured_library_ids() {
         let sections = vec![
             section("1", "Movies", "movie"),
             section("2", "Shows", "show"),
         ];
 
-        let selected = select_sections(&["Movies".to_string()], sections);
+        let selected = select_sections(&["1".to_string()], sections);
 
         assert_eq!(selected.len(), 1);
         assert_eq!(selected[0].title, "Movies");
+    }
+
+    #[test]
+    fn select_sections_supports_legacy_titles() {
+        let sections = vec![
+            section("1", "Movies", "movie"),
+            section("2", "Shows", "show"),
+        ];
+
+        let selected = select_sections(&["Shows".to_string()], sections);
+
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].key, "2");
     }
 
     #[test]

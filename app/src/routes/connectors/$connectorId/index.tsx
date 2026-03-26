@@ -1,3 +1,4 @@
+import { selectDirectory } from "@/actions/filesystem";
 import { openExternalLink } from "@/actions/shell";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import {
 import {
   type FilesystemConnection,
   type PlexConnection,
+  type PlexDetection,
   deleteFilesystemConnection,
   deleteGoogleConnection,
   deletePlexConnection,
@@ -45,6 +47,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ExternalLink,
+  FolderOpen,
   LoaderCircle,
   RefreshCw,
   Server,
@@ -74,7 +77,9 @@ function ConnectorDetailPage() {
   const [plexName, setPlexName] = useState("");
   const [plexBaseUrl, setPlexBaseUrl] = useState("");
   const [plexToken, setPlexToken] = useState("");
-  const [discoveredPlexLibraries, setDiscoveredPlexLibraries] = useState<string[]>([]);
+  const [discoveredPlexLibraries, setDiscoveredPlexLibraries] = useState<
+    PlexDetection["libraries"]
+  >([]);
   const [selectedPlexLibraries, setSelectedPlexLibraries] = useState<string[]>([]);
   const [plexLibraryCandidate, setPlexLibraryCandidate] = useState("");
   const [selectedPlexConnectionId, setSelectedPlexConnectionId] = useState<number | null>(null);
@@ -286,8 +291,8 @@ function ConnectorDetailPage() {
       }
       if (detected.libraries.length > 0) {
         setDiscoveredPlexLibraries(detected.libraries);
-        setSelectedPlexLibraries(detected.libraries);
-        setPlexLibraryCandidate(detected.libraries[0] ?? "");
+        setSelectedPlexLibraries(detected.libraries.map((library) => library.id));
+        setPlexLibraryCandidate(detected.libraries[0]?.id ?? "");
       }
     },
   });
@@ -297,8 +302,8 @@ function ConnectorDetailPage() {
       discoverPlexLibraries(input.baseUrl, input.token),
     onSuccess: (libraries) => {
       setDiscoveredPlexLibraries(libraries);
-      setSelectedPlexLibraries(libraries);
-      setPlexLibraryCandidate(libraries[0] ?? "");
+      setSelectedPlexLibraries(libraries.map((library) => library.id));
+      setPlexLibraryCandidate(libraries[0]?.id ?? "");
     },
   });
 
@@ -890,8 +895,8 @@ function ConnectorDetailPage() {
                           value={plexLibraryCandidate}
                         >
                           {discoveredPlexLibraries.map((library) => (
-                            <option key={library} value={library}>
-                              {library}
+                            <option key={library.id} value={library.id}>
+                              {library.name}
                             </option>
                           ))}
                         </select>
@@ -925,7 +930,7 @@ function ConnectorDetailPage() {
                             }
                             type="button"
                           >
-                            {library} ×
+                            {displayLibraryName(discoveredPlexLibraries, library)} ×
                           </button>
                         ))}
                       </div>
@@ -978,7 +983,9 @@ function ConnectorDetailPage() {
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {selectedPlexConnection.libraries.join(", ") || "No libraries selected"}
+                          {selectedPlexConnection.libraries
+                            .map((library) => library.name)
+                            .join(", ") || "No libraries selected"}
                         </div>
                       </div>
                       <Button
@@ -1062,6 +1069,35 @@ function ConnectorDetailPage() {
                       placeholder="Root path (e.g. /Users/me/Documents)"
                       value={filesystemRootPath}
                     />
+                    <div>
+                      <Button
+                        onClick={async () => {
+                          try {
+                            const selectedPath = await selectDirectory(
+                              filesystemRootPath.trim() || undefined,
+                            );
+                            if (selectedPath) {
+                              setFilesystemRootPath(selectedPath);
+                            }
+                          } catch (error) {
+                            const message = error instanceof Error ? error.message : String(error);
+                            if (message.includes("Not Found")) {
+                              window.alert(
+                                "Directory picker is not loaded in the current desktop session yet. Please restart the Electron app once.",
+                              );
+                              return;
+                            }
+                            window.alert(`Failed to open directory picker: ${message}`);
+                          }
+                        }}
+                        size="sm"
+                        type="button"
+                        variant="outline"
+                      >
+                        <FolderOpen />
+                        Select directory
+                      </Button>
+                    </div>
                   </div>
                   <div className="mt-3">
                     <Button
@@ -1146,6 +1182,14 @@ function ConnectorDetailPage() {
       </div>
     </div>
   );
+}
+
+function displayLibraryName(
+  discoveredLibraries: PlexDetection["libraries"],
+  libraryId: string,
+): string {
+  const match = discoveredLibraries.find((library) => library.id === libraryId);
+  return match?.name ?? libraryId;
 }
 
 export const Route = createFileRoute("/connectors/$connectorId/")({

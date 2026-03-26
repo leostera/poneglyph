@@ -9,9 +9,15 @@ pub(crate) struct PlexConnection {
     pub id: i64,
     pub name: String,
     pub base_url: String,
-    pub libraries: Vec<String>,
+    pub libraries: Vec<PlexLibraryOption>,
     pub last_synced_at: Option<DateTime<Utc>>,
     pub last_error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PlexLibraryOption {
+    pub id: String,
+    pub name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -19,7 +25,7 @@ pub(crate) struct PlexDetection {
     pub base_url: String,
     pub token: Option<String>,
     pub machine_identifier: Option<String>,
-    pub libraries: Vec<String>,
+    pub libraries: Vec<PlexLibraryOption>,
 }
 
 pub(crate) struct PlexService<'a> {
@@ -43,6 +49,12 @@ impl<'a> PlexService<'a> {
 
         let mut result = Vec::with_capacity(connections.len());
         for connection in connections {
+            let selected_libraries = resolve_selected_libraries(
+                connection.base_url.as_str(),
+                connection.token.as_str(),
+                &connection.libraries,
+            )
+            .await;
             let mut last_synced_at = None;
             let mut last_error = None;
             for library in &connection.libraries {
@@ -66,7 +78,7 @@ impl<'a> PlexService<'a> {
                 id: connection.id,
                 name: connection.name,
                 base_url: connection.base_url,
-                libraries: connection.libraries,
+                libraries: selected_libraries,
                 last_synced_at,
                 last_error,
             });
@@ -83,6 +95,7 @@ impl<'a> PlexService<'a> {
         libraries: Vec<String>,
     ) -> std::result::Result<PlexConnection, String> {
         let discovered = discover_plex_server(base_url.as_str(), token.as_str()).await?;
+        let token_for_name_resolution = token.clone();
         let saved = self
             .context
             .ctl
@@ -95,12 +108,18 @@ impl<'a> PlexService<'a> {
             })
             .await
             .map_err(|error| format!("failed to save plex connection: {error}"))?;
+        let selected_libraries = resolve_selected_libraries(
+            saved.base_url.as_str(),
+            token_for_name_resolution.as_str(),
+            &saved.libraries,
+        )
+        .await;
 
         Ok(PlexConnection {
             id: saved.id,
             name: saved.name,
             base_url: saved.base_url,
-            libraries: saved.libraries,
+            libraries: selected_libraries,
             last_synced_at: None,
             last_error: None,
         })
@@ -121,10 +140,10 @@ impl<'a> PlexService<'a> {
 pub(crate) async fn discover_libraries(
     base_url: &str,
     token: &str,
-) -> std::result::Result<Vec<String>, String> {
+) -> std::result::Result<Vec<PlexLibraryOption>, String> {
     fetch_library_sections(base_url, token)
         .await
-        .map(|sections| extract_libraries(&sections))
+        .map(|sections| extract_library_options(&sections))
 }
 
 pub(crate) async fn detect_local_connection() -> PlexDetection {
@@ -134,12 +153,16 @@ pub(crate) async fn detect_local_connection() -> PlexDetection {
         .or_else(read_plex_token_from_preferences);
 
     let mut machine_identifier = None;
-    let mut libraries = Vec::new();
+    let mut libraries: Vec<PlexLibraryOption> = Vec::new();
 
     if let Some(token_value) = token.as_deref() {
         if let Ok(sections) = fetch_library_sections(base_url.as_str(), token_value).await {
-            machine_identifier = sections.machine_identifier.clone();
-            libraries = extract_libraries(&sections);
+            machine_identifier =
+                resolve_machine_identifier(&sections, base_url.as_str(), token_value)
+                    .await
+                    .ok()
+                    .flatten();
+            libraries = extract_library_options(&sections);
         }
     }
 
@@ -191,6 +214,7 @@ struct PlexLibrarySections {
 
 #[derive(Debug, Deserialize)]
 struct PlexLibrarySection {
+    key: String,
     title: String,
 }
 
@@ -198,6 +222,18 @@ struct PlexLibrarySection {
 struct PlexMediaContainer {
     #[serde(rename = "MediaContainer")]
     media_container: PlexLibrarySections,
+}
+
+#[derive(Debug, Deserialize)]
+struct PlexIdentity {
+    #[serde(rename = "machineIdentifier")]
+    machine_identifier: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct PlexIdentityContainer {
+    #[serde(rename = "MediaContainer")]
+    media_container: PlexIdentity,
 }
 
 #[derive(Debug, Clone)]
@@ -210,15 +246,29 @@ async fn discover_plex_server(
     token: &str,
 ) -> std::result::Result<DiscoveredPlexServer, String> {
     let sections = fetch_library_sections(base_url, token).await?;
-    let machine_identifier = sections
-        .machine_identifier
-        .filter(|value| !value.trim().is_empty())
+    let machine_identifier = resolve_machine_identifier(&sections, base_url, token)
+        .await?
         .ok_or_else(|| {
             "plex server discovery did not include a machineIdentifier; cannot save connection"
                 .to_string()
         })?;
 
     Ok(DiscoveredPlexServer { machine_identifier })
+}
+
+async fn resolve_machine_identifier(
+    sections: &PlexLibrarySections,
+    base_url: &str,
+    token: &str,
+) -> std::result::Result<Option<String>, String> {
+    if let Some(machine_identifier) = sections.machine_identifier.as_deref() {
+        let trimmed = machine_identifier.trim();
+        if !trimmed.is_empty() {
+            return Ok(Some(trimmed.to_string()));
+        }
+    }
+
+    fetch_machine_identifier(base_url, token).await
 }
 
 async fn fetch_library_sections(
@@ -251,14 +301,53 @@ async fn fetch_library_sections(
     Ok(payload.media_container)
 }
 
-fn extract_libraries(sections: &PlexLibrarySections) -> Vec<String> {
-    let mut libraries: Vec<String> = sections
+async fn fetch_machine_identifier(
+    base_url: &str,
+    token: &str,
+) -> std::result::Result<Option<String>, String> {
+    let response = reqwest::Client::new()
+        .get(format!("{}/identity", base_url.trim_end_matches('/')))
+        .query(&[("X-Plex-Token", token)])
+        .header(reqwest::header::ACCEPT, "application/json")
+        .send()
+        .await
+        .map_err(|error| format!("failed to request plex identity: {error}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "plex identity discovery failed with status {}",
+            response.status()
+        ));
+    }
+
+    let payload: PlexIdentityContainer = response
+        .json()
+        .await
+        .map_err(|error| format!("failed to decode plex identity response: {error}"))?;
+
+    Ok(payload
+        .media_container
+        .machine_identifier
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty()))
+}
+
+fn extract_library_options(sections: &PlexLibrarySections) -> Vec<PlexLibraryOption> {
+    let mut libraries: Vec<PlexLibraryOption> = sections
         .directory
         .as_ref()
-        .map(|values| values.iter().map(|section| section.title.clone()).collect())
+        .map(|values| {
+            values
+                .iter()
+                .map(|section| PlexLibraryOption {
+                    id: section.key.clone(),
+                    name: section.title.clone(),
+                })
+                .collect()
+        })
         .unwrap_or_default();
-    libraries.sort();
-    libraries.dedup();
+    libraries.sort_by(|left, right| left.name.cmp(&right.name).then(left.id.cmp(&right.id)));
+    libraries.dedup_by(|left, right| left.id == right.id);
     libraries
 }
 
@@ -278,4 +367,33 @@ fn update_latest_sync(
     if last_error.is_none() && candidate_error.is_some() {
         *last_error = candidate_error;
     }
+}
+
+async fn resolve_selected_libraries(
+    base_url: &str,
+    token: &str,
+    selected_library_ids: &[String],
+) -> Vec<PlexLibraryOption> {
+    if selected_library_ids.is_empty() {
+        return Vec::new();
+    }
+
+    let known = match fetch_library_sections(base_url, token).await {
+        Ok(sections) => extract_library_options(&sections),
+        Err(_) => Vec::new(),
+    };
+
+    selected_library_ids
+        .iter()
+        .map(|library_id| {
+            known
+                .iter()
+                .find(|library| library.id == *library_id)
+                .cloned()
+                .unwrap_or_else(|| PlexLibraryOption {
+                    id: library_id.clone(),
+                    name: library_id.clone(),
+                })
+        })
+        .collect()
 }

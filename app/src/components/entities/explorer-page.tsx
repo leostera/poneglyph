@@ -20,8 +20,8 @@ import {
   useEntityQuery,
   useKnowledgeGraphSchemaQuery,
 } from "@/features/entities/queries";
-import { formatKindScope, formatNamespaceScope, parsePoneglyphUri } from "@poneglyph/uri";
-import { useNavigate } from "@tanstack/react-router";
+import { formatKindScope, parsePoneglyphUri } from "@poneglyph/uri";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -52,6 +52,7 @@ export function EntitiesExplorerPage({ scope }: EntitiesExplorerPageProps) {
   const navigate = useNavigate();
   const [offset, setOffset] = useState(0);
   const [leftFilter, setLeftFilter] = useState("");
+  const [expandedNamespaces, setExpandedNamespaces] = useState<Set<string>>(() => new Set());
   const selection = useMemo(() => parseScopeSelection(scope), [scope]);
 
   const query = useEntitiesQuery(PAGE_SIZE, offset);
@@ -146,6 +147,30 @@ export function EntitiesExplorerPage({ scope }: EntitiesExplorerPageProps) {
     });
   }, [rows, selection.kind, selection.namespace]);
 
+  const isNamespaceExpanded = (namespace: string): boolean => {
+    if (selection.namespace === namespace) {
+      return true;
+    }
+
+    if (leftFilter.trim().length > 0) {
+      return true;
+    }
+
+    return expandedNamespaces.has(namespace);
+  };
+
+  const toggleNamespace = (namespace: string) => {
+    setExpandedNamespaces((current) => {
+      const next = new Set(current);
+      if (next.has(namespace)) {
+        next.delete(namespace);
+      } else {
+        next.add(namespace);
+      }
+      return next;
+    });
+  };
+
   const hasNextPage = rows.length === PAGE_SIZE;
   const page = Math.floor(offset / PAGE_SIZE) + 1;
   const ListView = resolveEntityListView(selection.namespace, selection.kind);
@@ -184,239 +209,243 @@ export function EntitiesExplorerPage({ scope }: EntitiesExplorerPageProps) {
     : null;
 
   return (
-    <div className="flex min-h-full flex-1 px-6 py-7">
-      <div className="flex w-full min-h-0 flex-1">
-        <TwoColumnLayout
-          className="h-full"
-          contentClassName="pl-5"
-          nav={
-            <div className="space-y-1">
-              <div className="pb-2">
-                <Input
-                  className="h-8 text-xs"
-                  onChange={(event) => setLeftFilter(event.target.value)}
-                  placeholder="Filter namespaces/kinds"
-                  value={leftFilter}
-                />
-              </div>
-              <Button
-                className="mb-2 h-7 w-full justify-start text-xs"
-                onClick={() => {
-                  void navigate({ to: "/entities" });
-                }}
-                size="sm"
-                variant={
-                  selection.namespace === null && selection.kind === null ? "secondary" : "ghost"
-                }
-              >
-                all
-              </Button>
-              {filteredNamespaceKinds.map(([namespace, kinds]) => (
-                <div className="space-y-1" key={namespace}>
-                  <Button
-                    className="h-7 w-full justify-start text-xs"
-                    onClick={() => {
-                      void navigate({
-                        to: "/entities/$scope",
-                        params: { scope: formatNamespaceScope(namespace) },
-                      });
-                    }}
-                    size="sm"
-                    variant={
-                      selection.namespace === namespace && selection.kind === null
-                        ? "secondary"
-                        : "ghost"
-                    }
-                  >
-                    {namespaceLabels.get(namespace) ?? titleize(namespace)}
-                  </Button>
-                  <div className="space-y-1 pl-3">
-                    {kinds.map((kind) => (
-                      <Button
-                        className="h-7 w-full justify-start text-xs"
-                        key={`${namespace}:${kind}`}
-                        onClick={() => {
-                          void navigate({
-                            to: "/entities/$scope",
-                            params: { scope: formatKindScope(namespace, kind) },
-                          });
-                        }}
-                        size="sm"
-                        variant={
-                          selection.namespace === namespace && selection.kind === kind
-                            ? "secondary"
-                            : "ghost"
-                        }
-                      >
-                        {kindLabels.get(`${namespace}:${kind}`) ?? titleize(kind)}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          }
-          navClassName="w-[220px] border-r pr-4"
-          content={
-            <>
-              <div className="mb-4 flex items-start justify-between gap-6">
-                <h1 className="text-[26px] font-semibold tracking-tight">{contentTitle}</h1>
+    <TwoColumnLayout
+      className="h-full"
+      contentClassName="pl-5"
+      nav={
+        <div className="space-y-1">
+          <div className="pb-2">
+            <Input
+              className="h-8 text-xs"
+              onChange={(event) => setLeftFilter(event.target.value)}
+              placeholder="Filter namespaces/kinds"
+              value={leftFilter}
+            />
+          </div>
+          <Button
+            asChild
+            className="mb-2 h-7 w-full justify-start text-xs"
+            size="sm"
+            variant={
+              selection.namespace === null && selection.kind === null ? "secondary" : "ghost"
+            }
+          >
+            <Link to="/entities">all</Link>
+          </Button>
+          {filteredNamespaceKinds.map(([namespace, kinds]) => (
+            <div className="space-y-1" key={namespace}>
+              <div className="flex items-center gap-1">
                 <Button
-                  onClick={() => {
-                    void query.refetch();
-                    void schemaQuery.refetch();
-                    if (selection.entityUri) {
-                      void entityQuery.refetch();
-                    }
-                  }}
+                  asChild
+                  className="h-7 min-w-0 flex-1 justify-start text-xs"
                   size="sm"
+                  variant={
+                    selection.namespace === namespace && selection.kind === null
+                      ? "secondary"
+                      : "ghost"
+                  }
+                >
+                  <Link params={{ scope: namespace }} to="/entities/$scope">
+                    {namespaceLabels.get(namespace) ?? titleize(namespace)}
+                  </Link>
+                </Button>
+                <Button
+                  className="h-7 shrink-0 px-1.5 font-mono text-[11px]"
+                  onClick={() => toggleNamespace(namespace)}
+                  size="sm"
+                  type="button"
                   variant="ghost"
                 >
-                  <RefreshCw
-                    className={
-                      query.isFetching || schemaQuery.isFetching || entityQuery.isFetching
-                        ? "animate-spin"
-                        : undefined
-                    }
-                  />
-                  Refresh
+                  {isNamespaceExpanded(namespace) ? "[-]" : "[+]"}
                 </Button>
               </div>
+              {isNamespaceExpanded(namespace) ? (
+                <div className="space-y-1 pl-3">
+                  {kinds.map((kind) => (
+                    <Button
+                      asChild
+                      className="h-7 w-full justify-start text-xs"
+                      key={`${namespace}:${kind}`}
+                      size="sm"
+                      variant={
+                        selection.namespace === namespace && selection.kind === kind
+                          ? "secondary"
+                          : "ghost"
+                      }
+                    >
+                      <Link
+                        params={{ scope: formatKindScope(namespace, kind) }}
+                        to="/entities/$scope"
+                      >
+                        {kindLabels.get(`${namespace}:${kind}`) ?? titleize(kind)}
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      }
+      navClassName="w-[220px] border-r pr-4"
+      content={
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="mb-4 flex items-start justify-between gap-6">
+            <h1 className="text-[26px] font-semibold tracking-tight">{contentTitle}</h1>
+            <Button
+              onClick={() => {
+                void query.refetch();
+                void schemaQuery.refetch();
+                if (selection.entityUri) {
+                  void entityQuery.refetch();
+                }
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              <RefreshCw
+                className={
+                  query.isFetching || schemaQuery.isFetching || entityQuery.isFetching
+                    ? "animate-spin"
+                    : undefined
+                }
+              />
+              Refresh
+            </Button>
+          </div>
 
-              {!selection.valid ? (
+          {!selection.valid ? (
+            <Alert className="mb-4" variant="destructive">
+              <AlertTitle>Invalid entity scope</AlertTitle>
+              <AlertDescription>
+                The URL scope is not valid. Use `/entities`, `/entities/ns`, `/entities/ns:kind`, or
+                `/entities/ns:kind:id`.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {selection.entityUri ? (
+            <>
+              {entityQuery.error ? (
                 <Alert className="mb-4" variant="destructive">
-                  <AlertTitle>Invalid entity scope</AlertTitle>
-                  <AlertDescription>
-                    The URL scope is not valid. Use `/entities`, `/entities/ns:`,
-                    `/entities/ns:kind`, or `/entities/ns:kind:id`.
-                  </AlertDescription>
+                  <AlertTitle>Unable to load entity</AlertTitle>
+                  <AlertDescription>{entityQuery.error.message}</AlertDescription>
                 </Alert>
               ) : null}
 
-              {selection.entityUri ? (
-                <>
-                  {entityQuery.error ? (
-                    <Alert className="mb-4" variant="destructive">
-                      <AlertTitle>Unable to load entity</AlertTitle>
-                      <AlertDescription>{entityQuery.error.message}</AlertDescription>
-                    </Alert>
-                  ) : null}
-
-                  {entityQuery.isLoading ? (
-                    <div className="space-y-3">
-                      <Skeleton className="h-6 w-72" />
-                      <Skeleton className="h-24 w-full" />
-                      <Skeleton className="h-64 w-full" />
-                    </div>
-                  ) : viewEntity && View ? (
-                    <View entity={viewEntity} />
-                  ) : (
-                    <Alert>
-                      <AlertTitle>Entity not found</AlertTitle>
-                      <AlertDescription>
-                        No entity exists for URI{" "}
-                        <span className="font-mono">{selection.entityUri}</span>.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </>
+              {entityQuery.isLoading ? (
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-72" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-64 w-full" />
+                </div>
+              ) : viewEntity && View ? (
+                <View entity={viewEntity} />
               ) : (
-                <>
-                  {query.error ? (
-                    <Alert className="mb-4" variant="destructive">
-                      <AlertTitle>Unable to load entities</AlertTitle>
-                      <AlertDescription>{query.error.message}</AlertDescription>
-                    </Alert>
-                  ) : null}
-
-                  <div className="overflow-hidden rounded-[3px] border bg-background">
-                    {query.isLoading ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[16%]">Namespace</TableHead>
-                            <TableHead className="w-[16%]">Kind</TableHead>
-                            <TableHead className="w-[36%]">URI</TableHead>
-                            <TableHead className="w-[20%]">Label</TableHead>
-                            <TableHead>Last updated at</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {SKELETON_ROWS.map((rowId) => (
-                            <TableRow key={rowId}>
-                              <TableCell>
-                                <Skeleton className="h-4 w-20" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-20" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-full max-w-[320px]" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-28" />
-                              </TableCell>
-                              <TableCell>
-                                <Skeleton className="h-4 w-24" />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : listRows.length === 0 ? (
-                      <Table>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell className="py-6 text-sm text-muted-foreground" colSpan={5}>
-                              No entities in this namespace/kind scope on the current page.
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <ListView
-                        onSelect={(row) => {
-                          void navigate({
-                            to: "/entities/$scope",
-                            params: { scope: row.uri },
-                          });
-                        }}
-                        rows={listRows}
-                        selectedUri={selection.entityUri}
-                      />
-                    )}
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between px-1 py-2">
-                    <div className="text-sm text-muted-foreground">Page {page}</div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        disabled={offset === 0 || query.isFetching}
-                        onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
-                        size="sm"
-                        variant="outline"
-                      >
-                        <ChevronLeft />
-                        Previous
-                      </Button>
-                      <Button
-                        disabled={!hasNextPage || query.isFetching}
-                        onClick={() => setOffset((current) => current + PAGE_SIZE)}
-                        size="sm"
-                        variant="outline"
-                      >
-                        Next
-                        <ChevronRight />
-                      </Button>
-                    </div>
-                  </div>
-                </>
+                <Alert>
+                  <AlertTitle>Entity not found</AlertTitle>
+                  <AlertDescription>
+                    No entity exists for URI{" "}
+                    <span className="font-mono">{selection.entityUri}</span>.
+                  </AlertDescription>
+                </Alert>
               )}
             </>
-          }
-        />
-      </div>
-    </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col">
+              {query.error ? (
+                <Alert className="mb-4" variant="destructive">
+                  <AlertTitle>Unable to load entities</AlertTitle>
+                  <AlertDescription>{query.error.message}</AlertDescription>
+                </Alert>
+              ) : null}
+
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-[3px] border bg-background">
+                {query.isLoading ? (
+                  <Table>
+                    <TableHeader className="sticky top-0 z-10 bg-background">
+                      <TableRow>
+                        <TableHead className="w-[16%]">Namespace</TableHead>
+                        <TableHead className="w-[16%]">Kind</TableHead>
+                        <TableHead className="w-[36%]">URI</TableHead>
+                        <TableHead className="w-[20%]">Label</TableHead>
+                        <TableHead>Last updated at</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {SKELETON_ROWS.map((rowId) => (
+                        <TableRow key={rowId}>
+                          <TableCell>
+                            <Skeleton className="h-4 w-20" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-20" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-full max-w-[320px]" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-28" />
+                          </TableCell>
+                          <TableCell>
+                            <Skeleton className="h-4 w-24" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : listRows.length === 0 ? (
+                  <Table>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="py-6 text-sm text-muted-foreground" colSpan={5}>
+                          No entities in this namespace/kind scope on the current page.
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <ListView
+                    onSelect={(row) => {
+                      void navigate({
+                        to: "/entities/$scope",
+                        params: { scope: row.uri },
+                      });
+                    }}
+                    rows={listRows}
+                    selectedUri={selection.entityUri}
+                  />
+                )}
+              </div>
+
+              <div className="mt-3 flex items-center justify-between px-1 py-2">
+                <div className="text-sm text-muted-foreground">Page {page}</div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    disabled={offset === 0 || query.isFetching}
+                    onClick={() => setOffset((current) => Math.max(0, current - PAGE_SIZE))}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <ChevronLeft />
+                    Previous
+                  </Button>
+                  <Button
+                    disabled={!hasNextPage || query.isFetching}
+                    onClick={() => setOffset((current) => current + PAGE_SIZE)}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Next
+                    <ChevronRight />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      }
+    />
   );
 }
 
