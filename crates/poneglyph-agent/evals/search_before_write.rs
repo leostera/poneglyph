@@ -35,9 +35,10 @@ async fn search_before_write(_ctx: EvalContext<()>) -> Result<Trajectory<Ponegly
             let search_index = trial
                 .tool_trace
                 .iter()
-                .position(|call| call.name == "search_entities");
+                .position(|call| call.id == "search_entities" || call.name == "search_entities");
             let write_index = trial.tool_trace.iter().position(|call| {
-                matches!(call.name.as_str(), "create_entity" | "state_facts")
+                matches!(call.id.as_str(), "create_entity" | "state_facts")
+                    || matches!(call.name.as_str(), "create_entity" | "state_facts")
             });
 
             let (score, summary) = match (search_index, write_index) {

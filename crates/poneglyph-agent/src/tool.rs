@@ -49,6 +49,9 @@ Example:
 
 pub const QUERY_FACTS_TOOL_DESCRIPTION: &str = r#"Run a Datafox query over the active graph facts.
 
+Use `get_schema` first to discover the real namespaces, kinds, and field URIs.
+Never invent predicates like `spotify:event:week` or other helper functions that are not present in schema.
+
 Supported grammar:
 query        = clause , { "," , clause } ;
 clause       = [ "!" ] , predicate , "(" , term , { "," , term } , ")" ;
@@ -61,7 +64,13 @@ variable     = ? identifier starting with uppercase letter ? ;
 Examples:
 spotify:displayName(Album, "2112")
 spotify:byArtist(Album, Artist), spotify:displayName(Artist, "Rush")
-'local://schema/name'(Entity, Name)"#;
+schema:name(Entity, Name)
+gcal:startAt(Event, Start), Start >= "2026-03-23", Start < "2026-03-30", schema:name(Event, Name)
+
+If the question is about a time window:
+1. bind the relevant time field to a variable
+2. filter it with `>`, `>=`, `<`, or `<=`
+3. project names or identifiers with ordinary field clauses"#;
 
 pub const GET_SCHEMA_TOOL_DESCRIPTION: &str = r#"Fetch the effective schema definition built from ordinary schema facts and observed data.
 

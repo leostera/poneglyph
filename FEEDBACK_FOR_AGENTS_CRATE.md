@@ -82,6 +82,28 @@ What would help:
 - surfacing the exact tool index and tool name consistently
 - wrapping provider errors with actionable crate-level hints
 
+## 8. Tool trace metadata should preserve the real tool name consistently
+
+While running `evals`, the recorded tool trace stored our actual tool identifier in `id`, but `name` came through as `unknown_tool`, even for successful calls.
+
+That made naive graders look like the agent never used the expected tool until we switched grading logic to check both fields.
+
+What would help:
+
+- guarantee that traced tool calls preserve the real tool name in one canonical field
+- document whether `id` is meant to be the call id, the tool name, or both
+- include a regression test around successful tool traces so eval authors can trust the recorded metadata
+
+## 9. Recovery after tool errors needs stronger support
+
+With smaller models, a failed tool call often led to the model emitting a fake JSON blob like `{\"name\": \"get_schema\", ...}` in assistant text instead of making a second real tool call.
+
+What would help:
+
+- a built-in retry / recovery strategy after tool errors
+- optional provider-side tool-choice nudging after a tool failure
+- examples showing how to keep the model in tool-calling mode after a bad first attempt
+
 ## Short version
 
 The crate is close, but typed tools need a better provider-compatibility story:
@@ -90,5 +112,7 @@ The crate is close, but typed tools need a better provider-compatibility story:
 - transform it for a provider safely
 - validate it locally
 - inspect the exact emitted payload easily
+- preserve trustworthy tool trace metadata
+- make post-error tool recovery more reliable
 
 That would have turned this debugging session from "trial and error against OpenAI" into a straightforward local fix.
