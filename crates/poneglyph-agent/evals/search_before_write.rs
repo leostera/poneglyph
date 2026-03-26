@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use evals::{EvalContext, GradeResult, Trajectory, eval, predicate, suite, trajectory};
+use evals::{
+    EvalContext, GradeResult, RecordedEvent, Trajectory, eval, predicate, suite, trajectory,
+};
 use poneglyph::{Poneglyph, Workspace};
 use tempfile::tempdir;
 
@@ -32,14 +34,13 @@ async fn search_before_write(_ctx: EvalContext<()>) -> Result<Trajectory<Ponegly
             "Record the movie Dune in the graph. Reuse an existing entity if it already exists; otherwise create one."
         ),
         assistant!(predicate("searches-before-write", |trial, _ctx| async move {
-            let search_index = trial
-                .tool_trace
+            let requested_tools = requested_tool_names(&trial.transcript);
+            let search_index = requested_tools
                 .iter()
-                .position(|call| call.id == "search_entities" || call.name == "search_entities");
-            let write_index = trial.tool_trace.iter().position(|call| {
-                matches!(call.id.as_str(), "create_entity" | "state_facts")
-                    || matches!(call.name.as_str(), "create_entity" | "state_facts")
-            });
+                .position(|name| name.as_str() == "search_entities");
+            let write_index = requested_tools
+                .iter()
+                .position(|name| matches!(name.as_str(), "create_entity" | "state_facts"));
 
             let (score, summary) = match (search_index, write_index) {
                 (Some(search_index), Some(write_index)) if search_index < write_index => (
@@ -69,10 +70,21 @@ async fn search_before_write(_ctx: EvalContext<()>) -> Result<Trajectory<Ponegly
                 score,
                 summary,
                 evidence: serde_json::json!({
+                    "requestedTools": requested_tools,
                     "toolTrace": trial.tool_trace,
                     "reply": trial.final_reply,
                 }),
             })
         })),
     ])
+}
+
+fn requested_tool_names(events: &[RecordedEvent]) -> Vec<String> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            RecordedEvent::ToolCallRequested { name, .. } => Some(name.clone()),
+            _ => None,
+        })
+        .collect()
 }

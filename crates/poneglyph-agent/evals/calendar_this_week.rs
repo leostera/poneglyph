@@ -3,7 +3,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use evals::{
-    EvalContext, GradeResult, GradingConfig, Trajectory, eval, predicate, suite, trajectory,
+    EvalContext, GradeResult, GradingConfig, RecordedEvent, Trajectory, eval, predicate, suite,
+    trajectory,
 };
 use poneglyph::{Poneglyph, Value, Workspace, fact, uri};
 use tempfile::tempdir;
@@ -40,22 +41,12 @@ async fn answers_events_this_week(_ctx: EvalContext<()>) -> Result<Trajectory<Po
         user!(WEEKLY_CALENDAR_PROMPT),
         assistant!(GradingConfig::new()
             .grader(predicate("uses-schema-then-query", |trial, _ctx| async move {
-                let schema_index = trial
-                    .tool_trace
+                let requested_tools = requested_tool_names(&trial.transcript);
+                let schema_index =
+                    requested_tools.iter().position(|name| name.as_str() == "get_schema");
+                let query_index = requested_tools
                     .iter()
-                    .position(|call| call.id == "get_schema" || call.name == "get_schema");
-                let query_index = trial
-                    .tool_trace
-                    .iter()
-                    .position(|call| {
-                        matches!(
-                            call.id.as_str(),
-                            "query_facts" | "query_entities"
-                        ) || matches!(
-                            call.name.as_str(),
-                            "query_facts" | "query_entities"
-                        )
-                    });
+                    .position(|name| matches!(name.as_str(), "query_facts" | "query_entities"));
 
                 let (score, summary) = match (schema_index, query_index) {
                     (Some(schema_index), Some(query_index)) if schema_index < query_index => (
@@ -84,6 +75,7 @@ async fn answers_events_this_week(_ctx: EvalContext<()>) -> Result<Trajectory<Po
                     score,
                     summary,
                     evidence: serde_json::json!({
+                        "requestedTools": requested_tools,
                         "toolTrace": trial.tool_trace,
                         "reply": trial.final_reply,
                     }),
@@ -124,6 +116,16 @@ async fn answers_events_this_week(_ctx: EvalContext<()>) -> Result<Trajectory<Po
                 })
             }))),
     ])
+}
+
+fn requested_tool_names(events: &[RecordedEvent]) -> Vec<String> {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            RecordedEvent::ToolCallRequested { name, .. } => Some(name.clone()),
+            _ => None,
+        })
+        .collect()
 }
 
 async fn seed_fake_calendar_graph(poneglyph: &Arc<Poneglyph>) -> Result<()> {
