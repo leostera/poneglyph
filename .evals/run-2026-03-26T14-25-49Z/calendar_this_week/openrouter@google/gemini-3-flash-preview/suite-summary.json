@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T14-25-49Z",
+  "suite_id": "calendar_this_week",
+  "target": {
+    "label": "openrouter/google/gemini-3-flash-preview",
+    "provider": "openrouter",
+    "model": "google/gemini-3-flash-preview",
+    "max_in_flight": 1
+  },
+  "total_evals": 1,
+  "total_trials": 10,
+  "passed_trials": 10,
+  "pass_rate": 1.0,
+  "mean_score": 1.0,
+  "mean_duration": {
+    "secs": 8,
+    "nanos": 960550870
+  },
+  "usage": {
+    "prompt_tokens": 125139,
+    "completion_tokens": 1726,
+    "total_tokens": 126865
+  },
+  "evals": [
+    {
+      "eval_id": "answers_events_this_week",
+      "trial_count": 10,
+      "passed_trials": 10,
+      "pass_rate": 1.0,
+      "mean_score": 1.0,
+      "mean_duration": {
+        "secs": 8,
+        "nanos": 960550870
+      },
+      "usage": {
+        "prompt_tokens": 125139,
+        "completion_tokens": 1726,
+        "total_tokens": 126865
+      },
+      "grader_means": [
+        {
+          "name": "identifies-in-week-event",
+          "mean_score": 1.0,
+          "pass_rate": 1.0
+        },
+        {
+          "name": "uses-schema-then-query",
+          "mean_score": 1.0,
+          "pass_rate": 1.0
+        }
+      ]
+    }
+  ]
+}

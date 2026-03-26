@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T22-17-02Z",
+  "started_at": {
+    "secs": 1774563422,
+    "nanos": 165708000
+  },
+  "finished_at": {
+    "secs": 1774563422,
+    "nanos": 165708000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/qwen3.5:122b-a10b",
+      "provider": "ollama",
+      "model": "qwen3.5:122b-a10b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T22-17-02Z/calendar_this_week/ollama@qwen3.5:122b-a10b/manifest.json",
+    "run-2026-03-26T22-17-02Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-001__answers_events_this_week__019d2c38-efd6-7b73-b197-74076cd3b41f.json",
+    "run-2026-03-26T22-17-02Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-002__answers_events_this_week__019d2c3e-3baa-7403-9c62-08a3c0be4401.json",
+    "run-2026-03-26T22-17-02Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-003__answers_events_this_week__019d2c44-76b6-76a1-815e-43a81cef71c1.json",
+    "run-2026-03-26T22-17-02Z/calendar_this_week/ollama@qwen3.5:122b-a10b/suite-summary.json"
+  ]
+}

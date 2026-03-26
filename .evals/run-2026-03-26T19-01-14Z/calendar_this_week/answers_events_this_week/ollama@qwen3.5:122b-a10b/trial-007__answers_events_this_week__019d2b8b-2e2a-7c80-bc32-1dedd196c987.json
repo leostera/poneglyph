@@ -1,0 +1,31 @@
+{
+  "trial_id": "019d2b8b-2e2a-7c80-bc32-1dedd196c987",
+  "suite_id": "calendar_this_week",
+  "eval_id": "answers_events_this_week",
+  "target": {
+    "label": "ollama/qwen3.5:122b-a10b"
+  },
+  "timing": {
+    "started_at_ms": 1774552034858,
+    "finished_at_ms": 1774552094860,
+    "duration_ms": 60001
+  },
+  "grading": {
+    "passed": false,
+    "mean_score": 0.0,
+    "error": {
+      "kind": "eval_error",
+      "error": {
+        "TrialTimedOut": {
+          "duration_ms": 60000
+        }
+      }
+    }
+  },
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "transcript": []
+}

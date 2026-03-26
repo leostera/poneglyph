@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T15-38-01Z",
+  "started_at": {
+    "secs": 1774539481,
+    "nanos": 62355000
+  },
+  "finished_at": {
+    "secs": 1774539481,
+    "nanos": 62355000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/llama3.3:70b",
+      "provider": "ollama",
+      "model": "llama3.3:70b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T15-38-01Z/calendar_this_week/ollama@llama3.3:70b/manifest.json",
+    "run-2026-03-26T15-38-01Z/calendar_this_week/answers_events_this_week/ollama@llama3.3:70b/trial-001__answers_events_this_week__019d2acb-9fe8-72e2-8b84-16de9a817869.json"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T18-42-36Z",
+  "started_at": {
+    "secs": 1774551156,
+    "nanos": 259468000
+  },
+  "finished_at": {
+    "secs": 1774551156,
+    "nanos": 259468000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/devstral-2",
+      "provider": "ollama",
+      "model": "devstral-2",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T18-42-36Z/calendar_this_week/ollama@devstral-2/manifest.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-001__answers_events_this_week__019d2b7d-c623-70a2-80bb-7fb53974d96e.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-002__answers_events_this_week__019d2b7e-b086-79a0-ad78-c6a674bb78c8.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-003__answers_events_this_week__019d2b7f-9aea-78c3-901b-58253a4635da.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-004__answers_events_this_week__019d2b80-854c-71a0-8b6d-b2d714eeb2cd.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-005__answers_events_this_week__019d2b81-6fb0-7102-8b3e-53151a52fe71.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-006__answers_events_this_week__019d2b82-5a16-7be3-a4f5-5adafc815522.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-007__answers_events_this_week__019d2b83-447d-7c53-af64-a6255aaa4360.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-008__answers_events_this_week__019d2b84-2ee2-7841-8a89-9d298af50fa6.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-009__answers_events_this_week__019d2b84-ac5c-7163-a039-5815c6711112.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-010__answers_events_this_week__019d2b84-ada4-7962-9a59-916521e9dcec.json",
+    "run-2026-03-26T18-42-36Z/calendar_this_week/ollama@devstral-2/suite-summary.json"
+  ]
+}

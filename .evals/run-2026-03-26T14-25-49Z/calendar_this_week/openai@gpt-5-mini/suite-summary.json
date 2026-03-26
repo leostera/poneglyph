@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T14-25-49Z",
+  "suite_id": "calendar_this_week",
+  "target": {
+    "label": "openai/gpt-5-mini",
+    "provider": "openai",
+    "model": "gpt-5-mini",
+    "max_in_flight": 1
+  },
+  "total_evals": 1,
+  "total_trials": 10,
+  "passed_trials": 0,
+  "pass_rate": 0.0,
+  "mean_score": 0.5,
+  "mean_duration": {
+    "secs": 46,
+    "nanos": 647430729
+  },
+  "usage": {
+    "prompt_tokens": 157357,
+    "completion_tokens": 15623,
+    "total_tokens": 172980
+  },
+  "evals": [
+    {
+      "eval_id": "answers_events_this_week",
+      "trial_count": 10,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.5,
+      "mean_duration": {
+        "secs": 46,
+        "nanos": 647430729
+      },
+      "usage": {
+        "prompt_tokens": 157357,
+        "completion_tokens": 15623,
+        "total_tokens": 172980
+      },
+      "grader_means": [
+        {
+          "name": "uses-schema-then-query",
+          "mean_score": 1.0,
+          "pass_rate": 1.0
+        }
+      ]
+    }
+  ]
+}

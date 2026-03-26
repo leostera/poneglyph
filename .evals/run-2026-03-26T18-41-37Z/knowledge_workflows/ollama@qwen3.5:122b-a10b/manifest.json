@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T18-41-37Z",
+  "started_at": {
+    "secs": 1774551969,
+    "nanos": 608987000
+  },
+  "finished_at": {
+    "secs": 1774551969,
+    "nanos": 608987000
+  },
+  "suites": [
+    "knowledge_workflows"
+  ],
+  "targets": [
+    {
+      "label": "ollama/qwen3.5:122b-a10b",
+      "provider": "ollama",
+      "model": "qwen3.5:122b-a10b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/ollama@qwen3.5:122b-a10b/manifest.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-001__answers_events_today__019d2b8a-2f49-71d2-b4fd-a6ba902b1dbe.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-002__answers_events_today__019d2b8b-19ab-7651-825e-991453c1c528.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-003__answers_events_today__019d2b8c-040e-70b3-a63d-66100eee4f9d.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-004__answers_events_today__019d2b8c-ee72-77a2-bc91-cb2469f9d0a0.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-005__answers_events_today__019d2b8d-d8d5-7e03-8a80-e2b1c8ac77c4.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-006__answers_events_today__019d2b8e-c338-7b03-8b34-687adcc857ab.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-007__answers_events_today__019d2b8f-ad9b-7491-b580-89c8aab8bf2d.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-008__answers_events_today__019d2b90-97fd-7541-b766-c33f3cd501d6.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-009__answers_events_today__019d2b91-8261-71d0-a645-1dd4e5374ef2.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-010__answers_events_today__019d2b92-6cce-74b1-8373-b2f1e63bf796.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-001__answers_events_this_month__019d2b93-5731-7b82-812f-f3caaf910ff0.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-002__answers_events_this_month__019d2b94-4194-7de0-a7eb-9dee334da43a.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-003__answers_events_this_month__019d2b95-2bf8-7092-9fb9-d91aada885be.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-004__answers_events_this_month__019d2b96-165b-7ae3-974d-263c4b465b35.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-005__answers_events_this_month__019d2b97-00be-7db3-8826-fe715b623a2e.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-006__answers_events_this_month__019d2b97-eb20-7e61-83aa-dd00cb3e1aec.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-007__answers_events_this_month__019d2b98-d585-7133-a8ab-5f5ef85b5d35.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-008__answers_events_this_month__019d2b99-bfe9-70c1-9dd9-2e30d666ddf3.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-009__answers_events_this_month__019d2b9a-aa4b-7f33-9e06-97ac4fa80209.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-010__answers_events_this_month__019d2b9b-94ae-7ae2-be0f-5785528af97e.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-001__answers_email_question_from_gmail__019d2b9c-7f10-70a3-95f0-13833f498a29.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-002__answers_email_question_from_gmail__019d2b9d-6983-7ec1-9c32-0c7290298b1a.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-003__answers_email_question_from_gmail__019d2b9e-53eb-7d31-8bbb-fa8bf625f7d5.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-004__answers_email_question_from_gmail__019d2b9f-3e4f-70a0-a9b8-a1a5a18daaef.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-005__answers_email_question_from_gmail__019d2ba0-28b3-7252-9377-c283bba8794c.json",
+    "run-2026-03-26T18-41-37Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-006__answers_email_question_from_gmail__019d2ba1-1319-75e3-be75-1480747df77a.json"
+  ]
+}

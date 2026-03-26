@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T13-03-13Z",
+  "started_at": {
+    "secs": 1774530193,
+    "nanos": 608931000
+  },
+  "finished_at": {
+    "secs": 1774530193,
+    "nanos": 608931000
+  },
+  "suites": [
+    "test_eval"
+  ],
+  "targets": [
+    {
+      "label": "openrouter/google/gemini-3-flash",
+      "provider": "openrouter",
+      "model": "google/gemini-3-flash",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T13-03-13Z/test_eval/openrouter@google/gemini-3-flash/manifest.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-001__dummy_eval__019d2a3d-e8ca-7052-88bf-07a31352b8ba.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-002__dummy_eval__019d2a3d-e8ce-7e52-87d2-6427b68e6649.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-003__dummy_eval__019d2a3d-e8d0-71d2-8629-8d4337f92c0e.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-004__dummy_eval__019d2a3d-e8d1-7290-94ff-58456f70eb91.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-005__dummy_eval__019d2a3d-e8d3-7d30-a845-a777d3246caa.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-006__dummy_eval__019d2a3d-e8d4-7f90-abf9-9e932fe8ca06.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-007__dummy_eval__019d2a3d-e8d6-70d2-b178-8c56d6e5d718.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-008__dummy_eval__019d2a3d-e8d7-7053-b1bf-6cf7fd4b6c8b.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-009__dummy_eval__019d2a3d-e8d8-7473-8344-bfb9e56195e8.json",
+    "run-2026-03-26T13-03-13Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash/trial-010__dummy_eval__019d2a3d-e8da-7f22-9917-e1255962276f.json",
+    "run-2026-03-26T13-03-13Z/test_eval/openrouter@google/gemini-3-flash/suite-summary.json"
+  ]
+}

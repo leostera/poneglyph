@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T13-24-39Z",
+  "started_at": {
+    "secs": 1774531479,
+    "nanos": 764464000
+  },
+  "finished_at": {
+    "secs": 1774531479,
+    "nanos": 764464000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "openai/gpt-5-mini",
+      "provider": "openai",
+      "model": "gpt-5-mini",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T13-24-39Z/calendar_this_week/openai@gpt-5-mini/manifest.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-001__answers_events_this_week__019d2a51-88d6-73d3-83ce-f31fc9057c9d.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-002__answers_events_this_week__019d2a51-df43-7ae2-96d9-1305b806cf58.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-003__answers_events_this_week__019d2a52-20d6-7223-bbc6-9a060c05ca6f.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-004__answers_events_this_week__019d2a52-6b66-7140-a5e0-7675afdff2b5.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-005__answers_events_this_week__019d2a52-b1f2-7f60-bfe5-d77d0c84fb2f.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-006__answers_events_this_week__019d2a52-f083-7e62-8dd7-d83cc5ca8456.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-007__answers_events_this_week__019d2a53-3458-7651-a33f-f472db85cbfb.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-008__answers_events_this_week__019d2a53-6a1b-7f33-ba17-1f0b7bfb5b84.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-009__answers_events_this_week__019d2a53-978d-7ec2-b294-e43e0d99e560.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-010__answers_events_this_week__019d2a53-cf95-7993-a2f4-ec4cb6169a33.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/openai@gpt-5-mini/suite-summary.json"
+  ]
+}

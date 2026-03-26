@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T12-22-55Z",
+  "started_at": {
+    "secs": 1774528766,
+    "nanos": 296092000
+  },
+  "finished_at": {
+    "secs": 1774528766,
+    "nanos": 296092000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/nemotron-3-nano:30b",
+      "provider": "ollama",
+      "model": "nemotron-3-nano:30b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T12-22-55Z/calendar_this_week/ollama@nemotron-3-nano:30b/manifest.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-001__answers_events_this_week__019d2a28-2159-7093-8861-e5fbb961d5ec.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-002__answers_events_this_week__019d2a28-8b55-7222-b567-46c86f1606d8.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-003__answers_events_this_week__019d2a28-da7e-7ba0-9e16-7e690a0b01fa.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-004__answers_events_this_week__019d2a29-1625-7980-b774-2010fe790706.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-005__answers_events_this_week__019d2a29-3d1b-77d2-9712-9a698f42cc4e.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-006__answers_events_this_week__019d2a29-6823-7032-9ed5-8b3e870a051e.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-007__answers_events_this_week__019d2a29-9c74-7e71-9f15-643d70cad2de.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-008__answers_events_this_week__019d2a29-c6bd-7250-82e7-675f16f80106.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-009__answers_events_this_week__019d2a29-efc0-75c3-8947-60daeedfc3d9.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/answers_events_this_week/ollama@nemotron-3-nano:30b/trial-010__answers_events_this_week__019d2a2a-1496-7661-b98d-19e0d481479c.json",
+    "run-2026-03-26T12-22-55Z/calendar_this_week/ollama@nemotron-3-nano:30b/suite-summary.json"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "trial_id": "019d2b83-484c-7140-8345-e5f02d3e4e17",
+  "suite_id": "knowledge_workflows",
+  "eval_id": "answers_events_this_month",
+  "target": {
+    "label": "ollama/llama3.3:70b"
+  },
+  "timing": {
+    "started_at_ms": 1774551517260,
+    "finished_at_ms": 1774551577263,
+    "duration_ms": 60002
+  },
+  "grading": {
+    "passed": false,
+    "mean_score": 0.0,
+    "error": {
+      "kind": "eval_error",
+      "error": {
+        "TrialTimedOut": {
+          "duration_ms": 60000
+        }
+      }
+    }
+  },
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "transcript": []
+}

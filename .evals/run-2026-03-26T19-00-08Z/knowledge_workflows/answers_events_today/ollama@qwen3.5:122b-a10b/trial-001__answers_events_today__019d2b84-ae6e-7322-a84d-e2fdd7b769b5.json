@@ -1,0 +1,164 @@
+{
+  "trial_id": "019d2b84-ae6e-7322-a84d-e2fdd7b769b5",
+  "suite_id": "knowledge_workflows",
+  "eval_id": "answers_events_today",
+  "target": {
+    "label": "ollama/qwen3.5:122b-a10b"
+  },
+  "timing": {
+    "started_at_ms": 1774551608942,
+    "finished_at_ms": 1774551609144,
+    "duration_ms": 202
+  },
+  "grading": {
+    "passed": false,
+    "mean_score": 0.0,
+    "error": {
+      "kind": "eval_error",
+      "error": {
+        "MessageWithTrial": {
+          "message": "LLM error: HTTP error: error sending request for url (http://192.168.0.2:11434/api/chat)",
+          "trial": {
+            "final_reply": null,
+            "grader_failures": [],
+            "grades": {},
+            "metadata": null,
+            "tool_trace": [],
+            "transcript": [
+              {
+                "input": "Today is Wednesday, March 25, 2026. Answer only from the Poneglyph graph. What events do I have today?",
+                "kind": "step_started",
+                "step_index": 0
+              },
+              {
+                "content": "\"Today is Wednesday, March 25, 2026. Answer only from the Poneglyph graph. What events do I have today?\"",
+                "kind": "message",
+                "role": "user"
+              },
+              {
+                "chunks": [
+                  {
+                    "Message": {
+                      "content": "You are Robin, the built-in expert operator for the Poneglyph knowledge graph.\n\nYour job is to help humans and other agents extract, query, and structure graph knowledge safely.\n\nOperating rules:\n- You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.\n- For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.\n- The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.\n- Prefer `query_entities` for \"find entities of kind X matching field filters or time ranges\" tasks.\n- Use `query_facts` for joins, projections, or when `query_entities` cannot express the query you need.\n- Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.\n- If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.\n- Search before write. If a thing may already exist, use `search_entities` first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer `create_entity` before `state_facts`.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies.",
+                      "role": "System",
+                      "strategy": "Pinnable"
+                    }
+                  },
+                  {
+                    "Message": {
+                      "content": "Runtime context:\n- Current local datetime: 2026-03-26 20:00:09 +01:00\n- Current local date: 2026-03-26\n- Current ISO week: 2026-W13\n- Today is: Thursday\n- If the user asks about \"this week\", interpret that relative to the current date unless they provide explicit dates.",
+                      "role": "System",
+                      "strategy": "Pinnable"
+                    }
+                  },
+                  {
+                    "Message": {
+                      "content": "Today is Wednesday, March 25, 2026. Answer only from the Poneglyph graph. What events do I have today?",
+                      "role": "User",
+                      "strategy": "Compactable"
+                    }
+                  }
+                ],
+                "kind": "context_window"
+              },
+              {
+                "kind": "request_prepared",
+                "request": {
+                  "expects_typed_response": false,
+                  "has_tools": true,
+                  "input_items": 3,
+                  "model": "any",
+                  "response_mode": "Buffered",
+                  "temperature": "ProviderDefault",
+                  "token_limit": "ProviderDefault",
+                  "tool_choice": "ProviderDefault",
+                  "top_k": "ProviderDefault",
+                  "top_p": "ProviderDefault"
+                }
+              },
+              {
+                "error": {
+                  "error": {
+                    "Llm": {
+                      "Http": {
+                        "message": "error sending request for url (http://192.168.0.2:11434/api/chat)"
+                      }
+                    }
+                  },
+                  "kind": "agent_error"
+                },
+                "kind": "error"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "transcript": [
+    {
+      "type": "user",
+      "value": "Today is Wednesday, March 25, 2026. Answer only from the Poneglyph graph. What events do I have today?",
+      "step": 0
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are Robin, the built-in expert operator for the Poneglyph knowledge graph.\n\nYour job is to help humans and other agents extract, query, and structure graph knowledge safely.\n\nOperating rules:\n- You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.\n- For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.\n- The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.\n- Prefer `query_entities` for \"find entities of kind X matching field filters or time ranges\" tasks.\n- Use `query_facts` for joins, projections, or when `query_entities` cannot express the query you need.\n- Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.\n- If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.\n- Search before write. If a thing may already exist, use `search_entities` first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer `create_entity` before `state_facts`.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "Runtime context:\n- Current local datetime: 2026-03-26 20:00:09 +01:00\n- Current local date: 2026-03-26\n- Current ISO week: 2026-W13\n- Today is: Thursday\n- If the user asks about \"this week\", interpret that relative to the current date unless they provide explicit dates."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Wednesday, March 25, 2026. Answer only from the Poneglyph graph. What events do I have today?"
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 3,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "error",
+      "error": {
+        "kind": "agent_error",
+        "error": {
+          "Llm": {
+            "Http": {
+              "message": "error sending request for url (http://192.168.0.2:11434/api/chat)"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

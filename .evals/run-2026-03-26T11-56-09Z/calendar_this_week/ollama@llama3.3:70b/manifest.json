@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T11-56-09Z",
+  "started_at": {
+    "secs": 1774526169,
+    "nanos": 521744000
+  },
+  "finished_at": {
+    "secs": 1774526169,
+    "nanos": 521744000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/llama3.3:70b",
+      "provider": "ollama",
+      "model": "llama3.3:70b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T11-56-09Z/calendar_this_week/ollama@llama3.3:70b/manifest.json",
+    "run-2026-03-26T11-56-09Z/calendar_this_week/answers_events_this_week/ollama@llama3.3:70b/trial-001__answers_events_this_week__019d2a00-81b2-70e0-ad27-f33c63b55992.json",
+    "run-2026-03-26T11-56-09Z/calendar_this_week/answers_events_this_week/ollama@llama3.3:70b/trial-002__answers_events_this_week__019d2a01-8bce-7953-b485-002f030f360a.json"
+  ]
+}

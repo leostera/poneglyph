@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T13-24-39Z",
+  "started_at": {
+    "secs": 1774533473,
+    "nanos": 545196000
+  },
+  "finished_at": {
+    "secs": 1774533473,
+    "nanos": 545196000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/devstral-2",
+      "provider": "ollama",
+      "model": "devstral-2",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T13-24-39Z/calendar_this_week/ollama@devstral-2/manifest.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-001__answers_events_this_week__019d2a6f-f50b-7103-8a8f-7521dcf0568e.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-002__answers_events_this_week__019d2a77-d8db-7031-a58a-a685dc1ac94b.json",
+    "run-2026-03-26T13-24-39Z/calendar_this_week/answers_events_this_week/ollama@devstral-2/trial-003__answers_events_this_week__019d2a7f-553d-7151-8ce9-8666044ff5a6.json"
+  ]
+}

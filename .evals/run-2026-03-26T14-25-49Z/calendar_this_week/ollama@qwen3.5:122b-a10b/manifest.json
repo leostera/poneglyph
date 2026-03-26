@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T14-25-49Z",
+  "started_at": {
+    "secs": 1774535738,
+    "nanos": 331604000
+  },
+  "finished_at": {
+    "secs": 1774535738,
+    "nanos": 331604000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/qwen3.5:122b-a10b",
+      "provider": "ollama",
+      "model": "qwen3.5:122b-a10b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T14-25-49Z/calendar_this_week/ollama@qwen3.5:122b-a10b/manifest.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-001__answers_events_this_week__019d2a92-83df-7f90-a34e-d20eabaa1917.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-002__answers_events_this_week__019d2a95-2254-7483-b0d8-883f16967cb6.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-003__answers_events_this_week__019d2a97-99ba-7a80-98b6-3193559cfd35.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-004__answers_events_this_week__019d2a9a-8fd7-76d3-a634-97c19f43f87e.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-005__answers_events_this_week__019d2a9c-d57b-7ea2-90fa-aa8da538c97d.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-006__answers_events_this_week__019d2a9f-a98e-7852-98a2-269adbed0c1c.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-007__answers_events_this_week__019d2aa3-003a-7cc0-8e6e-8428686c9150.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-008__answers_events_this_week__019d2aa5-23e5-7231-8b3f-db9902bc3ff7.json",
+    "run-2026-03-26T14-25-49Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-009__answers_events_this_week__019d2aa7-5fae-7900-b2d6-5b8b7a04d014.json"
+  ]
+}

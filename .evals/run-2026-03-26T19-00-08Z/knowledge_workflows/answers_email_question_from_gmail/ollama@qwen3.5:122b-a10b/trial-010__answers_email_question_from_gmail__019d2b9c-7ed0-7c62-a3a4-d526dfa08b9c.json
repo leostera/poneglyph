@@ -1,0 +1,31 @@
+{
+  "trial_id": "019d2b9c-7ed0-7c62-a3a4-d526dfa08b9c",
+  "suite_id": "knowledge_workflows",
+  "eval_id": "answers_email_question_from_gmail",
+  "target": {
+    "label": "ollama/qwen3.5:122b-a10b"
+  },
+  "timing": {
+    "started_at_ms": 1774553169616,
+    "finished_at_ms": 1774553229624,
+    "duration_ms": 60008
+  },
+  "grading": {
+    "passed": false,
+    "mean_score": 0.0,
+    "error": {
+      "kind": "eval_error",
+      "error": {
+        "TrialTimedOut": {
+          "duration_ms": 60000
+        }
+      }
+    }
+  },
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "transcript": []
+}

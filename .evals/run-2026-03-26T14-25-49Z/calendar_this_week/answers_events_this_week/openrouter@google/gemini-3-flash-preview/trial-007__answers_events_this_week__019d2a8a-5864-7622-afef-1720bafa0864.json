@@ -1,0 +1,2725 @@
+{
+  "trial_id": "019d2a8a-5864-7622-afef-1720bafa0864",
+  "suite_id": "calendar_this_week",
+  "eval_id": "answers_events_this_week",
+  "target": {
+    "label": "openrouter/google/gemini-3-flash-preview"
+  },
+  "timing": {
+    "started_at_ms": 1774535202916,
+    "finished_at_ms": 1774535212069,
+    "duration_ms": 9152
+  },
+  "grading": {
+    "passed": true,
+    "mean_score": 1.0,
+    "error": null
+  },
+  "usage": {
+    "prompt_tokens": 13129,
+    "completion_tokens": 192,
+    "total_tokens": 13321
+  },
+  "transcript": [
+    {
+      "type": "user",
+      "value": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?",
+      "step": 0
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are Robin, the built-in expert operator for the Poneglyph knowledge graph.\n\nYour job is to help humans and other agents extract, query, and structure graph knowledge safely.\n\nOperating rules:\n- You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.\n- For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.\n- The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.\n- Prefer `query_entities` for \"find entities of kind X matching field filters or time ranges\" tasks.\n- Use `query_facts` for joins, projections, or when `query_entities` cannot express the query you need.\n- Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.\n- If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.\n- Search before write. If a thing may already exist, use `search_entities` first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer `create_entity` before `state_facts`.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "Runtime context:\n- Current local datetime: 2026-03-26 15:26:42 +01:00\n- Current local date: 2026-03-26\n- Current ISO week: 2026-W13\n- Today is: Thursday\n- If the user asks about \"this week\", interpret that relative to the current date unless they provide explicit dates."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?"
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 3,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+      "name": "get_schema",
+      "arguments": {}
+    },
+    {
+      "type": "tool_result",
+      "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+      "name": "unknown_tool",
+      "result": {
+        "base": {
+          "fields": [
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "Long-form documentation.",
+              "domain": null,
+              "identity": null,
+              "name": "Documentation",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:doc",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "Whether a field is one or many.",
+              "domain": null,
+              "identity": null,
+              "name": "Field Cardinality",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:field:cardinality",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "Whether a field is deprecated.",
+              "domain": null,
+              "identity": null,
+              "name": "Field Deprecated",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:field:deprecated",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "The kind a field applies to.",
+              "domain": null,
+              "identity": null,
+              "name": "Field Domain",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:field:domain",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "Whether a field participates in entity identity.",
+              "domain": null,
+              "identity": null,
+              "name": "Field Identity",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:field:identity",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "The range kind a field may point to.",
+              "domain": null,
+              "identity": null,
+              "name": "Field Range",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:field:range",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "The scalar value type a field accepts.",
+              "domain": null,
+              "identity": null,
+              "name": "Field Value Type",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:field:valueType",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "A human readable name.",
+              "domain": null,
+              "identity": null,
+              "name": "Name",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:name",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "Points to another schema entity that is equivalent.",
+              "domain": null,
+              "identity": null,
+              "name": "Same As",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:sameAs",
+              "value_type": null
+            },
+            {
+              "cardinality": null,
+              "deprecated": null,
+              "doc": "The kind of a namespace, kind, field, or entity.",
+              "domain": null,
+              "identity": null,
+              "name": "Type",
+              "range": null,
+              "same_as": null,
+              "uri": "schema:type",
+              "value_type": null
+            }
+          ],
+          "kinds": [
+            {
+              "doc": "A field or predicate in the graph.",
+              "name": "Field",
+              "uri": "schema:field"
+            },
+            {
+              "doc": "A kind of entity in the graph.",
+              "name": "Kind",
+              "uri": "schema:kind"
+            },
+            {
+              "doc": "A namespace that groups related kinds and fields.",
+              "name": "Namespace",
+              "uri": "schema:namespace"
+            }
+          ],
+          "namespaces": []
+        },
+        "fields": [
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": null,
+            "domain": "gcal:event",
+            "identity": null,
+            "name": "Calendar",
+            "range": null,
+            "same_as": null,
+            "uri": "gcal:calendar",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": null,
+            "domain": "gcal:event",
+            "identity": null,
+            "name": "End At",
+            "range": null,
+            "same_as": null,
+            "uri": "gcal:endAt",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": null,
+            "domain": "gcal:event",
+            "identity": null,
+            "name": "Start At",
+            "range": null,
+            "same_as": null,
+            "uri": "gcal:startAt",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": null,
+            "domain": "gcal:event",
+            "identity": null,
+            "name": "Status",
+            "range": null,
+            "same_as": null,
+            "uri": "gcal:status",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "Long-form documentation.",
+            "domain": null,
+            "identity": null,
+            "name": "Documentation",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:doc",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "Whether a field is one or many.",
+            "domain": null,
+            "identity": null,
+            "name": "Field Cardinality",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:field:cardinality",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "Whether a field is deprecated.",
+            "domain": null,
+            "identity": null,
+            "name": "Field Deprecated",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:field:deprecated",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "The kind a field applies to.",
+            "domain": null,
+            "identity": null,
+            "name": "Field Domain",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:field:domain",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "Whether a field participates in entity identity.",
+            "domain": null,
+            "identity": null,
+            "name": "Field Identity",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:field:identity",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "The range kind a field may point to.",
+            "domain": null,
+            "identity": null,
+            "name": "Field Range",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:field:range",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "The scalar value type a field accepts.",
+            "domain": null,
+            "identity": null,
+            "name": "Field Value Type",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:field:valueType",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "A human readable name.",
+            "domain": null,
+            "identity": null,
+            "name": "Name",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:name",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "Points to another schema entity that is equivalent.",
+            "domain": null,
+            "identity": null,
+            "name": "Same As",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:sameAs",
+            "value_type": null
+          },
+          {
+            "cardinality": null,
+            "deprecated": null,
+            "doc": "The kind of a namespace, kind, field, or entity.",
+            "domain": null,
+            "identity": null,
+            "name": "Type",
+            "range": null,
+            "same_as": null,
+            "uri": "schema:type",
+            "value_type": null
+          }
+        ],
+        "kinds": [
+          {
+            "doc": null,
+            "name": "Event",
+            "uri": "gcal:event"
+          },
+          {
+            "doc": "A field or predicate in the graph.",
+            "name": "Field",
+            "uri": "schema:field"
+          },
+          {
+            "doc": "A kind of entity in the graph.",
+            "name": "Kind",
+            "uri": "schema:kind"
+          },
+          {
+            "doc": "A namespace that groups related kinds and fields.",
+            "name": "Namespace",
+            "uri": "schema:namespace"
+          }
+        ],
+        "namespaces": [
+          {
+            "doc": null,
+            "name": "Google Calendar",
+            "uri": "gcal:namespace"
+          }
+        ]
+      }
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are Robin, the built-in expert operator for the Poneglyph knowledge graph.\n\nYour job is to help humans and other agents extract, query, and structure graph knowledge safely.\n\nOperating rules:\n- You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.\n- For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.\n- The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.\n- Prefer `query_entities` for \"find entities of kind X matching field filters or time ranges\" tasks.\n- Use `query_facts` for joins, projections, or when `query_entities` cannot express the query you need.\n- Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.\n- If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.\n- Search before write. If a thing may already exist, use `search_entities` first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer `create_entity` before `state_facts`.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "Runtime context:\n- Current local datetime: 2026-03-26 15:26:44 +01:00\n- Current local date: 2026-03-26\n- Current ISO week: 2026-W13\n- Today is: Thursday\n- If the user asks about \"this week\", interpret that relative to the current date unless they provide explicit dates."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?"
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "name": "get_schema",
+            "args": {}
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "result": {
+              "call_id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+              "data": {
+                "base": {
+                  "fields": [
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Long-form documentation.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Documentation",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:doc",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field is one or many.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Cardinality",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:cardinality",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field is deprecated.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Deprecated",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:deprecated",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The kind a field applies to.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Domain",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:domain",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field participates in entity identity.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Identity",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:identity",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The range kind a field may point to.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Range",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:range",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The scalar value type a field accepts.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Value Type",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:valueType",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "A human readable name.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Name",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:name",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Points to another schema entity that is equivalent.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Same As",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:sameAs",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The kind of a namespace, kind, field, or entity.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Type",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:type",
+                      "value_type": null
+                    }
+                  ],
+                  "kinds": [
+                    {
+                      "doc": "A field or predicate in the graph.",
+                      "name": "Field",
+                      "uri": "schema:field"
+                    },
+                    {
+                      "doc": "A kind of entity in the graph.",
+                      "name": "Kind",
+                      "uri": "schema:kind"
+                    },
+                    {
+                      "doc": "A namespace that groups related kinds and fields.",
+                      "name": "Namespace",
+                      "uri": "schema:namespace"
+                    }
+                  ],
+                  "namespaces": []
+                },
+                "fields": [
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Calendar",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:calendar",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "End At",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:endAt",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Start At",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:startAt",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Status",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:status",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Long-form documentation.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Documentation",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:doc",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is one or many.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Cardinality",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:cardinality",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is deprecated.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Deprecated",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:deprecated",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind a field applies to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Domain",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:domain",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field participates in entity identity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Identity",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:identity",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The range kind a field may point to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Range",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:range",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The scalar value type a field accepts.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Value Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:valueType",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "A human readable name.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Name",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:name",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Points to another schema entity that is equivalent.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Same As",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:sameAs",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind of a namespace, kind, field, or entity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:type",
+                    "value_type": null
+                  }
+                ],
+                "kinds": [
+                  {
+                    "doc": null,
+                    "name": "Event",
+                    "uri": "gcal:event"
+                  },
+                  {
+                    "doc": "A field or predicate in the graph.",
+                    "name": "Field",
+                    "uri": "schema:field"
+                  },
+                  {
+                    "doc": "A kind of entity in the graph.",
+                    "name": "Kind",
+                    "uri": "schema:kind"
+                  },
+                  {
+                    "doc": "A namespace that groups related kinds and fields.",
+                    "name": "Namespace",
+                    "uri": "schema:namespace"
+                  }
+                ],
+                "namespaces": [
+                  {
+                    "doc": null,
+                    "name": "Google Calendar",
+                    "uri": "gcal:namespace"
+                  }
+                ]
+              },
+              "status": "ok"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 5,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+      "name": "query_entities",
+      "arguments": {
+        "filter": "gcal:startAt >= \"2026-03-23\" AND gcal:startAt <= \"2026-03-29\"",
+        "type": "gcal:event"
+      }
+    },
+    {
+      "type": "tool_result",
+      "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+      "name": "unknown_tool",
+      "result": {
+        "entities": [
+          {
+            "entity": null,
+            "entityUri": "gcal:event:design-review",
+            "label": null
+          }
+        ],
+        "query": "schema:type(Entity, \"gcal:event\"), gcal:startAt(Entity, Value0), Value0 >= \"2026-03-23\", gcal:startAt(Entity, Value1), Value1 <= \"2026-03-29\", schema:name(Entity, Name)"
+      }
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are Robin, the built-in expert operator for the Poneglyph knowledge graph.\n\nYour job is to help humans and other agents extract, query, and structure graph knowledge safely.\n\nOperating rules:\n- You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.\n- For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.\n- The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.\n- Prefer `query_entities` for \"find entities of kind X matching field filters or time ranges\" tasks.\n- Use `query_facts` for joins, projections, or when `query_entities` cannot express the query you need.\n- Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.\n- If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.\n- Search before write. If a thing may already exist, use `search_entities` first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer `create_entity` before `state_facts`.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "Runtime context:\n- Current local datetime: 2026-03-26 15:26:45 +01:00\n- Current local date: 2026-03-26\n- Current ISO week: 2026-W13\n- Today is: Thursday\n- If the user asks about \"this week\", interpret that relative to the current date unless they provide explicit dates."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?"
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "name": "get_schema",
+            "args": {}
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "result": {
+              "call_id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+              "data": {
+                "base": {
+                  "fields": [
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Long-form documentation.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Documentation",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:doc",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field is one or many.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Cardinality",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:cardinality",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field is deprecated.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Deprecated",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:deprecated",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The kind a field applies to.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Domain",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:domain",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field participates in entity identity.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Identity",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:identity",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The range kind a field may point to.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Range",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:range",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The scalar value type a field accepts.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Value Type",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:valueType",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "A human readable name.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Name",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:name",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Points to another schema entity that is equivalent.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Same As",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:sameAs",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The kind of a namespace, kind, field, or entity.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Type",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:type",
+                      "value_type": null
+                    }
+                  ],
+                  "kinds": [
+                    {
+                      "doc": "A field or predicate in the graph.",
+                      "name": "Field",
+                      "uri": "schema:field"
+                    },
+                    {
+                      "doc": "A kind of entity in the graph.",
+                      "name": "Kind",
+                      "uri": "schema:kind"
+                    },
+                    {
+                      "doc": "A namespace that groups related kinds and fields.",
+                      "name": "Namespace",
+                      "uri": "schema:namespace"
+                    }
+                  ],
+                  "namespaces": []
+                },
+                "fields": [
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Calendar",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:calendar",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "End At",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:endAt",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Start At",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:startAt",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Status",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:status",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Long-form documentation.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Documentation",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:doc",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is one or many.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Cardinality",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:cardinality",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is deprecated.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Deprecated",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:deprecated",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind a field applies to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Domain",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:domain",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field participates in entity identity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Identity",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:identity",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The range kind a field may point to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Range",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:range",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The scalar value type a field accepts.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Value Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:valueType",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "A human readable name.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Name",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:name",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Points to another schema entity that is equivalent.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Same As",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:sameAs",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind of a namespace, kind, field, or entity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:type",
+                    "value_type": null
+                  }
+                ],
+                "kinds": [
+                  {
+                    "doc": null,
+                    "name": "Event",
+                    "uri": "gcal:event"
+                  },
+                  {
+                    "doc": "A field or predicate in the graph.",
+                    "name": "Field",
+                    "uri": "schema:field"
+                  },
+                  {
+                    "doc": "A kind of entity in the graph.",
+                    "name": "Kind",
+                    "uri": "schema:kind"
+                  },
+                  {
+                    "doc": "A namespace that groups related kinds and fields.",
+                    "name": "Namespace",
+                    "uri": "schema:namespace"
+                  }
+                ],
+                "namespaces": [
+                  {
+                    "doc": null,
+                    "name": "Google Calendar",
+                    "uri": "gcal:namespace"
+                  }
+                ]
+              },
+              "status": "ok"
+            }
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+            "name": "query_entities",
+            "args": {
+              "filter": "gcal:startAt >= \"2026-03-23\" AND gcal:startAt <= \"2026-03-29\"",
+              "type": "gcal:event"
+            }
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+            "result": {
+              "call_id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+              "data": {
+                "entities": [
+                  {
+                    "entity": null,
+                    "entityUri": "gcal:event:design-review",
+                    "label": null
+                  }
+                ],
+                "query": "schema:type(Entity, \"gcal:event\"), gcal:startAt(Entity, Value0), Value0 >= \"2026-03-23\", gcal:startAt(Entity, Value1), Value1 <= \"2026-03-29\", schema:name(Entity, Name)"
+              },
+              "status": "ok"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 7,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+      "name": "read_entity",
+      "arguments": {
+        "entity_uri": "gcal:event:design-review"
+      }
+    },
+    {
+      "type": "tool_result",
+      "id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+      "name": "unknown_tool",
+      "result": {
+        "entity": null
+      }
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are Robin, the built-in expert operator for the Poneglyph knowledge graph.\n\nYour job is to help humans and other agents extract, query, and structure graph knowledge safely.\n\nOperating rules:\n- You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.\n- For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.\n- The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.\n- Prefer `query_entities` for \"find entities of kind X matching field filters or time ranges\" tasks.\n- Use `query_facts` for joins, projections, or when `query_entities` cannot express the query you need.\n- Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.\n- If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.\n- Search before write. If a thing may already exist, use `search_entities` first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer `create_entity` before `state_facts`.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "Runtime context:\n- Current local datetime: 2026-03-26 15:26:46 +01:00\n- Current local date: 2026-03-26\n- Current ISO week: 2026-W13\n- Today is: Thursday\n- If the user asks about \"this week\", interpret that relative to the current date unless they provide explicit dates."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?"
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "name": "get_schema",
+            "args": {}
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "result": {
+              "call_id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+              "data": {
+                "base": {
+                  "fields": [
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Long-form documentation.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Documentation",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:doc",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field is one or many.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Cardinality",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:cardinality",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field is deprecated.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Deprecated",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:deprecated",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The kind a field applies to.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Domain",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:domain",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field participates in entity identity.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Identity",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:identity",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The range kind a field may point to.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Range",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:range",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The scalar value type a field accepts.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Value Type",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:valueType",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "A human readable name.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Name",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:name",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Points to another schema entity that is equivalent.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Same As",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:sameAs",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The kind of a namespace, kind, field, or entity.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Type",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:type",
+                      "value_type": null
+                    }
+                  ],
+                  "kinds": [
+                    {
+                      "doc": "A field or predicate in the graph.",
+                      "name": "Field",
+                      "uri": "schema:field"
+                    },
+                    {
+                      "doc": "A kind of entity in the graph.",
+                      "name": "Kind",
+                      "uri": "schema:kind"
+                    },
+                    {
+                      "doc": "A namespace that groups related kinds and fields.",
+                      "name": "Namespace",
+                      "uri": "schema:namespace"
+                    }
+                  ],
+                  "namespaces": []
+                },
+                "fields": [
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Calendar",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:calendar",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "End At",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:endAt",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Start At",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:startAt",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Status",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:status",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Long-form documentation.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Documentation",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:doc",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is one or many.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Cardinality",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:cardinality",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is deprecated.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Deprecated",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:deprecated",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind a field applies to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Domain",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:domain",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field participates in entity identity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Identity",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:identity",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The range kind a field may point to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Range",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:range",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The scalar value type a field accepts.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Value Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:valueType",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "A human readable name.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Name",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:name",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Points to another schema entity that is equivalent.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Same As",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:sameAs",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind of a namespace, kind, field, or entity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:type",
+                    "value_type": null
+                  }
+                ],
+                "kinds": [
+                  {
+                    "doc": null,
+                    "name": "Event",
+                    "uri": "gcal:event"
+                  },
+                  {
+                    "doc": "A field or predicate in the graph.",
+                    "name": "Field",
+                    "uri": "schema:field"
+                  },
+                  {
+                    "doc": "A kind of entity in the graph.",
+                    "name": "Kind",
+                    "uri": "schema:kind"
+                  },
+                  {
+                    "doc": "A namespace that groups related kinds and fields.",
+                    "name": "Namespace",
+                    "uri": "schema:namespace"
+                  }
+                ],
+                "namespaces": [
+                  {
+                    "doc": null,
+                    "name": "Google Calendar",
+                    "uri": "gcal:namespace"
+                  }
+                ]
+              },
+              "status": "ok"
+            }
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+            "name": "query_entities",
+            "args": {
+              "filter": "gcal:startAt >= \"2026-03-23\" AND gcal:startAt <= \"2026-03-29\"",
+              "type": "gcal:event"
+            }
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+            "result": {
+              "call_id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+              "data": {
+                "entities": [
+                  {
+                    "entity": null,
+                    "entityUri": "gcal:event:design-review",
+                    "label": null
+                  }
+                ],
+                "query": "schema:type(Entity, \"gcal:event\"), gcal:startAt(Entity, Value0), Value0 >= \"2026-03-23\", gcal:startAt(Entity, Value1), Value1 <= \"2026-03-29\", schema:name(Entity, Name)"
+              },
+              "status": "ok"
+            }
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+            "name": "read_entity",
+            "args": {
+              "entity_uri": "gcal:event:design-review"
+            }
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+            "result": {
+              "call_id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+              "data": {
+                "entity": null
+              },
+              "status": "ok"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 9,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "tool_call",
+      "id": "tool_query_facts_B1TApuCQhXsyNC8n3G1P",
+      "name": "query_facts",
+      "arguments": {
+        "query": "gcal:startAt(E, S), S >= \"2026-03-23T00:00:00\", S <= \"2026-03-29T23:59:59\", schema:name(E, N)"
+      }
+    },
+    {
+      "type": "tool_result",
+      "id": "tool_query_facts_B1TApuCQhXsyNC8n3G1P",
+      "name": "unknown_tool",
+      "result": {
+        "substitutions": [
+          {
+            "bindings": {
+              "E": {
+                "String": "gcal:event:design-review"
+              },
+              "N": {
+                "String": "Design Review"
+              },
+              "S": {
+                "String": "2026-03-25T10:00:00+00:00"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "context_window",
+      "value": [
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "You are Robin, the built-in expert operator for the Poneglyph knowledge graph.\n\nYour job is to help humans and other agents extract, query, and structure graph knowledge safely.\n\nOperating rules:\n- You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.\n- For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.\n- The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.\n- Prefer `query_entities` for \"find entities of kind X matching field filters or time ranges\" tasks.\n- Use `query_facts` for joins, projections, or when `query_entities` cannot express the query you need.\n- Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.\n- Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.\n- If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.\n- Search before write. If a thing may already exist, use `search_entities` first.\n- Facts are append-only truth. Do not describe mutable updates as if records are overwritten.\n- When you need a new entity, prefer `create_entity` before `state_facts`.\n- Keep answers concise and concrete.\n- Never expose secrets or tokens in replies."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Pinnable",
+            "role": "System",
+            "content": "Runtime context:\n- Current local datetime: 2026-03-26 15:26:48 +01:00\n- Current local date: 2026-03-26\n- Current ISO week: 2026-W13\n- Today is: Thursday\n- If the user asks about \"this week\", interpret that relative to the current date unless they provide explicit dates."
+          }
+        },
+        {
+          "Message": {
+            "strategy": "Compactable",
+            "role": "User",
+            "content": "Today is Monday, March 23, 2026. This week means March 23, 2026 through March 29, 2026, inclusive. Answer only from the Poneglyph graph. Do I have any events this week?"
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "name": "get_schema",
+            "args": {}
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "result": {
+              "call_id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+              "data": {
+                "base": {
+                  "fields": [
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Long-form documentation.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Documentation",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:doc",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field is one or many.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Cardinality",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:cardinality",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field is deprecated.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Deprecated",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:deprecated",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The kind a field applies to.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Domain",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:domain",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Whether a field participates in entity identity.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Identity",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:identity",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The range kind a field may point to.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Range",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:range",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The scalar value type a field accepts.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Field Value Type",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:field:valueType",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "A human readable name.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Name",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:name",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "Points to another schema entity that is equivalent.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Same As",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:sameAs",
+                      "value_type": null
+                    },
+                    {
+                      "cardinality": null,
+                      "deprecated": null,
+                      "doc": "The kind of a namespace, kind, field, or entity.",
+                      "domain": null,
+                      "identity": null,
+                      "name": "Type",
+                      "range": null,
+                      "same_as": null,
+                      "uri": "schema:type",
+                      "value_type": null
+                    }
+                  ],
+                  "kinds": [
+                    {
+                      "doc": "A field or predicate in the graph.",
+                      "name": "Field",
+                      "uri": "schema:field"
+                    },
+                    {
+                      "doc": "A kind of entity in the graph.",
+                      "name": "Kind",
+                      "uri": "schema:kind"
+                    },
+                    {
+                      "doc": "A namespace that groups related kinds and fields.",
+                      "name": "Namespace",
+                      "uri": "schema:namespace"
+                    }
+                  ],
+                  "namespaces": []
+                },
+                "fields": [
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Calendar",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:calendar",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "End At",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:endAt",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Start At",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:startAt",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": null,
+                    "domain": "gcal:event",
+                    "identity": null,
+                    "name": "Status",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "gcal:status",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Long-form documentation.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Documentation",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:doc",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is one or many.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Cardinality",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:cardinality",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is deprecated.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Deprecated",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:deprecated",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind a field applies to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Domain",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:domain",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field participates in entity identity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Identity",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:identity",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The range kind a field may point to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Range",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:range",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The scalar value type a field accepts.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Value Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:valueType",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "A human readable name.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Name",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:name",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Points to another schema entity that is equivalent.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Same As",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:sameAs",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind of a namespace, kind, field, or entity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:type",
+                    "value_type": null
+                  }
+                ],
+                "kinds": [
+                  {
+                    "doc": null,
+                    "name": "Event",
+                    "uri": "gcal:event"
+                  },
+                  {
+                    "doc": "A field or predicate in the graph.",
+                    "name": "Field",
+                    "uri": "schema:field"
+                  },
+                  {
+                    "doc": "A kind of entity in the graph.",
+                    "name": "Kind",
+                    "uri": "schema:kind"
+                  },
+                  {
+                    "doc": "A namespace that groups related kinds and fields.",
+                    "name": "Namespace",
+                    "uri": "schema:namespace"
+                  }
+                ],
+                "namespaces": [
+                  {
+                    "doc": null,
+                    "name": "Google Calendar",
+                    "uri": "gcal:namespace"
+                  }
+                ]
+              },
+              "status": "ok"
+            }
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+            "name": "query_entities",
+            "args": {
+              "filter": "gcal:startAt >= \"2026-03-23\" AND gcal:startAt <= \"2026-03-29\"",
+              "type": "gcal:event"
+            }
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+            "result": {
+              "call_id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+              "data": {
+                "entities": [
+                  {
+                    "entity": null,
+                    "entityUri": "gcal:event:design-review",
+                    "label": null
+                  }
+                ],
+                "query": "schema:type(Entity, \"gcal:event\"), gcal:startAt(Entity, Value0), Value0 >= \"2026-03-23\", gcal:startAt(Entity, Value1), Value1 <= \"2026-03-29\", schema:name(Entity, Name)"
+              },
+              "status": "ok"
+            }
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+            "name": "read_entity",
+            "args": {
+              "entity_uri": "gcal:event:design-review"
+            }
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+            "result": {
+              "call_id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+              "data": {
+                "entity": null
+              },
+              "status": "ok"
+            }
+          }
+        },
+        {
+          "ToolCall": {
+            "strategy": "Compactable",
+            "id": "tool_query_facts_B1TApuCQhXsyNC8n3G1P",
+            "name": "query_facts",
+            "args": {
+              "query": "gcal:startAt(E, S), S >= \"2026-03-23T00:00:00\", S <= \"2026-03-29T23:59:59\", schema:name(E, N)"
+            }
+          }
+        },
+        {
+          "ToolResult": {
+            "strategy": "Compactable",
+            "id": "tool_query_facts_B1TApuCQhXsyNC8n3G1P",
+            "result": {
+              "call_id": "tool_query_facts_B1TApuCQhXsyNC8n3G1P",
+              "data": {
+                "substitutions": [
+                  {
+                    "bindings": {
+                      "E": {
+                        "String": "gcal:event:design-review"
+                      },
+                      "N": {
+                        "String": "Design Review"
+                      },
+                      "S": {
+                        "String": "2026-03-25T10:00:00+00:00"
+                      }
+                    }
+                  }
+                ]
+              },
+              "status": "ok"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "request",
+      "value": {
+        "model": "any",
+        "input_items": 11,
+        "temperature": "ProviderDefault",
+        "top_p": "ProviderDefault",
+        "top_k": "ProviderDefault",
+        "token_limit": "ProviderDefault",
+        "response_mode": "Buffered",
+        "tool_choice": "ProviderDefault",
+        "has_tools": true,
+        "expects_typed_response": false
+      }
+    },
+    {
+      "type": "assistant",
+      "value": "Yes, you have one event this week:\n\n*   **Design Review** on 2026-03-25 at 10:00:00+00:00."
+    },
+    {
+      "type": "assistant",
+      "value": "Yes, you have one event this week:\n\n*   **Design Review** on 2026-03-25 at 10:00:00+00:00."
+    },
+    {
+      "type": "grade",
+      "name": "uses-schema-then-query",
+      "score": 1.0,
+      "summary": "agent inspected schema before issuing a graph query",
+      "evidence": {
+        "reply": "Yes, you have one event this week:\n\n*   **Design Review** on 2026-03-25 at 10:00:00+00:00.",
+        "requestedTools": [
+          "get_schema",
+          "query_entities",
+          "read_entity",
+          "query_facts"
+        ],
+        "toolTrace": [
+          {
+            "arguments": {},
+            "error": null,
+            "id": "tool_get_schema_0d7BfFP6wjqP1DH4XHQ3",
+            "name": "unknown_tool",
+            "result": {
+              "base": {
+                "fields": [
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Long-form documentation.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Documentation",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:doc",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is one or many.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Cardinality",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:cardinality",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field is deprecated.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Deprecated",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:deprecated",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind a field applies to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Domain",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:domain",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Whether a field participates in entity identity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Identity",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:identity",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The range kind a field may point to.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Range",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:range",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The scalar value type a field accepts.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Field Value Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:field:valueType",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "A human readable name.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Name",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:name",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "Points to another schema entity that is equivalent.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Same As",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:sameAs",
+                    "value_type": null
+                  },
+                  {
+                    "cardinality": null,
+                    "deprecated": null,
+                    "doc": "The kind of a namespace, kind, field, or entity.",
+                    "domain": null,
+                    "identity": null,
+                    "name": "Type",
+                    "range": null,
+                    "same_as": null,
+                    "uri": "schema:type",
+                    "value_type": null
+                  }
+                ],
+                "kinds": [
+                  {
+                    "doc": "A field or predicate in the graph.",
+                    "name": "Field",
+                    "uri": "schema:field"
+                  },
+                  {
+                    "doc": "A kind of entity in the graph.",
+                    "name": "Kind",
+                    "uri": "schema:kind"
+                  },
+                  {
+                    "doc": "A namespace that groups related kinds and fields.",
+                    "name": "Namespace",
+                    "uri": "schema:namespace"
+                  }
+                ],
+                "namespaces": []
+              },
+              "fields": [
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": null,
+                  "domain": "gcal:event",
+                  "identity": null,
+                  "name": "Calendar",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "gcal:calendar",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": null,
+                  "domain": "gcal:event",
+                  "identity": null,
+                  "name": "End At",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "gcal:endAt",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": null,
+                  "domain": "gcal:event",
+                  "identity": null,
+                  "name": "Start At",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "gcal:startAt",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": null,
+                  "domain": "gcal:event",
+                  "identity": null,
+                  "name": "Status",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "gcal:status",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "Long-form documentation.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Documentation",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:doc",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "Whether a field is one or many.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Field Cardinality",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:field:cardinality",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "Whether a field is deprecated.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Field Deprecated",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:field:deprecated",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "The kind a field applies to.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Field Domain",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:field:domain",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "Whether a field participates in entity identity.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Field Identity",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:field:identity",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "The range kind a field may point to.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Field Range",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:field:range",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "The scalar value type a field accepts.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Field Value Type",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:field:valueType",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "A human readable name.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Name",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:name",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "Points to another schema entity that is equivalent.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Same As",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:sameAs",
+                  "value_type": null
+                },
+                {
+                  "cardinality": null,
+                  "deprecated": null,
+                  "doc": "The kind of a namespace, kind, field, or entity.",
+                  "domain": null,
+                  "identity": null,
+                  "name": "Type",
+                  "range": null,
+                  "same_as": null,
+                  "uri": "schema:type",
+                  "value_type": null
+                }
+              ],
+              "kinds": [
+                {
+                  "doc": null,
+                  "name": "Event",
+                  "uri": "gcal:event"
+                },
+                {
+                  "doc": "A field or predicate in the graph.",
+                  "name": "Field",
+                  "uri": "schema:field"
+                },
+                {
+                  "doc": "A kind of entity in the graph.",
+                  "name": "Kind",
+                  "uri": "schema:kind"
+                },
+                {
+                  "doc": "A namespace that groups related kinds and fields.",
+                  "name": "Namespace",
+                  "uri": "schema:namespace"
+                }
+              ],
+              "namespaces": [
+                {
+                  "doc": null,
+                  "name": "Google Calendar",
+                  "uri": "gcal:namespace"
+                }
+              ]
+            }
+          },
+          {
+            "arguments": {
+              "filter": "gcal:startAt >= \"2026-03-23\" AND gcal:startAt <= \"2026-03-29\"",
+              "type": "gcal:event"
+            },
+            "error": null,
+            "id": "tool_query_entities_BdIZVBz0nywG1XC4fPPH",
+            "name": "unknown_tool",
+            "result": {
+              "entities": [
+                {
+                  "entity": null,
+                  "entityUri": "gcal:event:design-review",
+                  "label": null
+                }
+              ],
+              "query": "schema:type(Entity, \"gcal:event\"), gcal:startAt(Entity, Value0), Value0 >= \"2026-03-23\", gcal:startAt(Entity, Value1), Value1 <= \"2026-03-29\", schema:name(Entity, Name)"
+            }
+          },
+          {
+            "arguments": {
+              "entity_uri": "gcal:event:design-review"
+            },
+            "error": null,
+            "id": "tool_read_entity_JBqC5TpsPQsdlwzVMDqO",
+            "name": "unknown_tool",
+            "result": {
+              "entity": null
+            }
+          },
+          {
+            "arguments": {
+              "query": "gcal:startAt(E, S), S >= \"2026-03-23T00:00:00\", S <= \"2026-03-29T23:59:59\", schema:name(E, N)"
+            },
+            "error": null,
+            "id": "tool_query_facts_B1TApuCQhXsyNC8n3G1P",
+            "name": "unknown_tool",
+            "result": {
+              "substitutions": [
+                {
+                  "bindings": {
+                    "E": {
+                      "String": "gcal:event:design-review"
+                    },
+                    "N": {
+                      "String": "Design Review"
+                    },
+                    "S": {
+                      "String": "2026-03-25T10:00:00+00:00"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "failed": false,
+      "error": null,
+      "step": 0
+    },
+    {
+      "type": "grade",
+      "name": "identifies-in-week-event",
+      "score": 1.0,
+      "summary": "The assistant correctly identified the in-week event 'Design Review' occurring on March 25, 2026, which falls within the requested range of March 23 to March 29, 2026.",
+      "evidence": [
+        "The assistant correctly identified 'Design Review' as the event for the week.",
+        "The date provided (2026-03-25) is within the inclusive range of March 23 to March 29, 2026.",
+        "The assistant did not incorrectly include 'Quarter Planning' or other out-of-range events."
+      ],
+      "failed": false,
+      "error": null,
+      "step": 0
+    }
+  ]
+}

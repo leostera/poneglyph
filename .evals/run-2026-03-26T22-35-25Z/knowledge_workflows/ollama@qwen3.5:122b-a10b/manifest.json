@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T22-35-25Z",
+  "started_at": {
+    "secs": 1774564525,
+    "nanos": 979790000
+  },
+  "finished_at": {
+    "secs": 1774564525,
+    "nanos": 979790000
+  },
+  "suites": [
+    "knowledge_workflows"
+  ],
+  "targets": [
+    {
+      "label": "ollama/qwen3.5:122b-a10b",
+      "provider": "ollama",
+      "model": "qwen3.5:122b-a10b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T22-35-25Z/knowledge_workflows/ollama@qwen3.5:122b-a10b/manifest.json"
+  ]
+}

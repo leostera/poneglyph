@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T13-06-39Z",
+  "started_at": {
+    "secs": 1774530399,
+    "nanos": 841635000
+  },
+  "finished_at": {
+    "secs": 1774530399,
+    "nanos": 841635000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "openrouter/google/gemini-3-flash",
+      "provider": "openrouter",
+      "model": "google/gemini-3-flash",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T13-06-39Z/calendar_this_week/openrouter@google/gemini-3-flash/manifest.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-001__answers_events_this_week__019d2a41-0e63-7230-9776-706edc380ec1.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-002__answers_events_this_week__019d2a41-1069-7712-adf0-6c257d88feaf.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-003__answers_events_this_week__019d2a41-124c-7631-8caf-c9e67078ab46.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-004__answers_events_this_week__019d2a41-1457-73e3-8710-1bb675e66e67.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-005__answers_events_this_week__019d2a41-156a-7291-8a27-4897aac5a71a.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-006__answers_events_this_week__019d2a41-1687-7fc1-9ccc-1782c9714297.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-007__answers_events_this_week__019d2a41-1709-7932-a0bb-17b87d63afb5.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-008__answers_events_this_week__019d2a41-17b0-7a53-9360-78c5caea5371.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-009__answers_events_this_week__019d2a41-18af-7f81-80d3-1844d7418b6e.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/answers_events_this_week/openrouter@google/gemini-3-flash/trial-010__answers_events_this_week__019d2a41-1924-78d0-93cc-aa9ac15f36e5.json",
+    "run-2026-03-26T13-06-39Z/calendar_this_week/openrouter@google/gemini-3-flash/suite-summary.json"
+  ]
+}

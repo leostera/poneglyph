@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T19-00-08Z",
+  "started_at": {
+    "secs": 1774551608,
+    "nanos": 926130000
+  },
+  "finished_at": {
+    "secs": 1774551608,
+    "nanos": 926130000
+  },
+  "suites": [
+    "knowledge_workflows"
+  ],
+  "targets": [
+    {
+      "label": "ollama/qwen3.5:122b-a10b",
+      "provider": "ollama",
+      "model": "qwen3.5:122b-a10b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/ollama@qwen3.5:122b-a10b/manifest.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-001__answers_events_today__019d2b84-ae6e-7322-a84d-e2fdd7b769b5.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-002__answers_events_today__019d2b84-af39-7bf3-8e1c-925063ba2b8a.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-003__answers_events_today__019d2b84-b017-7c90-8a30-009a6079f785.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-004__answers_events_today__019d2b84-b0a0-7e52-9c69-38eb75fb8a62.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-005__answers_events_today__019d2b85-9b03-7db3-8063-cc2129448657.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-006__answers_events_today__019d2b86-8568-7660-afdc-0102113c1d46.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-007__answers_events_today__019d2b87-6fcb-7e91-8a6e-fc23467c2b71.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-008__answers_events_today__019d2b88-5a2e-7ab2-8c6e-228b53a7751e.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-009__answers_events_today__019d2b89-4490-75b3-818f-eb7833c81820.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_today/ollama@qwen3.5:122b-a10b/trial-010__answers_events_today__019d2b8a-2ef4-7542-9b8b-c6c8f1fa5bfb.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-001__answers_events_this_month__019d2b8b-1956-7511-a2f2-7e7da56d38c8.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-002__answers_events_this_month__019d2b8c-03b9-7fd1-865f-bcfd6894b140.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-003__answers_events_this_month__019d2b8c-ee1c-7832-ba18-9231a6a6c076.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-004__answers_events_this_month__019d2b8d-d883-7262-8a7c-d0e5bf5f89d0.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-005__answers_events_this_month__019d2b8e-c2e6-7e12-8322-33b02b9f892e.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-006__answers_events_this_month__019d2b8f-ad4a-7953-8c70-31305c63a037.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-007__answers_events_this_month__019d2b90-97ae-78f3-8f46-45ad2a771a32.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-008__answers_events_this_month__019d2b91-8211-7980-8859-5feff03313ec.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-009__answers_events_this_month__019d2b92-6c74-7bb2-a0f2-cd6120bc6b2e.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_events_this_month/ollama@qwen3.5:122b-a10b/trial-010__answers_events_this_month__019d2b93-56db-70e1-8619-da5bfc1a6165.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-001__answers_email_question_from_gmail__019d2b94-413f-7eb1-be5c-f4cea5fbeb53.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-002__answers_email_question_from_gmail__019d2b95-2ba5-7ae2-aa37-0c8b304f28ad.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-003__answers_email_question_from_gmail__019d2b96-160a-7e62-96be-3a22b8f26e1e.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-004__answers_email_question_from_gmail__019d2b97-0071-7532-80d1-84d071e827eb.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-005__answers_email_question_from_gmail__019d2b97-ead5-7323-a935-e96cd05cc873.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-006__answers_email_question_from_gmail__019d2b98-d539-7bd0-9dd4-ed8ad13e2fe7.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-007__answers_email_question_from_gmail__019d2b99-bf9e-74a0-86e0-c934a179a2c4.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-008__answers_email_question_from_gmail__019d2b9a-aa04-7fe2-b5bd-bb0517930d41.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-009__answers_email_question_from_gmail__019d2b9b-946a-7703-b961-73d2e016318b.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/answers_email_question_from_gmail/ollama@qwen3.5:122b-a10b/trial-010__answers_email_question_from_gmail__019d2b9c-7ed0-7c62-a3a4-d526dfa08b9c.json",
+    "run-2026-03-26T19-00-08Z/knowledge_workflows/ollama@qwen3.5:122b-a10b/suite-summary.json"
+  ]
+}

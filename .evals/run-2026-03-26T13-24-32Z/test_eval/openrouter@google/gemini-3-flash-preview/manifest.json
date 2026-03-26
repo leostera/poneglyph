@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T13-24-32Z",
+  "started_at": {
+    "secs": 1774531472,
+    "nanos": 84619000
+  },
+  "finished_at": {
+    "secs": 1774531472,
+    "nanos": 84619000
+  },
+  "suites": [
+    "test_eval"
+  ],
+  "targets": [
+    {
+      "label": "openrouter/google/gemini-3-flash-preview",
+      "provider": "openrouter",
+      "model": "google/gemini-3-flash-preview",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T13-24-32Z/test_eval/openrouter@google/gemini-3-flash-preview/manifest.json",
+    "run-2026-03-26T13-24-32Z/test_eval/dummy_eval/openrouter@google/gemini-3-flash-preview/trial-001__dummy_eval__019d2a51-6ad9-7440-9873-32cccb5abd7b.json"
+  ]
+}

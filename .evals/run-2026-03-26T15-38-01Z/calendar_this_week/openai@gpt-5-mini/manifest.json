@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T15-38-01Z",
+  "started_at": {
+    "secs": 1774539481,
+    "nanos": 66688000
+  },
+  "finished_at": {
+    "secs": 1774539481,
+    "nanos": 66688000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "openai/gpt-5-mini",
+      "provider": "openai",
+      "model": "gpt-5-mini",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T15-38-01Z/calendar_this_week/openai@gpt-5-mini/manifest.json",
+    "run-2026-03-26T15-38-01Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-001__answers_events_this_week__019d2acb-9fea-7511-8e77-1d92db7490ec.json",
+    "run-2026-03-26T15-38-01Z/calendar_this_week/answers_events_this_week/openai@gpt-5-mini/trial-002__answers_events_this_week__019d2acc-4d38-76d0-be20-7800059c7908.json"
+  ]
+}

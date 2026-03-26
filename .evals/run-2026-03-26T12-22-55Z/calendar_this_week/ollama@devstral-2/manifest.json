@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T12-22-55Z",
+  "started_at": {
+    "secs": 1774528914,
+    "nanos": 644220000
+  },
+  "finished_at": {
+    "secs": 1774528914,
+    "nanos": 644220000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/devstral-2",
+      "provider": "ollama",
+      "model": "devstral-2",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T12-22-55Z/calendar_this_week/ollama@devstral-2/manifest.json"
+  ]
+}

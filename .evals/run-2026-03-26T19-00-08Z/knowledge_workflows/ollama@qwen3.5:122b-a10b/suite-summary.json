@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T19-00-08Z",
+  "suite_id": "knowledge_workflows",
+  "target": {
+    "label": "ollama/qwen3.5:122b-a10b",
+    "provider": "ollama",
+    "model": "qwen3.5:122b-a10b",
+    "max_in_flight": 1
+  },
+  "total_evals": 3,
+  "total_trials": 30,
+  "passed_trials": 0,
+  "pass_rate": 0.0,
+  "mean_score": 0.0,
+  "mean_duration": {
+    "secs": 54,
+    "nanos": 20959645
+  },
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "evals": [
+    {
+      "eval_id": "answers_events_today",
+      "trial_count": 10,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.0,
+      "mean_duration": {
+        "secs": 42,
+        "nanos": 57060996
+      },
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "grader_means": []
+    },
+    {
+      "eval_id": "answers_events_this_month",
+      "trial_count": 10,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.0,
+      "mean_duration": {
+        "secs": 60,
+        "nanos": 2549591
+      },
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "grader_means": []
+    },
+    {
+      "eval_id": "answers_email_question_from_gmail",
+      "trial_count": 10,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.0,
+      "mean_duration": {
+        "secs": 60,
+        "nanos": 3268350
+      },
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "grader_means": []
+    }
+  ]
+}

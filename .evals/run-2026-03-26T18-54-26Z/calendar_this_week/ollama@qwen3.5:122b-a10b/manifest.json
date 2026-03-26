@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T18-54-26Z",
+  "started_at": {
+    "secs": 1774551266,
+    "nanos": 190710000
+  },
+  "finished_at": {
+    "secs": 1774551266,
+    "nanos": 190710000
+  },
+  "suites": [
+    "calendar_this_week"
+  ],
+  "targets": [
+    {
+      "label": "ollama/qwen3.5:122b-a10b",
+      "provider": "ollama",
+      "model": "qwen3.5:122b-a10b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T18-54-26Z/calendar_this_week/ollama@qwen3.5:122b-a10b/manifest.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-001__answers_events_this_week__019d2b7f-738f-7f12-b0a4-dc07cbf87d7f.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-002__answers_events_this_week__019d2b80-5df4-74c1-b72f-b51ad7f41772.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-003__answers_events_this_week__019d2b81-4857-77a2-a0f1-32702e39b0fc.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-004__answers_events_this_week__019d2b82-32bc-7790-b14e-a3b62839e9d8.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-005__answers_events_this_week__019d2b83-1d20-7a00-85bb-2d50d700469c.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-006__answers_events_this_week__019d2b84-0783-7260-8adc-4ede267a806a.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-007__answers_events_this_week__019d2b84-ac59-7570-b097-59522c5ac533.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-008__answers_events_this_week__019d2b84-ad87-7a51-b785-520d382ec375.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-009__answers_events_this_week__019d2b84-adfe-7f32-be3c-2434edf63f88.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/answers_events_this_week/ollama@qwen3.5:122b-a10b/trial-010__answers_events_this_week__019d2b84-af34-7d13-92c9-beea7e311e64.json",
+    "run-2026-03-26T18-54-26Z/calendar_this_week/ollama@qwen3.5:122b-a10b/suite-summary.json"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T13-24-32Z",
+  "started_at": {
+    "secs": 1774531472,
+    "nanos": 77047000
+  },
+  "finished_at": {
+    "secs": 1774531472,
+    "nanos": 77047000
+  },
+  "suites": [
+    "test_eval"
+  ],
+  "targets": [
+    {
+      "label": "ollama/llama3.3:70b",
+      "provider": "ollama",
+      "model": "llama3.3:70b",
+      "max_in_flight": 1
+    }
+  ],
+  "files": [
+    "run-2026-03-26T13-24-32Z/test_eval/ollama@llama3.3:70b/manifest.json"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "run_id": "run-2026-03-26T18-41-37Z",
+  "suite_id": "knowledge_workflows",
+  "target": {
+    "label": "ollama/llama3.3:70b",
+    "provider": "ollama",
+    "model": "llama3.3:70b",
+    "max_in_flight": 1
+  },
+  "total_evals": 3,
+  "total_trials": 30,
+  "passed_trials": 0,
+  "pass_rate": 0.0,
+  "mean_score": 0.0,
+  "mean_duration": {
+    "secs": 49,
+    "nanos": 76413192
+  },
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "evals": [
+    {
+      "eval_id": "answers_events_today",
+      "trial_count": 10,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.0,
+      "mean_duration": {
+        "secs": 60,
+        "nanos": 2047812
+      },
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "grader_means": []
+    },
+    {
+      "eval_id": "answers_events_this_month",
+      "trial_count": 10,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.0,
+      "mean_duration": {
+        "secs": 51,
+        "nanos": 142839295
+      },
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "grader_means": []
+    },
+    {
+      "eval_id": "answers_email_question_from_gmail",
+      "trial_count": 10,
+      "passed_trials": 0,
+      "pass_rate": 0.0,
+      "mean_score": 0.0,
+      "mean_duration": {
+        "secs": 36,
+        "nanos": 84352470
+      },
+      "usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0
+      },
+      "grader_means": []
+    }
+  ]
+}

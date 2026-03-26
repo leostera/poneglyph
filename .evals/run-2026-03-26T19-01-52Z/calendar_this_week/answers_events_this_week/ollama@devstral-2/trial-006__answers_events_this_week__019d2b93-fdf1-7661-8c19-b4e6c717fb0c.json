@@ -1,0 +1,31 @@
+{
+  "trial_id": "019d2b93-fdf1-7661-8c19-b4e6c717fb0c",
+  "suite_id": "calendar_this_week",
+  "eval_id": "answers_events_this_week",
+  "target": {
+    "label": "ollama/devstral-2"
+  },
+  "timing": {
+    "started_at_ms": 1774552612337,
+    "finished_at_ms": 1774552672340,
+    "duration_ms": 60003
+  },
+  "grading": {
+    "passed": false,
+    "mean_score": 0.0,
+    "error": {
+      "kind": "eval_error",
+      "error": {
+        "TrialTimedOut": {
+          "duration_ms": 60000
+        }
+      }
+    }
+  },
+  "usage": {
+    "prompt_tokens": 0,
+    "completion_tokens": 0,
+    "total_tokens": 0
+  },
+  "transcript": []
+}
