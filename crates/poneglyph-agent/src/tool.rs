@@ -52,7 +52,8 @@ pub const QUERY_FACTS_TOOL_DESCRIPTION: &str = r#"Run a Datafox query over the a
 
 Use `get_schema` first to discover the real namespaces, kinds, and field URIs.
 Never invent predicates like `spotify:event:week` or other helper functions that are not present in schema.
-This is the only free-form graph query tool. There is no `query_entities` tool, no SPARQL, and no SQL.
+This is the free-form graph query tool. For simpler "find entities of kind X matching field filters" tasks, prefer `query_entities`.
+There is no SPARQL and no SQL.
 Do not emit tool-call JSON in assistant text. Call `query_facts` directly.
 
 Supported grammar:
@@ -102,8 +103,8 @@ Use this before querying or writing new schema so you can discover:
 - fields
 - field domains, ranges, and value types when available
 
-After reading schema, use the real field URIs you found there with `query_facts`.
-Do not invent other query tools.
+After reading schema, use the real field URIs you found there with `query_facts` or `query_entities`.
+Do not invent other query tools or query languages.
 
 Example:
 {}"#;
@@ -656,7 +657,7 @@ mod tests {
     use agents::tools::TypedTool;
     use serde_json::Value as JsonValue;
 
-    use super::{PoneglyphTool, ValueInput, ValueInputKind};
+    use super::{PoneglyphTool, QUERY_FACTS_TOOL_DESCRIPTION, ValueInput, ValueInputKind};
 
     #[test]
     fn state_facts_schema_avoids_one_of() {
@@ -742,5 +743,19 @@ mod tests {
         let encoded = serde_json::to_value(value).expect("serialize value input");
         assert_eq!(encoded["type"], "text");
         assert_eq!(encoded["text"], "Dune");
+    }
+
+    #[test]
+    fn query_tool_descriptions_match_registered_tools() {
+        let definitions = PoneglyphTool::tool_definitions();
+        let names = definitions
+            .iter()
+            .map(|definition| definition.function.name.as_str())
+            .collect::<Vec<_>>();
+
+        assert!(names.contains(&"query_facts"));
+        assert!(names.contains(&"query_entities"));
+        assert!(QUERY_FACTS_TOOL_DESCRIPTION.contains("prefer `query_entities`"));
+        assert!(!QUERY_FACTS_TOOL_DESCRIPTION.contains("There is no `query_entities` tool"));
     }
 }
