@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use agents::error::{Error as LlmError, LlmResult};
@@ -8,10 +8,12 @@ use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use poneglyph::{Entity, Fact, Poneglyph, Uri, Value, fact, uri};
 use schemars::JsonSchema;
+use schemars::generate::SchemaSettings;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value as JsonValue, json};
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct CreateEntityArgs {
     pub namespace: String,
     pub kind: String,
@@ -19,28 +21,33 @@ pub struct CreateEntityArgs {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct SearchEntitiesArgs {
     pub query: String,
     pub limit: Option<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct ReadEntityArgs {
     pub entity_uri: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct QueryFactsArgs {
     pub query: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct StateFactsArgs {
     pub entities: Vec<String>,
     pub facts: Vec<FactInput>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub struct FactInput {
     pub source: Option<String>,
     pub entity: String,
@@ -51,18 +58,39 @@ pub struct FactInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(tag = "type", content = "value", rename_all = "snake_case")]
-pub enum ValueInput {
+#[serde(rename_all = "snake_case")]
+pub enum ValueInputKind {
     Null,
-    Text(String),
-    Number(String),
-    Boolean(bool),
-    Bytes(Vec<u8>),
-    Reference(String),
-    Date(#[schemars(with = "String")] NaiveDate),
-    DateTime(#[schemars(with = "String")] DateTime<Utc>),
-    List(Vec<ValueInput>),
-    Map(BTreeMap<String, ValueInput>),
+    Text,
+    Number,
+    Boolean,
+    Bytes,
+    Reference,
+    Date,
+    DateTime,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ValueInput {
+    #[serde(rename = "type")]
+    pub kind: ValueInputKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub number: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub boolean: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bytes: Option<Vec<u8>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<String>")]
+    pub date: Option<NaiveDate>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Option<String>")]
+    pub date_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
@@ -118,7 +146,7 @@ impl agents::tools::TypedTool for PoneglyphTool {
                 Some(
                     "Append one atomic batch of facts. Prefer create_entity or search_entities before using this when the entity identity is not already known.",
                 ),
-                state_facts_schema(),
+                schema_for::<StateFactsArgs>(),
             ),
         ]
     }
@@ -259,7 +287,7 @@ impl PoneglyphToolRunner {
 }
 
 impl TryFrom<FactInput> for Fact {
-    type Error = poneglyph::Error;
+    type Error = anyhow::Error;
 
     fn try_from(input: FactInput) -> Result<Self, Self::Error> {
         let source = match input.source {
@@ -276,35 +304,27 @@ impl TryFrom<FactInput> for Fact {
         } else {
             builder.assert()
         };
-        builder.build()
+        Ok(builder.build()?)
     }
 }
 
 impl TryFrom<ValueInput> for Value {
-    type Error = poneglyph::Error;
+    type Error = anyhow::Error;
 
     fn try_from(value: ValueInput) -> Result<Self, Self::Error> {
-        Ok(match value {
-            ValueInput::Null => Value::Null,
-            ValueInput::Text(value) => Value::Text(value),
-            ValueInput::Number(value) => Value::Number(value),
-            ValueInput::Boolean(value) => Value::Boolean(value),
-            ValueInput::Bytes(value) => Value::Bytes(value),
-            ValueInput::Reference(value) => Value::Reference(Uri::parse(value)?),
-            ValueInput::Date(value) => Value::Date(value),
-            ValueInput::DateTime(value) => Value::DateTime(value),
-            ValueInput::List(values) => Value::List(
-                values
-                    .into_iter()
-                    .map(TryInto::try_into)
-                    .collect::<Result<Vec<_>, _>>()?,
-            ),
-            ValueInput::Map(values) => Value::Map(
-                values
-                    .into_iter()
-                    .map(|(key, value)| value.try_into().map(|value| (key, value)))
-                    .collect::<Result<_, _>>()?,
-            ),
+        Ok(match value.kind {
+            ValueInputKind::Null => Value::Null,
+            ValueInputKind::Text => Value::Text(require_field(value.text, "text")?),
+            ValueInputKind::Number => Value::Number(require_field(value.number, "number")?),
+            ValueInputKind::Boolean => Value::Boolean(require_field(value.boolean, "boolean")?),
+            ValueInputKind::Bytes => Value::Bytes(require_field(value.bytes, "bytes")?),
+            ValueInputKind::Reference => {
+                Value::Reference(Uri::parse(require_field(value.reference, "reference")?)?)
+            }
+            ValueInputKind::Date => Value::Date(require_field(value.date, "date")?),
+            ValueInputKind::DateTime => {
+                Value::DateTime(require_field(value.date_time, "date_time")?)
+            }
         })
     }
 }
@@ -339,76 +359,52 @@ fn entity_label(entity: &Entity) -> Option<String> {
 }
 
 fn schema_for<T: JsonSchema>() -> JsonValue {
-    serde_json::to_value(schemars::schema_for!(T)).expect("json schema")
+    let schema = SchemaSettings::draft07()
+        .with(|settings| {
+            settings.meta_schema = None;
+            settings.inline_subschemas = true;
+        })
+        .into_generator()
+        .into_root_schema_for::<T>();
+    let mut value = serde_json::to_value(schema).expect("json schema");
+    sanitize_openai_schema(&mut value);
+    value
 }
 
-fn state_facts_schema() -> JsonValue {
-    json!({
-        "type": "object",
-        "properties": {
-            "entities": {
-                "type": "array",
-                "description": "Entity URIs that this fact batch is allowed to reference.",
-                "items": { "type": "string" }
-            },
-            "facts": {
-                "type": "array",
-                "description": "Facts to append in one atomic batch.",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "source": {
-                            "type": "string",
-                            "description": "Optional source URI. If omitted, poneglyph:agent is used."
-                        },
-                        "entity": {
-                            "type": "string",
-                            "description": "Entity URI receiving the fact."
-                        },
-                        "field": {
-                            "type": "string",
-                            "description": "Field URI for the fact."
-                        },
-                        "value": {
-                            "type": "object",
-                            "description": "Poneglyph value encoded as { type, value }. Supported types: null, text, number, boolean, bytes, reference, date, date_time, list, map. For null, omit value. For list, value is an array of nested encoded values. For map, value is an object whose property values are nested encoded values.",
-                            "properties": {
-                                "type": {
-                                    "type": "string",
-                                    "enum": [
-                                        "null",
-                                        "text",
-                                        "number",
-                                        "boolean",
-                                        "bytes",
-                                        "reference",
-                                        "date",
-                                        "date_time",
-                                        "list",
-                                        "map"
-                                    ]
-                                },
-                                "value": {
-                                    "description": "Variant payload. Use a string for text, number, reference, date, and date_time; a boolean for boolean; an array of integers for bytes; an array of nested values for list; and an object whose values are nested values for map."
-                                }
-                            },
-                            "required": ["type"],
-                            "additionalProperties": false
-                        },
-                        "retraction": {
-                            "type": "boolean",
-                            "description": "When true, the fact is appended as a retraction.",
-                            "default": false
-                        }
-                    },
-                    "required": ["entity", "field", "value"],
-                    "additionalProperties": false
-                }
+fn require_field<T>(value: Option<T>, field: &str) -> anyhow::Result<T> {
+    value.ok_or_else(|| anyhow::anyhow!("missing `{field}` for value input"))
+}
+
+fn sanitize_openai_schema(value: &mut JsonValue) {
+    match value {
+        JsonValue::Object(object) => {
+            object.remove("$schema");
+            object.remove("title");
+            object.remove("examples");
+            object.remove("default");
+            object.remove("definitions");
+            object.remove("$defs");
+
+            if object.contains_key("properties") {
+                object
+                    .entry("type".to_string())
+                    .or_insert_with(|| JsonValue::String("object".to_string()));
+                object
+                    .entry("additionalProperties".to_string())
+                    .or_insert(JsonValue::Bool(false));
             }
-        },
-        "required": ["entities", "facts"],
-        "additionalProperties": false
-    })
+
+            for child in object.values_mut() {
+                sanitize_openai_schema(child);
+            }
+        }
+        JsonValue::Array(values) => {
+            for value in values {
+                sanitize_openai_schema(value);
+            }
+        }
+        _ => {}
+    }
 }
 
 #[cfg(test)]
@@ -416,7 +412,7 @@ mod tests {
     use agents::tools::TypedTool;
     use serde_json::Value as JsonValue;
 
-    use super::PoneglyphTool;
+    use super::{PoneglyphTool, ValueInput, ValueInputKind};
 
     #[test]
     fn state_facts_schema_avoids_one_of() {
@@ -431,6 +427,26 @@ mod tests {
             !contains_one_of(&schema),
             "state_facts schema must not use oneOf because OpenAI function schemas reject it"
         );
+        assert_eq!(
+            schema
+                .pointer("/properties/facts/items/properties/value/type")
+                .and_then(JsonValue::as_str),
+            Some("object")
+        );
+        assert!(
+            !contains_property_schema_without_type(&schema),
+            "derived schemas with properties must declare a type or be a $ref"
+        );
+        assert!(
+            !contains_ref(&schema),
+            "state_facts schema must not use $ref because OpenAI tool validation is fragile around refs"
+        );
+        assert!(
+            !schema
+                .as_object()
+                .is_some_and(|object| object.contains_key("$defs")),
+            "sanitized tool schemas must not include $defs"
+        );
     }
 
     fn contains_one_of(value: &JsonValue) -> bool {
@@ -441,5 +457,46 @@ mod tests {
             JsonValue::Array(values) => values.iter().any(contains_one_of),
             _ => false,
         }
+    }
+
+    fn contains_property_schema_without_type(value: &JsonValue) -> bool {
+        match value {
+            JsonValue::Object(object) => {
+                let missing_type = object.contains_key("properties")
+                    && !object.contains_key("type")
+                    && !object.contains_key("$ref");
+                missing_type || object.values().any(contains_property_schema_without_type)
+            }
+            JsonValue::Array(values) => values.iter().any(contains_property_schema_without_type),
+            _ => false,
+        }
+    }
+
+    fn contains_ref(value: &JsonValue) -> bool {
+        match value {
+            JsonValue::Object(object) => {
+                object.contains_key("$ref") || object.values().any(contains_ref)
+            }
+            JsonValue::Array(values) => values.iter().any(contains_ref),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn value_input_serializes_without_one_of_shape() {
+        let value = ValueInput {
+            kind: ValueInputKind::Text,
+            text: Some("Dune".to_string()),
+            number: None,
+            boolean: None,
+            bytes: None,
+            reference: None,
+            date: None,
+            date_time: None,
+        };
+
+        let encoded = serde_json::to_value(value).expect("serialize value input");
+        assert_eq!(encoded["type"], "text");
+        assert_eq!(encoded["text"], "Dune");
     }
 }
