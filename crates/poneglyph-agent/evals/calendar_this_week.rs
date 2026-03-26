@@ -3,8 +3,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use chrono::{TimeZone, Utc};
 use evals::{
-    EvalContext, GradeResult, GradingConfig, RecordedEvent, Trajectory, eval, predicate, suite,
-    trajectory,
+    EvalContext, GradeResult, GradingConfig, RecordedEvent, Trajectory, eval, judge, predicate,
+    suite, trajectory,
 };
 use poneglyph::{Poneglyph, Value, Workspace, fact, uri};
 use tempfile::tempdir;
@@ -37,6 +37,16 @@ async fn new_agent(ctx: EvalContext<()>) -> Result<PoneglyphAgent> {
     tags = ["poneglyph-agent", "calendar", "gcal", "querying"],
 )]
 async fn answers_events_this_week(_ctx: EvalContext<()>) -> Result<Trajectory<PoneglyphAgent, ()>> {
+    let answer_quality_rubric = format!(
+        "Read the transcript and final reply. Grade whether the assistant correctly answered the user's question about events this week using the graph.\n\
+         Score 1.0 when the answer clearly says there is an in-week event and correctly identifies `{}` as happening during March 23, 2026 through March 29, 2026, inclusive.\n\
+         Score 1.0 even if the answer includes extra grounded details like the entity URI, timestamps, status, or calendar, as long as the answer remains correct.\n\
+         Score 1.0 if the event name is presented in equivalent human-readable form.\n\
+         Score 0.0 if the answer says there are no in-week events, fails to identify the in-week event, or incorrectly treats `{}` as being in the requested week.\n\
+         Use intermediate scores only for partially correct but still materially flawed answers.",
+        IN_WEEK_EVENT_NAME, OUT_OF_WEEK_EVENT_NAME,
+    );
+
     Ok(trajectory![
         user!(WEEKLY_CALENDAR_PROMPT),
         assistant!(GradingConfig::new()
@@ -81,40 +91,7 @@ async fn answers_events_this_week(_ctx: EvalContext<()>) -> Result<Trajectory<Po
                     }),
                 })
             }))
-            .grader(predicate("identifies-in-week-event", |trial, _ctx| async move {
-                let reply: String = trial.final_reply.unwrap_or_default();
-                let reply_lower = reply.to_lowercase();
-                let mentions_in_week = reply_lower.contains(&IN_WEEK_EVENT_NAME.to_lowercase());
-                let excludes_out_of_week =
-                    !reply_lower.contains(&OUT_OF_WEEK_EVENT_NAME.to_lowercase());
-
-                let (score, summary) = if mentions_in_week && excludes_out_of_week {
-                    (
-                        1.0,
-                        "agent identified the in-week event without leaking the out-of-week event"
-                            .to_string(),
-                    )
-                } else if !mentions_in_week {
-                    (
-                        0.0,
-                        "agent did not mention the event that actually occurs this week"
-                            .to_string(),
-                    )
-                } else {
-                    (
-                        0.0,
-                        "agent included an event that falls outside the requested week".to_string(),
-                    )
-                };
-
-                Ok(GradeResult {
-                    score,
-                    summary,
-                    evidence: serde_json::json!({
-                        "reply": reply,
-                    }),
-                })
-            }))),
+            .grader(judge("identifies-in-week-event", answer_quality_rubric))),
     ])
 }
 
