@@ -7,10 +7,12 @@ edition = "2024"
 chrono.workspace = true
 datafox.workspace = true
 derive_builder.workspace = true
+notify.workspace = true
 poneglyph = { path = "../poneglyph" }
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

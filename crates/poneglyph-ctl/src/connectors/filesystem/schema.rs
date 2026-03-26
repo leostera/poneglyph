@@ -80,6 +80,18 @@ impl FilesystemSchema {
             false,
         ));
         facts.extend(Self::field(
+            uri!("filesystem:contentHash"),
+            "Content Hash",
+            uri!("filesystem:file"),
+            true,
+        ));
+        facts.extend(Self::field(
+            uri!("filesystem:became"),
+            "Became",
+            uri!("filesystem:file"),
+            false,
+        ));
+        facts.extend(Self::field(
             uri!("filesystem:root"),
             "Root",
             uri!("filesystem:file"),

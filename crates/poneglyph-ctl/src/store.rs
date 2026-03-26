@@ -113,6 +113,17 @@ pub struct SaveFilesystemConnection {
     pub root_path: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FilesystemPathState {
+    pub id: i64,
+    pub connection_id: i64,
+    pub relative_path: String,
+    pub last_content_hash: Option<String>,
+    pub last_seen_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Clone)]
 pub struct CtlStore {
     pool: SqlitePool,
@@ -993,6 +1004,72 @@ impl CtlStore {
 
         Ok(result.rows_affected() > 0)
     }
+
+    pub async fn filesystem_path_state(
+        &self,
+        connection_id: i64,
+        relative_path: &str,
+    ) -> CtlResult<Option<FilesystemPathState>> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                id,
+                connection_id,
+                relative_path,
+                last_content_hash,
+                last_seen_at,
+                created_at,
+                updated_at
+            FROM filesystem_path_state
+            WHERE connection_id = ? AND relative_path = ?
+            "#,
+        )
+        .bind(connection_id)
+        .bind(relative_path)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        row.map(decode_filesystem_path_state).transpose()
+    }
+
+    pub async fn save_filesystem_path_state(
+        &self,
+        connection_id: i64,
+        relative_path: &str,
+        last_content_hash: Option<&str>,
+    ) -> CtlResult<FilesystemPathState> {
+        let now = Utc::now().to_rfc3339();
+        sqlx::query(
+            r#"
+            INSERT INTO filesystem_path_state (
+                connection_id,
+                relative_path,
+                last_content_hash,
+                last_seen_at,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(connection_id, relative_path) DO UPDATE SET
+                last_content_hash = excluded.last_content_hash,
+                last_seen_at = excluded.last_seen_at,
+                updated_at = excluded.updated_at
+            "#,
+        )
+        .bind(connection_id)
+        .bind(relative_path)
+        .bind(last_content_hash)
+        .bind(&now)
+        .bind(&now)
+        .bind(&now)
+        .execute(&self.pool)
+        .await
+        .map_err(|error| CtlError::StoreQuery(error.to_string()))?;
+
+        self.filesystem_path_state(connection_id, relative_path)
+            .await?
+            .ok_or_else(|| CtlError::StoreQuery("saved filesystem path state missing".into()))
+    }
 }
 
 fn resolve_db_path(path: &Path) -> PathBuf {
@@ -1480,6 +1557,44 @@ mod tests {
             0
         );
     }
+
+    #[tokio::test]
+    async fn ctl_store_tracks_filesystem_path_state() {
+        let tempdir = tempdir().expect("tempdir");
+        let db_path = tempdir.path().join("control.db");
+        let store = CtlStore::open(&db_path).await.expect("store");
+
+        let root = tempdir.path().join("documents");
+        std::fs::create_dir_all(&root).expect("create root");
+        let connection = store
+            .save_filesystem_connection(SaveFilesystemConnection {
+                name: "Documents".to_string(),
+                root_path: root.to_string_lossy().to_string(),
+            })
+            .await
+            .expect("save connection");
+
+        let first = store
+            .save_filesystem_path_state(connection.id, "notes/today.md", Some("hash-a"))
+            .await
+            .expect("save first");
+        assert_eq!(first.last_content_hash.as_deref(), Some("hash-a"));
+
+        let second = store
+            .save_filesystem_path_state(connection.id, "notes/today.md", Some("hash-b"))
+            .await
+            .expect("save second");
+        assert_eq!(second.id, first.id);
+        assert_eq!(second.last_content_hash.as_deref(), Some("hash-b"));
+
+        let loaded = store
+            .filesystem_path_state(connection.id, "notes/today.md")
+            .await
+            .expect("load")
+            .expect("exists");
+        assert_eq!(loaded.id, first.id);
+        assert_eq!(loaded.last_content_hash.as_deref(), Some("hash-b"));
+    }
 }
 
 fn decode_google_oauth_connection(
@@ -1790,6 +1905,47 @@ fn decode_filesystem_connection(row: sqlx::sqlite::SqliteRow) -> CtlResult<Files
         canonical_root_path: row
             .try_get("canonical_root_path")
             .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        created_at,
+        updated_at,
+    })
+}
+
+fn decode_filesystem_path_state(row: sqlx::sqlite::SqliteRow) -> CtlResult<FilesystemPathState> {
+    use sqlx::Row;
+
+    let last_seen_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("last_seen_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let created_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("created_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+    let updated_at = DateTime::parse_from_rfc3339(
+        &row.try_get::<String, _>("updated_at")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+    )
+    .map_err(|error| CtlError::StoreQuery(error.to_string()))?
+    .with_timezone(&Utc);
+
+    Ok(FilesystemPathState {
+        id: row
+            .try_get("id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        connection_id: row
+            .try_get("connection_id")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        relative_path: row
+            .try_get("relative_path")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        last_content_hash: row
+            .try_get("last_content_hash")
+            .map_err(|error| CtlError::StoreQuery(error.to_string()))?,
+        last_seen_at,
         created_at,
         updated_at,
     })

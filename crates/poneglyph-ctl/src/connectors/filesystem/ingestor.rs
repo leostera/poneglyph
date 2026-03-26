@@ -10,6 +10,8 @@ pub(super) struct FilesystemFileSnapshot {
     pub(super) size_bytes: Option<u64>,
     pub(super) modified_at: Option<DateTime<Utc>>,
     pub(super) extension: Option<String>,
+    pub(super) content_hash: Option<String>,
+    pub(super) previous_content_hash: Option<String>,
 }
 
 pub(super) fn root_facts(connection_id: i64, name: &str, root_path: &str) -> Vec<Fact> {
@@ -50,9 +52,8 @@ pub(super) fn file_facts(
 
     for file in files {
         let entity_key = format!(
-            "{}:{}",
-            connection_id,
-            encode_uri_part(file.relative_path.as_str())
+            "{connection_id}:{}",
+            file_identity(file.relative_path.as_str(), file.content_hash.as_deref())
         );
         let entity = uri!("filesystem", "file", entity_key.as_str());
         let name = Path::new(file.absolute_path.as_str())
@@ -114,9 +115,36 @@ pub(super) fn file_facts(
             if !extension.is_empty() {
                 facts.push(fact!(
                     source.clone(),
-                    entity,
+                    entity.clone(),
                     uri!("filesystem:extension"),
                     Value::text(extension.clone())
+                ));
+            }
+        }
+
+        if let Some(content_hash) = &file.content_hash {
+            facts.push(fact!(
+                source.clone(),
+                entity.clone(),
+                uri!("filesystem:contentHash"),
+                Value::text(content_hash.clone())
+            ));
+        }
+
+        if let (Some(previous_hash), Some(current_hash)) =
+            (&file.previous_content_hash, &file.content_hash)
+        {
+            if previous_hash != current_hash {
+                let previous_key = format!(
+                    "{connection_id}:{}",
+                    file_identity(file.relative_path.as_str(), Some(previous_hash.as_str()))
+                );
+                let previous_entity = uri!("filesystem", "file", previous_key.as_str());
+                facts.push(fact!(
+                    source.clone(),
+                    previous_entity,
+                    uri!("filesystem:became"),
+                    Value::reference(entity.clone())
                 ));
             }
         }
@@ -146,4 +174,11 @@ fn encode_uri_part(value: &str) -> String {
         }
     }
     out
+}
+
+fn file_identity(relative_path: &str, content_hash: Option<&str>) -> String {
+    match content_hash {
+        Some(hash) if !hash.is_empty() => format!("hash:{hash}"),
+        _ => format!("path:{}", encode_uri_part(relative_path)),
+    }
 }
