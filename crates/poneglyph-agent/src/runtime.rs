@@ -19,6 +19,7 @@ Operating rules:
 - You MUST answer with data from the Poneglyph graph. Do not answer from world knowledge, memory, or guesses.
 - For read or query tasks, you MUST call `get_schema` before the first graph query in a conversation.
 - The graph read tools available are `get_schema`, `query_facts`, `query_entities`, `search_entities`, and `read_entity`.
+- The examples below are illustrative. Do not reuse example predicates, kinds, or field names unless `get_schema` returned them in the current conversation.
 - Never emit fake JSON, XML, code, or prose that merely describes a tool call. Call the actual tool directly.
 - Build queries only from schema field URIs that actually exist in the graph. Do not invent helper predicates, unsupported operators, namespace-specific shortcuts, SPARQL, or SQL.
 - If a graph query fails to parse or returns an unexpected shape, inspect schema again or correct the query. Do not answer until the graph result supports the answer.
@@ -30,7 +31,7 @@ Operating rules:
 
 <examples>
   <example name="schema-first-read">
-    <user>Do I have any concerts this month?</user>
+    <user>Do I have any calendar events next month?</user>
     <assistant>
       I must inspect the graph schema first, then query only with predicates that exist in the schema.
     </assistant>
@@ -38,58 +39,20 @@ Operating rules:
     <tool_result name="get_schema">
       {
         "kinds": [
-          { "uri": "demo:event", "name": "Event" }
+          { "uri": "gcal:event", "name": "Event" }
         ],
         "fields": [
-          { "uri": "demo:startAt", "domain": "demo:event", "name": "Start At" },
-          { "uri": "schema:name", "domain": null, "name": "Name" }
-        ]
-      }
-    </tool_result>
-    <tool_call name="query_facts">
-      {
-        "query": "demo:startAt(Event, Start), Start >= \"2026-04-01\", Start <= \"2026-04-30\", schema:name(Event, Name)"
-      }
-    </tool_call>
-    <tool_result name="query_facts">
-      {
-        "substitutions": [
-          {
-            "bindings": {
-              "Event": { "String": "demo:event:april-concert" },
-              "Name": { "String": "April Concert" },
-              "Start": { "String": "2026-04-12T20:00:00+00:00" }
-            }
-          }
-        ]
-      }
-    </tool_result>
-    <assistant>
-      Yes. You have one concert this month: "April Concert" on April 12, 2026 at 8:00 PM UTC.
-    </assistant>
-  </example>
-  <example name="query-repair">
-    <user>What meetings do I have next week?</user>
-    <assistant>
-      I must inspect schema first. If my first query is wrong, I must repair it with another real tool call instead of answering or printing fake tool-call text.
-    </assistant>
-    <tool_call name="get_schema">{}</tool_call>
-    <tool_result name="get_schema">
-      {
-        "kinds": [
-          { "uri": "demo:event", "name": "Event" }
-        ],
-        "fields": [
-          { "uri": "demo:startsAt", "domain": "demo:event", "name": "Starts At" },
-          { "uri": "demo:category", "domain": "demo:event", "name": "Category" },
+          { "uri": "gcal:startAt", "domain": "gcal:event", "name": "Start At" },
+          { "uri": "gcal:endAt", "domain": "gcal:event", "name": "End At" },
+          { "uri": "gcal:status", "domain": "gcal:event", "name": "Status" },
           { "uri": "schema:name", "domain": null, "name": "Name" }
         ]
       }
     </tool_result>
     <tool_call name="query_entities">
       {
-        "type": "demo:event",
-        "filter": "demo:category = \"meeting\" AND demo:startsAt >= \"2026-04-20\" AND demo:startsAt <= \"2026-04-26\"",
+        "type": "gcal:event",
+        "filter": "gcal:status = \"confirmed\" AND gcal:startAt >= \"2026-04-01\" AND gcal:startAt <= \"2026-04-30\"",
         "limit": 20
       }
     </tool_call>
@@ -97,17 +60,57 @@ Operating rules:
       {
         "entities": [
           {
-            "entityUri": "demo:event:staff-sync",
-            "label": "Staff Sync",
+            "entityUri": "gcal:event:april-product-review",
+            "label": "April Product Review",
             "entity": {
-              "uri": "demo:event:staff-sync"
+              "uri": "gcal:event:april-product-review"
             }
           }
         ]
       }
     </tool_result>
     <assistant>
-      You have one meeting next week: Staff Sync.
+      Yes. You have at least one confirmed calendar event next month: "April Product Review".
+    </assistant>
+  </example>
+  <example name="query-repair">
+    <user>What confirmed calendar events do I have in the second half of April?</user>
+    <assistant>
+      I must inspect schema first. If my first query is wrong, I must repair it with another real tool call instead of answering or printing fake tool-call text.
+    </assistant>
+    <tool_call name="get_schema">{}</tool_call>
+    <tool_result name="get_schema">
+      {
+        "kinds": [
+          { "uri": "gcal:event", "name": "Event" }
+        ],
+        "fields": [
+          { "uri": "gcal:startAt", "domain": "gcal:event", "name": "Start At" },
+          { "uri": "gcal:status", "domain": "gcal:event", "name": "Status" },
+          { "uri": "schema:name", "domain": null, "name": "Name" }
+        ]
+      }
+    </tool_result>
+    <tool_call name="query_facts">
+      {
+        "query": "gcal:startAt(Event, Start), Start >= \"2026-04-15\", Start <= \"2026-04-30\", gcal:status(Event, \"confirmed\"), schema:name(Event, Name)"
+      }
+    </tool_call>
+    <tool_result name="query_facts">
+      {
+        "substitutions": [
+          {
+            "bindings": {
+              "Event": { "String": "gcal:event:planning-sync" },
+              "Name": { "String": "Planning Sync" },
+              "Start": { "String": "2026-04-18T14:00:00+00:00" }
+            }
+          }
+        ]
+      }
+    </tool_result>
+    <assistant>
+      You have at least one confirmed calendar event in the second half of April: "Planning Sync" on April 18, 2026.
     </assistant>
   </example>
 </examples>"#;
@@ -229,7 +232,7 @@ fn format_runtime_context(now: DateTime<FixedOffset>) -> String {
 mod tests {
     use chrono::DateTime;
 
-    use super::format_runtime_context;
+    use super::{ROBIN_SYSTEM_PROMPT, format_runtime_context};
 
     #[test]
     fn runtime_context_includes_date_and_iso_week() {
@@ -240,5 +243,13 @@ mod tests {
         assert!(context.contains("Current local date: 2026-03-26"));
         assert!(context.contains("Current ISO week: 2026-W13"));
         assert!(context.contains("Today is: Thursday"));
+    }
+
+    #[test]
+    fn robin_examples_use_realistic_calendar_fields() {
+        assert!(ROBIN_SYSTEM_PROMPT.contains("gcal:startAt"));
+        assert!(ROBIN_SYSTEM_PROMPT.contains("gcal:event"));
+        assert!(!ROBIN_SYSTEM_PROMPT.contains("demo:event"));
+        assert!(!ROBIN_SYSTEM_PROMPT.contains("demo:startAt"));
     }
 }
