@@ -13,7 +13,7 @@ export default defineConfig({
     react(),
   ],
   resolve: {
-    preserveSymlinks: true,
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
     },
