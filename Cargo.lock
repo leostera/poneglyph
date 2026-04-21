@@ -11,6 +11,8 @@ checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 [[package]]
 name = "agents"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fce684c1be5c01ea5381ba3addb23ff7773114c7093899a21d315c8d78644d0e"
 dependencies = [
  "agents-proc-macros",
  "async-trait",
@@ -40,6 +42,8 @@ dependencies = [
 [[package]]
 name = "agents-proc-macros"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfaa10bb6b9b323a531d3d61373cbcd20d82ee8d6175cc8f2c20c4044d6f5736"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1142,6 +1146,8 @@ dependencies = [
 [[package]]
 name = "evals"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd50e277a7e606f17d50d3be80e69fcc3e2675d2e944174d2079f612db5f4336"
 dependencies = [
  "agents",
  "anyhow",
@@ -1172,6 +1178,8 @@ dependencies = [
 [[package]]
 name = "evals-macros"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b04d199bf4ad15346d23ffbe7a338dc22994371512b7c24d834e05747e72aa3e"
 dependencies = [
  "humantime",
  "proc-macro2",
