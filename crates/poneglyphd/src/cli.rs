@@ -11,6 +11,8 @@ use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberI
 use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
 
+const DEFAULT_LOG_LEVEL: &str = "info";
+
 #[derive(Debug, Parser)]
 #[command(name = "poneglyphd")]
 #[command(about = "Run the Poneglyph daemon")]
@@ -75,7 +77,13 @@ fn init_tracing(workspace: &Workspace, config: &PoneglyphDaemonConfig) -> Result
         let (file_writer, guard) = tracing_appender::non_blocking(file_appender);
         let _ = FILE_GUARD.set(guard);
 
-        let filter = tracing_filter(config.poneglyph.log_level.as_deref().unwrap_or("off"));
+        let filter = tracing_filter(
+            config
+                .poneglyph
+                .log_level
+                .as_deref()
+                .unwrap_or(DEFAULT_LOG_LEVEL),
+        );
         let stderr_layer = fmt::layer().with_target(true);
         let file_layer = fmt::layer().with_target(true).with_writer(file_writer);
         let _ = tracing_subscriber::registry()
@@ -152,11 +160,20 @@ mod tests {
     }
 
     #[test]
-    fn tracing_filter_hides_all_logs_by_default() {
+    fn tracing_filter_can_disable_all_logs() {
         let filter: EnvFilter = tracing_filter("off");
         let rendered = filter.to_string();
 
         assert!(rendered.contains("off"));
+        assert!(rendered.contains("tantivy=off"));
+    }
+
+    #[test]
+    fn daemon_defaults_to_info_logging_when_unset() {
+        let filter: EnvFilter = tracing_filter(super::DEFAULT_LOG_LEVEL);
+        let rendered = filter.to_string();
+
+        assert!(rendered.contains("info"));
         assert!(rendered.contains("tantivy=off"));
     }
 

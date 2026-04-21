@@ -8,7 +8,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::{
     DefaultMakeSpan, DefaultOnFailure, DefaultOnRequest, DefaultOnResponse, TraceLayer,
 };
-use tracing::debug;
+use tracing::info;
 
 use crate::{
     config::{PoneglyphApiConfig, default_bind_addr},
@@ -77,12 +77,13 @@ impl PoneglyphApiServer {
     }
 
     pub async fn run(self) -> Result<()> {
-        debug!(
-            component = "poneglyph_api",
-            bind_addr = %self.bind_addr,
-            "starting poneglyph api server"
-        );
         let listener = tokio::net::TcpListener::bind(&self.bind_addr).await?;
+        let local_addr = listener.local_addr()?;
+        info!(
+            component = "poneglyph_api",
+            bind_addr = %local_addr,
+            "poneglyph api server listening"
+        );
         axum::serve(listener, self.router()).await?;
         Ok(())
     }
