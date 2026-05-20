@@ -12,29 +12,34 @@ pub async fn run(
     config: PoneglyphDaemonConfig,
     command: QueryCommand,
 ) -> Result<()> {
-    let json = match daemon_client(&config).await {
-        Ok(mut client) => {
-            client
-                .query(QueryRequest {
-                    expression: command.expression,
-                })
-                .await?
-                .into_inner()
-                .json
-        }
-        Err(_) => {
-            let poneglyph = open_runtime(workspace, config).await?;
-            let result = poneglyph.query_str(&command.expression).await?;
-            serde_json::to_string_pretty(result.substitutions())?
-        }
-    };
-
+    let json = query_json(&workspace, &config, &command.expression).await?;
     if command.json {
         println!("{json}");
     } else {
         print_plain_query_results(&json)?;
     }
     Ok(())
+}
+
+async fn query_json(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    expression: &str,
+) -> Result<String> {
+    match daemon_client(config).await {
+        Ok(mut client) => Ok(client
+            .query(QueryRequest {
+                expression: expression.to_owned(),
+            })
+            .await?
+            .into_inner()
+            .json),
+        Err(_) => {
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            let result = poneglyph.query_str(expression).await?;
+            serde_json::to_string_pretty(result.substitutions()).map_err(Into::into)
+        }
+    }
 }
 
 fn print_plain_query_results(json: &str) -> Result<()> {
@@ -111,5 +116,12 @@ mod tests {
         let rows = plain_query_rows("[]").expect("plain rows");
 
         assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn plain_query_rows_formats_unexpected_json_payloads() {
+        let rows = plain_query_rows(r#"{"status":"ok"}"#).expect("plain rows");
+
+        assert_eq!(rows, vec![r#"row	{"status":"ok"}"#]);
     }
 }
