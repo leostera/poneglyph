@@ -4,6 +4,7 @@ mod cmd;
 mod config;
 mod config_cmd;
 mod daemon;
+mod fact_cmd;
 mod schema_cmd;
 mod server;
 
