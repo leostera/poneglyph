@@ -9,6 +9,7 @@ mod fact_cmd;
 mod query_cmd;
 mod schema_cmd;
 mod server;
+mod tracing;
 
 use anyhow::Result;
 use clap::Parser;
