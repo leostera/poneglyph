@@ -7,15 +7,18 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use chrono::{DateTime, NaiveDate, Utc};
-use poneglyph_core::{ActiveFilter, Fact, Filter, PoneResult, Poneglyph, Query, Uri, Value};
+use poneglyph_core::{
+    ActiveFact, ActiveFilter, Fact, Filter, PoneResult, Poneglyph, Query, Uri, Value,
+};
 use serde::Serialize;
 use tonic::{Request, Response, Status};
 
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
     GetEntityRequest, GetSchemaRequest, JsonResponse, ListEntitiesRequest, ListFactsRequest,
-    QueryRequest, RetractFactByIdRequest, SearchEntitiesRequest, ShutdownRequest, ShutdownResponse,
-    StateFactRequest, StateFactResponse, StateFactsRequest, StatusRequest, StatusResponse,
+    ListFactsResponse, QueryRequest, RetractFactByIdRequest, SearchEntitiesRequest,
+    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StateFactsRequest,
+    StatusRequest, StatusResponse,
 };
 
 pub struct DaemonApi {
@@ -30,6 +33,36 @@ impl DaemonApi {
             poneglyph,
             started_at: Instant::now(),
             shutdown: Arc::new(Mutex::new(Some(shutdown))),
+        }
+    }
+
+    async fn list_fact_items(&self, request: ListFactsRequest) -> Result<FactListItems, Status> {
+        let pagination = Pagination::try_from_limit_offset(request.limit, request.offset)?;
+
+        match fact_list_filter(&request)? {
+            FactListFilter::Active(filter) => {
+                let facts = self
+                    .poneglyph
+                    .fact_service()
+                    .store()
+                    .get_active_facts(filter)
+                    .await
+                    .map_err(internal)?;
+                Ok(FactListItems::Active(
+                    pagination.apply(collect_results(facts).await?),
+                ))
+            }
+            FactListFilter::Log(filter) => {
+                let facts = self
+                    .poneglyph
+                    .fact_service()
+                    .get_facts(filter)
+                    .await
+                    .map_err(internal)?;
+                Ok(FactListItems::Log(
+                    pagination.apply(collect_results(facts).await?),
+                ))
+            }
         }
     }
 }
@@ -92,6 +125,11 @@ async fn collect_results<T>(
     Ok(items)
 }
 
+enum FactListItems {
+    Active(Vec<ActiveFact>),
+    Log(Vec<Fact>),
+}
+
 pub fn fact_to_proto(fact: &Fact) -> proto::Fact {
     proto::Fact {
         fact_id: fact.fact_id.to_string(),
@@ -106,6 +144,17 @@ pub fn fact_to_proto(fact: &Fact) -> proto::Fact {
             .as_ref()
             .map(ToString::to_string)
             .unwrap_or_default(),
+    }
+}
+
+pub fn active_fact_to_proto(fact: &ActiveFact) -> proto::ActiveFact {
+    proto::ActiveFact {
+        fact_id: fact.fact_id.to_string(),
+        tx_id: fact.tx_id.to_string(),
+        source: fact.source.to_string(),
+        entity: fact.entity.to_string(),
+        field: fact.field.to_string(),
+        value: Some(value_to_proto(&fact.value)),
     }
 }
 
@@ -186,6 +235,21 @@ pub fn value_from_proto(value: proto::Value) -> Result<Value, String> {
                 .map(|(key, value)| value_from_proto(value).map(|value| (key, value)))
                 .collect::<Result<BTreeMap<_, _>, _>>()?,
         )),
+    }
+}
+
+fn list_facts_response(items: &FactListItems) -> ListFactsResponse {
+    match items {
+        FactListItems::Active(facts) => ListFactsResponse {
+            active: true,
+            facts: Vec::new(),
+            active_facts: facts.iter().map(active_fact_to_proto).collect(),
+        },
+        FactListItems::Log(facts) => ListFactsResponse {
+            active: false,
+            facts: facts.iter().map(fact_to_proto).collect(),
+            active_facts: Vec::new(),
+        },
     }
 }
 
@@ -356,32 +420,18 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         request: Request<ListFactsRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let request = request.into_inner();
-        let pagination = Pagination::try_from_limit_offset(request.limit, request.offset)?;
-
-        match fact_list_filter(&request)? {
-            FactListFilter::Active(filter) => {
-                let facts = self
-                    .poneglyph
-                    .fact_service()
-                    .store()
-                    .get_active_facts(filter)
-                    .await
-                    .map_err(internal)?;
-                let facts = pagination.apply(collect_results(facts).await?);
-                json_response(&facts)
-            }
-            FactListFilter::Log(filter) => {
-                let facts = self
-                    .poneglyph
-                    .fact_service()
-                    .get_facts(filter)
-                    .await
-                    .map_err(internal)?;
-                let facts = pagination.apply(collect_results(facts).await?);
-                json_response(&facts)
-            }
+        match self.list_fact_items(request.into_inner()).await? {
+            FactListItems::Active(facts) => json_response(&facts),
+            FactListItems::Log(facts) => json_response(&facts),
         }
+    }
+
+    async fn list_facts_typed(
+        &self,
+        request: Request<ListFactsRequest>,
+    ) -> Result<Response<ListFactsResponse>, Status> {
+        let items = self.list_fact_items(request.into_inner()).await?;
+        Ok(Response::new(list_facts_response(&items)))
     }
 
     async fn query(
@@ -681,6 +731,67 @@ mod tests {
         assert_eq!(first_facts.len(), 1);
         assert_eq!(second_facts.len(), 1);
         assert_ne!(first_facts[0].fact_id, second_facts[0].fact_id);
+    }
+
+    #[tokio::test]
+    async fn list_facts_typed_returns_typed_log_facts() {
+        let (api, runtime) = api_with_runtime().await;
+        let tx_id = runtime
+            .state_facts(vec![fact!(
+                uri!("spotify:album:signals"),
+                uri!("spotify:displayName"),
+                Value::text("Signals")
+            )])
+            .await
+            .expect("state facts");
+
+        let response = api
+            .list_facts_typed(Request::new(ListFactsRequest {
+                entity_uri: String::new(),
+                tx_id: tx_id.to_string(),
+                active: false,
+                limit: 100,
+                offset: 0,
+            }))
+            .await
+            .expect("typed facts")
+            .into_inner();
+
+        assert!(!response.active);
+        assert_eq!(response.facts.len(), 1);
+        assert!(response.active_facts.is_empty());
+        assert_eq!(response.facts[0].tx_id, tx_id.to_string());
+        assert_eq!(response.facts[0].entity, "spotify:album:signals");
+    }
+
+    #[tokio::test]
+    async fn list_facts_typed_returns_typed_active_facts() {
+        let (api, runtime) = api_with_runtime().await;
+        runtime
+            .state_facts(vec![fact!(
+                uri!("spotify:album:signals"),
+                uri!("spotify:displayName"),
+                Value::text("Signals")
+            )])
+            .await
+            .expect("state facts");
+
+        let response = api
+            .list_facts_typed(Request::new(ListFactsRequest {
+                entity_uri: "spotify:album:signals".to_string(),
+                tx_id: String::new(),
+                active: true,
+                limit: 100,
+                offset: 0,
+            }))
+            .await
+            .expect("typed active facts")
+            .into_inner();
+
+        assert!(response.active);
+        assert!(response.facts.is_empty());
+        assert_eq!(response.active_facts.len(), 1);
+        assert_eq!(response.active_facts[0].entity, "spotify:album:signals");
     }
 
     #[tokio::test]

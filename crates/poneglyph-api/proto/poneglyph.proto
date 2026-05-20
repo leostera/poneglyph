@@ -9,6 +9,7 @@ service PoneglyphDaemon {
   rpc StateFacts(StateFactsRequest) returns (StateFactResponse);
   rpc RetractFactById(RetractFactByIdRequest) returns (StateFactResponse);
   rpc ListFacts(ListFactsRequest) returns (JsonResponse);
+  rpc ListFactsTyped(ListFactsRequest) returns (ListFactsResponse);
   rpc Query(QueryRequest) returns (JsonResponse);
   rpc GetEntity(GetEntityRequest) returns (JsonResponse);
   rpc ListEntities(ListEntitiesRequest) returns (JsonResponse);
@@ -68,6 +69,21 @@ message Fact {
   bool retraction = 6;
   string stated_at = 7;
   string tx_id = 8;
+}
+
+message ActiveFact {
+  string fact_id = 1;
+  string tx_id = 2;
+  string source = 3;
+  string entity = 4;
+  string field = 5;
+  Value value = 6;
+}
+
+message ListFactsResponse {
+  bool active = 1;
+  repeated Fact facts = 2;
+  repeated ActiveFact active_facts = 3;
 }
 
 message Value {

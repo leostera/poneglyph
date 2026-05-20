@@ -66,9 +66,10 @@ Typed protobuf migration sketch and current audit:
 - `Value` and `Fact` are the first typed domain payloads in the proto. They are
   not wired into RPC responses yet; conversion helpers and round-trip tests live
   in `poneglyph-api` so future RPC migrations can happen one method at a time.
-- Best first service candidate: add a typed `ListFacts` response alongside the
-  existing JSON response. Fact and value shapes are now explicit, fact list UX is
-  stable, and append-only semantics are already heavily tested.
+- First service slice: `ListFactsTyped` now exposes a typed `ListFactsResponse`
+  alongside the existing JSON `ListFacts` response. The CLI still uses JSON so
+  user-facing output remains unchanged while clients can start testing the typed
+  fact/value payloads.
 - Later candidates: typed entity/list/search responses once entity field maps and
   search score semantics have settled; schema messages mirroring
   `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`; query
