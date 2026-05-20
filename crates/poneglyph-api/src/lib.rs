@@ -166,6 +166,12 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<ListFactsRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let request = request.into_inner();
+        if request.limit == 0 {
+            return Err(Status::invalid_argument("limit must be greater than 0"));
+        }
+        let limit = request.limit as usize;
+        let offset = request.offset as usize;
+
         if request.active {
             if !request.tx_id.is_empty() {
                 return Err(Status::invalid_argument(
@@ -191,6 +197,11 @@ impl PoneglyphDaemon for DaemonApi {
             while let Some(fact) = stream.recv().await {
                 facts.push(fact.map_err(|error| Status::internal(error.to_string()))?);
             }
+            let facts = facts
+                .into_iter()
+                .skip(offset)
+                .take(limit)
+                .collect::<Vec<_>>();
             let json = serde_json::to_string_pretty(&facts)
                 .map_err(|error| Status::internal(error.to_string()))?;
 
@@ -223,6 +234,11 @@ impl PoneglyphDaemon for DaemonApi {
         while let Some(fact) = stream.recv().await {
             facts.push(fact.map_err(|error| Status::internal(error.to_string()))?);
         }
+        let facts = facts
+            .into_iter()
+            .skip(offset)
+            .take(limit)
+            .collect::<Vec<_>>();
         let json = serde_json::to_string_pretty(&facts)
             .map_err(|error| Status::internal(error.to_string()))?;
 
@@ -325,7 +341,7 @@ mod tests {
 
     use super::DaemonApi;
     use super::proto::poneglyph_daemon_server::PoneglyphDaemon;
-    use super::proto::{ListEntitiesRequest, SearchEntitiesRequest};
+    use super::proto::{ListEntitiesRequest, ListFactsRequest, SearchEntitiesRequest};
 
     async fn api() -> DaemonApi {
         let runtime = Poneglyph::builder()
@@ -342,6 +358,24 @@ mod tests {
             .expect("runtime");
         let (shutdown, _receiver) = tokio::sync::oneshot::channel();
         DaemonApi::new(Arc::new(runtime), shutdown)
+    }
+
+    #[tokio::test]
+    async fn list_facts_rejects_zero_limit() {
+        let error = api()
+            .await
+            .list_facts(Request::new(ListFactsRequest {
+                entity_uri: String::new(),
+                tx_id: String::new(),
+                active: false,
+                limit: 0,
+                offset: 0,
+            }))
+            .await
+            .expect_err("zero limit should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("greater than 0"));
     }
 
     #[tokio::test]

@@ -26,9 +26,10 @@ pub async fn run(
                 entity.as_deref(),
                 tx.as_deref(),
                 active,
+                limit,
+                offset,
             )
-            .await?
-            .paginate(limit, offset);
+            .await?;
             print_fact_list(&facts, json)
         }
         FactSubcommand::State {
@@ -174,6 +175,8 @@ async fn list_facts(
     entity: Option<&str>,
     tx: Option<&str>,
     active: bool,
+    limit: usize,
+    offset: usize,
 ) -> Result<FactList> {
     match daemon_client(config).await {
         Ok(mut client) => {
@@ -182,6 +185,8 @@ async fn list_facts(
                     entity_uri: entity.unwrap_or_default().to_string(),
                     tx_id: tx.unwrap_or_default().to_string(),
                     active,
+                    limit: limit as u64,
+                    offset: offset as u64,
                 })
                 .await?
                 .into_inner();
@@ -210,7 +215,7 @@ async fn list_facts(
                 while let Some(fact) = stream.recv().await {
                     facts.push(fact?);
                 }
-                return Ok(FactList::Active(facts));
+                return Ok(FactList::Active(facts).paginate(limit, offset));
             }
 
             let filter = match (entity, tx) {
@@ -226,7 +231,7 @@ async fn list_facts(
             while let Some(fact) = stream.recv().await {
                 facts.push(fact?);
             }
-            Ok(FactList::Log(facts))
+            Ok(FactList::Log(facts).paginate(limit, offset))
         }
     }
 }

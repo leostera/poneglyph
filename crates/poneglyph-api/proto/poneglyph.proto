@@ -46,6 +46,8 @@ message ListFactsRequest {
   string entity_uri = 1;
   string tx_id = 2;
   bool active = 3;
+  uint64 limit = 4;
+  uint64 offset = 5;
 }
 
 message StateFactResponse {
