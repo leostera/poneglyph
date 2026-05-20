@@ -368,6 +368,20 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
     );
     assert!(facts.contains("spotify:displayName"));
 
+    let paged_facts = poneglyph(
+        workspace,
+        &[
+            "fact",
+            "list",
+            "--entity",
+            "spotify:album:signals",
+            "--limit",
+            "1",
+        ],
+    );
+    assert_eq!(paged_facts.lines().count(), 1);
+    assert!(paged_facts.contains("spotify:displayName"));
+
     let tx_id = serde_json::from_str::<serde_json::Value>(&state).expect("state json")["tx_id"]
         .as_str()
         .expect("tx id")

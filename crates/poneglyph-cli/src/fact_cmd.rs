@@ -16,6 +16,8 @@ pub async fn run(
             entity,
             tx,
             active,
+            limit,
+            offset,
             json,
         } => {
             let facts = list_facts(
@@ -25,7 +27,8 @@ pub async fn run(
                 tx.as_deref(),
                 active,
             )
-            .await?;
+            .await?
+            .paginate(limit, offset);
             print_fact_list(&facts, json)
         }
         FactSubcommand::State {
@@ -102,6 +105,19 @@ fn print_fact_outcome(outcome: &FactOutcome, json: bool) -> Result<()> {
 enum FactList {
     Log(Vec<Fact>),
     Active(Vec<ActiveFact>),
+}
+
+impl FactList {
+    fn paginate(self, limit: usize, offset: usize) -> Self {
+        match self {
+            FactList::Log(facts) => {
+                FactList::Log(facts.into_iter().skip(offset).take(limit).collect())
+            }
+            FactList::Active(facts) => {
+                FactList::Active(facts.into_iter().skip(offset).take(limit).collect())
+            }
+        }
+    }
 }
 
 fn print_fact_list(facts: &FactList, json: bool) -> Result<()> {

@@ -141,6 +141,12 @@ pub enum FactSubcommand {
         /// Show only active assertions.
         #[arg(long, conflicts_with = "tx")]
         active: bool,
+        /// Maximum number of facts to print.
+        #[arg(long, default_value_t = 100, value_parser = parse_nonzero_usize)]
+        limit: usize,
+        /// Number of facts to skip.
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
         /// Print machine-readable JSON.
         #[arg(long)]
         json: bool,
@@ -377,6 +383,16 @@ mod tests {
         ])
         .expect_err("active and tx conflict");
         assert!(error.to_string().contains("cannot be used"));
+    }
+
+    #[test]
+    fn fact_list_rejects_zero_limit() {
+        let error = Cli::try_parse_from(["poneglyph", "fact", "list", "--limit", "0"])
+            .expect_err("zero limit should fail");
+        assert!(
+            error.to_string().contains("greater than 0"),
+            "unexpected error: {error}"
+        );
     }
 
     #[test]
