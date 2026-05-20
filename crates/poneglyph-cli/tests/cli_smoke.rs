@@ -94,9 +94,16 @@ fn cli_applies_schema_definition_without_daemon() {
     let applied = poneglyph(workspace, &["schema", "apply", path_str(&schema_path)]);
     assert!(applied.contains("applied"));
 
-    let field = poneglyph(workspace, &["schema", "get", "music:released"]);
+    let field = poneglyph(workspace, &["schema", "get", "music:released", "--json"]);
     assert!(field.contains("Release year."));
     assert!(field.contains("music:album"));
+
+    let listed_json = poneglyph(workspace, &["schema", "list", "--json"]);
+    assert!(listed_json.contains("\"fields\""));
+    assert!(listed_json.contains("music:released"));
+
+    let field_plain = poneglyph(workspace, &["schema", "get", "music:released"]);
+    assert_eq!(field_plain.trim(), "field\tmusic:released");
 }
 
 #[tokio::test]
@@ -233,7 +240,7 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
 
     let applied = poneglyph(workspace, &["schema", "apply", path_str(&schema_path)]);
     assert!(applied.contains("applied"));
-    let field = poneglyph(workspace, &["schema", "get", "music:released"]);
+    let field = poneglyph(workspace, &["schema", "get", "music:released", "--json"]);
     assert!(field.contains("Release year."));
 
     let fact_id = first_fact_id(workspace, "spotify:album:signals").await;

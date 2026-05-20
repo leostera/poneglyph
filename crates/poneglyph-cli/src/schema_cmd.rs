@@ -29,12 +29,15 @@ pub async fn run(
     };
 
     match command.command {
-        SchemaSubcommand::List => print_schema_list(&schema),
-        SchemaSubcommand::Get { uri: None } => {
+        SchemaSubcommand::List { json } => print_schema_list(&schema, json),
+        SchemaSubcommand::Get { uri: None, .. } => {
             println!("{}", serde_json::to_string_pretty(&schema)?);
             Ok(())
         }
-        SchemaSubcommand::Get { uri: Some(uri) } => print_schema_entry(schema, &uri),
+        SchemaSubcommand::Get {
+            uri: Some(uri),
+            json,
+        } => print_schema_entry(schema, &uri, json),
         SchemaSubcommand::Apply { path } => {
             let schema = read_schema_definition(&path).await?;
             let facts = schema_definition_to_facts(schema)?;
@@ -46,7 +49,17 @@ pub async fn run(
     }
 }
 
-fn print_schema_list(schema: &SchemaDefinition) -> Result<()> {
+fn print_schema_list(schema: &SchemaDefinition, json: bool) -> Result<()> {
+    if json {
+        let entries = serde_json::json!({
+            "namespaces": schema.namespaces.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
+            "kinds": schema.kinds.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
+            "fields": schema.fields.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
+        });
+        println!("{}", serde_json::to_string_pretty(&entries)?);
+        return Ok(());
+    }
+
     for namespace in &schema.namespaces {
         println!("namespace\t{}", namespace.uri);
     }
@@ -177,13 +190,32 @@ fn schema_fact(entity: Uri, field: &str, value: Value) -> Result<Fact> {
         .build()?)
 }
 
-fn print_schema_entry(schema: SchemaDefinition, uri: &str) -> Result<()> {
+fn print_schema_entry(schema: SchemaDefinition, uri: &str, json: bool) -> Result<()> {
     let matches = serde_json::json!({
         "namespaces": schema.namespaces.into_iter().filter(|entry| entry.uri.as_str() == uri).collect::<Vec<_>>(),
         "kinds": schema.kinds.into_iter().filter(|entry| entry.uri.as_str() == uri).collect::<Vec<_>>(),
         "fields": schema.fields.into_iter().filter(|entry| entry.uri.as_str() == uri).collect::<Vec<_>>(),
     });
-    println!("{}", serde_json::to_string_pretty(&matches)?);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&matches)?);
+    } else if matches["namespaces"]
+        .as_array()
+        .is_some_and(|entries| !entries.is_empty())
+    {
+        println!("namespace\t{uri}");
+    } else if matches["kinds"]
+        .as_array()
+        .is_some_and(|entries| !entries.is_empty())
+    {
+        println!("kind\t{uri}");
+    } else if matches["fields"]
+        .as_array()
+        .is_some_and(|entries| !entries.is_empty())
+    {
+        println!("field\t{uri}");
+    } else {
+        println!("not found\t{uri}");
+    }
     Ok(())
 }
 

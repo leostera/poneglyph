@@ -98,9 +98,20 @@ pub struct SchemaCommand {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum SchemaSubcommand {
-    List,
-    Get { uri: Option<String> },
-    Apply { path: PathBuf },
+    List {
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    Get {
+        uri: Option<String>,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    Apply {
+        path: PathBuf,
+    },
 }
 
 #[derive(Debug, Clone, Args)]
