@@ -268,6 +268,9 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<ListEntitiesRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let request = request.into_inner();
+        if request.limit == 0 {
+            return Err(Status::invalid_argument("limit must be greater than 0"));
+        }
         let entities = self
             .poneglyph
             .list_entities(request.limit as usize, request.offset as usize)
@@ -284,6 +287,9 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<SearchEntitiesRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let request = request.into_inner();
+        if request.limit == 0 {
+            return Err(Status::invalid_argument("limit must be greater than 0"));
+        }
         let hits = self
             .poneglyph
             .search(&request.query, request.limit as usize)
@@ -307,5 +313,64 @@ impl PoneglyphDaemon for DaemonApi {
             .map_err(|error| Status::internal(error.to_string()))?;
 
         Ok(Response::new(JsonResponse { json }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use poneglyph_core::{InMemoryEntityStore, InMemoryFactStore, Poneglyph, SearchProjection};
+    use tonic::{Code, Request};
+
+    use super::DaemonApi;
+    use super::proto::poneglyph_daemon_server::PoneglyphDaemon;
+    use super::proto::{ListEntitiesRequest, SearchEntitiesRequest};
+
+    async fn api() -> DaemonApi {
+        let runtime = Poneglyph::builder()
+            .with_fact_service(
+                poneglyph_core::FactService::builder()
+                    .with_store(InMemoryFactStore::new())
+                    .build()
+                    .expect("fact service"),
+            )
+            .with_entity_store(InMemoryEntityStore::new())
+            .with_search_projection(SearchProjection::create_in_memory().expect("search"))
+            .build()
+            .await
+            .expect("runtime");
+        let (shutdown, _receiver) = tokio::sync::oneshot::channel();
+        DaemonApi::new(Arc::new(runtime), shutdown)
+    }
+
+    #[tokio::test]
+    async fn list_entities_rejects_zero_limit() {
+        let error = api()
+            .await
+            .list_entities(Request::new(ListEntitiesRequest {
+                limit: 0,
+                offset: 0,
+            }))
+            .await
+            .expect_err("zero limit should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("greater than 0"));
+    }
+
+    #[tokio::test]
+    async fn search_entities_rejects_zero_limit() {
+        let error = api()
+            .await
+            .search_entities(Request::new(SearchEntitiesRequest {
+                query: "Signals".to_string(),
+                limit: 0,
+            }))
+            .await
+            .expect_err("zero limit should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("greater than 0"));
     }
 }
