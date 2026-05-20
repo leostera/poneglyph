@@ -80,9 +80,10 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        open_entity_store, open_fact_store, open_runtime, open_search_projection, repair_workspace,
+        DbRuntimeStorageFactory, open_entity_store, open_fact_store, open_runtime,
+        open_search_projection, repair_workspace,
     };
-    use poneglyph_core::{PoneglyphConfig, Workspace};
+    use poneglyph_core::{Poneglyph, PoneglyphConfig, Workspace};
 
     #[tokio::test]
     async fn db_adapters_open_workspace_backed_defaults() {
@@ -94,6 +95,25 @@ mod tests {
         let _entity_store = open_entity_store(&workspace).await.expect("entity store");
         let _search_projection = open_search_projection(&workspace).expect("search projection");
 
+        assert!(workspace.facts_db_path().exists());
+        assert!(workspace.entities_db_path().exists());
+        assert!(workspace.search_db_path().exists());
+    }
+
+    #[tokio::test]
+    async fn db_storage_factory_opens_runtime_adapters_through_core_builder() {
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+
+        let runtime = Poneglyph::builder()
+            .with_workspace(workspace.clone())
+            .with_config(PoneglyphConfig::default())
+            .with_storage_factory(DbRuntimeStorageFactory)
+            .build()
+            .await
+            .expect("runtime");
+
+        assert_eq!(runtime.workspace().root(), workspace.root());
         assert!(workspace.facts_db_path().exists());
         assert!(workspace.entities_db_path().exists());
         assert!(workspace.search_db_path().exists());
