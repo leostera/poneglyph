@@ -83,10 +83,16 @@ pub enum ConfigSubcommand {
     },
     Get {
         key: String,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
     },
     Set {
         key: String,
         value: String,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -249,6 +255,24 @@ mod tests {
     }
 
     #[test]
+    fn config_help_mentions_json_output_flags() {
+        let mut command = Cli::command();
+        let config = command.find_subcommand_mut("config").expect("config help");
+
+        for subcommand in ["list", "get", "set"] {
+            let help = config
+                .find_subcommand_mut(subcommand)
+                .expect("config subcommand help")
+                .render_long_help()
+                .to_string();
+            assert!(
+                help.contains("--json"),
+                "missing --json in config {subcommand} help:\n{help}"
+            );
+        }
+    }
+
+    #[test]
     fn schema_help_mentions_json_output_flags() {
         let mut command = Cli::command();
         let schema = command.find_subcommand_mut("schema").expect("schema help");
@@ -299,7 +323,7 @@ mod tests {
             Cli::try_parse_from(["poneglyph", "config", "set", "a.b.c", "value"]).expect("cli");
         assert!(matches!(
             cli.command,
-            Some(Command::Config(config)) if matches!(config.command, ConfigSubcommand::Set { ref key, ref value } if key == "a.b.c" && value == "value")
+            Some(Command::Config(config)) if matches!(config.command, ConfigSubcommand::Set { ref key, ref value, .. } if key == "a.b.c" && value == "value")
         ));
     }
 

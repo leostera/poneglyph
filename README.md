@@ -47,6 +47,8 @@ Use an isolated workspace while experimenting:
 ```sh
 export PONE=./.poneglyph-dev
 poneglyph --workspace "$PONE" config set poneglyph.log_level off
+poneglyph --workspace "$PONE" config get poneglyph.log_level --json
+poneglyph --workspace "$PONE" config set rpc.bind_addr 127.0.0.1:50051 --json
 ```
 
 Start and inspect the daemon:

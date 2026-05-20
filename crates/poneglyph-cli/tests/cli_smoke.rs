@@ -151,12 +151,20 @@ fn cli_config_get_set_and_list_round_trips() {
         "debug"
     );
 
-    let config = poneglyph(workspace, &["config", "set", "rpc.bind_addr", &bind_addr]);
-    assert!(config.contains(&format!("bind_addr = \"{bind_addr}\"")));
+    let config = poneglyph(
+        workspace,
+        &["config", "set", "rpc.bind_addr", &bind_addr, "--json"],
+    );
+    assert!(config.contains("\"status\": \"updated\""));
+    assert!(config.contains(&bind_addr));
     assert_eq!(
         poneglyph(workspace, &["config", "get", "rpc.bind_addr"]).trim(),
         bind_addr
     );
+
+    let bind_addr_json = poneglyph(workspace, &["config", "get", "rpc.bind_addr", "--json"]);
+    assert!(bind_addr_json.contains("\"key\": \"rpc.bind_addr\""));
+    assert!(bind_addr_json.contains(&bind_addr));
 
     let listed = poneglyph(workspace, &["config", "list"]);
     assert!(listed.contains("[poneglyph]"));
