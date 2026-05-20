@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "crates/poneglyph",
+    "crates/poneglyph-core",
     "crates/poneglyph-api",
     "crates/poneglyph-cli",
 ]

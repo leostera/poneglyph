@@ -17,9 +17,13 @@ daemon and exposes facts, schemas, entities, and Datalog queries.
 ## Decision
 
 - The only user-facing binary is `poneglyph`.
-- `crates/poneglyph` is the core runtime/library crate.
-- `crates/poneglyphd` is the CLI/process host crate and builds the `poneglyph`
+- `crates/poneglyph-cli` is the CLI/process host crate and builds the `poneglyph`
   binary.
+- `crates/poneglyph-api` owns local gRPC protobuf definitions, generated client/server
+  types, and daemon service adapters.
+- `crates/poneglyph-core` is the core runtime/library crate.
+- `crates/poneglyph-db` is reserved for a future storage/Datafox split once that
+  boundary is clearer.
 - Durable truth remains the append-only fact log.
 - Entity and search data are derived projections and must remain replayable.
 - The CLI talks to the daemon over gRPC when the daemon is available.

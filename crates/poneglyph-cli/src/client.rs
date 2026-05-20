@@ -1,5 +1,5 @@
 use anyhow::Result;
-use poneglyph::{Poneglyph, Workspace};
+use poneglyph_core::{Poneglyph, Workspace};
 
 use poneglyph_api::proto::poneglyph_daemon_client::PoneglyphDaemonClient;
 

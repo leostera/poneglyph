@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use poneglyph::{Poneglyph, Workspace};
+use poneglyph_core::{Poneglyph, Workspace};
 use tokio::sync::oneshot;
 use tonic::transport::Server;
 use tracing::{debug, info};
@@ -110,7 +110,7 @@ impl DaemonBuilder {
 
 #[cfg(test)]
 mod tests {
-    use poneglyph::{PoneglyphConfig, Workspace};
+    use poneglyph_core::{PoneglyphConfig, Workspace};
     use tempfile::tempdir;
 
     use crate::config::PoneglyphDaemonConfig;

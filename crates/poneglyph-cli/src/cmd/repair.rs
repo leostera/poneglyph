@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Args;
-use poneglyph::{Poneglyph, Workspace};
+use poneglyph_core::{Poneglyph, Workspace};
 use tracing::info;
 
 use crate::config::PoneglyphDaemonConfig;

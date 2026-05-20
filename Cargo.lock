@@ -1863,7 +1863,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
-name = "poneglyph"
+name = "poneglyph-api"
+version = "0.1.0"
+dependencies = [
+ "poneglyph-core",
+ "prost",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
+name = "poneglyph-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "config",
+ "derive_builder",
+ "dotenvy",
+ "poneglyph-api",
+ "poneglyph-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "toml",
+ "tonic",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "poneglyph-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1886,40 +1920,6 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
-]
-
-[[package]]
-name = "poneglyph-api"
-version = "0.1.0"
-dependencies = [
- "poneglyph",
- "prost",
- "serde_json",
- "tokio",
- "tonic",
- "tonic-build",
-]
-
-[[package]]
-name = "poneglyph-cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "config",
- "derive_builder",
- "dotenvy",
- "poneglyph",
- "poneglyph-api",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "toml",
- "tonic",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
 ]
 
 [[package]]

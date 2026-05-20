@@ -8,9 +8,11 @@ Datafox-backed Datalog queries.
 
 ## Current workspace
 
-- `crates/poneglyph` — core append-only fact store, schema/entity services,
+- `crates/poneglyph-cli` — CLI/process host that builds the `poneglyph` binary.
+- `crates/poneglyph-api` — local gRPC API/protobuf definitions and daemon service adapter.
+- `crates/poneglyph-core` — core append-only fact store, schema/entity services,
   projections, query engine, runtime, and disk-backed workspace layout.
-- `crates/poneglyphd` — CLI/process host that builds the `poneglyph` binary.
+- `crates/poneglyph-db` — planned storage/Datafox split point if core storage modules outgrow the core crate.
 - `../datafox` — external sibling path dependency for Datalog parsing/evaluation.
 
 Clone/check out Datafox next to this repository before building:

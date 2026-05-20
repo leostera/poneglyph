@@ -9,7 +9,7 @@ use common::{
     assert_retracting_an_already_retracted_fact_is_a_noop, assert_retractions_are_append_only,
     assert_tx_ids_are_unique_per_batch,
 };
-use poneglyph::InMemoryFactStore;
+use poneglyph_core::InMemoryFactStore;
 
 #[tokio::test]
 async fn inmemory_state_facts_persists_a_batch_with_one_tx_id() {

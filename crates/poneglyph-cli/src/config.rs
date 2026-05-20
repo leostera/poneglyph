@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use config::{Config, File, FileFormat};
 use derive_builder::Builder;
-use poneglyph::{PoneglyphConfig, Workspace};
+use poneglyph_core::{PoneglyphConfig, Workspace};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
@@ -96,7 +96,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::PoneglyphDaemonConfig;
-    use poneglyph::Workspace;
+    use poneglyph_core::Workspace;
 
     #[tokio::test]
     async fn daemon_config_loads_defaults_when_missing() {

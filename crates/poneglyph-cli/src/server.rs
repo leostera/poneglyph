@@ -2,7 +2,7 @@ use std::process::{Command as ProcessCommand, Stdio};
 use std::time::Duration;
 
 use anyhow::Result;
-use poneglyph::Workspace;
+use poneglyph_core::Workspace;
 
 use poneglyph_api::proto::{ShutdownRequest, StatusRequest};
 

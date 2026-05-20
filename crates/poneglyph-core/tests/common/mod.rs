@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 use tokio::task::yield_now;
 use tokio::time::timeout;
 
-use poneglyph::{
+use poneglyph_core::{
     ActiveFact, ActiveFilter, Consolidator, Entity, EntityStore, Fact, FactService, Filter,
     PoneResult, Store, Uri, Value, fact, uri,
 };
@@ -352,7 +352,10 @@ pub async fn assert_invalid_retractions_fail_cleanly(store: &impl Store) {
         .await
         .expect_err("unknown retraction should fail");
 
-    assert!(matches!(error, poneglyph::Error::CannotRetractUnknownFact));
+    assert!(matches!(
+        error,
+        poneglyph_core::Error::CannotRetractUnknownFact
+    ));
 }
 
 pub async fn assert_mixed_batch_rolls_back(store: &impl Store) {
@@ -364,7 +367,10 @@ pub async fn assert_mixed_batch_rolls_back(store: &impl Store) {
         .await
         .expect_err("batch should fail");
 
-    assert!(matches!(error, poneglyph::Error::CannotRetractUnknownFact));
+    assert!(matches!(
+        error,
+        poneglyph_core::Error::CannotRetractUnknownFact
+    ));
 }
 
 pub async fn assert_get_facts_returns_all_records_in_deterministic_order(store: &impl Store) {

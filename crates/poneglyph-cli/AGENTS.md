@@ -1,16 +1,18 @@
-# Poneglyphd Guide
+# Poneglyph CLI Guide
 
 ## Scope
 
-These instructions apply to `crates/poneglyphd/`.
+These instructions apply to `crates/poneglyph-cli/`.
 
 ## Purpose
 
-- `poneglyphd` is the process/CLI host for the `poneglyph` runtime.
-- Keep process concerns here: CLI parsing, daemon lifecycle, shutdown, and server adapters.
+- `poneglyph-cli` builds the single user-facing `poneglyph` binary.
+- Keep process concerns here: CLI parsing, daemon lifecycle, shutdown, configuration commands, and client adapters.
+- Prefer daemon-mediated operations for state, query, schema, and entity commands.
 
 ## Working rules
 
-- Prefer keeping business logic in `poneglyph`; `poneglyphd` should assemble and host it.
-- Split process wiring into small modules instead of letting `main.rs` grow into the daemon.
-- Add CLI tests for parsing and daemon tests for runtime assembly.
+- Prefer keeping business logic in `poneglyph-core`; `poneglyph-cli` should assemble and host it.
+- Use `poneglyph-api` for gRPC client/server types and daemon service adapters.
+- Split command handling into small modules instead of letting `cli.rs` grow.
+- Add CLI smoke tests for user-facing flows and daemon lifecycle behavior.

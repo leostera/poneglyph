@@ -1,5 +1,5 @@
 use anyhow::Result;
-use poneglyph::Workspace;
+use poneglyph_core::Workspace;
 
 use crate::cli::ConfigCommand;
 use crate::cli::ConfigSubcommand;

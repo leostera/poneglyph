@@ -5,7 +5,7 @@ use proptest::test_runner::TestCaseResult;
 use tokio::runtime::Builder;
 use tokio::sync::mpsc;
 
-use poneglyph::{Fact, Filter, PoneResult, Store, uri};
+use poneglyph_core::{Fact, Filter, PoneResult, Store, uri};
 
 fn run_async_test<T>(f: impl Future<Output = T>) -> T {
     let runtime = Builder::new_current_thread()

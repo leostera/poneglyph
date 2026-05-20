@@ -6,7 +6,7 @@ use common::{
     assert_entity_pipeline_deletes_retracted_entity,
     assert_entity_pipeline_materializes_latest_values,
 };
-use poneglyph::{EntityStore, FactService, SqliteEntityStore, SqliteFactStore, Value, uri};
+use poneglyph_core::{EntityStore, FactService, SqliteEntityStore, SqliteFactStore, Value, uri};
 use tempfile::TempDir;
 
 async fn make_services() -> (TempDir, TempDir, FactService, Arc<dyn EntityStore>) {

@@ -1,5 +1,5 @@
 mod common;
-use poneglyph::{
+use poneglyph_core::{
     Fact, FactService, InMemoryEntityStore, InMemoryFactStore, PoneResult, Poneglyph, Value,
     Workspace, fact, uri,
 };
@@ -139,7 +139,7 @@ async fn inmemory_retracting_data_does_not_remove_schema_entries() -> PoneResult
     poneglyph.state_facts(vec![assertion.clone()]).await?;
     let schema_after_assertion = poneglyph.get_schema().await?;
 
-    let retraction = poneglyph::Fact::builder()
+    let retraction = poneglyph_core::Fact::builder()
         .source(assertion.source.clone())
         .entity(assertion.entity.clone())
         .field(assertion.field.clone())

@@ -6,7 +6,9 @@ use common::{
     assert_entity_pipeline_deletes_retracted_entity,
     assert_entity_pipeline_materializes_latest_values,
 };
-use poneglyph::{EntityStore, FactService, InMemoryEntityStore, InMemoryFactStore, Value, uri};
+use poneglyph_core::{
+    EntityStore, FactService, InMemoryEntityStore, InMemoryFactStore, Value, uri,
+};
 
 #[tokio::test]
 async fn inmemory_entity_service_materializes_latest_values_from_fact_broadcasts() {

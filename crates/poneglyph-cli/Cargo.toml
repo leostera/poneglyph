@@ -9,7 +9,7 @@ clap.workspace = true
 config.workspace = true
 derive_builder.workspace = true
 dotenvy.workspace = true
-poneglyph = { path = "../poneglyph" }
+poneglyph-core = { path = "../poneglyph-core" }
 poneglyph-api = { path = "../poneglyph-api" }
 serde.workspace = true
 serde_json.workspace = true

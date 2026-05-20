@@ -6,17 +6,16 @@ These instructions apply to `crates/` unless a deeper `AGENTS.md` overrides them
 
 ## Routing
 
-- When work is scoped to `crates/poneglyph`, read `crates/poneglyph/AGENTS.md`.
-- When work is scoped to `crates/poneglyph-mcp`, read `crates/poneglyph-mcp/AGENTS.md`.
-- When work is scoped to `crates/datafox`, read `crates/datafox/AGENTS.md`.
 - When work is scoped to `crates/poneglyph-core`, read `crates/poneglyph-core/AGENTS.md`.
-- When work is scoped to `crates/poneglyph-consolidation`, read `crates/poneglyph-consolidation/AGENTS.md`.
-- When work is scoped to `crates/poneglyph-facts`, read `crates/poneglyph-facts/AGENTS.md`.
+- When work is scoped to `crates/poneglyph-cli`, read `crates/poneglyph-cli/AGENTS.md`.
 
 ## Purpose
 
-- `crates/` holds Rust runtime and storage code.
-- This is where the daemon, fact log, consolidation, projections, query engine, and MCP service should eventually live.
+- `crates/` holds the Rust-only Poneglyph product.
+- `poneglyph-cli` builds the user-facing `poneglyph` binary.
+- `poneglyph-api` owns local gRPC API/protobuf definitions and service adapters.
+- `poneglyph-core` owns the append-only fact log, consolidation, projections, schema/entity services, query engine, and workspace runtime.
+- `poneglyph-db` is planned for storage/Datafox-specific database implementation if the core storage modules warrant a split.
 
 ## Working rules
 

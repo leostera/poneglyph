@@ -3,43 +3,18 @@ mod common;
 use std::sync::Arc;
 
 use common::{assert_entity_pipeline_deletes_retracted_entity, wait_for_entity_fields};
-use poneglyph::{
-    Consolidator, EntityStore, FactService, SqliteEntityStore, SqliteFactStore, Value, fact, uri,
+use poneglyph_core::{
+    Consolidator, EntityStore, FactService, InMemoryEntityStore, InMemoryFactStore, Value, fact,
+    uri,
 };
 use proptest::prelude::*;
 
-async fn make_services() -> (
-    tempfile::TempDir,
-    tempfile::TempDir,
-    FactService,
-    Arc<dyn EntityStore>,
-) {
-    let facts_dir = tempfile::tempdir().expect("facts tempdir");
-    let entities_dir = tempfile::tempdir().expect("entities tempdir");
-    let fact_store = Arc::new(
-        SqliteFactStore::open(facts_dir.path())
-            .await
-            .expect("fact store"),
-    );
-    let entity_store: Arc<dyn EntityStore> = Arc::new(
-        SqliteEntityStore::open(entities_dir.path())
-            .await
-            .expect("entity store"),
-    );
-    let fact_service = FactService::builder()
-        .with_store_arc(fact_store.clone())
-        .build()
-        .expect("fact service");
-    let _ = fact_store;
-    (facts_dir, entities_dir, fact_service, entity_store)
-}
-
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(12))]
+    #![proptest_config(ProptestConfig::with_cases(24))]
 
     #[test]
-    fn sqlite_property_stated_entity_facts_eventually_materialize_latest_field_values_long(
-        assertions in prop::collection::vec(("[a-z][a-z0-9]{0,12}", any::<Value>()), 1..8)
+    fn inmemory_property_stated_entity_facts_eventually_materialize_latest_field_values_long(
+        assertions in prop::collection::vec(("[a-z][a-z0-9]{0,12}", any::<Value>()), 1..12)
     ) {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
@@ -47,14 +22,20 @@ proptest! {
             .expect("runtime");
 
         runtime.block_on(async move {
-            let (_facts_dir, _entities_dir, fact_service, entity_store) = make_services().await;
+            let fact_store = Arc::new(InMemoryFactStore::new());
+            let fact_service = FactService::builder()
+                .with_store_arc(fact_store.clone())
+                .build()
+                .expect("fact service");
+            let entity_store: Arc<dyn EntityStore> = Arc::new(InMemoryEntityStore::new());
             let worker = Consolidator::builder()
                 .with_entity_store_arc(entity_store.clone())
                 .with_fact_subscription(fact_service.subscribe())
                 .build()
                 .expect("consolidator")
                 .spawn();
-            let entity_uri = uri!("spotify:album:property-sqlite");
+
+            let entity_uri = uri!("spotify:album:property-inmemory");
             let mut expected = std::collections::BTreeMap::new();
 
             for (field_suffix, value) in assertions {
@@ -83,7 +64,7 @@ proptest! {
     }
 
     #[test]
-    fn sqlite_property_retracting_the_only_field_eventually_deletes_the_entity_long(
+    fn inmemory_property_retracting_the_only_field_eventually_deletes_the_entity_long(
         value in any::<Value>()
     ) {
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -92,12 +73,17 @@ proptest! {
             .expect("runtime");
 
         runtime.block_on(async move {
-            let (_facts_dir, _entities_dir, fact_service, entity_store) = make_services().await;
+            let fact_store = Arc::new(InMemoryFactStore::new());
+            let fact_service = FactService::builder()
+                .with_store_arc(fact_store.clone())
+                .build()
+                .expect("fact service");
+            let entity_store: Arc<dyn EntityStore> = Arc::new(InMemoryEntityStore::new());
 
             assert_entity_pipeline_deletes_retracted_entity(
                 &fact_service,
                 entity_store,
-                &uri!("spotify:album:property-delete-sqlite"),
+                &uri!("spotify:album:property-delete-inmemory"),
                 &uri!("spotify:displayName"),
                 value,
             )

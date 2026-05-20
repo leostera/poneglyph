@@ -1,5 +1,5 @@
 mod common;
-use poneglyph::{Fact, PoneResult, Poneglyph, Value, Workspace, fact, uri};
+use poneglyph_core::{Fact, PoneResult, Poneglyph, Value, Workspace, fact, uri};
 use tempfile::{TempDir, tempdir};
 
 fn schema_facts() -> Vec<Fact> {
@@ -129,7 +129,7 @@ async fn sqlite_retracting_data_does_not_remove_schema_entries() -> PoneResult<(
     poneglyph.state_facts(vec![assertion.clone()]).await?;
     let schema_after_assertion = poneglyph.get_schema().await?;
 
-    let retraction = poneglyph::Fact::builder()
+    let retraction = poneglyph_core::Fact::builder()
         .source(assertion.source.clone())
         .entity(assertion.entity.clone())
         .field(assertion.field.clone())

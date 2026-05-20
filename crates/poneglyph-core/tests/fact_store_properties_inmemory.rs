@@ -1,7 +1,7 @@
 mod common;
 
 use common::properties;
-use poneglyph::{Fact, InMemoryFactStore};
+use poneglyph_core::{Fact, InMemoryFactStore};
 use proptest::prelude::*;
 
 proptest! {

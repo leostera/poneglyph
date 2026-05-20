@@ -5,7 +5,7 @@ pub mod proto {
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use poneglyph::{Fact, Filter, Poneglyph, Query, Uri};
+use poneglyph_core::{Fact, Filter, Poneglyph, Query, Uri};
 use tonic::{Request, Response, Status};
 
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;

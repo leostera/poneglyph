@@ -1,7 +1,7 @@
 mod common;
 
 use common::properties;
-use poneglyph::{Fact, SqliteFactStore};
+use poneglyph_core::{Fact, SqliteFactStore};
 use proptest::prelude::*;
 use tempfile::TempDir;
 

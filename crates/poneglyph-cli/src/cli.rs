@@ -4,7 +4,9 @@ use std::sync::OnceLock;
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
 use dotenvy::dotenv;
-use poneglyph::{Fact, Filter, SchemaDefinition, Uri, Value, Workspace, default_workspace_path};
+use poneglyph_core::{
+    Fact, Filter, SchemaDefinition, Uri, Value, Workspace, default_workspace_path,
+};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -688,7 +690,7 @@ fn canonical_log_level(level: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use clap::Parser;
-    use poneglyph::default_workspace_path;
+    use poneglyph_core::default_workspace_path;
     use tracing_subscriber::EnvFilter;
 
     use super::{Cli, Command, ConfigSubcommand, FactSubcommand, ServerCommand, tracing_filter};
