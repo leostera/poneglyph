@@ -4,14 +4,12 @@ use std::sync::OnceLock;
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
 use dotenvy::dotenv;
-use poneglyph_core::{Uri, Workspace, default_workspace_path};
+use poneglyph_core::{Workspace, default_workspace_path};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::client::{daemon_client, open_runtime};
 use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
-use poneglyph_api::proto::{GetEntityRequest, QueryRequest};
 
 const DEFAULT_LOG_LEVEL: &str = "info";
 
@@ -185,68 +183,10 @@ impl Cli {
             Command::Config(command) => crate::config_cmd::run(workspace, command).await,
             Command::Schema(command) => crate::schema_cmd::run(workspace, config, command).await,
             Command::Fact(command) => crate::fact_cmd::run(workspace, config, command).await,
-            Command::Query(command) => run_query_command(workspace, config, command).await,
-            Command::Entity(command) => run_entity_command(workspace, config, command).await,
+            Command::Query(command) => crate::query_cmd::run(workspace, config, command).await,
+            Command::Entity(command) => crate::entity_cmd::run(workspace, config, command).await,
         }
     }
-}
-
-async fn run_query_command(
-    workspace: Workspace,
-    config: PoneglyphDaemonConfig,
-    command: QueryCommand,
-) -> Result<()> {
-    let json = match daemon_client(&config).await {
-        Ok(mut client) => {
-            client
-                .query(QueryRequest {
-                    expression: command.expression,
-                })
-                .await?
-                .into_inner()
-                .json
-        }
-        Err(_) => {
-            let poneglyph = open_runtime(workspace, config).await?;
-            let result = poneglyph.query_str(&command.expression).await?;
-            serde_json::to_string_pretty(result.substitutions())?
-        }
-    };
-    println!("{json}");
-    Ok(())
-}
-
-async fn run_entity_command(
-    workspace: Workspace,
-    config: PoneglyphDaemonConfig,
-    command: EntityCommand,
-) -> Result<()> {
-    match command.command {
-        EntitySubcommand::Get { uri } => {
-            let json = match daemon_client(&config).await {
-                Ok(mut client) => {
-                    client
-                        .get_entity(GetEntityRequest { uri })
-                        .await?
-                        .into_inner()
-                        .json
-                }
-                Err(_) => {
-                    let poneglyph = open_runtime(workspace, config).await?;
-                    match poneglyph.get_entity(&parse_uri(&uri)?).await? {
-                        Some(entity) => serde_json::to_string_pretty(&entity)?,
-                        None => "null".to_string(),
-                    }
-                }
-            };
-            println!("{json}");
-        }
-    }
-    Ok(())
-}
-
-fn parse_uri(value: &str) -> Result<Uri> {
-    Uri::parse(value.to_string()).map_err(Into::into)
 }
 
 fn init_tracing(workspace: &Workspace, config: &PoneglyphDaemonConfig) -> Result<()> {

@@ -4,7 +4,9 @@ mod cmd;
 mod config;
 mod config_cmd;
 mod daemon;
+mod entity_cmd;
 mod fact_cmd;
+mod query_cmd;
 mod schema_cmd;
 mod server;
 
