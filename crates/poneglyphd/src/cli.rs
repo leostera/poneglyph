@@ -69,9 +69,17 @@ pub enum ServerCommand {
         json: bool,
     },
     /// Stop the daemon.
-    Stop,
+    Stop {
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Restart the daemon.
-    Restart,
+    Restart {
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Debug, Clone, Args)]
@@ -176,8 +184,10 @@ impl Cli {
                 ServerCommand::Start(cmd) => cmd.run(workspace, config).await,
                 ServerCommand::Repair(cmd) => cmd.run(workspace, config).await,
                 ServerCommand::Status { json } => run_server_status(config, json).await,
-                ServerCommand::Stop => run_server_stop(config).await,
-                ServerCommand::Restart => run_server_restart(workspace, config).await,
+                ServerCommand::Stop { json } => run_server_stop(config, json).await,
+                ServerCommand::Restart { json } => {
+                    run_server_restart(workspace, config, json).await
+                }
             },
             Command::Config(command) => run_config_command(workspace, command).await,
             Command::Schema(command) => run_schema_command(workspace, config, command).await,
@@ -232,16 +242,29 @@ async fn run_server_status(config: PoneglyphDaemonConfig, json: bool) -> Result<
     }
 }
 
-async fn run_server_stop(config: PoneglyphDaemonConfig) -> Result<()> {
+async fn run_server_stop(config: PoneglyphDaemonConfig, json: bool) -> Result<()> {
     let mut client = daemon_client(&config).await?;
     let response = client.shutdown(ShutdownRequest {}).await?.into_inner();
-    println!("status: {}", response.status);
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "status": response.status,
+            }))?
+        );
+    } else {
+        println!("status: {}", response.status);
+    }
     Ok(())
 }
 
-async fn run_server_restart(workspace: Workspace, config: PoneglyphDaemonConfig) -> Result<()> {
+async fn run_server_restart(
+    workspace: Workspace,
+    config: PoneglyphDaemonConfig,
+    json: bool,
+) -> Result<()> {
     if daemon_client(&config).await.is_ok() {
-        run_server_stop(config.clone()).await?;
+        run_server_stop(config.clone(), false).await?;
         wait_until_offline(&config).await;
     }
 
@@ -257,7 +280,17 @@ async fn run_server_restart(workspace: Workspace, config: PoneglyphDaemonConfig)
         .spawn()?;
 
     wait_until_running(&config).await?;
-    println!("status: restarted");
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&serde_json::json!({
+                "status": "restarted",
+                "rpc_bind_addr": config.rpc.bind_addr.to_string(),
+            }))?
+        );
+    } else {
+        println!("status: restarted");
+    }
     Ok(())
 }
 

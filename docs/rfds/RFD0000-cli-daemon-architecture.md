@@ -56,6 +56,19 @@ places. This keeps the boundary flexible during CLI design. Typed protobuf
 messages should replace JSON once the API stabilizes, but not before the fact,
 value, schema, and query-result shapes have stopped changing.
 
+Typed protobuf migration sketch:
+
+- Add `Value` as a `oneof` covering null, text, number string, boolean, bytes,
+  reference URI, date, datetime, list, and map.
+- Add `Fact` with source/entity/field/fact/tx URIs as strings plus `Value`,
+  retraction flag, and stated timestamp.
+- Add schema messages mirroring `NamespaceSchema`, `KindSchema`, `FieldSchema`,
+  and `SchemaDefinition`.
+- Add query result messages as repeated variable bindings rather than generic
+  JSON substitutions.
+- Keep JSON compatibility during one transition window before removing JSON RPC
+  fields.
+
 ## Invariants
 
 - Facts are append-only. Retraction is represented by a new retraction fact, not

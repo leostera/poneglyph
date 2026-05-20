@@ -233,9 +233,28 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
     );
     assert_eq!(query.trim(), "[]");
 
-    poneglyph(workspace, &["server", "stop"]);
+    let stopped = poneglyph(workspace, &["server", "stop", "--json"]);
+    assert!(stopped.contains("\"status\": \"stopping\""));
     wait_for_offline(workspace);
     daemon.wait().expect("daemon exits");
+}
+
+#[test]
+fn daemon_cli_restarts_detached_server() {
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = tempdir.path();
+    let bind_addr = free_bind_addr();
+
+    poneglyph(workspace, &["config", "set", "poneglyph.log_level", "off"]);
+    poneglyph(workspace, &["config", "set", "rpc.bind_addr", &bind_addr]);
+
+    let restarted = poneglyph(workspace, &["server", "restart", "--json"]);
+    assert!(restarted.contains("\"status\": \"restarted\""));
+    let status = poneglyph(workspace, &["server", "status", "--json"]);
+    assert!(status.contains("\"status\": \"running\""));
+    let stopped = poneglyph(workspace, &["server", "stop", "--json"]);
+    assert!(stopped.contains("\"status\": \"stopping\""));
+    wait_for_offline(workspace);
 }
 
 async fn count_facts_for_entity(workspace: &Path, entity: &str) -> usize {
