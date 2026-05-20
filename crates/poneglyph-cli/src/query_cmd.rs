@@ -1,5 +1,5 @@
 use anyhow::Result;
-use poneglyph_api::proto::QueryRequest;
+use poneglyph_api::proto::{QueryRequest, QueryResponse, query_value};
 use poneglyph_core::Workspace;
 use serde_json::Value as JsonValue;
 
@@ -27,19 +27,49 @@ async fn query_json(
     expression: &str,
 ) -> Result<String> {
     match daemon_client(config).await {
-        Ok(mut client) => Ok(client
-            .query(QueryRequest {
-                expression: expression.to_owned(),
-            })
-            .await?
-            .into_inner()
-            .json),
+        Ok(mut client) => {
+            let response = client
+                .query_typed(QueryRequest {
+                    expression: expression.to_owned(),
+                })
+                .await?
+                .into_inner();
+            query_response_json(response)
+        }
         Err(_) => {
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
             let result = poneglyph.query_str(expression).await?;
             serde_json::to_string_pretty(result.substitutions()).map_err(Into::into)
         }
     }
+}
+
+fn query_response_json(response: QueryResponse) -> Result<String> {
+    let rows = response
+        .rows
+        .into_iter()
+        .map(|row| {
+            let bindings = row
+                .bindings
+                .into_iter()
+                .map(|binding| {
+                    let value = match binding.value.and_then(|value| value.kind) {
+                        Some(query_value::Kind::Integer(value)) => {
+                            serde_json::json!({"Integer": value})
+                        }
+                        Some(query_value::Kind::String(value)) => {
+                            serde_json::json!({"String": value})
+                        }
+                        None => serde_json::Value::Null,
+                    };
+                    (binding.variable, value)
+                })
+                .collect::<serde_json::Map<_, _>>();
+            serde_json::json!({ "bindings": bindings })
+        })
+        .collect::<Vec<_>>();
+
+    serde_json::to_string_pretty(&rows).map_err(Into::into)
 }
 
 fn print_plain_query_results(json: &str) -> Result<()> {
@@ -97,7 +127,37 @@ fn compact_json(value: &JsonValue) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::plain_query_rows;
+    use poneglyph_api::proto::{QueryBinding, QueryResponse, QueryRow, QueryValue, query_value};
+
+    use super::{plain_query_rows, query_response_json};
+
+    #[test]
+    fn query_response_json_matches_legacy_substitution_shape() {
+        let json = query_response_json(QueryResponse {
+            rows: vec![QueryRow {
+                bindings: vec![
+                    QueryBinding {
+                        variable: "Album".to_string(),
+                        value: Some(QueryValue {
+                            kind: Some(query_value::Kind::String("spotify:album:2112".to_string())),
+                        }),
+                    },
+                    QueryBinding {
+                        variable: "Year".to_string(),
+                        value: Some(QueryValue {
+                            kind: Some(query_value::Kind::Integer(1976)),
+                        }),
+                    },
+                ],
+            }],
+        })
+        .expect("query json");
+
+        assert_eq!(
+            plain_query_rows(&json).expect("plain rows"),
+            vec!["row\tAlbum=\"spotify:album:2112\"\tYear=1976"]
+        );
+    }
 
     #[test]
     fn plain_query_rows_formats_bindings() {

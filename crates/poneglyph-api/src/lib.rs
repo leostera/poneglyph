@@ -17,8 +17,8 @@ use tonic::{Request, Response, Status};
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
     GetEntityRequest, GetEntityResponse, GetSchemaRequest, JsonResponse, ListEntitiesRequest,
-    ListEntitiesResponse, ListFactsRequest, ListFactsResponse, QueryRequest,
-    RetractFactByIdRequest, SchemaEntries, SearchEntitiesRequest, SearchEntitiesResponse,
+    ListEntitiesResponse, ListFactsRequest, ListFactsResponse, QueryRequest, QueryResponse,
+    QueryRow, RetractFactByIdRequest, SchemaEntries, SearchEntitiesRequest, SearchEntitiesResponse,
     ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StateFactTypedRequest,
     StateFactsRequest, StateFactsTypedRequest, StatusRequest, StatusResponse,
 };
@@ -456,6 +456,34 @@ fn field_schema_from_proto(schema: proto::FieldSchema) -> Result<FieldSchema, St
     })
 }
 
+pub fn query_response_to_proto(substitutions: &[datafox::Substitution]) -> QueryResponse {
+    QueryResponse {
+        rows: substitutions.iter().map(query_row_to_proto).collect(),
+    }
+}
+
+fn query_row_to_proto(substitution: &datafox::Substitution) -> QueryRow {
+    QueryRow {
+        bindings: substitution
+            .bindings()
+            .map(|(variable, value)| proto::QueryBinding {
+                variable: variable.to_string(),
+                value: Some(query_value_to_proto(value)),
+            })
+            .collect(),
+    }
+}
+
+fn query_value_to_proto(value: &datafox::Value) -> proto::QueryValue {
+    use proto::query_value::Kind;
+
+    let kind = match value {
+        datafox::Value::Integer(value) => Kind::Integer(*value),
+        datafox::Value::String(value) => Kind::String(value.clone()),
+    };
+    proto::QueryValue { kind: Some(kind) }
+}
+
 fn list_facts_response(items: &FactListItems) -> ListFactsResponse {
     match items {
         FactListItems::Active(facts) => ListFactsResponse {
@@ -657,6 +685,17 @@ impl PoneglyphDaemon for DaemonApi {
         json_response(result.substitutions())
     }
 
+    async fn query_typed(
+        &self,
+        request: Request<QueryRequest>,
+    ) -> Result<Response<QueryResponse>, Status> {
+        let query = Query::parse(&request.into_inner().expression).map_err(invalid_argument)?;
+        let result = self.poneglyph.query(query).await.map_err(internal)?;
+        Ok(Response::new(query_response_to_proto(
+            result.substitutions(),
+        )))
+    }
+
     async fn get_entity(
         &self,
         request: Request<GetEntityRequest>,
@@ -750,8 +789,9 @@ mod tests {
     };
     use super::{
         DaemonApi, active_fact_from_proto, active_fact_to_proto, entity_from_proto,
-        entity_to_proto, fact_from_proto, fact_to_proto, schema_from_proto, schema_to_proto,
-        search_hit_from_proto, search_hit_to_proto, value_from_proto, value_to_proto,
+        entity_to_proto, fact_from_proto, fact_to_proto, query_response_to_proto,
+        schema_from_proto, schema_to_proto, search_hit_from_proto, search_hit_to_proto,
+        value_from_proto, value_to_proto,
     };
 
     async fn api() -> DaemonApi {
@@ -860,6 +900,21 @@ mod tests {
             search_hit_from_proto(search_hit_to_proto(&hit)).expect("search hit round-trip");
 
         assert_eq!(round_tripped, hit);
+    }
+
+    #[test]
+    fn typed_query_response_proto_preserves_bindings() {
+        let rows = query_response_to_proto(&[datafox::Substitution::from_bindings([
+            (
+                "Album".to_string(),
+                datafox::Value::from("spotify:album:2112"),
+            ),
+            ("Year".to_string(), datafox::Value::integer(1976)),
+        ])]);
+
+        assert_eq!(rows.rows.len(), 1);
+        assert_eq!(rows.rows[0].bindings.len(), 2);
+        assert_eq!(rows.rows[0].bindings[0].variable, "Album");
     }
 
     #[test]

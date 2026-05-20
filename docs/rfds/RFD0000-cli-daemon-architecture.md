@@ -82,6 +82,9 @@ Typed protobuf migration sketch and current audit:
   `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`.
   `schema list/get` uses `GetSchemaTyped` on the daemon path and keeps the
   existing CLI renderers unchanged.
+- Query reads have a typed `QueryResponse` made of rows, bindings, and scalar
+  query values. `query` uses `QueryTyped` on the daemon path, then adapts back to
+  the legacy substitution JSON shape used by existing plain/`--json` output.
 - Later candidates: typed entity/list/search responses once entity field maps and
   search score semantics have settled; schema messages mirroring
   `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`; query
