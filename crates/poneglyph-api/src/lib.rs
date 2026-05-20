@@ -5,7 +5,7 @@ pub mod proto {
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use poneglyph_core::{Fact, Filter, Poneglyph, Query, Uri};
+use poneglyph_core::{Fact, Filter, PoneResult, Poneglyph, Query, Uri};
 use serde::Serialize;
 use tonic::{Request, Response, Status};
 
@@ -44,8 +44,10 @@ impl Pagination {
             return Err(Status::invalid_argument("limit must be greater than 0"));
         }
         Ok(Self {
-            limit: limit as usize,
-            offset: offset as usize,
+            limit: usize::try_from(limit)
+                .map_err(|_| Status::invalid_argument("limit is too large"))?,
+            offset: usize::try_from(offset)
+                .map_err(|_| Status::invalid_argument("offset is too large"))?,
         })
     }
 
@@ -65,6 +67,16 @@ where
     let json =
         serde_json::to_string_pretty(value).map_err(|error| Status::internal(error.to_string()))?;
     Ok(Response::new(JsonResponse { json }))
+}
+
+async fn collect_results<T>(
+    mut stream: tokio::sync::mpsc::Receiver<PoneResult<T>>,
+) -> Result<Vec<T>, Status> {
+    let mut items = Vec::new();
+    while let Some(item) = stream.recv().await {
+        items.push(item.map_err(|error| Status::internal(error.to_string()))?);
+    }
+    Ok(items)
 }
 
 #[tonic::async_trait]
@@ -218,18 +230,14 @@ impl PoneglyphDaemon for DaemonApi {
                         .map_err(|error| Status::invalid_argument(error.to_string()))?,
                 )
             };
-            let mut stream = self
+            let facts = self
                 .poneglyph
                 .fact_service()
                 .store()
                 .get_active_facts(filter)
                 .await
                 .map_err(|error| Status::internal(error.to_string()))?;
-            let mut facts = Vec::new();
-            while let Some(fact) = stream.recv().await {
-                facts.push(fact.map_err(|error| Status::internal(error.to_string()))?);
-            }
-            let facts = pagination.apply(facts);
+            let facts = pagination.apply(collect_results(facts).await?);
 
             return json_response(&facts);
         }
@@ -250,17 +258,13 @@ impl PoneglyphDaemon for DaemonApi {
                 ));
             }
         };
-        let mut stream = self
+        let facts = self
             .poneglyph
             .fact_service()
             .get_facts(filter)
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
-        let mut facts = Vec::new();
-        while let Some(fact) = stream.recv().await {
-            facts.push(fact.map_err(|error| Status::internal(error.to_string()))?);
-        }
-        let facts = pagination.apply(facts);
+        let facts = pagination.apply(collect_results(facts).await?);
 
         json_response(&facts)
     }
@@ -276,10 +280,7 @@ impl PoneglyphDaemon for DaemonApi {
             .query(query)
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
-        let json = serde_json::to_string_pretty(result.substitutions())
-            .map_err(|error| Status::internal(error.to_string()))?;
-
-        Ok(Response::new(JsonResponse { json }))
+        json_response(result.substitutions())
     }
 
     async fn get_entity(
@@ -293,10 +294,7 @@ impl PoneglyphDaemon for DaemonApi {
             .get_entity(&uri)
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
-        let json = serde_json::to_string_pretty(&entity)
-            .map_err(|error| Status::internal(error.to_string()))?;
-
-        Ok(Response::new(JsonResponse { json }))
+        json_response(&entity)
     }
 
     async fn list_entities(
@@ -335,10 +333,7 @@ impl PoneglyphDaemon for DaemonApi {
             .get_schema()
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
-        let json = serde_json::to_string_pretty(&schema)
-            .map_err(|error| Status::internal(error.to_string()))?;
-
-        Ok(Response::new(JsonResponse { json }))
+        json_response(&schema)
     }
 }
 
