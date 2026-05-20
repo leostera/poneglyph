@@ -1,6 +1,6 @@
 use anyhow::Result;
 use poneglyph_api::proto::{GetEntityRequest, ListEntitiesRequest, SearchEntitiesRequest};
-use poneglyph_core::{Entity, SearchHit, Workspace};
+use poneglyph_core::{Entity, SearchHit, Value, Workspace};
 
 use crate::cli::{EntityCommand, EntitySubcommand};
 use crate::client::{daemon_client, open_runtime};
@@ -107,15 +107,22 @@ fn print_entity_list(response_json: &str, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    let entities = serde_json::from_str::<Vec<Entity>>(response_json)?;
-    if entities.is_empty() {
-        println!("no entities");
-    } else {
-        for entity in entities {
-            println!("entity\t{}", entity.uri);
-        }
+    for line in plain_entity_list_lines(response_json)? {
+        println!("{line}");
     }
     Ok(())
+}
+
+fn plain_entity_list_lines(response_json: &str) -> Result<Vec<String>> {
+    let entities = serde_json::from_str::<Vec<Entity>>(response_json)?;
+    if entities.is_empty() {
+        Ok(vec!["no entities".to_string()])
+    } else {
+        Ok(entities
+            .into_iter()
+            .map(|entity| format!("entity\t{}", entity.uri))
+            .collect())
+    }
 }
 
 fn print_search_hits(response_json: &str, json: bool) -> Result<()> {
@@ -124,15 +131,22 @@ fn print_search_hits(response_json: &str, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    let hits = serde_json::from_str::<Vec<SearchHit>>(response_json)?;
-    if hits.is_empty() {
-        println!("no results");
-    } else {
-        for hit in hits {
-            println!("hit\t{}\t{}", hit.entity_uri, hit.score);
-        }
+    for line in plain_search_hit_lines(response_json)? {
+        println!("{line}");
     }
     Ok(())
+}
+
+fn plain_search_hit_lines(response_json: &str) -> Result<Vec<String>> {
+    let hits = serde_json::from_str::<Vec<SearchHit>>(response_json)?;
+    if hits.is_empty() {
+        Ok(vec!["no results".to_string()])
+    } else {
+        Ok(hits
+            .into_iter()
+            .map(|hit| format!("hit\t{}\t{}", hit.entity_uri, hit.score))
+            .collect())
+    }
 }
 
 fn print_entity(response_json: &str, json: bool) -> Result<()> {
@@ -141,15 +155,98 @@ fn print_entity(response_json: &str, json: bool) -> Result<()> {
         return Ok(());
     }
 
+    for line in plain_entity_lines(response_json)? {
+        println!("{line}");
+    }
+    Ok(())
+}
+
+fn plain_entity_lines(response_json: &str) -> Result<Vec<String>> {
     if response_json.trim() == "null" {
-        println!("not found");
-        return Ok(());
+        return Ok(vec!["not found".to_string()]);
     }
 
     let entity = serde_json::from_str::<Entity>(response_json)?;
-    println!("entity\t{}", entity.uri);
+    let mut lines = vec![format!("entity\t{}", entity.uri)];
     for (field, value) in entity.fields {
-        println!("field\t{}\t{}", field, serde_json::to_string(&value)?);
+        lines.push(format!("field\t{}\t{}", field, value_json(&value)?));
     }
-    Ok(())
+    Ok(lines)
+}
+
+fn value_json(value: &Value) -> Result<String> {
+    serde_json::to_string(value).map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use poneglyph_core::{Entity, SearchHit, Value};
+
+    use super::{plain_entity_lines, plain_entity_list_lines, plain_search_hit_lines};
+    use crate::util::parse_uri;
+
+    #[test]
+    fn plain_entity_list_lines_formats_entities_and_empty_lists() {
+        let entity = Entity {
+            uri: parse_uri("spotify:album:signals").expect("entity uri"),
+            namespace: "spotify".to_string(),
+            kind: "album".to_string(),
+            fields: BTreeMap::new(),
+        };
+        let json = serde_json::to_string(&vec![entity]).expect("json");
+
+        assert_eq!(
+            plain_entity_list_lines(&json).expect("lines"),
+            vec!["entity\tspotify:album:signals"]
+        );
+        assert_eq!(
+            plain_entity_list_lines("[]").expect("empty lines"),
+            vec!["no entities"]
+        );
+    }
+
+    #[test]
+    fn plain_search_hit_lines_formats_hits_and_empty_results() {
+        let hit = SearchHit {
+            entity_uri: parse_uri("spotify:album:signals").expect("entity uri"),
+            score: 1.5,
+        };
+        let json = serde_json::to_string(&vec![hit]).expect("json");
+
+        assert_eq!(
+            plain_search_hit_lines(&json).expect("lines"),
+            vec!["hit\tspotify:album:signals\t1.5"]
+        );
+        assert_eq!(
+            plain_search_hit_lines("[]").expect("empty lines"),
+            vec!["no results"]
+        );
+    }
+
+    #[test]
+    fn plain_entity_lines_formats_fields_and_nulls() {
+        let mut fields = BTreeMap::new();
+        fields.insert(
+            parse_uri("spotify:displayName").expect("field uri"),
+            Value::text("Signals"),
+        );
+        let entity = Entity {
+            uri: parse_uri("spotify:album:signals").expect("entity uri"),
+            namespace: "spotify".to_string(),
+            kind: "album".to_string(),
+            fields,
+        };
+        let json = serde_json::to_string(&entity).expect("json");
+
+        assert_eq!(
+            plain_entity_lines(&json).expect("lines"),
+            vec![
+                "entity\tspotify:album:signals".to_string(),
+                "field\tspotify:displayName\t{\"type\":\"text\",\"value\":\"Signals\"}".to_string(),
+            ]
+        );
+        assert_eq!(plain_entity_lines("null").expect("null"), vec!["not found"]);
+    }
 }
