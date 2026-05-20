@@ -94,9 +94,11 @@ poneglyph --workspace "$PONE" fact retract --fact poneglyph:fact:... --json
 Retraction output includes the new retraction fact id and, for `--fact`, the
 `retracted_fact_id` that was targeted.
 
-Get a consolidated entity:
+Get consolidated entities:
 
 ```sh
+poneglyph --workspace "$PONE" entity list
+poneglyph --workspace "$PONE" entity list --json
 poneglyph --workspace "$PONE" entity get spotify:album:2112
 # machine-readable full entity
 poneglyph --workspace "$PONE" entity get spotify:album:2112 --json

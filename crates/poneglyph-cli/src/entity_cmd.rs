@@ -1,5 +1,5 @@
 use anyhow::Result;
-use poneglyph_api::proto::GetEntityRequest;
+use poneglyph_api::proto::{GetEntityRequest, ListEntitiesRequest};
 use poneglyph_core::{Entity, Uri, Workspace};
 
 use crate::cli::{EntityCommand, EntitySubcommand};
@@ -12,6 +12,29 @@ pub async fn run(
     command: EntityCommand,
 ) -> Result<()> {
     match command.command {
+        EntitySubcommand::List {
+            limit,
+            offset,
+            json,
+        } => {
+            let response_json = match daemon_client(&config).await {
+                Ok(mut client) => {
+                    client
+                        .list_entities(ListEntitiesRequest {
+                            limit: limit as u64,
+                            offset: offset as u64,
+                        })
+                        .await?
+                        .into_inner()
+                        .json
+                }
+                Err(_) => {
+                    let poneglyph = open_runtime(workspace, config).await?;
+                    serde_json::to_string_pretty(&poneglyph.list_entities(limit, offset).await?)?
+                }
+            };
+            print_entity_list(&response_json, json)?;
+        }
         EntitySubcommand::Get { uri, json } => {
             let response_json = match daemon_client(&config).await {
                 Ok(mut client) => {
@@ -30,6 +53,23 @@ pub async fn run(
                 }
             };
             print_entity(&response_json, json)?;
+        }
+    }
+    Ok(())
+}
+
+fn print_entity_list(response_json: &str, json: bool) -> Result<()> {
+    if json {
+        println!("{response_json}");
+        return Ok(());
+    }
+
+    let entities = serde_json::from_str::<Vec<Entity>>(response_json)?;
+    if entities.is_empty() {
+        println!("no entities");
+    } else {
+        for entity in entities {
+            println!("entity\t{}", entity.uri);
         }
     }
     Ok(())

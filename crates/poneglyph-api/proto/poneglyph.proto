@@ -10,6 +10,7 @@ service PoneglyphDaemon {
   rpc RetractFactById(RetractFactByIdRequest) returns (StateFactResponse);
   rpc Query(QueryRequest) returns (JsonResponse);
   rpc GetEntity(GetEntityRequest) returns (JsonResponse);
+  rpc ListEntities(ListEntitiesRequest) returns (JsonResponse);
   rpc GetSchema(GetSchemaRequest) returns (JsonResponse);
 }
 
@@ -51,6 +52,11 @@ message QueryRequest {
 
 message GetEntityRequest {
   string uri = 1;
+}
+
+message ListEntitiesRequest {
+  uint64 limit = 1;
+  uint64 offset = 2;
 }
 
 message GetSchemaRequest {}

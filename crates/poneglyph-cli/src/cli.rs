@@ -167,6 +167,17 @@ pub struct EntityCommand {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum EntitySubcommand {
+    List {
+        /// Maximum number of entities to print.
+        #[arg(long, default_value_t = 50)]
+        limit: usize,
+        /// Number of entities to skip.
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
     Get {
         uri: String,
         /// Print machine-readable JSON.
@@ -322,17 +333,18 @@ mod tests {
         );
 
         let mut command = Cli::command();
-        let entity_help = command
-            .find_subcommand_mut("entity")
-            .expect("entity help")
-            .find_subcommand_mut("get")
-            .expect("entity get help")
-            .render_long_help()
-            .to_string();
-        assert!(
-            entity_help.contains("--json"),
-            "missing --json in entity get help:\n{entity_help}"
-        );
+        let entity = command.find_subcommand_mut("entity").expect("entity help");
+        for subcommand in ["get", "list"] {
+            let help = entity
+                .find_subcommand_mut(subcommand)
+                .expect("entity subcommand help")
+                .render_long_help()
+                .to_string();
+            assert!(
+                help.contains("--json"),
+                "missing --json in entity {subcommand} help:\n{help}"
+            );
+        }
     }
 
     #[test]

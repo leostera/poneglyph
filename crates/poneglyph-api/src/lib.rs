@@ -10,9 +10,9 @@ use tonic::{Request, Response, Status};
 
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
-    GetEntityRequest, GetSchemaRequest, JsonResponse, QueryRequest, RetractFactByIdRequest,
-    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StateFactsRequest,
-    StatusRequest, StatusResponse,
+    GetEntityRequest, GetSchemaRequest, JsonResponse, ListEntitiesRequest, QueryRequest,
+    RetractFactByIdRequest, ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse,
+    StateFactsRequest, StatusRequest, StatusResponse,
 };
 
 pub struct DaemonApi {
@@ -190,6 +190,22 @@ impl PoneglyphDaemon for DaemonApi {
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
         let json = serde_json::to_string_pretty(&entity)
+            .map_err(|error| Status::internal(error.to_string()))?;
+
+        Ok(Response::new(JsonResponse { json }))
+    }
+
+    async fn list_entities(
+        &self,
+        request: Request<ListEntitiesRequest>,
+    ) -> Result<Response<JsonResponse>, Status> {
+        let request = request.into_inner();
+        let entities = self
+            .poneglyph
+            .list_entities(request.limit as usize, request.offset as usize)
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+        let json = serde_json::to_string_pretty(&entities)
             .map_err(|error| Status::internal(error.to_string()))?;
 
         Ok(Response::new(JsonResponse { json }))
