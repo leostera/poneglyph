@@ -4,6 +4,7 @@ mod cmd;
 mod config;
 mod config_cmd;
 mod daemon;
+mod schema_cmd;
 mod server;
 
 use anyhow::Result;
