@@ -5,7 +5,7 @@ pub mod proto {
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use poneglyph_core::{Fact, Filter, PoneResult, Poneglyph, Query, Uri};
+use poneglyph_core::{ActiveFilter, Fact, Filter, PoneResult, Poneglyph, Query, Uri};
 use serde::Serialize;
 use tonic::{Request, Response, Status};
 
@@ -60,12 +60,23 @@ impl Pagination {
     }
 }
 
+fn invalid_argument(error: impl ToString) -> Status {
+    Status::invalid_argument(error.to_string())
+}
+
+fn internal(error: impl ToString) -> Status {
+    Status::internal(error.to_string())
+}
+
+fn parse_uri(value: impl Into<String>) -> Result<Uri, Status> {
+    Uri::parse(value).map_err(invalid_argument)
+}
+
 fn json_response<T>(value: &T) -> Result<Response<JsonResponse>, Status>
 where
     T: Serialize + ?Sized,
 {
-    let json =
-        serde_json::to_string_pretty(value).map_err(|error| Status::internal(error.to_string()))?;
+    let json = serde_json::to_string_pretty(value).map_err(internal)?;
     Ok(Response::new(JsonResponse { json }))
 }
 
@@ -74,9 +85,43 @@ async fn collect_results<T>(
 ) -> Result<Vec<T>, Status> {
     let mut items = Vec::new();
     while let Some(item) = stream.recv().await {
-        items.push(item.map_err(|error| Status::internal(error.to_string()))?);
+        items.push(item.map_err(internal)?);
     }
     Ok(items)
+}
+
+enum FactListFilter {
+    Active(ActiveFilter),
+    Log(Filter),
+}
+
+fn fact_list_filter(request: &ListFactsRequest) -> Result<FactListFilter, Status> {
+    if request.active {
+        if !request.tx_id.is_empty() {
+            return Err(Status::invalid_argument(
+                "active fact listing does not support tx_id filtering",
+            ));
+        }
+
+        let filter = if request.entity_uri.is_empty() {
+            ActiveFilter::All
+        } else {
+            ActiveFilter::ByEntity(parse_uri(request.entity_uri.clone())?)
+        };
+        return Ok(FactListFilter::Active(filter));
+    }
+
+    let filter = match (request.entity_uri.as_str(), request.tx_id.as_str()) {
+        ("", "") => Filter::All,
+        (entity_uri, "") => Filter::ByEntityUri(parse_uri(entity_uri.to_owned())?),
+        ("", tx_id) => Filter::ByTx(parse_uri(tx_id.to_owned())?),
+        _ => {
+            return Err(Status::invalid_argument(
+                "list facts accepts only one filter: entity_uri or tx_id",
+            ));
+        }
+    };
+    Ok(FactListFilter::Log(filter))
 }
 
 #[tonic::async_trait]
@@ -120,13 +165,13 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<StateFactRequest>,
     ) -> Result<Response<StateFactResponse>, Status> {
         let fact = serde_json::from_str::<Fact>(&request.into_inner().fact_json)
-            .map_err(|error| Status::invalid_argument(error.to_string()))?;
+            .map_err(invalid_argument)?;
         let fact_id = fact.fact_id.to_string();
         let tx_id = self
             .poneglyph
             .state_facts(vec![fact])
             .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(internal)?;
 
         Ok(Response::new(StateFactResponse {
             tx_id: tx_id.to_string(),
@@ -157,11 +202,7 @@ impl PoneglyphDaemon for DaemonApi {
             .iter()
             .map(|fact| fact.fact_id.to_string())
             .collect::<Vec<_>>();
-        let tx_id = self
-            .poneglyph
-            .state_facts(facts)
-            .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+        let tx_id = self.poneglyph.state_facts(facts).await.map_err(internal)?;
 
         Ok(Response::new(StateFactResponse {
             tx_id: tx_id.to_string(),
@@ -174,19 +215,18 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         request: Request<RetractFactByIdRequest>,
     ) -> Result<Response<StateFactResponse>, Status> {
-        let fact_id = Uri::parse(request.into_inner().fact_id)
-            .map_err(|error| Status::invalid_argument(error.to_string()))?;
+        let fact_id = parse_uri(request.into_inner().fact_id)?;
         let mut facts = self
             .poneglyph
             .fact_service()
             .get_facts(Filter::ById(fact_id.clone()))
             .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(internal)?;
         let fact = facts
             .recv()
             .await
             .ok_or_else(|| Status::not_found(format!("fact `{fact_id}` not found")))?
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(internal)?;
         let retraction = Fact::builder()
             .source(fact.source)
             .entity(fact.entity)
@@ -194,13 +234,13 @@ impl PoneglyphDaemon for DaemonApi {
             .value(fact.value)
             .retract()
             .build()
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(internal)?;
         let fact_id = retraction.fact_id.to_string();
         let tx_id = self
             .poneglyph
             .state_facts(vec![retraction])
             .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(internal)?;
 
         Ok(Response::new(StateFactResponse {
             tx_id: tx_id.to_string(),
@@ -216,70 +256,37 @@ impl PoneglyphDaemon for DaemonApi {
         let request = request.into_inner();
         let pagination = Pagination::try_from_limit_offset(request.limit, request.offset)?;
 
-        if request.active {
-            if !request.tx_id.is_empty() {
-                return Err(Status::invalid_argument(
-                    "active fact listing does not support tx_id filtering",
-                ));
+        match fact_list_filter(&request)? {
+            FactListFilter::Active(filter) => {
+                let facts = self
+                    .poneglyph
+                    .fact_service()
+                    .store()
+                    .get_active_facts(filter)
+                    .await
+                    .map_err(internal)?;
+                let facts = pagination.apply(collect_results(facts).await?);
+                json_response(&facts)
             }
-            let filter = if request.entity_uri.is_empty() {
-                poneglyph_core::ActiveFilter::All
-            } else {
-                poneglyph_core::ActiveFilter::ByEntity(
-                    Uri::parse(request.entity_uri)
-                        .map_err(|error| Status::invalid_argument(error.to_string()))?,
-                )
-            };
-            let facts = self
-                .poneglyph
-                .fact_service()
-                .store()
-                .get_active_facts(filter)
-                .await
-                .map_err(|error| Status::internal(error.to_string()))?;
-            let facts = pagination.apply(collect_results(facts).await?);
-
-            return json_response(&facts);
+            FactListFilter::Log(filter) => {
+                let facts = self
+                    .poneglyph
+                    .fact_service()
+                    .get_facts(filter)
+                    .await
+                    .map_err(internal)?;
+                let facts = pagination.apply(collect_results(facts).await?);
+                json_response(&facts)
+            }
         }
-
-        let filter = match (request.entity_uri.as_str(), request.tx_id.as_str()) {
-            ("", "") => Filter::All,
-            (entity_uri, "") => Filter::ByEntityUri(
-                Uri::parse(entity_uri.to_string())
-                    .map_err(|error| Status::invalid_argument(error.to_string()))?,
-            ),
-            ("", tx_id) => Filter::ByTx(
-                Uri::parse(tx_id.to_string())
-                    .map_err(|error| Status::invalid_argument(error.to_string()))?,
-            ),
-            _ => {
-                return Err(Status::invalid_argument(
-                    "list facts accepts only one filter: entity_uri or tx_id",
-                ));
-            }
-        };
-        let facts = self
-            .poneglyph
-            .fact_service()
-            .get_facts(filter)
-            .await
-            .map_err(|error| Status::internal(error.to_string()))?;
-        let facts = pagination.apply(collect_results(facts).await?);
-
-        json_response(&facts)
     }
 
     async fn query(
         &self,
         request: Request<QueryRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let query = Query::parse(&request.into_inner().expression)
-            .map_err(|error| Status::invalid_argument(error.to_string()))?;
-        let result = self
-            .poneglyph
-            .query(query)
-            .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+        let query = Query::parse(&request.into_inner().expression).map_err(invalid_argument)?;
+        let result = self.poneglyph.query(query).await.map_err(internal)?;
         json_response(result.substitutions())
     }
 
@@ -287,13 +294,8 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         request: Request<GetEntityRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let uri = Uri::parse(request.into_inner().uri)
-            .map_err(|error| Status::invalid_argument(error.to_string()))?;
-        let entity = self
-            .poneglyph
-            .get_entity(&uri)
-            .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+        let uri = parse_uri(request.into_inner().uri)?;
+        let entity = self.poneglyph.get_entity(&uri).await.map_err(internal)?;
         json_response(&entity)
     }
 
@@ -307,7 +309,7 @@ impl PoneglyphDaemon for DaemonApi {
             .poneglyph
             .list_entities(pagination.limit, pagination.offset)
             .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(internal)?;
         json_response(&entities)
     }
 
@@ -320,7 +322,7 @@ impl PoneglyphDaemon for DaemonApi {
         let hits = self
             .poneglyph
             .search(&request.query, pagination.limit)
-            .map_err(|error| Status::internal(error.to_string()))?;
+            .map_err(internal)?;
         json_response(&hits)
     }
 
@@ -328,11 +330,7 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         _request: Request<GetSchemaRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let schema = self
-            .poneglyph
-            .get_schema()
-            .await
-            .map_err(|error| Status::internal(error.to_string()))?;
+        let schema = self.poneglyph.get_schema().await.map_err(internal)?;
         json_response(&schema)
     }
 }
