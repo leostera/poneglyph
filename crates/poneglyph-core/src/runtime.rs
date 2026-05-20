@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     Consolidator, Entity, EntityStore, Fact, FactService, PoneResult, PoneglyphConfig, Projection,
     ProjectionRunner, Query, QueryEngine, QueryResult, SchemaDefinition, SearchHit,
-    SearchProjection, SqliteEntityStore, SqliteFactStore, Store, Uri, Workspace,
+    SearchProjection, Uri, Workspace,
 };
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -185,20 +185,19 @@ impl PoneglyphBuilder {
         let fact_service = match self.fact_service {
             Some(fact_service) => fact_service,
             None => {
-                let store: Arc<dyn Store> =
-                    Arc::new(SqliteFactStore::open(workspace.facts_db_path()).await?);
+                let store = crate::storage::open_fact_store(&workspace).await?;
                 Arc::new(FactService::builder().with_store_arc(store).build()?)
             }
         };
 
         let entity_store = match self.entity_store {
             Some(entity_store) => entity_store,
-            None => Arc::new(SqliteEntityStore::open(workspace.entities_db_path()).await?),
+            None => crate::storage::open_entity_store(&workspace).await?,
         };
 
         let search_projection = match self.search_projection {
             Some(search_projection) => search_projection,
-            None => Arc::new(SearchProjection::open(workspace.search_db_path())?),
+            None => crate::storage::open_search_projection(&workspace)?,
         };
 
         let query_engine = QueryEngine::new(fact_service.clone());

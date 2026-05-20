@@ -24,6 +24,7 @@ mod projections;
 mod query;
 mod runtime;
 mod schema;
+mod storage;
 #[cfg(test)]
 mod tests;
 mod uri;

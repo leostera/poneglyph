@@ -48,7 +48,8 @@ runtime/service tests that should not depend on disk.
 1. Keep store traits and in-memory implementations in `poneglyph-core`.
 2. Move SQLite-specific modules behind narrow constructor functions in
    `poneglyph-core` first, so runtime assembly calls an adapter boundary rather
-   than concrete modules directly.
+   than concrete modules directly. This seam currently lives in
+   `crates/poneglyph-core/src/storage.rs`.
 3. Introduce `poneglyph-db` with a dependency on `poneglyph-core`.
 4. Move SQLite fact/entity store implementations and their SQLite-specific tests
    into `poneglyph-db`.
