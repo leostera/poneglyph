@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use poneglyph_core::{Fact, Filter, Poneglyph, Query, Uri};
+use serde::Serialize;
 use tonic::{Request, Response, Status};
 
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
@@ -29,6 +30,41 @@ impl DaemonApi {
             shutdown: Arc::new(Mutex::new(Some(shutdown))),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Pagination {
+    limit: usize,
+    offset: usize,
+}
+
+impl Pagination {
+    fn try_from_limit_offset(limit: u64, offset: u64) -> Result<Self, Status> {
+        if limit == 0 {
+            return Err(Status::invalid_argument("limit must be greater than 0"));
+        }
+        Ok(Self {
+            limit: limit as usize,
+            offset: offset as usize,
+        })
+    }
+
+    fn apply<T>(self, items: Vec<T>) -> Vec<T> {
+        items
+            .into_iter()
+            .skip(self.offset)
+            .take(self.limit)
+            .collect()
+    }
+}
+
+fn json_response<T>(value: &T) -> Result<Response<JsonResponse>, Status>
+where
+    T: Serialize + ?Sized,
+{
+    let json =
+        serde_json::to_string_pretty(value).map_err(|error| Status::internal(error.to_string()))?;
+    Ok(Response::new(JsonResponse { json }))
 }
 
 #[tonic::async_trait]
@@ -166,11 +202,7 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<ListFactsRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let request = request.into_inner();
-        if request.limit == 0 {
-            return Err(Status::invalid_argument("limit must be greater than 0"));
-        }
-        let limit = request.limit as usize;
-        let offset = request.offset as usize;
+        let pagination = Pagination::try_from_limit_offset(request.limit, request.offset)?;
 
         if request.active {
             if !request.tx_id.is_empty() {
@@ -197,15 +229,9 @@ impl PoneglyphDaemon for DaemonApi {
             while let Some(fact) = stream.recv().await {
                 facts.push(fact.map_err(|error| Status::internal(error.to_string()))?);
             }
-            let facts = facts
-                .into_iter()
-                .skip(offset)
-                .take(limit)
-                .collect::<Vec<_>>();
-            let json = serde_json::to_string_pretty(&facts)
-                .map_err(|error| Status::internal(error.to_string()))?;
+            let facts = pagination.apply(facts);
 
-            return Ok(Response::new(JsonResponse { json }));
+            return json_response(&facts);
         }
 
         let filter = match (request.entity_uri.as_str(), request.tx_id.as_str()) {
@@ -234,15 +260,9 @@ impl PoneglyphDaemon for DaemonApi {
         while let Some(fact) = stream.recv().await {
             facts.push(fact.map_err(|error| Status::internal(error.to_string()))?);
         }
-        let facts = facts
-            .into_iter()
-            .skip(offset)
-            .take(limit)
-            .collect::<Vec<_>>();
-        let json = serde_json::to_string_pretty(&facts)
-            .map_err(|error| Status::internal(error.to_string()))?;
+        let facts = pagination.apply(facts);
 
-        Ok(Response::new(JsonResponse { json }))
+        json_response(&facts)
     }
 
     async fn query(
@@ -284,18 +304,13 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<ListEntitiesRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let request = request.into_inner();
-        if request.limit == 0 {
-            return Err(Status::invalid_argument("limit must be greater than 0"));
-        }
+        let pagination = Pagination::try_from_limit_offset(request.limit, request.offset)?;
         let entities = self
             .poneglyph
-            .list_entities(request.limit as usize, request.offset as usize)
+            .list_entities(pagination.limit, pagination.offset)
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
-        let json = serde_json::to_string_pretty(&entities)
-            .map_err(|error| Status::internal(error.to_string()))?;
-
-        Ok(Response::new(JsonResponse { json }))
+        json_response(&entities)
     }
 
     async fn search_entities(
@@ -303,17 +318,12 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<SearchEntitiesRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let request = request.into_inner();
-        if request.limit == 0 {
-            return Err(Status::invalid_argument("limit must be greater than 0"));
-        }
+        let pagination = Pagination::try_from_limit_offset(request.limit, 0)?;
         let hits = self
             .poneglyph
-            .search(&request.query, request.limit as usize)
+            .search(&request.query, pagination.limit)
             .map_err(|error| Status::internal(error.to_string()))?;
-        let json = serde_json::to_string_pretty(&hits)
-            .map_err(|error| Status::internal(error.to_string()))?;
-
-        Ok(Response::new(JsonResponse { json }))
+        json_response(&hits)
     }
 
     async fn get_schema(
