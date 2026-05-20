@@ -205,7 +205,7 @@ impl Cli {
 
 #[cfg(test)]
 mod tests {
-    use clap::Parser;
+    use clap::{CommandFactory, Parser};
     use poneglyph_core::default_workspace_path;
 
     use super::{Cli, Command, ConfigSubcommand, EntitySubcommand, FactSubcommand, ServerCommand};
@@ -231,6 +231,63 @@ mod tests {
             cli.command,
             Some(Command::Server(server)) if matches!(server.command, Some(ServerCommand::Start(_)))
         ));
+    }
+
+    #[test]
+    fn top_level_help_lists_public_namespaces() {
+        let help = Cli::command().render_long_help().to_string();
+
+        for namespace in ["server", "config", "schema", "fact", "query", "entity"] {
+            assert!(
+                help.contains(namespace),
+                "missing {namespace} in help:\n{help}"
+            );
+        }
+    }
+
+    #[test]
+    fn schema_help_mentions_json_output_flags() {
+        let mut command = Cli::command();
+        let schema = command.find_subcommand_mut("schema").expect("schema help");
+
+        for subcommand in ["list", "get"] {
+            let help = schema
+                .find_subcommand_mut(subcommand)
+                .expect("schema subcommand help")
+                .render_long_help()
+                .to_string();
+            assert!(
+                help.contains("--json"),
+                "missing --json in schema {subcommand} help:\n{help}"
+            );
+        }
+    }
+
+    #[test]
+    fn query_and_entity_help_mentions_json_output_flags() {
+        let mut command = Cli::command();
+        let query_help = command
+            .find_subcommand_mut("query")
+            .expect("query help")
+            .render_long_help()
+            .to_string();
+        assert!(
+            query_help.contains("--json"),
+            "missing --json in query help:\n{query_help}"
+        );
+
+        let mut command = Cli::command();
+        let entity_help = command
+            .find_subcommand_mut("entity")
+            .expect("entity help")
+            .find_subcommand_mut("get")
+            .expect("entity get help")
+            .render_long_help()
+            .to_string();
+        assert!(
+            entity_help.contains("--json"),
+            "missing --json in entity get help:\n{entity_help}"
+        );
     }
 
     #[test]
