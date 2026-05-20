@@ -1,8 +1,0 @@
-{
-  "name": "@poneglyph/uri",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  }
-}

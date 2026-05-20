@@ -1,8 +1,0 @@
-{
-  "name": "@poneglyph/i18n",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  }
-}

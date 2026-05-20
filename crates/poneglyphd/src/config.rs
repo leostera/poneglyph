@@ -1,11 +1,10 @@
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use config::{Config, File, FileFormat};
 use derive_builder::Builder;
 use poneglyph::{PoneglyphConfig, Workspace};
-use poneglyph_api::PoneglyphApiConfig;
-use poneglyph_ctl::PoneglyphCtlConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
@@ -16,7 +15,23 @@ pub struct PoneglyphDaemonLoggingConfig {
     pub server_log_path: Option<PathBuf>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Builder)]
+#[builder(pattern = "owned")]
+pub struct PoneglyphDaemonRpcConfig {
+    #[serde(default = "default_rpc_bind_addr")]
+    #[builder(default = "default_rpc_bind_addr()")]
+    pub bind_addr: SocketAddr,
+}
+
+impl Default for PoneglyphDaemonRpcConfig {
+    fn default() -> Self {
+        Self {
+            bind_addr: default_rpc_bind_addr(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Builder)]
 #[builder(pattern = "owned")]
 pub struct PoneglyphDaemonConfig {
     #[serde(default)]
@@ -24,13 +39,26 @@ pub struct PoneglyphDaemonConfig {
     pub poneglyph: PoneglyphConfig,
     #[serde(default)]
     #[builder(default)]
-    pub ctl: PoneglyphCtlConfig,
-    #[serde(default)]
-    #[builder(default)]
-    pub api: PoneglyphApiConfig,
+    pub rpc: PoneglyphDaemonRpcConfig,
     #[serde(default)]
     #[builder(default)]
     pub logging: PoneglyphDaemonLoggingConfig,
+}
+
+impl Default for PoneglyphDaemonConfig {
+    fn default() -> Self {
+        Self {
+            poneglyph: PoneglyphConfig::default(),
+            rpc: PoneglyphDaemonRpcConfig::default(),
+            logging: PoneglyphDaemonLoggingConfig::default(),
+        }
+    }
+}
+
+fn default_rpc_bind_addr() -> SocketAddr {
+    "127.0.0.1:5747"
+        .parse()
+        .expect("valid default RPC bind addr")
 }
 
 impl PoneglyphDaemonConfig {
@@ -53,6 +81,13 @@ impl PoneglyphDaemonConfig {
             .build()?
             .try_deserialize()
             .map_err(Into::into)
+    }
+
+    pub async fn save_to(&self, workspace: &Workspace) -> Result<()> {
+        workspace.ensure()?;
+        let contents = toml::to_string_pretty(self)?;
+        tokio::fs::write(workspace.config_path(), contents).await?;
+        Ok(())
     }
 }
 
@@ -86,11 +121,8 @@ mod tests {
 [poneglyph]
 log_level = "debug"
 
-[ctl.plex]
-enabled = true
-
-[api]
-bind_addr = "127.0.0.1:9001"
+[rpc]
+bind_addr = "127.0.0.1:5748"
 
 [logging]
 server_log_path = "custom.log"
@@ -104,11 +136,7 @@ server_log_path = "custom.log"
             .expect("loaded config");
 
         assert_eq!(config.poneglyph.log_level.as_deref(), Some("debug"));
-        assert_eq!(
-            config.ctl.plex.as_ref().map(|plex| plex.enabled),
-            Some(true)
-        );
-        assert_eq!(config.api.bind_addr, "127.0.0.1:9001");
+        assert_eq!(config.rpc.bind_addr.to_string(), "127.0.0.1:5748");
         assert_eq!(
             config.logging.server_log_path.as_deref(),
             Some(std::path::Path::new("custom.log"))

@@ -2,19 +2,18 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use poneglyph::{Poneglyph, Workspace};
-use poneglyph_api::PoneglyphApiServer;
-use poneglyph_ctl::{
-    ConnectorRuntime, CtlStore, FilesystemConnector, GcalConnector, GmailConnector, PlexConnector,
-};
+use tokio::sync::oneshot;
+use tonic::transport::Server;
 use tracing::{debug, info};
 
+use crate::api::DaemonApi;
+use crate::api::proto::poneglyph_daemon_server::PoneglyphDaemonServer;
 use crate::config::PoneglyphDaemonConfig;
 
 /// Long-lived daemon host for a configured [`Poneglyph`] runtime.
 pub struct Daemon {
     poneglyph: Arc<Poneglyph>,
-    connectors: ConnectorRuntime,
-    api: PoneglyphApiServer,
+    config: PoneglyphDaemonConfig,
 }
 
 impl Daemon {
@@ -28,16 +27,29 @@ impl Daemon {
     }
 
     pub async fn run(self) -> Result<()> {
-        info!("daemon supervising runtime, connectors, and api server");
+        info!(
+            bind_addr = %self.config.rpc.bind_addr,
+            "daemon supervising core runtime and gRPC API"
+        );
         let poneglyph = self.poneglyph.clone();
-        let connectors = self.connectors;
-        let api = self.api;
+        let mut runtime =
+            tokio::spawn(async move { poneglyph.run().await.map_err(anyhow::Error::from) });
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let api = Server::builder()
+            .add_service(PoneglyphDaemonServer::new(DaemonApi::new(
+                self.poneglyph,
+                shutdown_tx,
+            )))
+            .serve_with_shutdown(self.config.rpc.bind_addr, async move {
+                let _ = shutdown_rx.await;
+            });
 
-        tokio::try_join!(
-            async move { poneglyph.run().await.map_err(anyhow::Error::from) },
-            async move { connectors.run().await.map_err(anyhow::Error::from) },
-            async move { api.run().await.map_err(anyhow::Error::from) },
-        )?;
+        tokio::select! {
+            result = api => result.map_err(anyhow::Error::from)?,
+            result = &mut runtime => result??,
+        }
+
+        runtime.abort();
         Ok(())
     }
 }
@@ -80,11 +92,8 @@ impl DaemonBuilder {
         debug!(
             workspace = %workspace.root().display(),
             log_level = ?config.poneglyph.log_level,
-            api_bind_addr = %config.api.bind_addr,
             "opening daemon runtime"
         );
-        let api_bind_addr = config.api.bind_addr.clone();
-        let ctl = CtlStore::open(workspace.control_db_path()).await?;
 
         let poneglyph = Arc::new(
             Poneglyph::builder()
@@ -93,45 +102,14 @@ impl DaemonBuilder {
                 .build()
                 .await?,
         );
-        let api = PoneglyphApiServer::builder()
-            .with_poneglyph_arc(poneglyph.clone())
-            .with_ctl_store(ctl.clone())
-            .with_ctl_config(config.ctl.clone())
-            .with_bind_addr(api_bind_addr)
-            .with_api_config(config.api.clone())
-            .build()?;
-        let connectors = {
-            ConnectorRuntime::builder()
-                .with_poneglyph_arc(poneglyph.clone())
-                .with_ctl_store(ctl)
-                .add_filesystem_connector(FilesystemConnector::init(
-                    config.ctl.filesystem.clone().unwrap_or_default(),
-                )?)
-                .add_gcal_connector(GcalConnector::init(
-                    config.ctl.gcal.clone().unwrap_or_default(),
-                )?)
-                .add_gmail_connector(GmailConnector::init(
-                    config.ctl.gmail.clone().unwrap_or_default(),
-                )?)
-                .add_plex_connector(PlexConnector::init(
-                    config.ctl.plex.clone().unwrap_or_default(),
-                )?)
-                .build()
-                .expect("connector runtime")
-        };
         info!("daemon runtime opened");
-        Ok(Daemon {
-            poneglyph,
-            connectors,
-            api,
-        })
+        Ok(Daemon { poneglyph, config })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use poneglyph::{PoneglyphConfig, Workspace};
-    use poneglyph_api::PoneglyphApiConfig;
     use tempfile::tempdir;
 
     use crate::config::PoneglyphDaemonConfig;
@@ -162,12 +140,6 @@ mod tests {
                     .log_level(Some("trace".to_string()))
                     .build()
                     .expect("poneglyph config"),
-            )
-            .api(
-                PoneglyphApiConfig::builder()
-                    .bind_addr("127.0.0.1:9002".to_string())
-                    .build()
-                    .expect("api config"),
             )
             .build()
             .expect("config");

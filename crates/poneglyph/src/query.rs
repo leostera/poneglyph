@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
-use datafox::{Evaluator, Query as DatafoxQuery, Substitution, Universe};
-use tokio::sync::mpsc;
+use datafox::{DatafoxClient, DatafoxConfig, InMemoryStorage, Query as DatafoxQuery, Substitution};
 use tracing::debug;
 
-use crate::{ActiveFact, ActiveFilter, FactService, PoneResult, Uri, Value};
+use crate::{ActiveFact, ActiveFilter, FactService, PoneResult, Value};
 
 /// Opaque query wrapper compiled by the current query engine implementation.
 ///
@@ -76,14 +74,9 @@ impl QueryEngine {
     }
 
     pub async fn query(&self, query: Query) -> PoneResult<QueryResult> {
-        let storage = FactServiceStorage::new(self.facts.clone());
-        let universe = Universe::new(storage);
-        let mut substitutions = Evaluator::evaluate(&universe, query.as_inner()).await?;
-        let mut results = Vec::new();
-
-        while let Some(substitution) = substitutions.recv().await {
-            results.push(substitution?);
-        }
+        let storage = self.active_graph_storage().await?;
+        let datafox = DatafoxClient::new(DatafoxConfig::new(&storage))?;
+        let results = datafox.eval(query.as_inner())?.collect::<Vec<_>>();
 
         debug!(result_count = results.len(), "query evaluated");
         Ok(QueryResult::new(results))
@@ -92,87 +85,19 @@ impl QueryEngine {
     pub async fn query_str(&self, source: &str) -> PoneResult<QueryResult> {
         self.query(Query::parse(source)?).await
     }
-}
 
-#[derive(Clone)]
-struct FactServiceStorage {
-    facts: Arc<FactService>,
-}
+    async fn active_graph_storage(&self) -> PoneResult<InMemoryStorage> {
+        let mut active_facts = self.facts.get_active_facts(ActiveFilter::All).await?;
+        let mut storage = InMemoryStorage::new();
 
-impl FactServiceStorage {
-    fn new(facts: Arc<FactService>) -> Self {
-        Self { facts }
-    }
-}
-
-#[async_trait]
-impl datafox::Storage for FactServiceStorage {
-    async fn get_facts_matching(
-        &self,
-        predicate: &str,
-        pattern: Vec<Option<datafox::Value>>,
-    ) -> datafox::Result<datafox::TupleStream> {
-        let field = match Uri::parse(predicate.to_string()) {
-            Ok(field) => field,
-            Err(_) => {
-                let (_tx, rx) = mpsc::channel(1);
-                return Ok(rx);
+        while let Some(active_fact) = active_facts.recv().await {
+            let active_fact = active_fact?;
+            for tuple in active_fact_to_tuples(active_fact.clone())? {
+                storage.insert(active_fact.field.to_string(), tuple);
             }
-        };
-        let filter = active_filter_for_pattern(field, &pattern);
-        debug!(?filter, "query storage selected active graph filter");
+        }
 
-        let mut active_facts = self
-            .facts
-            .get_active_facts(filter)
-            .await
-            .map_err(datafox_store_error)?;
-        let (tx, rx) = mpsc::channel(64);
-
-        tokio::spawn(async move {
-            while let Some(active_fact) = active_facts.recv().await {
-                let tuples = match active_fact {
-                    Ok(active_fact) => match active_fact_to_tuples(active_fact) {
-                        Ok(tuple) => tuple,
-                        Err(error) => {
-                            if tx.send(Err(datafox_store_error(error))).await.is_err() {
-                                break;
-                            }
-                            continue;
-                        }
-                    },
-                    Err(error) => {
-                        if tx.send(Err(datafox_store_error(error))).await.is_err() {
-                            break;
-                        }
-                        continue;
-                    }
-                };
-
-                for tuple in tuples {
-                    if datafox::matches_pattern(&pattern, &tuple)
-                        && tx.send(Ok(tuple)).await.is_err()
-                    {
-                        break;
-                    }
-                }
-            }
-        });
-
-        Ok(rx)
-    }
-}
-
-fn active_filter_for_pattern(field: Uri, pattern: &[Option<datafox::Value>]) -> ActiveFilter {
-    if pattern.len() != 2 {
-        return ActiveFilter::ByField(field);
-    }
-
-    let entity = pattern[0].as_ref().and_then(query_value_to_uri);
-
-    match entity {
-        Some(entity) => ActiveFilter::ByFieldEntity { field, entity },
-        None => ActiveFilter::ByField(field),
+        Ok(storage)
     }
 }
 
@@ -203,19 +128,6 @@ fn value_to_query_value(value: &Value) -> PoneResult<datafox::Value> {
         Value::DateTime(value) => Ok(datafox::Value::from(value.to_rfc3339())),
         Value::List(values) => Ok(datafox::Value::from(serde_json::to_string(values)?)),
         Value::Map(values) => Ok(datafox::Value::from(serde_json::to_string(values)?)),
-    }
-}
-
-fn query_value_to_uri(value: &datafox::Value) -> Option<Uri> {
-    match value {
-        datafox::Value::String(value) => Uri::parse(value.clone()).ok(),
-        datafox::Value::Integer(_) => None,
-    }
-}
-
-fn datafox_store_error(error: crate::Error) -> datafox::Error {
-    datafox::Error::Parse {
-        diagnostics: vec![datafox::Diagnostic::new(error.to_string())],
     }
 }
 

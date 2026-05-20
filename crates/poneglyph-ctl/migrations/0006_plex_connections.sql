@@ -1,8 +1,0 @@
-CREATE TABLE IF NOT EXISTS plex_connections (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  base_url TEXT NOT NULL UNIQUE,
-  token TEXT NOT NULL,
-  libraries TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);

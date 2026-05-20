@@ -1,5 +1,5 @@
 [package]
-name = "poneglyphd"
+name = "poneglyph-cli"
 version = "0.1.0"
 edition = "2024"
 
@@ -10,13 +10,22 @@ config.workspace = true
 derive_builder.workspace = true
 dotenvy.workspace = true
 poneglyph = { path = "../poneglyph" }
-poneglyph-api = { path = "../poneglyph-api" }
-poneglyph-ctl = { path = "../poneglyph-ctl" }
+prost.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 tokio.workspace = true
+toml.workspace = true
+tonic.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true
 tracing-subscriber.workspace = true
+
+[[bin]]
+name = "poneglyph"
+path = "src/main.rs"
+
+[build-dependencies]
+tonic-build.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

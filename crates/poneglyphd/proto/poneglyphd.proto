@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package poneglyph.daemon.v1;
+
+service PoneglyphDaemon {
+  rpc Status(StatusRequest) returns (StatusResponse);
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+  rpc StateFact(StateFactRequest) returns (StateFactResponse);
+  rpc Query(QueryRequest) returns (JsonResponse);
+  rpc GetEntity(GetEntityRequest) returns (JsonResponse);
+  rpc GetSchema(GetSchemaRequest) returns (JsonResponse);
+}
+
+message StatusRequest {}
+
+message StatusResponse {
+  string status = 1;
+  string workspace = 2;
+  uint64 uptime_seconds = 3;
+}
+
+message ShutdownRequest {}
+
+message ShutdownResponse {
+  string status = 1;
+}
+
+message StateFactRequest {
+  string fact_json = 1;
+}
+
+message StateFactResponse {
+  string tx_id = 1;
+}
+
+message QueryRequest {
+  string expression = 1;
+}
+
+message GetEntityRequest {
+  string uri = 1;
+}
+
+message GetSchemaRequest {}
+
+message JsonResponse {
+  string json = 1;
+}
