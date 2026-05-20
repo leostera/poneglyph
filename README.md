@@ -12,7 +12,7 @@ Datafox-backed Datalog queries.
 - `crates/poneglyph-api` — local gRPC API/protobuf definitions and daemon service adapter.
 - `crates/poneglyph-core` — core append-only fact store, schema/entity services,
   projections, query engine, runtime, and disk-backed workspace layout.
-- `crates/poneglyph-db` — planned storage/Datafox split point if core storage modules outgrow the core crate.
+- `crates/poneglyph-db` — planned storage/Datafox split point if core storage modules outgrow the core crate; see `docs/rfds/RFD0001-storage-crate-boundary.md` for the proposed boundary.
 - `../datafox` — external sibling path dependency for Datalog parsing/evaluation.
 
 Clone/check out Datafox next to this repository before building:

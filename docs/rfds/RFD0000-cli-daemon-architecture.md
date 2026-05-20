@@ -23,7 +23,8 @@ daemon and exposes facts, schemas, entities, and Datalog queries.
   types, and daemon service adapters.
 - `crates/poneglyph-core` is the core runtime/library crate.
 - `crates/poneglyph-db` is reserved for a future storage/Datafox split once that
-  boundary is clearer.
+  boundary is clearer; see `RFD0001-storage-crate-boundary.md` for the proposed
+  extraction boundary.
 - Durable truth remains the append-only fact log.
 - Entity and search data are derived projections and must remain replayable.
 - The CLI talks to the daemon over gRPC when the daemon is available.
