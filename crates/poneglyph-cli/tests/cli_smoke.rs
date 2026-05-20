@@ -300,6 +300,11 @@ fn daemon_cli_restarts_detached_server() {
     assert!(restarted.contains("\"status\": \"restarted\""));
     let status = poneglyph(workspace, &["server", "status", "--json"]);
     assert!(status.contains("\"status\": \"running\""));
+
+    let restarted = poneglyph(workspace, &["server", "restart", "--json"]);
+    assert!(restarted.contains("\"status\": \"restarted\""));
+    assert!(!restarted.contains("stopping"));
+
     let stopped = poneglyph(workspace, &["server", "stop", "--json"]);
     assert!(stopped.contains("\"status\": \"stopping\""));
     wait_for_offline(workspace);

@@ -48,8 +48,20 @@ pub async fn status(config: PoneglyphDaemonConfig, json: bool) -> Result<()> {
 }
 
 pub async fn stop(config: PoneglyphDaemonConfig, json: bool) -> Result<()> {
-    let mut client = match daemon_client(&config).await {
-        Ok(client) => client,
+    match stop_daemon(&config).await {
+        Ok(status) => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "status": status,
+                    }))?
+                );
+            } else {
+                println!("status: {status}");
+            }
+            Ok(())
+        }
         Err(error) => {
             if json {
                 println!(
@@ -63,19 +75,13 @@ pub async fn stop(config: PoneglyphDaemonConfig, json: bool) -> Result<()> {
             }
             anyhow::bail!("daemon is not running at {}: {error}", config.rpc.bind_addr);
         }
-    };
-    let response = client.shutdown(ShutdownRequest {}).await?.into_inner();
-    if json {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&serde_json::json!({
-                "status": response.status,
-            }))?
-        );
-    } else {
-        println!("status: {}", response.status);
     }
-    Ok(())
+}
+
+async fn stop_daemon(config: &PoneglyphDaemonConfig) -> Result<String> {
+    let mut client = daemon_client(config).await?;
+    let response = client.shutdown(ShutdownRequest {}).await?.into_inner();
+    Ok(response.status)
 }
 
 pub async fn restart(
@@ -84,7 +90,7 @@ pub async fn restart(
     json: bool,
 ) -> Result<()> {
     if daemon_client(&config).await.is_ok() {
-        stop(config.clone(), false).await?;
+        stop_daemon(&config).await?;
         wait_until_offline(&config).await;
     }
 
