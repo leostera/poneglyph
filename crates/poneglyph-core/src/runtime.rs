@@ -264,15 +264,19 @@ async fn await_worker(handle: JoinHandle<PoneResult<()>>) -> PoneResult<()> {
 mod tests {
     use std::collections::BTreeMap;
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
+
+    use async_trait::async_trait;
 
     use tempfile::tempdir;
     use tokio::task::yield_now;
     use tokio::time::timeout;
 
     use crate::{
-        Entity, InMemoryEntityStore, InMemoryFactStore, Poneglyph, PoneglyphConfig, Projection,
-        ProjectionBatch, SearchProjection, Value, Workspace, fact, uri,
+        Entity, EntityStore, InMemoryEntityStore, InMemoryFactStore, PoneResult, Poneglyph,
+        PoneglyphConfig, Projection, ProjectionBatch, RuntimeStorageFactory, SearchProjection,
+        Store, Value, Workspace, fact, uri,
     };
 
     #[tokio::test]
@@ -292,6 +296,59 @@ mod tests {
         assert!(workspace.facts_db_path().exists());
         assert!(workspace.entities_db_path().exists());
         assert!(workspace.search_db_path().exists());
+    }
+
+    #[derive(Default)]
+    struct TrackingStorageFactory {
+        fact_store_opens: AtomicUsize,
+        entity_store_opens: AtomicUsize,
+        search_projection_opens: AtomicUsize,
+    }
+
+    #[async_trait]
+    impl RuntimeStorageFactory for TrackingStorageFactory {
+        async fn open_fact_store(&self, _workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
+            self.fact_store_opens.fetch_add(1, Ordering::SeqCst);
+            Ok(Arc::new(InMemoryFactStore::new()))
+        }
+
+        async fn open_entity_store(
+            &self,
+            _workspace: &Workspace,
+        ) -> PoneResult<Arc<dyn EntityStore>> {
+            self.entity_store_opens.fetch_add(1, Ordering::SeqCst);
+            Ok(Arc::new(InMemoryEntityStore::new()))
+        }
+
+        fn open_search_projection(
+            &self,
+            _workspace: &Workspace,
+        ) -> PoneResult<Arc<SearchProjection>> {
+            self.search_projection_opens.fetch_add(1, Ordering::SeqCst);
+            Ok(Arc::new(SearchProjection::create_in_memory()?))
+        }
+    }
+
+    #[tokio::test]
+    async fn runtime_builder_uses_injected_storage_factory() {
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+        let factory = Arc::new(TrackingStorageFactory::default());
+
+        let poneglyph = Poneglyph::builder()
+            .with_workspace(workspace.clone())
+            .with_storage_factory_arc(factory.clone())
+            .build()
+            .await
+            .expect("runtime");
+
+        assert_eq!(poneglyph.workspace(), &workspace);
+        assert_eq!(factory.fact_store_opens.load(Ordering::SeqCst), 1);
+        assert_eq!(factory.entity_store_opens.load(Ordering::SeqCst), 1);
+        assert_eq!(factory.search_projection_opens.load(Ordering::SeqCst), 1);
+        assert!(!workspace.facts_db_path().exists());
+        assert!(!workspace.entities_db_path().exists());
+        assert!(!workspace.search_db_path().exists());
     }
 
     #[tokio::test]
