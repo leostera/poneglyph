@@ -133,8 +133,11 @@ pub struct FactCommand {
 pub enum FactSubcommand {
     List {
         /// Restrict output to facts for one entity URI.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "tx")]
         entity: Option<String>,
+        /// Restrict output to facts from one transaction URI.
+        #[arg(long, conflicts_with = "entity")]
+        tx: Option<String>,
         /// Print machine-readable JSON.
         #[arg(long)]
         json: bool,
@@ -332,6 +335,24 @@ mod tests {
             assert!(
                 help.contains("--json"),
                 "missing --json in schema {subcommand} help:\n{help}"
+            );
+        }
+    }
+
+    #[test]
+    fn fact_help_mentions_json_output_flags() {
+        let mut command = Cli::command();
+        let fact = command.find_subcommand_mut("fact").expect("fact help");
+
+        for subcommand in ["list", "state", "retract"] {
+            let help = fact
+                .find_subcommand_mut(subcommand)
+                .expect("fact subcommand help")
+                .render_long_help()
+                .to_string();
+            assert!(
+                help.contains("--json"),
+                "missing --json in fact {subcommand} help:\n{help}"
             );
         }
     }

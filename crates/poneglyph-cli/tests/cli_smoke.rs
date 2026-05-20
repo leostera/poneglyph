@@ -81,6 +81,13 @@ async fn cli_states_queries_and_retracts_facts_without_daemon() {
     );
     assert!(facts_json.contains("spotify:displayName"));
 
+    let tx_id = state
+        .lines()
+        .find_map(|line| line.strip_prefix("tx_id: "))
+        .expect("tx id");
+    let facts_by_tx = poneglyph(workspace, &["fact", "list", "--tx", tx_id]);
+    assert!(facts_by_tx.contains("spotify:album:2112"));
+
     let fact_id = first_fact_id(workspace, "spotify:album:2112").await;
     let retraction = poneglyph(
         workspace,
@@ -306,6 +313,13 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
         ],
     );
     assert!(facts.contains("spotify:displayName"));
+
+    let tx_id = serde_json::from_str::<serde_json::Value>(&state).expect("state json")["tx_id"]
+        .as_str()
+        .expect("tx id")
+        .to_string();
+    let facts_by_tx = poneglyph(workspace, &["fact", "list", "--tx", &tx_id]);
+    assert!(facts_by_tx.contains("spotify:album:signals"));
 
     let applied = poneglyph(
         workspace,

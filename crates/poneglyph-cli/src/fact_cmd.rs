@@ -12,8 +12,8 @@ pub async fn run(
     command: FactCommand,
 ) -> Result<()> {
     match command.command {
-        FactSubcommand::List { entity, json } => {
-            let facts = list_facts(&workspace, &config, entity.as_deref()).await?;
+        FactSubcommand::List { entity, tx, json } => {
+            let facts = list_facts(&workspace, &config, entity.as_deref(), tx.as_deref()).await?;
             print_fact_list(&facts, json)
         }
         FactSubcommand::State {
@@ -122,12 +122,14 @@ async fn list_facts(
     workspace: &Workspace,
     config: &PoneglyphDaemonConfig,
     entity: Option<&str>,
+    tx: Option<&str>,
 ) -> Result<Vec<Fact>> {
     match daemon_client(config).await {
         Ok(mut client) => {
             let response = client
                 .list_facts(ListFactsRequest {
                     entity_uri: entity.unwrap_or_default().to_string(),
+                    tx_id: tx.unwrap_or_default().to_string(),
                 })
                 .await?
                 .into_inner();
@@ -135,9 +137,13 @@ async fn list_facts(
         }
         Err(_) => {
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
-            let filter = match entity {
-                Some(entity) => Filter::ByEntityUri(parse_uri(entity)?),
-                None => Filter::All,
+            let filter = match (entity, tx) {
+                (Some(entity), None) => Filter::ByEntityUri(parse_uri(entity)?),
+                (None, Some(tx)) => Filter::ByTx(parse_uri(tx)?),
+                (None, None) => Filter::All,
+                (Some(_), Some(_)) => {
+                    anyhow::bail!("fact list accepts only one filter: --entity or --tx")
+                }
             };
             let mut stream = poneglyph.fact_service().get_facts(filter).await?;
             let mut facts = Vec::new();

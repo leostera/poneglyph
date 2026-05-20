@@ -166,13 +166,21 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<ListFactsRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let request = request.into_inner();
-        let filter = if request.entity_uri.is_empty() {
-            Filter::All
-        } else {
-            Filter::ByEntityUri(
-                Uri::parse(request.entity_uri)
+        let filter = match (request.entity_uri.as_str(), request.tx_id.as_str()) {
+            ("", "") => Filter::All,
+            (entity_uri, "") => Filter::ByEntityUri(
+                Uri::parse(entity_uri.to_string())
                     .map_err(|error| Status::invalid_argument(error.to_string()))?,
-            )
+            ),
+            ("", tx_id) => Filter::ByTx(
+                Uri::parse(tx_id.to_string())
+                    .map_err(|error| Status::invalid_argument(error.to_string()))?,
+            ),
+            _ => {
+                return Err(Status::invalid_argument(
+                    "list facts accepts only one filter: entity_uri or tx_id",
+                ));
+            }
         };
         let mut stream = self
             .poneglyph
