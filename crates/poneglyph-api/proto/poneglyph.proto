@@ -56,6 +56,45 @@ message StateFactResponse {
   repeated string fact_ids = 3;
 }
 
+// Typed domain payloads for the planned migration away from JsonResponse.
+// Current RPCs continue to use JsonResponse until each CLI call site can move
+// independently without changing user-facing output.
+message Fact {
+  string fact_id = 1;
+  string source = 2;
+  string entity = 3;
+  string field = 4;
+  Value value = 5;
+  bool retraction = 6;
+  string stated_at = 7;
+  string tx_id = 8;
+}
+
+message Value {
+  oneof kind {
+    NullValue null_value = 1;
+    string text = 2;
+    string number = 3;
+    bool boolean = 4;
+    bytes bytes = 5;
+    string reference_uri = 6;
+    string date = 7;
+    string datetime = 8;
+    ValueList list = 9;
+    ValueMap map = 10;
+  }
+}
+
+message NullValue {}
+
+message ValueList {
+  repeated Value values = 1;
+}
+
+message ValueMap {
+  map<string, Value> values = 1;
+}
+
 message QueryRequest {
   string expression = 1;
 }

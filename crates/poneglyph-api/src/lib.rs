@@ -2,10 +2,12 @@ pub mod proto {
     tonic::include_proto!("poneglyph.daemon.v1");
 }
 
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use poneglyph_core::{ActiveFilter, Fact, Filter, PoneResult, Poneglyph, Query, Uri};
+use chrono::{DateTime, NaiveDate, Utc};
+use poneglyph_core::{ActiveFilter, Fact, Filter, PoneResult, Poneglyph, Query, Uri, Value};
 use serde::Serialize;
 use tonic::{Request, Response, Status};
 
@@ -88,6 +90,107 @@ async fn collect_results<T>(
         items.push(item.map_err(internal)?);
     }
     Ok(items)
+}
+
+pub fn fact_to_proto(fact: &Fact) -> proto::Fact {
+    proto::Fact {
+        fact_id: fact.fact_id.to_string(),
+        source: fact.source.to_string(),
+        entity: fact.entity.to_string(),
+        field: fact.field.to_string(),
+        value: Some(value_to_proto(&fact.value)),
+        retraction: fact.retraction,
+        stated_at: fact.stated_at.to_rfc3339(),
+        tx_id: fact
+            .tx_id
+            .as_ref()
+            .map(ToString::to_string)
+            .unwrap_or_default(),
+    }
+}
+
+pub fn fact_from_proto(fact: proto::Fact) -> Result<Fact, String> {
+    Ok(Fact {
+        fact_id: parse_core_uri(fact.fact_id)?,
+        source: parse_core_uri(fact.source)?,
+        entity: parse_core_uri(fact.entity)?,
+        field: parse_core_uri(fact.field)?,
+        value: value_from_proto(fact.value.ok_or("missing fact value")?)?,
+        retraction: fact.retraction,
+        stated_at: DateTime::parse_from_rfc3339(&fact.stated_at)
+            .map_err(|error| error.to_string())?
+            .with_timezone(&Utc),
+        tx_id: if fact.tx_id.is_empty() {
+            None
+        } else {
+            Some(parse_core_uri(fact.tx_id)?)
+        },
+    })
+}
+
+pub fn value_to_proto(value: &Value) -> proto::Value {
+    use proto::value::Kind;
+
+    let kind = match value {
+        Value::Null => Kind::NullValue(proto::NullValue {}),
+        Value::Text(value) => Kind::Text(value.clone()),
+        Value::Number(value) => Kind::Number(value.clone()),
+        Value::Boolean(value) => Kind::Boolean(*value),
+        Value::Bytes(value) => Kind::Bytes(value.clone()),
+        Value::Reference(uri) => Kind::ReferenceUri(uri.to_string()),
+        Value::Date(value) => Kind::Date(value.to_string()),
+        Value::DateTime(value) => Kind::Datetime(value.to_rfc3339()),
+        Value::List(values) => Kind::List(proto::ValueList {
+            values: values.iter().map(value_to_proto).collect(),
+        }),
+        Value::Map(values) => Kind::Map(proto::ValueMap {
+            values: values
+                .iter()
+                .map(|(key, value)| (key.clone(), value_to_proto(value)))
+                .collect(),
+        }),
+    };
+
+    proto::Value { kind: Some(kind) }
+}
+
+pub fn value_from_proto(value: proto::Value) -> Result<Value, String> {
+    use proto::value::Kind;
+
+    match value.kind.ok_or("missing value kind")? {
+        Kind::NullValue(_) => Ok(Value::Null),
+        Kind::Text(value) => Ok(Value::Text(value)),
+        Kind::Number(value) => Ok(Value::Number(value)),
+        Kind::Boolean(value) => Ok(Value::Boolean(value)),
+        Kind::Bytes(value) => Ok(Value::Bytes(value)),
+        Kind::ReferenceUri(value) => Ok(Value::Reference(parse_core_uri(value)?)),
+        Kind::Date(value) => Ok(Value::Date(
+            NaiveDate::parse_from_str(&value, "%Y-%m-%d").map_err(|error| error.to_string())?,
+        )),
+        Kind::Datetime(value) => Ok(Value::DateTime(
+            DateTime::parse_from_rfc3339(&value)
+                .map_err(|error| error.to_string())?
+                .with_timezone(&Utc),
+        )),
+        Kind::List(value) => Ok(Value::List(
+            value
+                .values
+                .into_iter()
+                .map(value_from_proto)
+                .collect::<Result<_, _>>()?,
+        )),
+        Kind::Map(value) => Ok(Value::Map(
+            value
+                .values
+                .into_iter()
+                .map(|(key, value)| value_from_proto(value).map(|value| (key, value)))
+                .collect::<Result<BTreeMap<_, _>, _>>()?,
+        )),
+    }
+}
+
+fn parse_core_uri(value: String) -> Result<Uri, String> {
+    Uri::parse(value).map_err(|error| error.to_string())
 }
 
 enum FactListFilter {
@@ -339,15 +442,18 @@ impl PoneglyphDaemon for DaemonApi {
 mod tests {
     use std::sync::Arc;
 
+    use std::collections::BTreeMap;
+
+    use chrono::{NaiveDate, TimeZone, Utc};
     use poneglyph_core::{
         ActiveFact, Fact, InMemoryEntityStore, InMemoryFactStore, Poneglyph, SearchProjection,
         Value, fact, uri,
     };
     use tonic::{Code, Request};
 
-    use super::DaemonApi;
     use super::proto::poneglyph_daemon_server::PoneglyphDaemon;
     use super::proto::{ListEntitiesRequest, ListFactsRequest, SearchEntitiesRequest};
+    use super::{DaemonApi, fact_from_proto, fact_to_proto, value_from_proto, value_to_proto};
 
     async fn api() -> DaemonApi {
         api_with_runtime().await.0
@@ -370,6 +476,53 @@ mod tests {
         );
         let (shutdown, _receiver) = tokio::sync::oneshot::channel();
         (DaemonApi::new(runtime.clone(), shutdown), runtime)
+    }
+
+    #[test]
+    fn typed_value_proto_round_trips_nested_values() {
+        let mut values = BTreeMap::new();
+        values.insert("title".to_string(), Value::text("Signals"));
+        values.insert(
+            "released".to_string(),
+            Value::date(NaiveDate::from_ymd_opt(1982, 9, 9).expect("date")),
+        );
+        values.insert(
+            "refs".to_string(),
+            Value::list(vec![Value::reference(uri!("spotify:artist:rush"))]),
+        );
+        let value = Value::map(values);
+
+        let round_tripped = value_from_proto(value_to_proto(&value)).expect("value round-trip");
+
+        assert_eq!(round_tripped, value);
+    }
+
+    #[test]
+    fn typed_fact_proto_round_trips_fact_metadata() {
+        let mut fact = fact!(
+            uri!("poneglyph:cli"),
+            uri!("spotify:album:signals"),
+            uri!("spotify:displayName"),
+            Value::text("Signals")
+        );
+        fact.fact_id = uri!("poneglyph:fact:1");
+        fact.tx_id = Some(uri!("poneglyph:tx:1"));
+        fact.stated_at = Utc
+            .with_ymd_and_hms(1982, 9, 9, 12, 0, 0)
+            .single()
+            .expect("timestamp");
+
+        let round_tripped = fact_from_proto(fact_to_proto(&fact)).expect("fact round-trip");
+
+        assert_eq!(round_tripped, fact);
+    }
+
+    #[test]
+    fn typed_value_proto_rejects_missing_value_kind() {
+        let error = value_from_proto(super::proto::Value { kind: None })
+            .expect_err("missing kind should fail");
+
+        assert!(error.contains("missing value kind"));
     }
 
     #[tokio::test]

@@ -61,16 +61,19 @@ places. This keeps the boundary flexible during CLI design. Typed protobuf
 messages should replace JSON once the API stabilizes, but not before the fact,
 value, schema, and query-result shapes have stopped changing.
 
-Typed protobuf migration sketch:
+Typed protobuf migration sketch and current audit:
 
-- Add `Value` as a `oneof` covering null, text, number string, boolean, bytes,
-  reference URI, date, datetime, list, and map.
-- Add `Fact` with source/entity/field/fact/tx URIs as strings plus `Value`,
-  retraction flag, and stated timestamp.
-- Add schema messages mirroring `NamespaceSchema`, `KindSchema`, `FieldSchema`,
-  and `SchemaDefinition`.
-- Add query result messages as repeated variable bindings rather than generic
-  JSON substitutions.
+- `Value` and `Fact` are the first typed domain payloads in the proto. They are
+  not wired into RPC responses yet; conversion helpers and round-trip tests live
+  in `poneglyph-api` so future RPC migrations can happen one method at a time.
+- Best first service candidate: add a typed `ListFacts` response alongside the
+  existing JSON response. Fact and value shapes are now explicit, fact list UX is
+  stable, and append-only semantics are already heavily tested.
+- Later candidates: typed entity/list/search responses once entity field maps and
+  search score semantics have settled; schema messages mirroring
+  `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`; query
+  result messages as repeated variable bindings rather than generic JSON
+  substitutions.
 - Keep JSON compatibility during one transition window before removing JSON RPC
   fields.
 
