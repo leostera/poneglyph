@@ -9,12 +9,31 @@
 
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use poneglyph_core::{
-    EntityStore, FactService, PoneResult, Poneglyph, PoneglyphConfig, SearchProjection, Store,
-    Workspace,
+    EntityStore, PoneResult, Poneglyph, PoneglyphConfig, RuntimeStorageFactory, SearchProjection,
+    Store, Workspace,
 };
 
 pub use poneglyph_core::{SqliteEntityStore, SqliteFactStore};
+
+/// Durable runtime storage factory backed by this crate's adapters.
+pub struct DbRuntimeStorageFactory;
+
+#[async_trait]
+impl RuntimeStorageFactory for DbRuntimeStorageFactory {
+    async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
+        open_fact_store(workspace).await
+    }
+
+    async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>> {
+        open_entity_store(workspace).await
+    }
+
+    fn open_search_projection(&self, workspace: &Workspace) -> PoneResult<Arc<SearchProjection>> {
+        open_search_projection(workspace)
+    }
+}
 
 /// Opens a full Poneglyph runtime using this crate's durable storage adapters.
 ///
@@ -22,17 +41,10 @@ pub use poneglyph_core::{SqliteEntityStore, SqliteFactStore};
 /// assembly while `poneglyph-core` retains semantic contracts and injectable
 /// runtime construction.
 pub async fn open_runtime(workspace: Workspace, config: PoneglyphConfig) -> PoneResult<Poneglyph> {
-    let fact_store = open_fact_store(&workspace).await?;
-    let fact_service = Arc::new(FactService::builder().with_store_arc(fact_store).build()?);
-    let entity_store = open_entity_store(&workspace).await?;
-    let search_projection = open_search_projection(&workspace)?;
-
     Poneglyph::builder()
         .with_workspace(workspace)
         .with_config(config)
-        .with_fact_service_arc(fact_service)
-        .with_entity_store_arc(entity_store)
-        .with_search_projection_arc(search_projection)
+        .with_storage_factory(DbRuntimeStorageFactory)
         .build()
         .await
 }

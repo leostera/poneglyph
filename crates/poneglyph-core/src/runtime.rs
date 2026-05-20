@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use crate::{
     Consolidator, Entity, EntityStore, Fact, FactService, PoneResult, PoneglyphConfig, Projection,
-    ProjectionRunner, Query, QueryEngine, QueryResult, SchemaDefinition, SearchHit,
-    SearchProjection, Uri, Workspace,
+    ProjectionRunner, Query, QueryEngine, QueryResult, RuntimeStorageFactory, SchemaDefinition,
+    SearchHit, SearchProjection, Uri, Workspace,
 };
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -110,6 +110,7 @@ pub struct PoneglyphBuilder {
     fact_service: Option<Arc<FactService>>,
     entity_store: Option<Arc<dyn EntityStore>>,
     search_projection: Option<Arc<SearchProjection>>,
+    storage_factory: Option<Arc<dyn RuntimeStorageFactory>>,
 }
 
 impl Default for PoneglyphBuilder {
@@ -120,6 +121,7 @@ impl Default for PoneglyphBuilder {
             fact_service: None,
             entity_store: None,
             search_projection: None,
+            storage_factory: None,
         }
     }
 }
@@ -168,6 +170,22 @@ impl PoneglyphBuilder {
         self
     }
 
+    pub fn with_storage_factory<F>(mut self, storage_factory: F) -> Self
+    where
+        F: RuntimeStorageFactory + 'static,
+    {
+        self.storage_factory = Some(Arc::new(storage_factory));
+        self
+    }
+
+    pub fn with_storage_factory_arc(
+        mut self,
+        storage_factory: Arc<dyn RuntimeStorageFactory>,
+    ) -> Self {
+        self.storage_factory = Some(storage_factory);
+        self
+    }
+
     pub async fn build(self) -> PoneResult<Poneglyph> {
         let workspace = match self.workspace {
             Some(workspace) => workspace,
@@ -182,22 +200,26 @@ impl PoneglyphBuilder {
         };
         debug!(log_level = ?config.log_level, "runtime config loaded");
 
+        let storage_factory = self
+            .storage_factory
+            .unwrap_or_else(|| Arc::new(crate::storage::DefaultRuntimeStorageFactory));
+
         let fact_service = match self.fact_service {
             Some(fact_service) => fact_service,
             None => {
-                let store = crate::storage::open_fact_store(&workspace).await?;
+                let store = storage_factory.open_fact_store(&workspace).await?;
                 Arc::new(FactService::builder().with_store_arc(store).build()?)
             }
         };
 
         let entity_store = match self.entity_store {
             Some(entity_store) => entity_store,
-            None => crate::storage::open_entity_store(&workspace).await?,
+            None => storage_factory.open_entity_store(&workspace).await?,
         };
 
         let search_projection = match self.search_projection {
             Some(search_projection) => search_projection,
-            None => crate::storage::open_search_projection(&workspace)?,
+            None => storage_factory.open_search_projection(&workspace)?,
         };
 
         let query_engine = QueryEngine::new(fact_service.clone());

@@ -62,15 +62,19 @@ runtime/service tests that should not depend on disk.
    preferred external import path while the physical modules remain in core.
    The old `poneglyph-core` SQLite re-exports are deprecated to discourage new
    external callers from binding directly to core storage implementations.
-5. Move SQLite fact/entity store implementations and their SQLite-specific tests
+5. Introduce an injected runtime storage factory trait so disk-backed runtime
+   construction can be supplied by `poneglyph-db` without making core depend on
+   db. This seam now exists as `poneglyph_core::RuntimeStorageFactory`, and
+   `poneglyph-db` implements it with `DbRuntimeStorageFactory`.
+6. Move SQLite fact/entity store implementations and their SQLite-specific tests
    into `poneglyph-db` once core no longer needs to construct those concrete
    adapters itself. The remaining direct references are intentionally core-local:
    the SQLite modules, deprecated core re-exports, the default core storage seam,
    and core tests named `*_sqlite.rs`.
-6. Re-export database adapters from `poneglyph-core` only if needed for
+7. Re-export database adapters from `poneglyph-core` only if needed for
    compatibility; otherwise have disk-backed runtime construction happen through
    `poneglyph-db` or through injected adapter factories.
-7. Keep `cargo test --workspace` green after each move and preserve existing
+8. Keep `cargo test --workspace` green after each move and preserve existing
    append-only/replay tests.
 
 ## Non-goals
@@ -85,8 +89,8 @@ runtime/service tests that should not depend on disk.
 ## Consequences
 
 This staged extraction reduces risk. `poneglyph-core` now has a local adapter
-seam, and `poneglyph-db` mirrors that seam for process-level disk-backed runtime
-opening and repair. The next implementation step should be either introducing
-injected storage/search factories so core defaults no longer name SQLite, or
-moving one SQLite adapter and its tests at a time after that dependency direction
-is resolved.
+seam plus an injectable runtime storage factory, and `poneglyph-db` supplies the
+factory used for process-level disk-backed runtime opening and repair. The next
+implementation step should be reducing core's compatibility-only SQLite default
+path or moving one SQLite adapter and its tests at a time after that dependency
+direction is fully resolved.

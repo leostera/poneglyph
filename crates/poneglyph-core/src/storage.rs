@@ -1,8 +1,41 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
+
 use crate::{
     EntityStore, PoneResult, SearchProjection, SqliteEntityStore, SqliteFactStore, Store, Workspace,
 };
+
+/// Factory for opening runtime storage adapters.
+///
+/// `poneglyph-core` owns the semantic store traits. Process-level crates can
+/// provide a factory from `poneglyph-db` so disk-backed runtime construction can
+/// move out of core without making core depend on db.
+#[async_trait]
+pub trait RuntimeStorageFactory: Send + Sync {
+    async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>>;
+
+    async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>>;
+
+    fn open_search_projection(&self, workspace: &Workspace) -> PoneResult<Arc<SearchProjection>>;
+}
+
+pub(crate) struct DefaultRuntimeStorageFactory;
+
+#[async_trait]
+impl RuntimeStorageFactory for DefaultRuntimeStorageFactory {
+    async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
+        open_fact_store(workspace).await
+    }
+
+    async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>> {
+        open_entity_store(workspace).await
+    }
+
+    fn open_search_projection(&self, workspace: &Workspace) -> PoneResult<Arc<SearchProjection>> {
+        open_search_projection(workspace)
+    }
+}
 
 /// Opens the default durable fact store for a workspace.
 ///
