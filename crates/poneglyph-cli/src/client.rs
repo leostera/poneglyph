@@ -1,7 +1,8 @@
 use anyhow::Result;
 use poneglyph::{Poneglyph, Workspace};
 
-use crate::api::proto::poneglyph_daemon_client::PoneglyphDaemonClient;
+use poneglyph_api::proto::poneglyph_daemon_client::PoneglyphDaemonClient;
+
 use crate::config::PoneglyphDaemonConfig;
 
 pub async fn daemon_client(

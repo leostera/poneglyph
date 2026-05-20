@@ -4,7 +4,8 @@ use std::time::Duration;
 use anyhow::Result;
 use poneglyph::Workspace;
 
-use crate::api::proto::{ShutdownRequest, StatusRequest};
+use poneglyph_api::proto::{ShutdownRequest, StatusRequest};
+
 use crate::client::daemon_client;
 use crate::config::PoneglyphDaemonConfig;
 

@@ -1889,6 +1889,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "poneglyph-api"
+version = "0.1.0"
+dependencies = [
+ "poneglyph",
+ "prost",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
 name = "poneglyph-cli"
 version = "0.1.0"
 dependencies = [
@@ -1898,14 +1910,13 @@ dependencies = [
  "derive_builder",
  "dotenvy",
  "poneglyph",
- "prost",
+ "poneglyph-api",
  "serde",
  "serde_json",
  "tempfile",
  "tokio",
  "toml",
  "tonic",
- "tonic-build",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",

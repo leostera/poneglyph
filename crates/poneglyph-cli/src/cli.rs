@@ -8,13 +8,13 @@ use poneglyph::{Fact, Filter, SchemaDefinition, Uri, Value, Workspace, default_w
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::api::proto::{
-    GetEntityRequest, GetSchemaRequest, QueryRequest, RetractFactByIdRequest, StateFactRequest,
-    StateFactsRequest,
-};
 use crate::client::{daemon_client, open_runtime};
 use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
+use poneglyph_api::proto::{
+    GetEntityRequest, GetSchemaRequest, QueryRequest, RetractFactByIdRequest, StateFactRequest,
+    StateFactsRequest,
+};
 
 const DEFAULT_LOG_LEVEL: &str = "info";
 

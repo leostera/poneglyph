@@ -6,8 +6,9 @@ use tokio::sync::oneshot;
 use tonic::transport::Server;
 use tracing::{debug, info};
 
-use crate::api::DaemonApi;
-use crate::api::proto::poneglyph_daemon_server::PoneglyphDaemonServer;
+use poneglyph_api::DaemonApi;
+use poneglyph_api::proto::poneglyph_daemon_server::PoneglyphDaemonServer;
+
 use crate::config::PoneglyphDaemonConfig;
 
 /// Long-lived daemon host for a configured [`Poneglyph`] runtime.
