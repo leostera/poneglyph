@@ -287,6 +287,21 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
     );
     assert!(state.contains("tx_id"));
     assert!(state.contains("fact_id"));
+
+    let second_state = poneglyph(
+        workspace,
+        &[
+            "fact",
+            "state",
+            "spotify:album:permanent-waves",
+            "spotify:displayName",
+            "Permanent Waves",
+            "--json",
+        ],
+    );
+    assert!(second_state.contains("tx_id"));
+    assert!(second_state.contains("fact_id"));
+
     let query = poneglyph(
         workspace,
         &["query", r#"spotify:displayName(Album, "Signals")"#],
@@ -316,6 +331,20 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
 
     let entity_list_json = poneglyph(workspace, &["entity", "list", "--json"]);
     assert!(entity_list_json.contains("spotify:album:signals"));
+
+    let first_entity = wait_for_output(
+        workspace,
+        &["entity", "list", "--limit", "1"],
+        "entity\tspotify:album:permanent-waves",
+    );
+    assert!(!first_entity.contains("spotify:album:signals"));
+
+    let second_entity = wait_for_output(
+        workspace,
+        &["entity", "list", "--limit", "1", "--offset", "1"],
+        "entity\tspotify:album:signals",
+    );
+    assert!(!second_entity.contains("spotify:album:permanent-waves"));
 
     let entity_search = wait_for_output(
         workspace,
