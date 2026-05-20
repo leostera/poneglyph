@@ -18,64 +18,87 @@ pub async fn run(
             offset,
             json,
         } => {
-            let response_json = match daemon_client(&config).await {
-                Ok(mut client) => {
-                    client
-                        .list_entities(ListEntitiesRequest {
-                            limit: usize_to_u64(limit)?,
-                            offset: usize_to_u64(offset)?,
-                        })
-                        .await?
-                        .into_inner()
-                        .json
-                }
-                Err(_) => {
-                    let poneglyph = open_runtime(workspace, config).await?;
-                    serde_json::to_string_pretty(&poneglyph.list_entities(limit, offset).await?)?
-                }
-            };
+            let response_json = list_entities_json(&workspace, &config, limit, offset).await?;
             print_entity_list(&response_json, json)?;
         }
         EntitySubcommand::Search { query, limit, json } => {
-            let response_json = match daemon_client(&config).await {
-                Ok(mut client) => {
-                    client
-                        .search_entities(SearchEntitiesRequest {
-                            query,
-                            limit: usize_to_u64(limit)?,
-                        })
-                        .await?
-                        .into_inner()
-                        .json
-                }
-                Err(_) => {
-                    let poneglyph = open_runtime(workspace, config).await?;
-                    serde_json::to_string_pretty(&poneglyph.search(&query, limit)?)?
-                }
-            };
+            let response_json = search_entities_json(&workspace, &config, &query, limit).await?;
             print_search_hits(&response_json, json)?;
         }
         EntitySubcommand::Get { uri, json } => {
-            let response_json = match daemon_client(&config).await {
-                Ok(mut client) => {
-                    client
-                        .get_entity(GetEntityRequest { uri })
-                        .await?
-                        .into_inner()
-                        .json
-                }
-                Err(_) => {
-                    let poneglyph = open_runtime(workspace, config).await?;
-                    match poneglyph.get_entity(&parse_uri(&uri)?).await? {
-                        Some(entity) => serde_json::to_string_pretty(&entity)?,
-                        None => "null".to_string(),
-                    }
-                }
-            };
+            let response_json = get_entity_json(&workspace, &config, &uri).await?;
             print_entity(&response_json, json)?;
         }
     }
     Ok(())
+}
+
+async fn list_entities_json(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    limit: usize,
+    offset: usize,
+) -> Result<String> {
+    match daemon_client(config).await {
+        Ok(mut client) => Ok(client
+            .list_entities(ListEntitiesRequest {
+                limit: usize_to_u64(limit)?,
+                offset: usize_to_u64(offset)?,
+            })
+            .await?
+            .into_inner()
+            .json),
+        Err(_) => {
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            serde_json::to_string_pretty(&poneglyph.list_entities(limit, offset).await?)
+                .map_err(Into::into)
+        }
+    }
+}
+
+async fn search_entities_json(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    query: &str,
+    limit: usize,
+) -> Result<String> {
+    match daemon_client(config).await {
+        Ok(mut client) => Ok(client
+            .search_entities(SearchEntitiesRequest {
+                query: query.to_owned(),
+                limit: usize_to_u64(limit)?,
+            })
+            .await?
+            .into_inner()
+            .json),
+        Err(_) => {
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            serde_json::to_string_pretty(&poneglyph.search(query, limit)?).map_err(Into::into)
+        }
+    }
+}
+
+async fn get_entity_json(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    uri: &str,
+) -> Result<String> {
+    match daemon_client(config).await {
+        Ok(mut client) => Ok(client
+            .get_entity(GetEntityRequest {
+                uri: uri.to_owned(),
+            })
+            .await?
+            .into_inner()
+            .json),
+        Err(_) => {
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            match poneglyph.get_entity(&parse_uri(uri)?).await? {
+                Some(entity) => serde_json::to_string_pretty(&entity).map_err(Into::into),
+                None => Ok("null".to_string()),
+            }
+        }
+    }
 }
 
 fn print_entity_list(response_json: &str, json: bool) -> Result<()> {
