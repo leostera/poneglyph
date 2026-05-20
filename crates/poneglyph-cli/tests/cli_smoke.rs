@@ -64,7 +64,7 @@ async fn cli_states_queries_and_retracts_facts_without_daemon() {
 
     let query = poneglyph(
         workspace,
-        &["query", r#"spotify:displayName(Album, "2112")"#],
+        &["query", r#"spotify:displayName(Album, "2112")"#, "--json"],
     );
     assert!(query.contains("spotify:album:2112"));
 
@@ -233,7 +233,7 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
 
     let entity = wait_for_output(
         workspace,
-        &["entity", "get", "spotify:album:signals"],
+        &["entity", "get", "spotify:album:signals", "--json"],
         "Signals",
     );
     assert!(entity.contains("spotify:displayName"));

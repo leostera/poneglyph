@@ -145,6 +145,9 @@ pub enum FactSubcommand {
 #[derive(Debug, Clone, Args)]
 pub struct QueryCommand {
     pub expression: String,
+    /// Print machine-readable JSON.
+    #[arg(long)]
+    pub json: bool,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -155,7 +158,12 @@ pub struct EntityCommand {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum EntitySubcommand {
-    Get { uri: String },
+    Get {
+        uri: String,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 impl Default for Command {
@@ -200,7 +208,7 @@ mod tests {
     use clap::Parser;
     use poneglyph_core::default_workspace_path;
 
-    use super::{Cli, Command, ConfigSubcommand, FactSubcommand, ServerCommand};
+    use super::{Cli, Command, ConfigSubcommand, EntitySubcommand, FactSubcommand, ServerCommand};
 
     #[test]
     fn cli_parses_default_invocation() {
@@ -232,6 +240,37 @@ mod tests {
         assert!(matches!(
             cli.command,
             Some(Command::Config(config)) if matches!(config.command, ConfigSubcommand::Set { ref key, ref value } if key == "a.b.c" && value == "value")
+        ));
+    }
+
+    #[test]
+    fn cli_parses_query_json_flag() {
+        let cli = Cli::try_parse_from([
+            "poneglyph",
+            "query",
+            "spotify:displayName(Album, Name)",
+            "--json",
+        ])
+        .expect("cli");
+        assert!(matches!(
+            cli.command,
+            Some(Command::Query(query)) if query.json
+        ));
+    }
+
+    #[test]
+    fn cli_parses_entity_get_json_flag() {
+        let cli = Cli::try_parse_from([
+            "poneglyph",
+            "entity",
+            "get",
+            "spotify:album:signals",
+            "--json",
+        ])
+        .expect("cli");
+        assert!(matches!(
+            cli.command,
+            Some(Command::Entity(entity)) if matches!(entity.command, EntitySubcommand::Get { json: true, .. })
         ));
     }
 

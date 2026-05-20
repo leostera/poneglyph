@@ -11,6 +11,7 @@ pub async fn run(
     config: PoneglyphDaemonConfig,
     command: QueryCommand,
 ) -> Result<()> {
+    let _json_output = command.json;
     let json = match daemon_client(&config).await {
         Ok(mut client) => {
             client

@@ -74,6 +74,7 @@ Query the active graph with Datalog:
 
 ```sh
 poneglyph --workspace "$PONE" query 'spotify:displayName(Album, "2112")'
+poneglyph --workspace "$PONE" query 'spotify:displayName(Album, "2112")' --json
 ```
 
 Retract by fact id. This appends a retraction fact; it does not delete or mutate
@@ -87,6 +88,7 @@ Get a consolidated entity:
 
 ```sh
 poneglyph --workspace "$PONE" entity get spotify:album:2112
+poneglyph --workspace "$PONE" entity get spotify:album:2112 --json
 ```
 
 Apply schema from a JSON or TOML `SchemaDefinition` file:

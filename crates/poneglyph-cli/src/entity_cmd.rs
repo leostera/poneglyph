@@ -12,7 +12,8 @@ pub async fn run(
     command: EntityCommand,
 ) -> Result<()> {
     match command.command {
-        EntitySubcommand::Get { uri } => {
+        EntitySubcommand::Get { uri, json } => {
+            let _json_output = json;
             let json = match daemon_client(&config).await {
                 Ok(mut client) => {
                     client
