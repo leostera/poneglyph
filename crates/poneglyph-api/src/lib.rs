@@ -388,6 +388,42 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn list_facts_rejects_conflicting_filters() {
+        let error = api()
+            .await
+            .list_facts(Request::new(ListFactsRequest {
+                entity_uri: "spotify:album:signals".to_string(),
+                tx_id: "poneglyph:tx:1".to_string(),
+                active: false,
+                limit: 100,
+                offset: 0,
+            }))
+            .await
+            .expect_err("conflicting filters should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("only one filter"));
+    }
+
+    #[tokio::test]
+    async fn list_active_facts_rejects_tx_filter() {
+        let error = api()
+            .await
+            .list_facts(Request::new(ListFactsRequest {
+                entity_uri: String::new(),
+                tx_id: "poneglyph:tx:1".to_string(),
+                active: true,
+                limit: 100,
+                offset: 0,
+            }))
+            .await
+            .expect_err("active tx filtering should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("does not support tx_id"));
+    }
+
+    #[tokio::test]
     async fn list_facts_applies_limit_and_offset() {
         let (api, runtime) = api_with_runtime().await;
         let tx_id = runtime
