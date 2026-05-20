@@ -14,31 +14,23 @@ pub async fn run(
     config: PoneglyphDaemonConfig,
     command: SchemaCommand,
 ) -> Result<()> {
-    let schema = match daemon_client(&config).await {
-        Ok(mut client) => {
-            let json = client
-                .get_schema(GetSchemaRequest {})
-                .await?
-                .into_inner()
-                .json;
-            serde_json::from_str::<SchemaDefinition>(&json)?
-        }
-        Err(_) => {
-            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
-            poneglyph.get_schema().await?
-        }
-    };
-
     match command.command {
-        SchemaSubcommand::List { json } => print_schema_list(&schema, json),
+        SchemaSubcommand::List { json } => {
+            let schema = get_schema(&workspace, &config).await?;
+            print_schema_list(&schema, json)
+        }
         SchemaSubcommand::Get { uri: None, .. } => {
+            let schema = get_schema(&workspace, &config).await?;
             println!("{}", serde_json::to_string_pretty(&schema)?);
             Ok(())
         }
         SchemaSubcommand::Get {
             uri: Some(uri),
             json,
-        } => print_schema_entry(schema, &uri, json),
+        } => {
+            let schema = get_schema(&workspace, &config).await?;
+            print_schema_entry(schema, &uri, json)
+        }
         SchemaSubcommand::Apply { path, json } => {
             let schema = read_schema_definition(&path).await?;
             let facts = schema_definition_to_facts(schema)?;
@@ -57,6 +49,26 @@ pub async fn run(
                 println!("applied {fact_count} schema facts in {tx_id}");
             }
             Ok(())
+        }
+    }
+}
+
+async fn get_schema(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+) -> Result<SchemaDefinition> {
+    match daemon_client(config).await {
+        Ok(mut client) => {
+            let json = client
+                .get_schema(GetSchemaRequest {})
+                .await?
+                .into_inner()
+                .json;
+            serde_json::from_str(&json).map_err(Into::into)
+        }
+        Err(_) => {
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            poneglyph.get_schema().await.map_err(Into::into)
         }
     }
 }
