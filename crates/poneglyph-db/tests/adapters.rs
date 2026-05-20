@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 
 use poneglyph_core::{
-    ActiveFilter, Entity, FactService, Filter, Store, Value, fact, retraction, uri,
+    ActiveFilter, Entity, FactService, Filter, Projection, ProjectionBatch, Store, Value, fact,
+    retraction, uri,
 };
 use tempfile::tempdir;
 
@@ -81,6 +82,53 @@ async fn entity_adapter_round_trips_replayable_projection_rows() {
 
     store.delete_entity(&uri).await.expect("delete entity");
     assert_eq!(store.get_entity(&uri).await.expect("get deleted"), None);
+}
+
+#[tokio::test]
+async fn search_adapter_indexes_and_removes_projection_rows() {
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = poneglyph_core::Workspace::at(tempdir.path());
+    workspace.ensure().expect("workspace");
+    let projection = poneglyph_db::open_search_projection(&workspace).expect("search projection");
+
+    let uri = uri!("person", "alice");
+    let entity = Entity {
+        uri: uri.clone(),
+        namespace: "person".to_string(),
+        kind: "alice".to_string(),
+        fields: BTreeMap::from([(uri!("person", "name"), Value::text("Alice Liddell"))]),
+    };
+
+    projection
+        .handle_events(ProjectionBatch {
+            entities: vec![entity],
+        })
+        .await
+        .expect("index entity");
+
+    let hits = projection.search("Alice", 10).expect("search hits");
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].entity_uri, uri);
+
+    projection
+        .handle_events(ProjectionBatch {
+            entities: vec![Entity {
+                uri: uri.clone(),
+                namespace: "person".to_string(),
+                kind: "alice".to_string(),
+                fields: BTreeMap::new(),
+            }],
+        })
+        .await
+        .expect("remove entity");
+
+    assert!(
+        projection
+            .search("Alice", 10)
+            .expect("search removed")
+            .is_empty(),
+        "empty entity updates remove indexed documents"
+    );
 }
 
 async fn collect_facts(store: &dyn Store, filter: Filter) -> Vec<poneglyph_core::Fact> {
