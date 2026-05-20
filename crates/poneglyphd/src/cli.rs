@@ -63,7 +63,11 @@ pub enum ServerCommand {
     /// Repair the database.
     Repair(cmd::Repair),
     /// Print daemon status.
-    Status,
+    Status {
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// Stop the daemon.
     Stop,
     /// Restart the daemon.
@@ -78,9 +82,18 @@ pub struct ConfigCommand {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum ConfigSubcommand {
-    List,
-    Get { key: String },
-    Set { key: String, value: String },
+    List {
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
+    Get {
+        key: String,
+    },
+    Set {
+        key: String,
+        value: String,
+    },
 }
 
 #[derive(Debug, Clone, Args)]
@@ -156,10 +169,13 @@ impl Cli {
         init_tracing(&workspace, &config)?;
 
         match self.command.unwrap_or_default() {
-            Command::Server(server) => match server.command.unwrap_or(ServerCommand::Status) {
+            Command::Server(server) => match server
+                .command
+                .unwrap_or(ServerCommand::Status { json: false })
+            {
                 ServerCommand::Start(cmd) => cmd.run(workspace, config).await,
                 ServerCommand::Repair(cmd) => cmd.run(workspace, config).await,
-                ServerCommand::Status => run_server_status(config).await,
+                ServerCommand::Status { json } => run_server_status(config, json).await,
                 ServerCommand::Stop => run_server_stop(config).await,
                 ServerCommand::Restart => run_server_restart(workspace, config).await,
             },
@@ -178,18 +194,39 @@ async fn daemon_client(
     PoneglyphDaemonClient::connect(format!("http://{}", config.rpc.bind_addr)).await
 }
 
-async fn run_server_status(config: PoneglyphDaemonConfig) -> Result<()> {
+async fn run_server_status(config: PoneglyphDaemonConfig, json: bool) -> Result<()> {
     match daemon_client(&config).await {
         Ok(mut client) => {
             let status = client.status(StatusRequest {}).await?.into_inner();
-            println!("status: {}", status.status);
-            println!("workspace: {}", status.workspace);
-            println!("uptime_seconds: {}", status.uptime_seconds);
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "status": status.status,
+                        "workspace": status.workspace,
+                        "uptime_seconds": status.uptime_seconds,
+                    }))?
+                );
+            } else {
+                println!("status: {}", status.status);
+                println!("workspace: {}", status.workspace);
+                println!("uptime_seconds: {}", status.uptime_seconds);
+            }
             Ok(())
         }
         Err(error) => {
-            println!("status: offline");
-            println!("error: {error}");
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "status": "offline",
+                        "error": error.to_string(),
+                    }))?
+                );
+            } else {
+                println!("status: offline");
+                println!("error: {error}");
+            }
             Ok(())
         }
     }
@@ -265,9 +302,13 @@ async fn open_runtime(workspace: Workspace, config: PoneglyphDaemonConfig) -> Re
 
 async fn run_config_command(workspace: Workspace, command: ConfigCommand) -> Result<()> {
     match command.command {
-        ConfigSubcommand::List => {
+        ConfigSubcommand::List { json } => {
             let config = PoneglyphDaemonConfig::load_from(&workspace).await?;
-            println!("{}", toml::to_string_pretty(&config)?);
+            if json {
+                println!("{}", serde_json::to_string_pretty(&config)?);
+            } else {
+                println!("{}", toml::to_string_pretty(&config)?);
+            }
             Ok(())
         }
         ConfigSubcommand::Get { key } => {

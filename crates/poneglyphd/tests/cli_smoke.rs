@@ -148,6 +148,11 @@ fn cli_config_get_set_and_list_round_trips() {
     assert!(listed.contains("[poneglyph]"));
     assert!(listed.contains("[rpc]"));
     assert!(listed.contains(&bind_addr));
+
+    let listed_json = poneglyph(workspace, &["config", "list", "--json"]);
+    assert!(listed_json.contains("\"poneglyph\""));
+    assert!(listed_json.contains("\"rpc\""));
+    assert!(listed_json.contains(&bind_addr));
 }
 
 #[test]
@@ -184,6 +189,10 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
     let status = poneglyph(workspace, &["server", "status"]);
     assert!(status.contains("status: running"));
     assert!(status.contains(&workspace.display().to_string()));
+
+    let status_json = poneglyph(workspace, &["server", "status", "--json"]);
+    assert!(status_json.contains("\"status\": \"running\""));
+    assert!(status_json.contains(&workspace.display().to_string()));
 
     let state = poneglyph(
         workspace,
