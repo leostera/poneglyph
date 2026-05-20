@@ -80,7 +80,7 @@ async fn cli_states_queries_and_retracts_facts_without_daemon() {
         workspace,
         &["query", r#"spotify:displayName(Album, "2112")"#],
     );
-    assert_eq!(query.trim(), "[]");
+    assert_eq!(query.trim(), "no results");
 }
 
 #[test]
@@ -229,7 +229,7 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
         workspace,
         &["query", r#"spotify:displayName(Album, "Signals")"#],
     );
-    assert!(query.contains("spotify:album:signals"));
+    assert!(query.contains("row\tAlbum=\"spotify:album:signals\""));
 
     let entity = wait_for_output(
         workspace,
@@ -256,7 +256,7 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
         workspace,
         &["query", r#"spotify:displayName(Album, "Signals")"#],
     );
-    assert_eq!(query.trim(), "[]");
+    assert_eq!(query.trim(), "no results");
 
     let stopped = poneglyph(workspace, &["server", "stop", "--json"]);
     assert!(stopped.contains("\"status\": \"stopping\""));

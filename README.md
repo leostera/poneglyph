@@ -70,10 +70,13 @@ poneglyph --workspace "$PONE" fact state \
 poneglyph --workspace "$PONE" fact state spotify:album:signals spotify:displayName Signals --json
 ```
 
-Query the active graph with Datalog:
+Query the active graph with Datalog. Plain output prints one `row` line with
+variable bindings; `--json` preserves the full machine-readable substitution
+array.
 
 ```sh
 poneglyph --workspace "$PONE" query 'spotify:displayName(Album, "2112")'
+# row	Album="spotify:album:2112"
 poneglyph --workspace "$PONE" query 'spotify:displayName(Album, "2112")' --json
 ```
 
