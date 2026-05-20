@@ -337,7 +337,8 @@ mod tests {
     use std::sync::Arc;
 
     use poneglyph_core::{
-        Fact, InMemoryEntityStore, InMemoryFactStore, Poneglyph, SearchProjection, Value, fact, uri,
+        ActiveFact, Fact, InMemoryEntityStore, InMemoryFactStore, Poneglyph, SearchProjection,
+        Value, fact, uri,
     };
     use tonic::{Code, Request};
 
@@ -432,6 +433,58 @@ mod tests {
             .into_inner();
         let second_facts =
             serde_json::from_str::<Vec<Fact>>(&second_response.json).expect("facts json");
+
+        assert_eq!(first_facts.len(), 1);
+        assert_eq!(second_facts.len(), 1);
+        assert_ne!(first_facts[0].fact_id, second_facts[0].fact_id);
+    }
+
+    #[tokio::test]
+    async fn list_active_facts_applies_limit_and_offset() {
+        let (api, runtime) = api_with_runtime().await;
+        runtime
+            .state_facts(vec![
+                fact!(
+                    uri!("spotify:album:permanent-waves"),
+                    uri!("spotify:displayName"),
+                    Value::text("Permanent Waves")
+                ),
+                fact!(
+                    uri!("spotify:album:moving-pictures"),
+                    uri!("spotify:displayName"),
+                    Value::text("Moving Pictures")
+                ),
+            ])
+            .await
+            .expect("state facts");
+
+        let first_response = api
+            .list_facts(Request::new(ListFactsRequest {
+                entity_uri: String::new(),
+                tx_id: String::new(),
+                active: true,
+                limit: 1,
+                offset: 0,
+            }))
+            .await
+            .expect("list active facts")
+            .into_inner();
+        let first_facts = serde_json::from_str::<Vec<ActiveFact>>(&first_response.json)
+            .expect("active facts json");
+
+        let second_response = api
+            .list_facts(Request::new(ListFactsRequest {
+                entity_uri: String::new(),
+                tx_id: String::new(),
+                active: true,
+                limit: 1,
+                offset: 1,
+            }))
+            .await
+            .expect("list active facts")
+            .into_inner();
+        let second_facts = serde_json::from_str::<Vec<ActiveFact>>(&second_response.json)
+            .expect("active facts json");
 
         assert_eq!(first_facts.len(), 1);
         assert_eq!(second_facts.len(), 1);
