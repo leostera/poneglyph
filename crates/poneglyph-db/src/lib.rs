@@ -5,6 +5,8 @@
 //! functions over the existing core SQLite implementations so downstream wiring
 //! can depend on a stable storage boundary before the physical module move.
 
+#![allow(deprecated)]
+
 use std::sync::Arc;
 
 use poneglyph_core::{

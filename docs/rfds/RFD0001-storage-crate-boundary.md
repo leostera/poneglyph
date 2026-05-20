@@ -59,6 +59,8 @@ runtime/service tests that should not depend on disk.
    through `poneglyph_db::open_runtime` / `poneglyph_db::repair_workspace`.
    `poneglyph-db` also re-exports the current SQLite adapter types as the
    preferred external import path while the physical modules remain in core.
+   The old `poneglyph-core` SQLite re-exports are deprecated to discourage new
+   external callers from binding directly to core storage implementations.
 5. Move SQLite fact/entity store implementations and their SQLite-specific tests
    into `poneglyph-db`.
 6. Re-export database adapters from `poneglyph-core` only if needed for CLI/tests;

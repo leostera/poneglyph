@@ -34,11 +34,15 @@ mod workspace;
 pub use active_graph::{ActiveFact, ActiveFilter};
 pub use config::{Config, PoneglyphConfig, PoneglyphConfigBuilder, default_workspace_path};
 pub use consolidation::{Consolidation, Consolidator, ConsolidatorBuilder};
-pub use entities::{EntityStore, InMemoryEntityStore, SqliteEntityStore};
+pub use entities::{EntityStore, InMemoryEntityStore};
+#[deprecated(note = "import durable SQLite adapters from poneglyph-db instead")]
+pub use entities::SqliteEntityStore;
 pub use entity::Entity;
 pub use error::{Error, PoneResult};
 pub use fact::{Builder, Fact, Filter};
-pub use facts::{FactService, FactServiceBuilder, InMemoryFactStore, SqliteFactStore, Store};
+pub use facts::{FactService, FactServiceBuilder, InMemoryFactStore, Store};
+#[deprecated(note = "import durable SQLite adapters from poneglyph-db instead")]
+pub use facts::SqliteFactStore;
 pub use projections::{
     IndexedEntity, Projection, ProjectionBatch, ProjectionRunner, ProjectionRunnerBuilder,
     SearchHit, SearchProjection,
