@@ -41,6 +41,8 @@ message RetractFactByIdRequest {
 
 message StateFactResponse {
   string tx_id = 1;
+  string fact_id = 2;
+  repeated string fact_ids = 3;
 }
 
 message QueryRequest {

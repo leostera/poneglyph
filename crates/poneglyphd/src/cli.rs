@@ -110,10 +110,14 @@ pub enum FactSubcommand {
         value: String,
         #[arg(long)]
         source: Option<String>,
+        #[arg(long)]
+        json: bool,
     },
     Retract {
         #[arg(long)]
         fact: Option<String>,
+        #[arg(long)]
+        json: bool,
         entity: Option<String>,
         attribute: Option<String>,
         value: Option<String>,
@@ -507,45 +511,70 @@ async fn run_fact_command(
     config: PoneglyphDaemonConfig,
     command: FactCommand,
 ) -> Result<()> {
-    let fact = match command.command {
+    match command.command {
         FactSubcommand::State {
             entity,
             attribute,
             value,
             source,
-        } => Fact::builder()
-            .source(parse_uri(source.as_deref().unwrap_or("poneglyph:cli"))?)
-            .entity(parse_uri(&entity)?)
-            .field(parse_uri(&attribute)?)
-            .value(parse_cli_value(&value)?)
-            .build()?,
+            json,
+        } => {
+            let fact = Fact::builder()
+                .source(parse_uri(source.as_deref().unwrap_or("poneglyph:cli"))?)
+                .entity(parse_uri(&entity)?)
+                .field(parse_uri(&attribute)?)
+                .value(parse_cli_value(&value)?)
+                .build()?;
+            let outcome = state_fact(&workspace, &config, fact).await?;
+            print_fact_outcome(&outcome, json)
+        }
         FactSubcommand::Retract {
             fact: Some(fact_id),
+            json,
             ..
         } => {
-            let tx_id = retract_fact_by_id(&workspace, &config, &fact_id).await?;
-            println!("{tx_id}");
-            return Ok(());
+            let outcome = retract_fact_by_id(&workspace, &config, &fact_id).await?;
+            print_fact_outcome(&outcome, json)
         }
         FactSubcommand::Retract {
             fact: None,
             entity: Some(entity),
             attribute: Some(attribute),
             value: Some(value),
-        } => Fact::builder()
-            .source(parse_uri("poneglyph:cli")?)
-            .entity(parse_uri(&entity)?)
-            .field(parse_uri(&attribute)?)
-            .value(parse_cli_value(&value)?)
-            .retract()
-            .build()?,
+            json,
+        } => {
+            let fact = Fact::builder()
+                .source(parse_uri("poneglyph:cli")?)
+                .entity(parse_uri(&entity)?)
+                .field(parse_uri(&attribute)?)
+                .value(parse_cli_value(&value)?)
+                .retract()
+                .build()?;
+            let outcome = state_fact(&workspace, &config, fact).await?;
+            print_fact_outcome(&outcome, json)
+        }
         FactSubcommand::Retract { .. } => {
             anyhow::bail!("retract requires --fact or entity attribute value")
         }
-    };
+    }
+}
 
-    let tx_id = state_fact(&workspace, &config, fact).await?;
-    println!("{tx_id}");
+#[derive(Debug, Clone, serde::Serialize)]
+struct FactOutcome {
+    tx_id: String,
+    fact_id: String,
+    fact_ids: Vec<String>,
+}
+
+fn print_fact_outcome(outcome: &FactOutcome, json: bool) -> Result<()> {
+    if json {
+        println!("{}", serde_json::to_string_pretty(outcome)?);
+    } else {
+        println!("tx_id: {}", outcome.tx_id);
+        if !outcome.fact_id.is_empty() {
+            println!("fact_id: {}", outcome.fact_id);
+        }
+    }
     Ok(())
 }
 
@@ -553,18 +582,30 @@ async fn state_fact(
     workspace: &Workspace,
     config: &PoneglyphDaemonConfig,
     fact: Fact,
-) -> Result<String> {
+) -> Result<FactOutcome> {
     match daemon_client(config).await {
-        Ok(mut client) => Ok(client
-            .state_fact(StateFactRequest {
-                fact_json: serde_json::to_string(&fact)?,
+        Ok(mut client) => {
+            let response = client
+                .state_fact(StateFactRequest {
+                    fact_json: serde_json::to_string(&fact)?,
+                })
+                .await?
+                .into_inner();
+            Ok(FactOutcome {
+                tx_id: response.tx_id,
+                fact_id: response.fact_id,
+                fact_ids: response.fact_ids,
             })
-            .await?
-            .into_inner()
-            .tx_id),
+        }
         Err(_) => {
+            let fact_id = fact.fact_id.to_string();
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
-            Ok(poneglyph.state_facts(vec![fact]).await?.to_string())
+            let tx_id = poneglyph.state_facts(vec![fact]).await?.to_string();
+            Ok(FactOutcome {
+                tx_id,
+                fact_id: fact_id.clone(),
+                fact_ids: vec![fact_id],
+            })
         }
     }
 }
@@ -596,15 +637,21 @@ async fn retract_fact_by_id(
     workspace: &Workspace,
     config: &PoneglyphDaemonConfig,
     fact_id: &str,
-) -> Result<String> {
+) -> Result<FactOutcome> {
     match daemon_client(config).await {
-        Ok(mut client) => Ok(client
-            .retract_fact_by_id(RetractFactByIdRequest {
-                fact_id: fact_id.to_string(),
+        Ok(mut client) => {
+            let response = client
+                .retract_fact_by_id(RetractFactByIdRequest {
+                    fact_id: fact_id.to_string(),
+                })
+                .await?
+                .into_inner();
+            Ok(FactOutcome {
+                tx_id: response.tx_id,
+                fact_id: response.fact_id,
+                fact_ids: response.fact_ids,
             })
-            .await?
-            .into_inner()
-            .tx_id),
+        }
         Err(_) => {
             let fact_id = parse_uri(fact_id)?;
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
@@ -623,7 +670,13 @@ async fn retract_fact_by_id(
                 .value(fact.value)
                 .retract()
                 .build()?;
-            Ok(poneglyph.state_facts(vec![retraction]).await?.to_string())
+            let retraction_id = retraction.fact_id.to_string();
+            let tx_id = poneglyph.state_facts(vec![retraction]).await?.to_string();
+            Ok(FactOutcome {
+                tx_id,
+                fact_id: retraction_id.clone(),
+                fact_ids: vec![retraction_id],
+            })
         }
     }
 }

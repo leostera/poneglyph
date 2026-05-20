@@ -73,6 +73,7 @@ impl PoneglyphDaemon for DaemonApi {
     ) -> Result<Response<StateFactResponse>, Status> {
         let fact = serde_json::from_str::<Fact>(&request.into_inner().fact_json)
             .map_err(|error| Status::invalid_argument(error.to_string()))?;
+        let fact_id = fact.fact_id.to_string();
         let tx_id = self
             .poneglyph
             .state_facts(vec![fact])
@@ -81,6 +82,8 @@ impl PoneglyphDaemon for DaemonApi {
 
         Ok(Response::new(StateFactResponse {
             tx_id: tx_id.to_string(),
+            fact_id: fact_id.clone(),
+            fact_ids: vec![fact_id],
         }))
     }
 
@@ -102,6 +105,10 @@ impl PoneglyphDaemon for DaemonApi {
             return Err(Status::invalid_argument("empty fact batch"));
         }
 
+        let fact_ids = facts
+            .iter()
+            .map(|fact| fact.fact_id.to_string())
+            .collect::<Vec<_>>();
         let tx_id = self
             .poneglyph
             .state_facts(facts)
@@ -110,6 +117,8 @@ impl PoneglyphDaemon for DaemonApi {
 
         Ok(Response::new(StateFactResponse {
             tx_id: tx_id.to_string(),
+            fact_id: fact_ids.first().cloned().unwrap_or_default(),
+            fact_ids,
         }))
     }
 
@@ -138,6 +147,7 @@ impl PoneglyphDaemon for DaemonApi {
             .retract()
             .build()
             .map_err(|error| Status::internal(error.to_string()))?;
+        let fact_id = retraction.fact_id.to_string();
         let tx_id = self
             .poneglyph
             .state_facts(vec![retraction])
@@ -146,6 +156,8 @@ impl PoneglyphDaemon for DaemonApi {
 
         Ok(Response::new(StateFactResponse {
             tx_id: tx_id.to_string(),
+            fact_id: fact_id.clone(),
+            fact_ids: vec![fact_id],
         }))
     }
 
