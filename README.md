@@ -54,6 +54,7 @@ poneglyph --workspace "$PONE" config set rpc.bind_addr 127.0.0.1:50051 --json
 Start and inspect the daemon:
 
 ```sh
+poneglyph --workspace "$PONE" server repair --json
 poneglyph --workspace "$PONE" server start
 poneglyph --workspace "$PONE" server status
 poneglyph --workspace "$PONE" server stop

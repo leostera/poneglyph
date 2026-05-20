@@ -243,6 +243,24 @@ mod tests {
     }
 
     #[test]
+    fn server_help_mentions_json_output_flags() {
+        let mut command = Cli::command();
+        let server = command.find_subcommand_mut("server").expect("server help");
+
+        for subcommand in ["repair", "status", "stop", "restart"] {
+            let help = server
+                .find_subcommand_mut(subcommand)
+                .expect("server subcommand help")
+                .render_long_help()
+                .to_string();
+            assert!(
+                help.contains("--json"),
+                "missing --json in server {subcommand} help:\n{help}"
+            );
+        }
+    }
+
+    #[test]
     fn top_level_help_lists_public_namespaces() {
         let help = Cli::command().render_long_help().to_string();
 

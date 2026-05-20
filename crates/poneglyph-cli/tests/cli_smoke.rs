@@ -183,8 +183,10 @@ fn cli_server_repair_initializes_workspace_storage() {
     let workspace = tempdir.path();
 
     poneglyph(workspace, &["config", "set", "poneglyph.log_level", "off"]);
-    poneglyph(workspace, &["server", "repair"]);
+    let repaired = poneglyph(workspace, &["server", "repair", "--json"]);
 
+    assert!(repaired.contains("\"status\": \"repaired\""));
+    assert!(repaired.contains("\"workspace\":"));
     assert!(workspace.join("store/facts.db").exists());
 }
 
