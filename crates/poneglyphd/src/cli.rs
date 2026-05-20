@@ -6,17 +6,15 @@ use std::time::Duration;
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
 use dotenvy::dotenv;
-use poneglyph::{
-    Fact, Filter, Poneglyph, SchemaDefinition, Uri, Value, Workspace, default_workspace_path,
-};
+use poneglyph::{Fact, Filter, SchemaDefinition, Uri, Value, Workspace, default_workspace_path};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::api::proto::poneglyph_daemon_client::PoneglyphDaemonClient;
 use crate::api::proto::{
     GetEntityRequest, GetSchemaRequest, QueryRequest, RetractFactByIdRequest, ShutdownRequest,
     StateFactRequest, StateFactsRequest, StatusRequest,
 };
+use crate::client::{daemon_client, open_runtime};
 use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
 
@@ -198,12 +196,6 @@ impl Cli {
     }
 }
 
-async fn daemon_client(
-    config: &PoneglyphDaemonConfig,
-) -> Result<PoneglyphDaemonClient<tonic::transport::Channel>, tonic::transport::Error> {
-    PoneglyphDaemonClient::connect(format!("http://{}", config.rpc.bind_addr)).await
-}
-
 async fn run_server_status(config: PoneglyphDaemonConfig, json: bool) -> Result<()> {
     match daemon_client(&config).await {
         Ok(mut client) => {
@@ -322,15 +314,6 @@ async fn wait_until_running(config: &PoneglyphDaemonConfig) -> Result<()> {
         "daemon did not become ready: {}",
         last_error.unwrap_or_else(|| "unknown error".to_string())
     )
-}
-
-async fn open_runtime(workspace: Workspace, config: PoneglyphDaemonConfig) -> Result<Poneglyph> {
-    Poneglyph::builder()
-        .with_workspace(workspace)
-        .with_config(config.poneglyph)
-        .build()
-        .await
-        .map_err(Into::into)
 }
 
 async fn run_config_command(workspace: Workspace, command: ConfigCommand) -> Result<()> {

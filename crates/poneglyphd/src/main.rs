@@ -1,5 +1,6 @@
 mod api;
 mod cli;
+mod client;
 mod cmd;
 mod config;
 mod daemon;
