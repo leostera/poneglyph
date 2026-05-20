@@ -48,7 +48,22 @@ pub async fn status(config: PoneglyphDaemonConfig, json: bool) -> Result<()> {
 }
 
 pub async fn stop(config: PoneglyphDaemonConfig, json: bool) -> Result<()> {
-    let mut client = daemon_client(&config).await?;
+    let mut client = match daemon_client(&config).await {
+        Ok(client) => client,
+        Err(error) => {
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "status": "offline",
+                        "rpc_bind_addr": config.rpc.bind_addr.to_string(),
+                        "error": error.to_string(),
+                    }))?
+                );
+            }
+            anyhow::bail!("daemon is not running at {}: {error}", config.rpc.bind_addr);
+        }
+    };
     let response = client.shutdown(ShutdownRequest {}).await?.into_inner();
     if json {
         println!(

@@ -274,7 +274,10 @@ fn daemon_cli_stop_offline_fails_and_restart_from_offline_starts() {
     poneglyph(workspace, &["config", "set", "rpc.bind_addr", &bind_addr]);
 
     let stop_error = poneglyph_fails(workspace, &["server", "stop"]);
-    assert!(stop_error.contains("transport error") || stop_error.contains("Connection refused"));
+    assert!(stop_error.contains("daemon is not running"));
+
+    let stop_json_error = poneglyph_fails(workspace, &["server", "stop", "--json"]);
+    assert!(stop_json_error.contains("daemon is not running"));
 
     let restarted = poneglyph(workspace, &["server", "restart", "--json"]);
     assert!(restarted.contains("\"status\": \"restarted\""));
