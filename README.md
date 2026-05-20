@@ -99,6 +99,7 @@ Apply schema from a JSON or TOML `SchemaDefinition` file:
 
 ```sh
 poneglyph --workspace "$PONE" schema apply ./schema.json
+poneglyph --workspace "$PONE" schema apply ./schema.json --json
 poneglyph --workspace "$PONE" schema list
 poneglyph --workspace "$PONE" schema list --json
 poneglyph --workspace "$PONE" schema get music:released

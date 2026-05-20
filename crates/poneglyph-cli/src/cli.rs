@@ -111,6 +111,9 @@ pub enum SchemaSubcommand {
     },
     Apply {
         path: PathBuf,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -250,7 +253,7 @@ mod tests {
         let mut command = Cli::command();
         let schema = command.find_subcommand_mut("schema").expect("schema help");
 
-        for subcommand in ["list", "get"] {
+        for subcommand in ["list", "get", "apply"] {
             let help = schema
                 .find_subcommand_mut(subcommand)
                 .expect("schema subcommand help")

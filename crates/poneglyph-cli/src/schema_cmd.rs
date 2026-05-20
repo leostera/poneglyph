@@ -38,12 +38,23 @@ pub async fn run(
             uri: Some(uri),
             json,
         } => print_schema_entry(schema, &uri, json),
-        SchemaSubcommand::Apply { path } => {
+        SchemaSubcommand::Apply { path, json } => {
             let schema = read_schema_definition(&path).await?;
             let facts = schema_definition_to_facts(schema)?;
             let fact_count = facts.len();
             let tx_id = state_facts(&workspace, &config, facts).await?;
-            println!("applied {fact_count} schema facts in {tx_id}");
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&serde_json::json!({
+                        "status": "applied",
+                        "fact_count": fact_count,
+                        "tx_id": tx_id,
+                    }))?
+                );
+            } else {
+                println!("applied {fact_count} schema facts in {tx_id}");
+            }
             Ok(())
         }
     }

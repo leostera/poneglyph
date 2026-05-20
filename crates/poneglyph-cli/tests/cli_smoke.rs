@@ -91,8 +91,13 @@ fn cli_applies_schema_definition_without_daemon() {
 
     poneglyph(workspace, &["config", "set", "poneglyph.log_level", "off"]);
 
-    let applied = poneglyph(workspace, &["schema", "apply", path_str(&schema_path)]);
-    assert!(applied.contains("applied"));
+    let applied = poneglyph(
+        workspace,
+        &["schema", "apply", path_str(&schema_path), "--json"],
+    );
+    assert!(applied.contains("\"status\": \"applied\""));
+    assert!(applied.contains("\"fact_count\":"));
+    assert!(applied.contains("\"tx_id\":"));
 
     let field = poneglyph(workspace, &["schema", "get", "music:released", "--json"]);
     assert!(field.contains("Release year."));
@@ -245,8 +250,12 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
     );
     assert!(entity_plain.contains("field\tspotify:displayName"));
 
-    let applied = poneglyph(workspace, &["schema", "apply", path_str(&schema_path)]);
-    assert!(applied.contains("applied"));
+    let applied = poneglyph(
+        workspace,
+        &["schema", "apply", path_str(&schema_path), "--json"],
+    );
+    assert!(applied.contains("\"status\": \"applied\""));
+    assert!(applied.contains("\"tx_id\":"));
     let field = poneglyph(workspace, &["schema", "get", "music:released", "--json"]);
     assert!(field.contains("Release year."));
 
