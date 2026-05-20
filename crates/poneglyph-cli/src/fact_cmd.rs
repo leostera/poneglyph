@@ -149,43 +149,56 @@ fn print_fact_list(facts: &FactList, json: bool) -> Result<()> {
         return Ok(());
     }
 
-    match facts {
-        FactList::Log(facts) if facts.is_empty() => println!("no facts"),
-        FactList::Log(facts) => {
-            for fact in facts {
-                println!(
-                    "fact\t{}\t{}\t{}\t{}\t{}\t{}",
-                    fact.fact_id,
-                    fact.tx_id
-                        .as_ref()
-                        .map(ToString::to_string)
-                        .unwrap_or_else(|| "pending".to_string()),
-                    fact.entity,
-                    fact.field,
-                    serde_json::to_string(&fact.value)?,
-                    if fact.retraction {
-                        "retraction"
-                    } else {
-                        "assertion"
-                    }
-                );
-            }
-        }
-        FactList::Active(facts) if facts.is_empty() => println!("no facts"),
-        FactList::Active(facts) => {
-            for fact in facts {
-                println!(
-                    "active\t{}\t{}\t{}\t{}\t{}",
-                    fact.fact_id,
-                    fact.tx_id,
-                    fact.entity,
-                    fact.field,
-                    serde_json::to_string(&fact.value)?
-                );
-            }
-        }
+    for line in plain_fact_list_lines(facts)? {
+        println!("{line}");
     }
     Ok(())
+}
+
+fn plain_fact_list_lines(facts: &FactList) -> Result<Vec<String>> {
+    match facts {
+        FactList::Log(facts) if facts.is_empty() => Ok(vec!["no facts".to_string()]),
+        FactList::Log(facts) => facts.iter().map(plain_log_fact_line).collect(),
+        FactList::Active(facts) if facts.is_empty() => Ok(vec!["no facts".to_string()]),
+        FactList::Active(facts) => facts.iter().map(plain_active_fact_line).collect(),
+    }
+}
+
+fn plain_log_fact_line(fact: &Fact) -> Result<String> {
+    let tx_id = fact
+        .tx_id
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_else(|| "pending".to_string());
+    let kind = if fact.retraction {
+        "retraction"
+    } else {
+        "assertion"
+    };
+    Ok(format!(
+        "fact\t{}\t{}\t{}\t{}\t{}\t{}",
+        fact.fact_id,
+        tx_id,
+        fact.entity,
+        fact.field,
+        value_json(&fact.value)?,
+        kind
+    ))
+}
+
+fn plain_active_fact_line(fact: &ActiveFact) -> Result<String> {
+    Ok(format!(
+        "active\t{}\t{}\t{}\t{}\t{}",
+        fact.fact_id,
+        fact.tx_id,
+        fact.entity,
+        fact.field,
+        value_json(&fact.value)?
+    ))
+}
+
+fn value_json(value: &Value) -> Result<String> {
+    serde_json::to_string(value).map_err(Into::into)
 }
 
 async fn list_facts(
@@ -362,4 +375,82 @@ fn parse_cli_value(value: &str) -> Result<Value> {
         return Ok(Value::reference(parse_uri(uri)?));
     }
     Ok(Value::text(value))
+}
+
+#[cfg(test)]
+mod tests {
+    use poneglyph_core::{ActiveFact, Fact, Value};
+
+    use super::{FactList, plain_fact_list_lines};
+    use crate::util::parse_uri;
+
+    fn assertion_fact() -> Fact {
+        let mut fact = Fact::builder()
+            .source(parse_uri("poneglyph:cli").expect("source"))
+            .entity(parse_uri("spotify:album:signals").expect("entity"))
+            .field(parse_uri("spotify:displayName").expect("field"))
+            .value(Value::text("Signals"))
+            .build()
+            .expect("fact");
+        fact.fact_id = parse_uri("poneglyph:fact:1").expect("fact id");
+        fact.tx_id = Some(parse_uri("poneglyph:tx:1").expect("tx id"));
+        fact
+    }
+
+    #[test]
+    fn plain_fact_list_lines_formats_log_facts_and_empty_logs() {
+        let lines = plain_fact_list_lines(&FactList::Log(vec![assertion_fact()])).expect("lines");
+
+        assert_eq!(
+            lines,
+            vec![
+                "fact\tponeglyph:fact:1\tponeglyph:tx:1\tspotify:album:signals\tspotify:displayName\t{\"type\":\"text\",\"value\":\"Signals\"}\tassertion"
+            ]
+        );
+        assert_eq!(
+            plain_fact_list_lines(&FactList::Log(vec![])).expect("empty"),
+            vec!["no facts"]
+        );
+    }
+
+    #[test]
+    fn plain_fact_list_lines_formats_pending_retractions() {
+        let mut fact = assertion_fact();
+        fact.tx_id = None;
+        fact.retraction = true;
+
+        let lines = plain_fact_list_lines(&FactList::Log(vec![fact])).expect("lines");
+
+        assert_eq!(
+            lines,
+            vec![
+                "fact\tponeglyph:fact:1\tpending\tspotify:album:signals\tspotify:displayName\t{\"type\":\"text\",\"value\":\"Signals\"}\tretraction"
+            ]
+        );
+    }
+
+    #[test]
+    fn plain_fact_list_lines_formats_active_facts_and_empty_lists() {
+        let fact = ActiveFact {
+            source: parse_uri("poneglyph:cli").expect("source"),
+            entity: parse_uri("spotify:album:signals").expect("entity"),
+            field: parse_uri("spotify:displayName").expect("field"),
+            value: Value::text("Signals"),
+            fact_id: parse_uri("poneglyph:fact:1").expect("fact id"),
+            tx_id: parse_uri("poneglyph:tx:1").expect("tx id"),
+        };
+
+        let lines = plain_fact_list_lines(&FactList::Active(vec![fact])).expect("lines");
+
+        assert_eq!(
+            lines,
+            vec![
+                "active\tponeglyph:fact:1\tponeglyph:tx:1\tspotify:album:signals\tspotify:displayName\t{\"type\":\"text\",\"value\":\"Signals\"}"
+            ]
+        );
+        assert_eq!(
+            plain_fact_list_lines(&FactList::Active(vec![])).expect("empty"),
+            vec!["no facts"]
+        );
+    }
 }
