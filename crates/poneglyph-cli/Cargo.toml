@@ -11,6 +11,7 @@ derive_builder.workspace = true
 dotenvy.workspace = true
 poneglyph-core = { path = "../poneglyph-core" }
 poneglyph-api = { path = "../poneglyph-api" }
+poneglyph-db = { path = "../poneglyph-db" }
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
@@ -25,5 +26,4 @@ name = "poneglyph"
 path = "src/main.rs"
 
 [dev-dependencies]
-poneglyph-db = { path = "../poneglyph-db" }
 tempfile.workspace = true

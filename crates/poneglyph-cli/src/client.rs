@@ -15,10 +15,7 @@ pub async fn open_runtime(
     workspace: Workspace,
     config: PoneglyphDaemonConfig,
 ) -> Result<Poneglyph> {
-    Poneglyph::builder()
-        .with_workspace(workspace)
-        .with_config(config.poneglyph)
-        .build()
+    poneglyph_db::open_runtime(workspace, config.poneglyph)
         .await
         .map_err(Into::into)
 }

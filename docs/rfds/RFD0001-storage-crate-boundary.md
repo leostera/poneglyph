@@ -54,7 +54,9 @@ runtime/service tests that should not depend on disk.
    can wrap the existing core SQLite implementations so callers can target the
    storage adapter crate before the physical module move.
 4. Migrate non-core consumers and integration tests to call `poneglyph-db`
-   adapter functions rather than constructing core SQLite types directly.
+   adapter functions rather than constructing core SQLite types directly. The
+   CLI now opens disk-backed direct fallback and daemon runtimes through
+   `poneglyph_db::open_runtime`.
 5. Move SQLite fact/entity store implementations and their SQLite-specific tests
    into `poneglyph-db`.
 6. Re-export database adapters from `poneglyph-core` only if needed for CLI/tests;

@@ -96,13 +96,8 @@ impl DaemonBuilder {
             "opening daemon runtime"
         );
 
-        let poneglyph = Arc::new(
-            Poneglyph::builder()
-                .with_workspace(workspace)
-                .with_config(config.poneglyph.clone())
-                .build()
-                .await?,
-        );
+        let poneglyph =
+            Arc::new(poneglyph_db::open_runtime(workspace, config.poneglyph.clone()).await?);
         info!("daemon runtime opened");
         Ok(Daemon { poneglyph, config })
     }
