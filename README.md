@@ -68,6 +68,8 @@ poneglyph --workspace "$PONE" fact state \
   spotify:album:2112 \
   spotify:displayName \
   2112
+poneglyph --workspace "$PONE" fact list --entity spotify:album:2112
+poneglyph --workspace "$PONE" fact list --entity spotify:album:2112 --json
 
 # machine-readable outcome
 poneglyph --workspace "$PONE" fact state spotify:album:signals spotify:displayName Signals --json

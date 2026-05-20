@@ -1,5 +1,5 @@
 use anyhow::Result;
-use poneglyph_api::proto::{RetractFactByIdRequest, StateFactRequest};
+use poneglyph_api::proto::{ListFactsRequest, RetractFactByIdRequest, StateFactRequest};
 use poneglyph_core::{Fact, Filter, Uri, Value, Workspace};
 
 use crate::cli::{FactCommand, FactSubcommand};
@@ -12,6 +12,10 @@ pub async fn run(
     command: FactCommand,
 ) -> Result<()> {
     match command.command {
+        FactSubcommand::List { entity, json } => {
+            let facts = list_facts(&workspace, &config, entity.as_deref()).await?;
+            print_fact_list(&facts, json)
+        }
         FactSubcommand::State {
             entity,
             attribute,
@@ -81,6 +85,68 @@ fn print_fact_outcome(outcome: &FactOutcome, json: bool) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn print_fact_list(facts: &[Fact], json: bool) -> Result<()> {
+    if json {
+        println!("{}", serde_json::to_string_pretty(facts)?);
+        return Ok(());
+    }
+
+    if facts.is_empty() {
+        println!("no facts");
+    } else {
+        for fact in facts {
+            println!(
+                "fact\t{}\t{}\t{}\t{}\t{}\t{}",
+                fact.fact_id,
+                fact.tx_id
+                    .as_ref()
+                    .map(ToString::to_string)
+                    .unwrap_or_else(|| "pending".to_string()),
+                fact.entity,
+                fact.field,
+                serde_json::to_string(&fact.value)?,
+                if fact.retraction {
+                    "retraction"
+                } else {
+                    "assertion"
+                }
+            );
+        }
+    }
+    Ok(())
+}
+
+async fn list_facts(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    entity: Option<&str>,
+) -> Result<Vec<Fact>> {
+    match daemon_client(config).await {
+        Ok(mut client) => {
+            let response = client
+                .list_facts(ListFactsRequest {
+                    entity_uri: entity.unwrap_or_default().to_string(),
+                })
+                .await?
+                .into_inner();
+            Ok(serde_json::from_str(&response.json)?)
+        }
+        Err(_) => {
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            let filter = match entity {
+                Some(entity) => Filter::ByEntityUri(parse_uri(entity)?),
+                None => Filter::All,
+            };
+            let mut stream = poneglyph.fact_service().get_facts(filter).await?;
+            let mut facts = Vec::new();
+            while let Some(fact) = stream.recv().await {
+                facts.push(fact?);
+            }
+            Ok(facts)
+        }
+    }
 }
 
 async fn state_fact(

@@ -10,8 +10,8 @@ use tonic::{Request, Response, Status};
 
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
-    GetEntityRequest, GetSchemaRequest, JsonResponse, ListEntitiesRequest, QueryRequest,
-    RetractFactByIdRequest, SearchEntitiesRequest, ShutdownRequest, ShutdownResponse,
+    GetEntityRequest, GetSchemaRequest, JsonResponse, ListEntitiesRequest, ListFactsRequest,
+    QueryRequest, RetractFactByIdRequest, SearchEntitiesRequest, ShutdownRequest, ShutdownResponse,
     StateFactRequest, StateFactResponse, StateFactsRequest, StatusRequest, StatusResponse,
 };
 
@@ -159,6 +159,35 @@ impl PoneglyphDaemon for DaemonApi {
             fact_id: fact_id.clone(),
             fact_ids: vec![fact_id],
         }))
+    }
+
+    async fn list_facts(
+        &self,
+        request: Request<ListFactsRequest>,
+    ) -> Result<Response<JsonResponse>, Status> {
+        let request = request.into_inner();
+        let filter = if request.entity_uri.is_empty() {
+            Filter::All
+        } else {
+            Filter::ByEntityUri(
+                Uri::parse(request.entity_uri)
+                    .map_err(|error| Status::invalid_argument(error.to_string()))?,
+            )
+        };
+        let mut stream = self
+            .poneglyph
+            .fact_service()
+            .get_facts(filter)
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+        let mut facts = Vec::new();
+        while let Some(fact) = stream.recv().await {
+            facts.push(fact.map_err(|error| Status::internal(error.to_string()))?);
+        }
+        let json = serde_json::to_string_pretty(&facts)
+            .map_err(|error| Status::internal(error.to_string()))?;
+
+        Ok(Response::new(JsonResponse { json }))
     }
 
     async fn query(

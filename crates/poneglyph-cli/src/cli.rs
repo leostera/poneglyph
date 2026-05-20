@@ -131,6 +131,14 @@ pub struct FactCommand {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum FactSubcommand {
+    List {
+        /// Restrict output to facts for one entity URI.
+        #[arg(long)]
+        entity: Option<String>,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
     State {
         entity: String,
         attribute: String,

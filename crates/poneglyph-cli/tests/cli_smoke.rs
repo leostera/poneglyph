@@ -68,6 +68,19 @@ async fn cli_states_queries_and_retracts_facts_without_daemon() {
     );
     assert!(query.contains("spotify:album:2112"));
 
+    let facts = poneglyph(
+        workspace,
+        &["fact", "list", "--entity", "spotify:album:2112"],
+    );
+    assert!(facts.contains("fact\t"));
+    assert!(facts.contains("spotify:displayName"));
+
+    let facts_json = poneglyph(
+        workspace,
+        &["fact", "list", "--entity", "spotify:album:2112", "--json"],
+    );
+    assert!(facts_json.contains("spotify:displayName"));
+
     let fact_id = first_fact_id(workspace, "spotify:album:2112").await;
     let retraction = poneglyph(
         workspace,
@@ -281,6 +294,18 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
 
     let entity_search_json = poneglyph(workspace, &["entity", "search", "Signals", "--json"]);
     assert!(entity_search_json.contains("spotify:album:signals"));
+
+    let facts = poneglyph(
+        workspace,
+        &[
+            "fact",
+            "list",
+            "--entity",
+            "spotify:album:signals",
+            "--json",
+        ],
+    );
+    assert!(facts.contains("spotify:displayName"));
 
     let applied = poneglyph(
         workspace,
