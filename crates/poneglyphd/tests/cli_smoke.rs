@@ -9,12 +9,7 @@ use poneglyph::{Filter, Store, Uri};
 use tempfile::tempdir;
 
 fn poneglyph(workspace: &Path, args: &[&str]) -> String {
-    let output = Command::new(env!("CARGO_BIN_EXE_poneglyph"))
-        .arg("--workspace")
-        .arg(workspace)
-        .args(args)
-        .output()
-        .expect("run poneglyph");
+    let output = poneglyph_output(workspace, args);
 
     assert!(
         output.status.success(),
@@ -24,6 +19,28 @@ fn poneglyph(workspace: &Path, args: &[&str]) -> String {
     );
 
     String::from_utf8(output.stdout).expect("utf8 stdout")
+}
+
+fn poneglyph_fails(workspace: &Path, args: &[&str]) -> String {
+    let output = poneglyph_output(workspace, args);
+
+    assert!(
+        !output.status.success(),
+        "poneglyph {args:?} unexpectedly succeeded\nstdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    String::from_utf8(output.stderr).expect("utf8 stderr")
+}
+
+fn poneglyph_output(workspace: &Path, args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_poneglyph"))
+        .arg("--workspace")
+        .arg(workspace)
+        .args(args)
+        .output()
+        .expect("run poneglyph")
 }
 
 #[tokio::test]
@@ -52,7 +69,10 @@ async fn cli_states_queries_and_retracts_facts_without_daemon() {
     assert!(query.contains("spotify:album:2112"));
 
     let fact_id = first_fact_id(workspace, "spotify:album:2112").await;
-    let retraction = poneglyph(workspace, &["fact", "retract", "--fact", &fact_id, "--json"]);
+    let retraction = poneglyph(
+        workspace,
+        &["fact", "retract", "--fact", &fact_id, "--json"],
+    );
     assert!(retraction.contains("tx_id"));
     assert!(retraction.contains("fact_id"));
 
@@ -77,6 +97,55 @@ fn cli_applies_schema_definition_without_daemon() {
     let field = poneglyph(workspace, &["schema", "get", "music:released"]);
     assert!(field.contains("Release year."));
     assert!(field.contains("music:album"));
+}
+
+#[test]
+fn cli_config_get_set_and_list_round_trips() {
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = tempdir.path();
+    let bind_addr = free_bind_addr();
+
+    let config = poneglyph(
+        workspace,
+        &["config", "set", "poneglyph.log_level", "debug"],
+    );
+    assert!(config.contains("log_level = \"debug\""));
+    assert_eq!(
+        poneglyph(workspace, &["config", "get", "poneglyph.log_level"]).trim(),
+        "debug"
+    );
+
+    let config = poneglyph(workspace, &["config", "set", "rpc.bind_addr", &bind_addr]);
+    assert!(config.contains(&format!("bind_addr = \"{bind_addr}\"")));
+    assert_eq!(
+        poneglyph(workspace, &["config", "get", "rpc.bind_addr"]).trim(),
+        bind_addr
+    );
+
+    let listed = poneglyph(workspace, &["config", "list"]);
+    assert!(listed.contains("[poneglyph]"));
+    assert!(listed.contains("[rpc]"));
+    assert!(listed.contains(&bind_addr));
+}
+
+#[test]
+fn cli_reports_invalid_inputs() {
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = tempdir.path();
+
+    let error = poneglyph_fails(
+        workspace,
+        &["fact", "state", "not-a-uri", "spotify:displayName", "2112"],
+    );
+    assert!(error.contains("invalid uri") || error.contains("URI"));
+
+    let error = poneglyph_fails(workspace, &["query", "not valid datalog"]);
+    assert!(error.contains("query parse failed") || error.contains("parse"));
+
+    let schema_path = workspace.join("bad-schema.json");
+    fs::write(&schema_path, "{ nope").expect("write bad schema");
+    let error = poneglyph_fails(workspace, &["schema", "apply", path_str(&schema_path)]);
+    assert!(error.contains("expected") || error.contains("JSON") || error.contains("key"));
 }
 
 #[tokio::test]
