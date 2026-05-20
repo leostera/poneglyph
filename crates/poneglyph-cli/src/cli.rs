@@ -396,6 +396,24 @@ mod tests {
     }
 
     #[test]
+    fn cli_parses_fact_list_pagination() {
+        let cli = Cli::try_parse_from([
+            "poneglyph",
+            "fact",
+            "list",
+            "--limit",
+            "25",
+            "--offset",
+            "50",
+        ])
+        .expect("cli");
+        assert!(matches!(
+            cli.command,
+            Some(Command::Fact(fact)) if matches!(fact.command, FactSubcommand::List { limit: 25, offset: 50, .. })
+        ));
+    }
+
+    #[test]
     fn fact_help_mentions_json_output_flags() {
         let mut command = Cli::command();
         let fact = command.find_subcommand_mut("fact").expect("fact help");
@@ -409,6 +427,18 @@ mod tests {
             assert!(
                 help.contains("--json"),
                 "missing --json in fact {subcommand} help:\n{help}"
+            );
+        }
+
+        let list_help = fact
+            .find_subcommand_mut("list")
+            .expect("fact list help")
+            .render_long_help()
+            .to_string();
+        for flag in ["--limit", "--offset"] {
+            assert!(
+                list_help.contains(flag),
+                "missing {flag} in fact list help:\n{list_help}"
             );
         }
     }
@@ -439,6 +469,28 @@ mod tests {
                 "missing --json in entity {subcommand} help:\n{help}"
             );
         }
+
+        let list_help = entity
+            .find_subcommand_mut("list")
+            .expect("entity list help")
+            .render_long_help()
+            .to_string();
+        for flag in ["--limit", "--offset"] {
+            assert!(
+                list_help.contains(flag),
+                "missing {flag} in entity list help:\n{list_help}"
+            );
+        }
+
+        let search_help = entity
+            .find_subcommand_mut("search")
+            .expect("entity search help")
+            .render_long_help()
+            .to_string();
+        assert!(
+            search_help.contains("--limit"),
+            "missing --limit in entity search help:\n{search_help}"
+        );
     }
 
     #[test]
@@ -463,6 +515,24 @@ mod tests {
         assert!(matches!(
             cli.command,
             Some(Command::Query(query)) if query.json
+        ));
+    }
+
+    #[test]
+    fn entity_list_parses_pagination() {
+        let cli = Cli::try_parse_from([
+            "poneglyph",
+            "entity",
+            "list",
+            "--limit",
+            "25",
+            "--offset",
+            "50",
+        ])
+        .expect("cli");
+        assert!(matches!(
+            cli.command,
+            Some(Command::Entity(entity)) if matches!(entity.command, EntitySubcommand::List { limit: 25, offset: 50, .. })
         ));
     }
 
