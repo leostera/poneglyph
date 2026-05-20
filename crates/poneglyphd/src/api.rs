@@ -5,13 +5,14 @@ pub mod proto {
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use poneglyph::{Fact, Poneglyph, Query, Uri};
+use poneglyph::{Fact, Filter, Poneglyph, Query, Uri};
 use tonic::{Request, Response, Status};
 
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
-    GetEntityRequest, GetSchemaRequest, JsonResponse, QueryRequest, ShutdownRequest,
-    ShutdownResponse, StateFactRequest, StateFactResponse, StatusRequest, StatusResponse,
+    GetEntityRequest, GetSchemaRequest, JsonResponse, QueryRequest, RetractFactByIdRequest,
+    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StatusRequest,
+    StatusResponse,
 };
 
 pub struct DaemonApi {
@@ -75,6 +76,42 @@ impl PoneglyphDaemon for DaemonApi {
         let tx_id = self
             .poneglyph
             .state_facts(vec![fact])
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+
+        Ok(Response::new(StateFactResponse {
+            tx_id: tx_id.to_string(),
+        }))
+    }
+
+    async fn retract_fact_by_id(
+        &self,
+        request: Request<RetractFactByIdRequest>,
+    ) -> Result<Response<StateFactResponse>, Status> {
+        let fact_id = Uri::parse(request.into_inner().fact_id)
+            .map_err(|error| Status::invalid_argument(error.to_string()))?;
+        let mut facts = self
+            .poneglyph
+            .fact_service()
+            .get_facts(Filter::ById(fact_id.clone()))
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+        let fact = facts
+            .recv()
+            .await
+            .ok_or_else(|| Status::not_found(format!("fact `{fact_id}` not found")))?
+            .map_err(|error| Status::internal(error.to_string()))?;
+        let retraction = Fact::builder()
+            .source(fact.source)
+            .entity(fact.entity)
+            .field(fact.field)
+            .value(fact.value)
+            .retract()
+            .build()
+            .map_err(|error| Status::internal(error.to_string()))?;
+        let tx_id = self
+            .poneglyph
+            .state_facts(vec![retraction])
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
 

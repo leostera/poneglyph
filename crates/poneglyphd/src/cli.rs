@@ -6,14 +6,16 @@ use std::time::Duration;
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
 use dotenvy::dotenv;
-use poneglyph::{Fact, Poneglyph, SchemaDefinition, Uri, Value, Workspace, default_workspace_path};
+use poneglyph::{
+    Fact, Filter, Poneglyph, SchemaDefinition, Uri, Value, Workspace, default_workspace_path,
+};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::api::proto::poneglyph_daemon_client::PoneglyphDaemonClient;
 use crate::api::proto::{
-    GetEntityRequest, GetSchemaRequest, QueryRequest, ShutdownRequest, StateFactRequest,
-    StatusRequest,
+    GetEntityRequest, GetSchemaRequest, QueryRequest, RetractFactByIdRequest, ShutdownRequest,
+    StateFactRequest, StatusRequest,
 };
 use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
@@ -336,7 +338,7 @@ async fn run_schema_command(
             serde_json::from_str::<SchemaDefinition>(&json)?
         }
         Err(_) => {
-            let poneglyph = open_runtime(workspace, config).await?;
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
             poneglyph.get_schema().await?
         }
     };
@@ -349,10 +351,14 @@ async fn run_schema_command(
         }
         SchemaSubcommand::Get { uri: Some(uri) } => print_schema_entry(schema, &uri),
         SchemaSubcommand::Apply { path } => {
-            anyhow::bail!(
-                "schema apply is not implemented yet for {}; schemas are currently stated as facts",
-                path.display()
-            )
+            let schema = read_schema_definition(&path).await?;
+            let facts = schema_definition_to_facts(schema)?;
+            let fact_count = facts.len();
+            for fact in facts {
+                state_fact(&workspace, &config, fact).await?;
+            }
+            println!("applied {fact_count} schema facts");
+            Ok(())
         }
     }
 }
@@ -368,6 +374,124 @@ fn print_schema_list(schema: &SchemaDefinition) -> Result<()> {
         println!("field\t{}", field.uri);
     }
     Ok(())
+}
+
+async fn read_schema_definition(path: &std::path::Path) -> Result<SchemaDefinition> {
+    let contents = tokio::fs::read_to_string(path).await?;
+    match path.extension().and_then(|extension| extension.to_str()) {
+        Some("toml") => toml::from_str(&contents).map_err(Into::into),
+        _ => serde_json::from_str(&contents).map_err(Into::into),
+    }
+}
+
+fn schema_definition_to_facts(schema: SchemaDefinition) -> Result<Vec<Fact>> {
+    let mut facts = Vec::new();
+
+    for namespace in schema.namespaces {
+        push_schema_entry_facts(
+            &mut facts,
+            namespace.uri,
+            "schema:namespace",
+            namespace.name,
+            namespace.doc,
+        )?;
+    }
+
+    for kind in schema.kinds {
+        push_schema_entry_facts(&mut facts, kind.uri, "schema:kind", kind.name, kind.doc)?;
+    }
+
+    for field in schema.fields {
+        let uri = field.uri;
+        push_schema_entry_facts(
+            &mut facts,
+            uri.clone(),
+            "schema:field",
+            field.name,
+            field.doc,
+        )?;
+        push_optional_reference_fact(&mut facts, &uri, "schema:sameAs", field.same_as)?;
+        push_optional_reference_fact(&mut facts, &uri, "schema:field:domain", field.domain)?;
+        push_optional_reference_fact(&mut facts, &uri, "schema:field:range", field.range)?;
+        push_optional_text_fact(&mut facts, &uri, "schema:field:valueType", field.value_type)?;
+        push_optional_text_fact(
+            &mut facts,
+            &uri,
+            "schema:field:cardinality",
+            field.cardinality,
+        )?;
+        push_optional_bool_fact(
+            &mut facts,
+            &uri,
+            "schema:field:deprecated",
+            field.deprecated,
+        )?;
+        push_optional_bool_fact(&mut facts, &uri, "schema:field:identity", field.identity)?;
+    }
+
+    Ok(facts)
+}
+
+fn push_schema_entry_facts(
+    facts: &mut Vec<Fact>,
+    uri: Uri,
+    schema_type: &str,
+    name: Option<String>,
+    doc: Option<String>,
+) -> Result<()> {
+    facts.push(schema_fact(
+        uri.clone(),
+        "schema:type",
+        Value::reference(parse_uri(schema_type)?),
+    )?);
+    push_optional_text_fact(facts, &uri, "schema:name", name)?;
+    push_optional_text_fact(facts, &uri, "schema:doc", doc)?;
+    Ok(())
+}
+
+fn push_optional_text_fact(
+    facts: &mut Vec<Fact>,
+    entity: &Uri,
+    field: &str,
+    value: Option<String>,
+) -> Result<()> {
+    if let Some(value) = value {
+        facts.push(schema_fact(entity.clone(), field, Value::text(value))?);
+    }
+    Ok(())
+}
+
+fn push_optional_bool_fact(
+    facts: &mut Vec<Fact>,
+    entity: &Uri,
+    field: &str,
+    value: Option<bool>,
+) -> Result<()> {
+    if let Some(value) = value {
+        facts.push(schema_fact(entity.clone(), field, Value::boolean(value))?);
+    }
+    Ok(())
+}
+
+fn push_optional_reference_fact(
+    facts: &mut Vec<Fact>,
+    entity: &Uri,
+    field: &str,
+    value: Option<Uri>,
+) -> Result<()> {
+    if let Some(value) = value {
+        facts.push(schema_fact(entity.clone(), field, Value::reference(value))?);
+    }
+    Ok(())
+}
+
+fn schema_fact(entity: Uri, field: &str, value: Value) -> Result<Fact> {
+    Ok(Fact::builder()
+        .source(parse_uri("poneglyph:cli")?)
+        .entity(entity)
+        .field(parse_uri(field)?)
+        .value(value)
+        .build()?)
 }
 
 fn print_schema_entry(schema: SchemaDefinition, uri: &str) -> Result<()> {
@@ -400,9 +524,11 @@ async fn run_fact_command(
         FactSubcommand::Retract {
             fact: Some(fact_id),
             ..
-        } => anyhow::bail!(
-            "retract by fact URI `{fact_id}` is not implemented yet; pass entity attribute value"
-        ),
+        } => {
+            let tx_id = retract_fact_by_id(&workspace, &config, &fact_id).await?;
+            println!("{tx_id}");
+            return Ok(());
+        }
         FactSubcommand::Retract {
             fact: None,
             entity: Some(entity),
@@ -420,23 +546,65 @@ async fn run_fact_command(
         }
     };
 
-    let tx_id = match daemon_client(&config).await {
-        Ok(mut client) => {
-            client
-                .state_fact(StateFactRequest {
-                    fact_json: serde_json::to_string(&fact)?,
-                })
-                .await?
-                .into_inner()
-                .tx_id
-        }
-        Err(_) => {
-            let poneglyph = open_runtime(workspace, config).await?;
-            poneglyph.state_facts(vec![fact]).await?.to_string()
-        }
-    };
+    let tx_id = state_fact(&workspace, &config, fact).await?;
     println!("{tx_id}");
     Ok(())
+}
+
+async fn state_fact(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    fact: Fact,
+) -> Result<String> {
+    match daemon_client(config).await {
+        Ok(mut client) => Ok(client
+            .state_fact(StateFactRequest {
+                fact_json: serde_json::to_string(&fact)?,
+            })
+            .await?
+            .into_inner()
+            .tx_id),
+        Err(_) => {
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            Ok(poneglyph.state_facts(vec![fact]).await?.to_string())
+        }
+    }
+}
+
+async fn retract_fact_by_id(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    fact_id: &str,
+) -> Result<String> {
+    match daemon_client(config).await {
+        Ok(mut client) => Ok(client
+            .retract_fact_by_id(RetractFactByIdRequest {
+                fact_id: fact_id.to_string(),
+            })
+            .await?
+            .into_inner()
+            .tx_id),
+        Err(_) => {
+            let fact_id = parse_uri(fact_id)?;
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            let mut facts = poneglyph
+                .fact_service()
+                .get_facts(Filter::ById(fact_id.clone()))
+                .await?;
+            let fact = facts
+                .recv()
+                .await
+                .ok_or_else(|| anyhow::anyhow!("fact `{fact_id}` not found"))??;
+            let retraction = Fact::builder()
+                .source(fact.source)
+                .entity(fact.entity)
+                .field(fact.field)
+                .value(fact.value)
+                .retract()
+                .build()?;
+            Ok(poneglyph.state_facts(vec![retraction]).await?.to_string())
+        }
+    }
 }
 
 async fn run_query_command(
