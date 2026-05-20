@@ -71,6 +71,9 @@ Typed protobuf migration sketch and current audit:
   the typed response and converts it back into domain structs before applying the
   existing plain/JSON renderers, so user-facing output remains unchanged while
   the process boundary is no longer JSON for fact listing.
+- State writes also have typed RPCs (`StateFactTyped` and `StateFactsTyped`).
+  `fact state` and daemon-backed `schema apply` use them, preserving existing
+  outcome text/JSON while avoiding fact JSON serialization on those write paths.
 - Later candidates: typed entity/list/search responses once entity field maps and
   search score semantics have settled; schema messages mirroring
   `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`; query

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use poneglyph_api::{
-    active_fact_from_proto, fact_from_proto,
+    active_fact_from_proto, fact_from_proto, fact_to_proto,
     proto::{
-        ListFactsRequest, ListFactsResponse, RetractFactByIdRequest, StateFactRequest,
+        ListFactsRequest, ListFactsResponse, RetractFactByIdRequest, StateFactTypedRequest,
         poneglyph_daemon_client::PoneglyphDaemonClient,
     },
 };
@@ -304,8 +304,8 @@ async fn state_fact(
     match daemon_client(config).await {
         Ok(mut client) => {
             let response = client
-                .state_fact(StateFactRequest {
-                    fact_json: serde_json::to_string(&fact)?,
+                .state_fact_typed(StateFactTypedRequest {
+                    fact: Some(fact_to_proto(&fact)),
                 })
                 .await?
                 .into_inner();

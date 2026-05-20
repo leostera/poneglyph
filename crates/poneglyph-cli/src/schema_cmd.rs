@@ -1,7 +1,10 @@
 use std::path::Path;
 
 use anyhow::Result;
-use poneglyph_api::proto::{GetSchemaRequest, StateFactsRequest};
+use poneglyph_api::{
+    fact_to_proto,
+    proto::{GetSchemaRequest, StateFactsTypedRequest},
+};
 use poneglyph_core::{Fact, SchemaDefinition, Uri, Value, Workspace};
 
 use crate::cli::{SchemaCommand, SchemaSubcommand};
@@ -264,11 +267,8 @@ async fn state_facts(
 ) -> Result<String> {
     match daemon_client(config).await {
         Ok(mut client) => Ok(client
-            .state_facts(StateFactsRequest {
-                fact_json: facts
-                    .iter()
-                    .map(serde_json::to_string)
-                    .collect::<Result<Vec<_>, _>>()?,
+            .state_facts_typed(StateFactsTypedRequest {
+                facts: facts.iter().map(fact_to_proto).collect(),
             })
             .await?
             .into_inner()

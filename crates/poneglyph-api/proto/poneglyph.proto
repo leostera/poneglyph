@@ -6,7 +6,9 @@ service PoneglyphDaemon {
   rpc Status(StatusRequest) returns (StatusResponse);
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
   rpc StateFact(StateFactRequest) returns (StateFactResponse);
+  rpc StateFactTyped(StateFactTypedRequest) returns (StateFactResponse);
   rpc StateFacts(StateFactsRequest) returns (StateFactResponse);
+  rpc StateFactsTyped(StateFactsTypedRequest) returns (StateFactResponse);
   rpc RetractFactById(RetractFactByIdRequest) returns (StateFactResponse);
   rpc ListFacts(ListFactsRequest) returns (JsonResponse);
   rpc ListFactsTyped(ListFactsRequest) returns (ListFactsResponse);
@@ -37,6 +39,14 @@ message StateFactRequest {
 
 message StateFactsRequest {
   repeated string fact_json = 1;
+}
+
+message StateFactTypedRequest {
+  Fact fact = 1;
+}
+
+message StateFactsTypedRequest {
+  repeated Fact facts = 1;
 }
 
 message RetractFactByIdRequest {

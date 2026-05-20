@@ -17,8 +17,8 @@ use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
     GetEntityRequest, GetSchemaRequest, JsonResponse, ListEntitiesRequest, ListFactsRequest,
     ListFactsResponse, QueryRequest, RetractFactByIdRequest, SearchEntitiesRequest,
-    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StateFactsRequest,
-    StatusRequest, StatusResponse,
+    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StateFactTypedRequest,
+    StateFactsRequest, StateFactsTypedRequest, StatusRequest, StatusResponse,
 };
 
 pub struct DaemonApi {
@@ -34,6 +34,24 @@ impl DaemonApi {
             started_at: Instant::now(),
             shutdown: Arc::new(Mutex::new(Some(shutdown))),
         }
+    }
+
+    async fn state_fact_batch(&self, facts: Vec<Fact>) -> Result<StateFactResponse, Status> {
+        if facts.is_empty() {
+            return Err(Status::invalid_argument("empty fact batch"));
+        }
+
+        let fact_ids = facts
+            .iter()
+            .map(|fact| fact.fact_id.to_string())
+            .collect::<Vec<_>>();
+        let tx_id = self.poneglyph.state_facts(facts).await.map_err(internal)?;
+
+        Ok(StateFactResponse {
+            tx_id: tx_id.to_string(),
+            fact_id: fact_ids.first().cloned().unwrap_or_default(),
+            fact_ids,
+        })
     }
 
     async fn list_fact_items(&self, request: ListFactsRequest) -> Result<FactListItems, Status> {
@@ -344,18 +362,19 @@ impl PoneglyphDaemon for DaemonApi {
     ) -> Result<Response<StateFactResponse>, Status> {
         let fact = serde_json::from_str::<Fact>(&request.into_inner().fact_json)
             .map_err(invalid_argument)?;
-        let fact_id = fact.fact_id.to_string();
-        let tx_id = self
-            .poneglyph
-            .state_facts(vec![fact])
-            .await
-            .map_err(internal)?;
+        Ok(Response::new(self.state_fact_batch(vec![fact]).await?))
+    }
 
-        Ok(Response::new(StateFactResponse {
-            tx_id: tx_id.to_string(),
-            fact_id: fact_id.clone(),
-            fact_ids: vec![fact_id],
-        }))
+    async fn state_fact_typed(
+        &self,
+        request: Request<StateFactTypedRequest>,
+    ) -> Result<Response<StateFactResponse>, Status> {
+        let fact = request
+            .into_inner()
+            .fact
+            .ok_or_else(|| Status::invalid_argument("missing fact"))
+            .and_then(|fact| fact_from_proto(fact).map_err(invalid_argument))?;
+        Ok(Response::new(self.state_fact_batch(vec![fact]).await?))
     }
 
     async fn state_facts(
@@ -366,27 +385,22 @@ impl PoneglyphDaemon for DaemonApi {
             .into_inner()
             .fact_json
             .into_iter()
-            .map(|json| {
-                serde_json::from_str::<Fact>(&json)
-                    .map_err(|error| Status::invalid_argument(error.to_string()))
-            })
+            .map(|json| serde_json::from_str::<Fact>(&json).map_err(invalid_argument))
             .collect::<Result<Vec<_>, _>>()?;
+        Ok(Response::new(self.state_fact_batch(facts).await?))
+    }
 
-        if facts.is_empty() {
-            return Err(Status::invalid_argument("empty fact batch"));
-        }
-
-        let fact_ids = facts
-            .iter()
-            .map(|fact| fact.fact_id.to_string())
-            .collect::<Vec<_>>();
-        let tx_id = self.poneglyph.state_facts(facts).await.map_err(internal)?;
-
-        Ok(Response::new(StateFactResponse {
-            tx_id: tx_id.to_string(),
-            fact_id: fact_ids.first().cloned().unwrap_or_default(),
-            fact_ids,
-        }))
+    async fn state_facts_typed(
+        &self,
+        request: Request<StateFactsTypedRequest>,
+    ) -> Result<Response<StateFactResponse>, Status> {
+        let facts = request
+            .into_inner()
+            .facts
+            .into_iter()
+            .map(|fact| fact_from_proto(fact).map_err(invalid_argument))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Response::new(self.state_fact_batch(facts).await?))
     }
 
     async fn retract_fact_by_id(
@@ -513,7 +527,10 @@ mod tests {
     use tonic::{Code, Request};
 
     use super::proto::poneglyph_daemon_server::PoneglyphDaemon;
-    use super::proto::{ListEntitiesRequest, ListFactsRequest, SearchEntitiesRequest};
+    use super::proto::{
+        ListEntitiesRequest, ListFactsRequest, SearchEntitiesRequest, StateFactTypedRequest,
+        StateFactsTypedRequest,
+    };
     use super::{
         DaemonApi, active_fact_from_proto, active_fact_to_proto, fact_from_proto, fact_to_proto,
         value_from_proto, value_to_proto,
@@ -604,6 +621,40 @@ mod tests {
             .expect_err("missing kind should fail");
 
         assert!(error.contains("missing value kind"));
+    }
+
+    #[tokio::test]
+    async fn state_fact_typed_states_one_fact() {
+        let fact = fact!(
+            uri!("spotify:album:signals"),
+            uri!("spotify:displayName"),
+            Value::text("Signals")
+        );
+        let fact_id = fact.fact_id.to_string();
+        let response = api()
+            .await
+            .state_fact_typed(Request::new(StateFactTypedRequest {
+                fact: Some(fact_to_proto(&fact)),
+            }))
+            .await
+            .expect("state fact")
+            .into_inner();
+
+        assert_eq!(response.fact_id, fact_id);
+        assert_eq!(response.fact_ids, vec![fact_id]);
+        assert!(!response.tx_id.is_empty());
+    }
+
+    #[tokio::test]
+    async fn state_facts_typed_rejects_empty_batches() {
+        let error = api()
+            .await
+            .state_facts_typed(Request::new(StateFactsTypedRequest { facts: vec![] }))
+            .await
+            .expect_err("empty batch should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("empty fact batch"));
     }
 
     #[tokio::test]
