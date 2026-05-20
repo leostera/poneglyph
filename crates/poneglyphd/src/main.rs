@@ -4,6 +4,7 @@ mod client;
 mod cmd;
 mod config;
 mod daemon;
+mod server;
 
 use anyhow::Result;
 use clap::Parser;
