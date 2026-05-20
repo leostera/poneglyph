@@ -102,8 +102,10 @@ Get consolidated entities:
 
 ```sh
 poneglyph --workspace "$PONE" entity list
+poneglyph --workspace "$PONE" entity list --limit 25 --offset 25
 poneglyph --workspace "$PONE" entity list --json
 poneglyph --workspace "$PONE" entity search "2112"
+poneglyph --workspace "$PONE" entity search "2112" --limit 5
 poneglyph --workspace "$PONE" entity search "2112" --json
 poneglyph --workspace "$PONE" entity get spotify:album:2112
 # machine-readable full entity

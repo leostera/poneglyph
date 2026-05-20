@@ -183,7 +183,7 @@ pub struct EntityCommand {
 pub enum EntitySubcommand {
     List {
         /// Maximum number of entities to print.
-        #[arg(long, default_value_t = 50)]
+        #[arg(long, default_value_t = 50, value_parser = parse_nonzero_usize)]
         limit: usize,
         /// Number of entities to skip.
         #[arg(long, default_value_t = 0)]
@@ -195,7 +195,7 @@ pub enum EntitySubcommand {
     Search {
         query: String,
         /// Maximum number of hits to print.
-        #[arg(long, default_value_t = 10)]
+        #[arg(long, default_value_t = 10, value_parser = parse_nonzero_usize)]
         limit: usize,
         /// Print machine-readable JSON.
         #[arg(long)]
@@ -207,6 +207,17 @@ pub enum EntitySubcommand {
         #[arg(long)]
         json: bool,
     },
+}
+
+fn parse_nonzero_usize(value: &str) -> Result<usize, String> {
+    let parsed = value
+        .parse::<usize>()
+        .map_err(|_| format!("{value:?} is not a valid positive integer"))?;
+    if parsed == 0 {
+        Err("value must be greater than 0".to_string())
+    } else {
+        Ok(parsed)
+    }
 }
 
 impl Default for Command {
@@ -437,6 +448,20 @@ mod tests {
             cli.command,
             Some(Command::Query(query)) if query.json
         ));
+    }
+
+    #[test]
+    fn entity_list_and_search_reject_zero_limits() {
+        for args in [
+            vec!["poneglyph", "entity", "list", "--limit", "0"],
+            vec!["poneglyph", "entity", "search", "Signals", "--limit", "0"],
+        ] {
+            let error = Cli::try_parse_from(args).expect_err("zero limit should fail");
+            assert!(
+                error.to_string().contains("greater than 0"),
+                "unexpected error: {error}"
+            );
+        }
     }
 
     #[test]
