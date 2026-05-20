@@ -33,6 +33,11 @@ pub async fn open_runtime(workspace: Workspace, config: PoneglyphConfig) -> Pone
         .await
 }
 
+/// Opens a runtime and runs storage repair for the workspace.
+pub async fn repair_workspace(workspace: Workspace, config: PoneglyphConfig) -> PoneResult<()> {
+    open_runtime(workspace, config).await?.repair().await
+}
+
 /// Opens the default durable fact store for a workspace.
 pub async fn open_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
     Ok(Arc::new(
@@ -58,7 +63,9 @@ pub fn open_search_projection(workspace: &Workspace) -> PoneResult<Arc<SearchPro
 mod tests {
     use tempfile::tempdir;
 
-    use super::{open_entity_store, open_fact_store, open_runtime, open_search_projection};
+    use super::{
+        open_entity_store, open_fact_store, open_runtime, open_search_projection, repair_workspace,
+    };
     use poneglyph_core::{PoneglyphConfig, Workspace};
 
     #[tokio::test]
@@ -89,5 +96,17 @@ mod tests {
         assert!(workspace.facts_db_path().exists());
         assert!(workspace.entities_db_path().exists());
         assert!(workspace.search_db_path().exists());
+    }
+
+    #[tokio::test]
+    async fn db_repair_opens_and_repairs_workspace() {
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+
+        repair_workspace(workspace.clone(), PoneglyphConfig::default())
+            .await
+            .expect("repair");
+
+        assert!(workspace.facts_db_path().exists());
     }
 }

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Args;
-use poneglyph_core::{Poneglyph, Workspace};
+use poneglyph_core::Workspace;
 use tracing::info;
 
 use crate::config::PoneglyphDaemonConfig;
@@ -13,13 +13,7 @@ impl Repair {
     pub async fn run(self, workspace: Workspace, config: PoneglyphDaemonConfig) -> Result<()> {
         info!("initializing poneglyph daemon");
 
-        let poneglyph = Poneglyph::builder()
-            .with_workspace(workspace)
-            .with_config(config.poneglyph)
-            .build()
-            .await?;
-
-        poneglyph.repair().await?;
+        poneglyph_db::repair_workspace(workspace, config.poneglyph).await?;
 
         Ok(())
     }

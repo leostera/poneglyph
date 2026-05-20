@@ -156,6 +156,17 @@ fn cli_config_get_set_and_list_round_trips() {
 }
 
 #[test]
+fn cli_server_repair_initializes_workspace_storage() {
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = tempdir.path();
+
+    poneglyph(workspace, &["config", "set", "poneglyph.log_level", "off"]);
+    poneglyph(workspace, &["server", "repair"]);
+
+    assert!(workspace.join("store/facts.db").exists());
+}
+
+#[test]
 fn cli_reports_invalid_inputs() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = tempdir.path();
