@@ -14,8 +14,11 @@ service PoneglyphDaemon {
   rpc ListFactsTyped(ListFactsRequest) returns (ListFactsResponse);
   rpc Query(QueryRequest) returns (JsonResponse);
   rpc GetEntity(GetEntityRequest) returns (JsonResponse);
+  rpc GetEntityTyped(GetEntityRequest) returns (GetEntityResponse);
   rpc ListEntities(ListEntitiesRequest) returns (JsonResponse);
+  rpc ListEntitiesTyped(ListEntitiesRequest) returns (ListEntitiesResponse);
   rpc SearchEntities(SearchEntitiesRequest) returns (JsonResponse);
+  rpc SearchEntitiesTyped(SearchEntitiesRequest) returns (SearchEntitiesResponse);
   rpc GetSchema(GetSchemaRequest) returns (JsonResponse);
 }
 
@@ -94,6 +97,30 @@ message ListFactsResponse {
   bool active = 1;
   repeated Fact facts = 2;
   repeated ActiveFact active_facts = 3;
+}
+
+message Entity {
+  string uri = 1;
+  string namespace = 2;
+  string kind = 3;
+  map<string, Value> fields = 4;
+}
+
+message GetEntityResponse {
+  Entity entity = 1;
+}
+
+message ListEntitiesResponse {
+  repeated Entity entities = 1;
+}
+
+message SearchHit {
+  string entity_uri = 1;
+  float score = 2;
+}
+
+message SearchEntitiesResponse {
+  repeated SearchHit hits = 1;
 }
 
 message Value {

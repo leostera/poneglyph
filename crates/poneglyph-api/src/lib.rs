@@ -8,16 +8,18 @@ use std::time::Instant;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use poneglyph_core::{
-    ActiveFact, ActiveFilter, Fact, Filter, PoneResult, Poneglyph, Query, Uri, Value,
+    ActiveFact, ActiveFilter, Entity, Fact, Filter, PoneResult, Poneglyph, Query, SearchHit, Uri,
+    Value,
 };
 use serde::Serialize;
 use tonic::{Request, Response, Status};
 
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
-    GetEntityRequest, GetSchemaRequest, JsonResponse, ListEntitiesRequest, ListFactsRequest,
-    ListFactsResponse, QueryRequest, RetractFactByIdRequest, SearchEntitiesRequest,
-    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StateFactTypedRequest,
+    GetEntityRequest, GetEntityResponse, GetSchemaRequest, JsonResponse, ListEntitiesRequest,
+    ListEntitiesResponse, ListFactsRequest, ListFactsResponse, QueryRequest,
+    RetractFactByIdRequest, SearchEntitiesRequest, SearchEntitiesResponse, ShutdownRequest,
+    ShutdownResponse, StateFactRequest, StateFactResponse, StateFactTypedRequest,
     StateFactsRequest, StateFactsTypedRequest, StatusRequest, StatusResponse,
 };
 
@@ -52,6 +54,24 @@ impl DaemonApi {
             fact_id: fact_ids.first().cloned().unwrap_or_default(),
             fact_ids,
         })
+    }
+
+    async fn list_entity_items(&self, request: ListEntitiesRequest) -> Result<Vec<Entity>, Status> {
+        let pagination = Pagination::try_from_limit_offset(request.limit, request.offset)?;
+        self.poneglyph
+            .list_entities(pagination.limit, pagination.offset)
+            .await
+            .map_err(internal)
+    }
+
+    fn search_entity_items(
+        &self,
+        request: SearchEntitiesRequest,
+    ) -> Result<Vec<SearchHit>, Status> {
+        let pagination = Pagination::try_from_limit_offset(request.limit, 0)?;
+        self.poneglyph
+            .search(&request.query, pagination.limit)
+            .map_err(internal)
     }
 
     async fn list_fact_items(&self, request: ListFactsRequest) -> Result<FactListItems, Status> {
@@ -267,6 +287,46 @@ pub fn value_from_proto(value: proto::Value) -> Result<Value, String> {
     }
 }
 
+pub fn entity_to_proto(entity: &Entity) -> proto::Entity {
+    proto::Entity {
+        uri: entity.uri.to_string(),
+        namespace: entity.namespace.clone(),
+        kind: entity.kind.clone(),
+        fields: entity
+            .fields
+            .iter()
+            .map(|(field, value)| (field.to_string(), value_to_proto(value)))
+            .collect(),
+    }
+}
+
+pub fn entity_from_proto(entity: proto::Entity) -> Result<Entity, String> {
+    Ok(Entity {
+        uri: parse_core_uri(entity.uri)?,
+        namespace: entity.namespace,
+        kind: entity.kind,
+        fields: entity
+            .fields
+            .into_iter()
+            .map(|(field, value)| Ok((parse_core_uri(field)?, value_from_proto(value)?)))
+            .collect::<Result<BTreeMap<_, _>, String>>()?,
+    })
+}
+
+pub fn search_hit_to_proto(hit: &SearchHit) -> proto::SearchHit {
+    proto::SearchHit {
+        entity_uri: hit.entity_uri.to_string(),
+        score: hit.score,
+    }
+}
+
+pub fn search_hit_from_proto(hit: proto::SearchHit) -> Result<SearchHit, String> {
+    Ok(SearchHit {
+        entity_uri: parse_core_uri(hit.entity_uri)?,
+        score: hit.score,
+    })
+}
+
 fn list_facts_response(items: &FactListItems) -> ListFactsResponse {
     match items {
         FactListItems::Active(facts) => ListFactsResponse {
@@ -477,31 +537,51 @@ impl PoneglyphDaemon for DaemonApi {
         json_response(&entity)
     }
 
+    async fn get_entity_typed(
+        &self,
+        request: Request<GetEntityRequest>,
+    ) -> Result<Response<GetEntityResponse>, Status> {
+        let uri = parse_uri(request.into_inner().uri)?;
+        let entity = self.poneglyph.get_entity(&uri).await.map_err(internal)?;
+        Ok(Response::new(GetEntityResponse {
+            entity: entity.as_ref().map(entity_to_proto),
+        }))
+    }
+
     async fn list_entities(
         &self,
         request: Request<ListEntitiesRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let request = request.into_inner();
-        let pagination = Pagination::try_from_limit_offset(request.limit, request.offset)?;
-        let entities = self
-            .poneglyph
-            .list_entities(pagination.limit, pagination.offset)
-            .await
-            .map_err(internal)?;
+        let entities = self.list_entity_items(request.into_inner()).await?;
         json_response(&entities)
+    }
+
+    async fn list_entities_typed(
+        &self,
+        request: Request<ListEntitiesRequest>,
+    ) -> Result<Response<ListEntitiesResponse>, Status> {
+        let entities = self.list_entity_items(request.into_inner()).await?;
+        Ok(Response::new(ListEntitiesResponse {
+            entities: entities.iter().map(entity_to_proto).collect(),
+        }))
     }
 
     async fn search_entities(
         &self,
         request: Request<SearchEntitiesRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let request = request.into_inner();
-        let pagination = Pagination::try_from_limit_offset(request.limit, 0)?;
-        let hits = self
-            .poneglyph
-            .search(&request.query, pagination.limit)
-            .map_err(internal)?;
+        let hits = self.search_entity_items(request.into_inner())?;
         json_response(&hits)
+    }
+
+    async fn search_entities_typed(
+        &self,
+        request: Request<SearchEntitiesRequest>,
+    ) -> Result<Response<SearchEntitiesResponse>, Status> {
+        let hits = self.search_entity_items(request.into_inner())?;
+        Ok(Response::new(SearchEntitiesResponse {
+            hits: hits.iter().map(search_hit_to_proto).collect(),
+        }))
     }
 
     async fn get_schema(
@@ -521,8 +601,8 @@ mod tests {
 
     use chrono::{NaiveDate, TimeZone, Utc};
     use poneglyph_core::{
-        ActiveFact, Fact, InMemoryEntityStore, InMemoryFactStore, Poneglyph, SearchProjection,
-        Value, fact, uri,
+        ActiveFact, Entity, Fact, InMemoryEntityStore, InMemoryFactStore, Poneglyph,
+        SearchProjection, Value, fact, uri,
     };
     use tonic::{Code, Request};
 
@@ -532,8 +612,9 @@ mod tests {
         StateFactsTypedRequest,
     };
     use super::{
-        DaemonApi, active_fact_from_proto, active_fact_to_proto, fact_from_proto, fact_to_proto,
-        value_from_proto, value_to_proto,
+        DaemonApi, active_fact_from_proto, active_fact_to_proto, entity_from_proto,
+        entity_to_proto, fact_from_proto, fact_to_proto, search_hit_from_proto,
+        search_hit_to_proto, value_from_proto, value_to_proto,
     };
 
     async fn api() -> DaemonApi {
@@ -613,6 +694,35 @@ mod tests {
             active_fact_from_proto(active_fact_to_proto(&fact)).expect("active fact round-trip");
 
         assert_eq!(round_tripped, fact);
+    }
+
+    #[test]
+    fn typed_entity_proto_round_trips_field_values() {
+        let mut fields = BTreeMap::new();
+        fields.insert(uri!("spotify:displayName"), Value::text("Signals"));
+        let entity = Entity {
+            uri: uri!("spotify:album:signals"),
+            namespace: "spotify".to_string(),
+            kind: "album".to_string(),
+            fields,
+        };
+
+        let round_tripped = entity_from_proto(entity_to_proto(&entity)).expect("entity round-trip");
+
+        assert_eq!(round_tripped, entity);
+    }
+
+    #[test]
+    fn typed_search_hit_proto_round_trips_score_and_uri() {
+        let hit = poneglyph_core::SearchHit {
+            entity_uri: uri!("spotify:album:signals"),
+            score: 1.5,
+        };
+
+        let round_tripped =
+            search_hit_from_proto(search_hit_to_proto(&hit)).expect("search hit round-trip");
+
+        assert_eq!(round_tripped, hit);
     }
 
     #[test]
@@ -881,6 +991,21 @@ mod tests {
         let error = api()
             .await
             .list_entities(Request::new(ListEntitiesRequest {
+                limit: 0,
+                offset: 0,
+            }))
+            .await
+            .expect_err("zero limit should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("greater than 0"));
+    }
+
+    #[tokio::test]
+    async fn list_entities_typed_rejects_zero_limit() {
+        let error = api()
+            .await
+            .list_entities_typed(Request::new(ListEntitiesRequest {
                 limit: 0,
                 offset: 0,
             }))

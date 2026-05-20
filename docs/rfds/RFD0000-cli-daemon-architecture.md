@@ -74,6 +74,10 @@ Typed protobuf migration sketch and current audit:
 - State writes also have typed RPCs (`StateFactTyped` and `StateFactsTyped`).
   `fact state` and daemon-backed `schema apply` use them, preserving existing
   outcome text/JSON while avoiding fact JSON serialization on those write paths.
+- Entity read paths have typed protobuf shapes for `Entity` and `SearchHit`.
+  `GetEntityTyped`, `ListEntitiesTyped`, and `SearchEntitiesTyped` are available,
+  and the CLI daemon path uses them before converting back into the existing
+  plain/JSON renderers.
 - Later candidates: typed entity/list/search responses once entity field maps and
   search score semantics have settled; schema messages mirroring
   `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`; query

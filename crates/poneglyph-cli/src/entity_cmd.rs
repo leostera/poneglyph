@@ -1,5 +1,9 @@
 use anyhow::Result;
-use poneglyph_api::proto::{GetEntityRequest, ListEntitiesRequest, SearchEntitiesRequest};
+use poneglyph_api::{
+    entity_from_proto,
+    proto::{GetEntityRequest, ListEntitiesRequest, SearchEntitiesRequest},
+    search_hit_from_proto,
+};
 use poneglyph_core::{Entity, SearchHit, Value, Workspace};
 
 use crate::cli::{EntityCommand, EntitySubcommand};
@@ -40,14 +44,21 @@ async fn list_entities_json(
     offset: usize,
 ) -> Result<String> {
     match daemon_client(config).await {
-        Ok(mut client) => Ok(client
-            .list_entities(ListEntitiesRequest {
-                limit: usize_to_u64(limit)?,
-                offset: usize_to_u64(offset)?,
-            })
-            .await?
-            .into_inner()
-            .json),
+        Ok(mut client) => {
+            let entities = client
+                .list_entities_typed(ListEntitiesRequest {
+                    limit: usize_to_u64(limit)?,
+                    offset: usize_to_u64(offset)?,
+                })
+                .await?
+                .into_inner()
+                .entities
+                .into_iter()
+                .map(entity_from_proto)
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(anyhow::Error::msg)?;
+            serde_json::to_string_pretty(&entities).map_err(Into::into)
+        }
         Err(_) => {
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
             serde_json::to_string_pretty(&poneglyph.list_entities(limit, offset).await?)
@@ -63,14 +74,21 @@ async fn search_entities_json(
     limit: usize,
 ) -> Result<String> {
     match daemon_client(config).await {
-        Ok(mut client) => Ok(client
-            .search_entities(SearchEntitiesRequest {
-                query: query.to_owned(),
-                limit: usize_to_u64(limit)?,
-            })
-            .await?
-            .into_inner()
-            .json),
+        Ok(mut client) => {
+            let hits = client
+                .search_entities_typed(SearchEntitiesRequest {
+                    query: query.to_owned(),
+                    limit: usize_to_u64(limit)?,
+                })
+                .await?
+                .into_inner()
+                .hits
+                .into_iter()
+                .map(search_hit_from_proto)
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .map_err(anyhow::Error::msg)?;
+            serde_json::to_string_pretty(&hits).map_err(Into::into)
+        }
         Err(_) => {
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
             serde_json::to_string_pretty(&poneglyph.search(query, limit)?).map_err(Into::into)
@@ -84,13 +102,20 @@ async fn get_entity_json(
     uri: &str,
 ) -> Result<String> {
     match daemon_client(config).await {
-        Ok(mut client) => Ok(client
-            .get_entity(GetEntityRequest {
+        Ok(mut client) => match client
+            .get_entity_typed(GetEntityRequest {
                 uri: uri.to_owned(),
             })
             .await?
             .into_inner()
-            .json),
+            .entity
+        {
+            Some(entity) => serde_json::to_string_pretty(
+                &entity_from_proto(entity).map_err(anyhow::Error::msg)?,
+            )
+            .map_err(Into::into),
+            None => Ok("null".to_string()),
+        },
         Err(_) => {
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
             match poneglyph.get_entity(&parse_uri(uri)?).await? {
