@@ -42,12 +42,19 @@ poneglyph query <datalog>
 ## Daemon API
 
 The daemon currently exposes gRPC on localhost TCP via `rpc.bind_addr`, default
-`127.0.0.1:5747`. This is intentionally narrow and local-only. Unix-domain
-sockets or named pipes are preferred later for tighter local transport semantics.
+`127.0.0.1:5747`. This is intentionally narrow and local-only.
+
+Unix-domain sockets are technically compatible with tonic by building a custom
+transport channel around `tokio::net::UnixStream` and `Endpoint::connect_with_connector`.
+That should become the default Unix transport once daemon lifecycle and socket
+path cleanup are designed. Named pipes or localhost TCP can remain the Windows
+fallback. For now, localhost TCP keeps the CLI portable while the command API is
+still changing.
 
 RPC payloads still use JSON for facts, schemas, entities, and query results in
 places. This keeps the boundary flexible during CLI design. Typed protobuf
-messages should replace JSON once the API stabilizes.
+messages should replace JSON once the API stabilizes, but not before the fact,
+value, schema, and query-result shapes have stopped changing.
 
 ## Invariants
 
@@ -62,3 +69,5 @@ messages should replace JSON once the API stabilizes.
 - The reset removes app/web/connector/API/MCP concerns from this repository.
 - A sibling `../datafox` checkout is required for local builds.
 - The daemon protocol can evolve without reintroducing a general HTTP or app API.
+- `schema apply` may be replayed safely: reapplying the same schema appends facts
+  to the log while keeping the materialized schema view stable.

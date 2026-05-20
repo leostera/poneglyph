@@ -99,6 +99,28 @@ fn cli_applies_schema_definition_without_daemon() {
     assert!(field.contains("music:album"));
 }
 
+#[tokio::test]
+async fn cli_schema_apply_is_replay_safe_and_append_only() {
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = tempdir.path();
+    let schema_path = write_music_schema(workspace);
+
+    poneglyph(workspace, &["config", "set", "poneglyph.log_level", "off"]);
+    poneglyph(workspace, &["schema", "apply", path_str(&schema_path)]);
+    let first_schema = poneglyph(workspace, &["schema", "get", "music:released"]);
+    let first_fact_count = count_facts_for_entity(workspace, "music:released").await;
+
+    poneglyph(workspace, &["schema", "apply", path_str(&schema_path)]);
+    let second_schema = poneglyph(workspace, &["schema", "get", "music:released"]);
+    let second_fact_count = count_facts_for_entity(workspace, "music:released").await;
+
+    assert_eq!(second_schema, first_schema);
+    assert!(
+        second_fact_count > first_fact_count,
+        "schema apply should append facts while keeping the materialized schema stable"
+    );
+}
+
 #[test]
 fn cli_config_get_set_and_list_round_trips() {
     let tempdir = tempdir().expect("tempdir");
@@ -205,6 +227,25 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
     poneglyph(workspace, &["server", "stop"]);
     wait_for_offline(workspace);
     daemon.wait().expect("daemon exits");
+}
+
+async fn count_facts_for_entity(workspace: &Path, entity: &str) -> usize {
+    let store = poneglyph::SqliteFactStore::open(workspace.join("store/facts.db"))
+        .await
+        .expect("open fact store");
+    let entity = Uri::parse(entity.to_string()).expect("entity uri");
+    let mut facts = store
+        .get_facts(Filter::ByEntityUri(entity))
+        .await
+        .expect("get facts");
+    let mut count = 0;
+
+    while let Some(fact) = facts.recv().await {
+        fact.expect("fact");
+        count += 1;
+    }
+
+    count
 }
 
 async fn first_fact_id(workspace: &Path, entity: &str) -> String {
