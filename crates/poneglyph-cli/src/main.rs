@@ -10,6 +10,7 @@ mod query_cmd;
 mod schema_cmd;
 mod server;
 mod tracing;
+mod util;
 
 use anyhow::Result;
 use clap::Parser;

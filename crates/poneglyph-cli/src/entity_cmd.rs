@@ -1,10 +1,11 @@
 use anyhow::Result;
 use poneglyph_api::proto::{GetEntityRequest, ListEntitiesRequest, SearchEntitiesRequest};
-use poneglyph_core::{Entity, SearchHit, Uri, Workspace};
+use poneglyph_core::{Entity, SearchHit, Workspace};
 
 use crate::cli::{EntityCommand, EntitySubcommand};
 use crate::client::{daemon_client, open_runtime};
 use crate::config::PoneglyphDaemonConfig;
+use crate::util::{parse_uri, usize_to_u64};
 
 pub async fn run(
     workspace: Workspace,
@@ -128,12 +129,4 @@ fn print_entity(response_json: &str, json: bool) -> Result<()> {
         println!("field\t{}\t{}", field, serde_json::to_string(&value)?);
     }
     Ok(())
-}
-
-fn usize_to_u64(value: usize) -> Result<u64> {
-    u64::try_from(value).map_err(Into::into)
-}
-
-fn parse_uri(value: &str) -> Result<Uri> {
-    Uri::parse(value.to_string()).map_err(Into::into)
 }

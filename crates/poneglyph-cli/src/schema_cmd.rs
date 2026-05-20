@@ -7,6 +7,7 @@ use poneglyph_core::{Fact, SchemaDefinition, Uri, Value, Workspace};
 use crate::cli::{SchemaCommand, SchemaSubcommand};
 use crate::client::{daemon_client, open_runtime};
 use crate::config::PoneglyphDaemonConfig;
+use crate::util::parse_uri;
 
 pub async fn run(
     workspace: Workspace,
@@ -251,8 +252,4 @@ async fn state_facts(
             Ok(poneglyph.state_facts(facts).await?.to_string())
         }
     }
-}
-
-fn parse_uri(value: &str) -> Result<Uri> {
-    Uri::parse(value.to_string()).map_err(Into::into)
 }

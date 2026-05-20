@@ -1,10 +1,11 @@
 use anyhow::Result;
 use poneglyph_api::proto::{ListFactsRequest, RetractFactByIdRequest, StateFactRequest};
-use poneglyph_core::{ActiveFact, ActiveFilter, Fact, Filter, PoneResult, Uri, Value, Workspace};
+use poneglyph_core::{ActiveFact, ActiveFilter, Fact, Filter, Value, Workspace};
 
 use crate::cli::{FactCommand, FactSubcommand};
 use crate::client::{daemon_client, open_runtime};
 use crate::config::PoneglyphDaemonConfig;
+use crate::util::{collect_results, parse_uri, usize_to_u64};
 
 pub async fn run(
     workspace: Workspace,
@@ -310,24 +311,6 @@ async fn retract_fact_by_id(
             })
         }
     }
-}
-
-async fn collect_results<T>(
-    mut stream: tokio::sync::mpsc::Receiver<PoneResult<T>>,
-) -> Result<Vec<T>> {
-    let mut items = Vec::new();
-    while let Some(item) = stream.recv().await {
-        items.push(item?);
-    }
-    Ok(items)
-}
-
-fn usize_to_u64(value: usize) -> Result<u64> {
-    u64::try_from(value).map_err(Into::into)
-}
-
-fn parse_uri(value: &str) -> Result<Uri> {
-    Uri::parse(value.to_string()).map_err(Into::into)
 }
 
 fn parse_cli_value(value: &str) -> Result<Value> {
