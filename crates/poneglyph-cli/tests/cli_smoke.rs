@@ -274,7 +274,7 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
 
     let entity_search = wait_for_output(
         workspace,
-        &["entity", "search", "Signals"],
+        &["entity", "search", "Signals", "--limit", "1"],
         "hit\tspotify:album:signals",
     );
     assert!(entity_search.contains("spotify:album:signals"));
