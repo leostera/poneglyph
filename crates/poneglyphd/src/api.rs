@@ -11,8 +11,8 @@ use tonic::{Request, Response, Status};
 use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
     GetEntityRequest, GetSchemaRequest, JsonResponse, QueryRequest, RetractFactByIdRequest,
-    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StatusRequest,
-    StatusResponse,
+    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StateFactsRequest,
+    StatusRequest, StatusResponse,
 };
 
 pub struct DaemonApi {
@@ -76,6 +76,35 @@ impl PoneglyphDaemon for DaemonApi {
         let tx_id = self
             .poneglyph
             .state_facts(vec![fact])
+            .await
+            .map_err(|error| Status::internal(error.to_string()))?;
+
+        Ok(Response::new(StateFactResponse {
+            tx_id: tx_id.to_string(),
+        }))
+    }
+
+    async fn state_facts(
+        &self,
+        request: Request<StateFactsRequest>,
+    ) -> Result<Response<StateFactResponse>, Status> {
+        let facts = request
+            .into_inner()
+            .fact_json
+            .into_iter()
+            .map(|json| {
+                serde_json::from_str::<Fact>(&json)
+                    .map_err(|error| Status::invalid_argument(error.to_string()))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        if facts.is_empty() {
+            return Err(Status::invalid_argument("empty fact batch"));
+        }
+
+        let tx_id = self
+            .poneglyph
+            .state_facts(facts)
             .await
             .map_err(|error| Status::internal(error.to_string()))?;
 

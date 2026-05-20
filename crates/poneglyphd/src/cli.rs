@@ -15,7 +15,7 @@ use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberI
 use crate::api::proto::poneglyph_daemon_client::PoneglyphDaemonClient;
 use crate::api::proto::{
     GetEntityRequest, GetSchemaRequest, QueryRequest, RetractFactByIdRequest, ShutdownRequest,
-    StateFactRequest, StatusRequest,
+    StateFactRequest, StateFactsRequest, StatusRequest,
 };
 use crate::cmd;
 use crate::config::PoneglyphDaemonConfig;
@@ -354,10 +354,8 @@ async fn run_schema_command(
             let schema = read_schema_definition(&path).await?;
             let facts = schema_definition_to_facts(schema)?;
             let fact_count = facts.len();
-            for fact in facts {
-                state_fact(&workspace, &config, fact).await?;
-            }
-            println!("applied {fact_count} schema facts");
+            let tx_id = state_facts(&workspace, &config, facts).await?;
+            println!("applied {fact_count} schema facts in {tx_id}");
             Ok(())
         }
     }
@@ -567,6 +565,29 @@ async fn state_fact(
         Err(_) => {
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
             Ok(poneglyph.state_facts(vec![fact]).await?.to_string())
+        }
+    }
+}
+
+async fn state_facts(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    facts: Vec<Fact>,
+) -> Result<String> {
+    match daemon_client(config).await {
+        Ok(mut client) => Ok(client
+            .state_facts(StateFactsRequest {
+                fact_json: facts
+                    .iter()
+                    .map(serde_json::to_string)
+                    .collect::<Result<Vec<_>, _>>()?,
+            })
+            .await?
+            .into_inner()
+            .tx_id),
+        Err(_) => {
+            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            Ok(poneglyph.state_facts(facts).await?.to_string())
         }
     }
 }
