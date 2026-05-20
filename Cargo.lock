@@ -1885,6 +1885,7 @@ dependencies = [
  "dotenvy",
  "poneglyph-api",
  "poneglyph-core",
+ "poneglyph-db",
  "serde",
  "serde_json",
  "tempfile",

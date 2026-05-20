@@ -25,4 +25,5 @@ name = "poneglyph"
 path = "src/main.rs"
 
 [dev-dependencies]
+poneglyph-db = { path = "../poneglyph-db" }
 tempfile.workspace = true

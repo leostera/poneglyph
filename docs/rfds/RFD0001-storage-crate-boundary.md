@@ -53,9 +53,11 @@ runtime/service tests that should not depend on disk.
 3. Introduce `poneglyph-db` with a dependency on `poneglyph-core`. Initially it
    can wrap the existing core SQLite implementations so callers can target the
    storage adapter crate before the physical module move.
-4. Move SQLite fact/entity store implementations and their SQLite-specific tests
+4. Migrate non-core consumers and integration tests to call `poneglyph-db`
+   adapter functions rather than constructing core SQLite types directly.
+5. Move SQLite fact/entity store implementations and their SQLite-specific tests
    into `poneglyph-db`.
-5. Re-export database adapters from `poneglyph-core` only if needed for CLI/tests;
+6. Re-export database adapters from `poneglyph-core` only if needed for CLI/tests;
    otherwise have the runtime depend on adapter constructors through an explicit
    feature or thin integration module.
 6. Keep `cargo test --workspace` green after each move and preserve existing

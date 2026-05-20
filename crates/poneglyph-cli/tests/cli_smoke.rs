@@ -5,7 +5,7 @@ use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use poneglyph_core::{Filter, Store, Uri};
+use poneglyph_core::{Filter, Uri, Workspace};
 use tempfile::tempdir;
 
 fn poneglyph(workspace: &Path, args: &[&str]) -> String {
@@ -278,7 +278,8 @@ fn daemon_cli_restarts_detached_server() {
 }
 
 async fn count_facts_for_entity(workspace: &Path, entity: &str) -> usize {
-    let store = poneglyph_core::SqliteFactStore::open(workspace.join("store/facts.db"))
+    let workspace = Workspace::at(workspace);
+    let store = poneglyph_db::open_fact_store(&workspace)
         .await
         .expect("open fact store");
     let entity = Uri::parse(entity.to_string()).expect("entity uri");
@@ -297,7 +298,8 @@ async fn count_facts_for_entity(workspace: &Path, entity: &str) -> usize {
 }
 
 async fn first_fact_id(workspace: &Path, entity: &str) -> String {
-    let store = poneglyph_core::SqliteFactStore::open(workspace.join("store/facts.db"))
+    let workspace = Workspace::at(workspace);
+    let store = poneglyph_db::open_fact_store(&workspace)
         .await
         .expect("open fact store");
     let entity = Uri::parse(entity.to_string()).expect("entity uri");
