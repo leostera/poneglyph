@@ -88,6 +88,7 @@ Get a consolidated entity:
 
 ```sh
 poneglyph --workspace "$PONE" entity get spotify:album:2112
+# machine-readable full entity
 poneglyph --workspace "$PONE" entity get spotify:album:2112 --json
 ```
 

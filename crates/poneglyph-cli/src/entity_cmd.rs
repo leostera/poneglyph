@@ -1,6 +1,6 @@
 use anyhow::Result;
 use poneglyph_api::proto::GetEntityRequest;
-use poneglyph_core::{Uri, Workspace};
+use poneglyph_core::{Entity, Uri, Workspace};
 
 use crate::cli::{EntityCommand, EntitySubcommand};
 use crate::client::{daemon_client, open_runtime};
@@ -13,8 +13,7 @@ pub async fn run(
 ) -> Result<()> {
     match command.command {
         EntitySubcommand::Get { uri, json } => {
-            let _json_output = json;
-            let json = match daemon_client(&config).await {
+            let response_json = match daemon_client(&config).await {
                 Ok(mut client) => {
                     client
                         .get_entity(GetEntityRequest { uri })
@@ -30,8 +29,27 @@ pub async fn run(
                     }
                 }
             };
-            println!("{json}");
+            print_entity(&response_json, json)?;
         }
+    }
+    Ok(())
+}
+
+fn print_entity(response_json: &str, json: bool) -> Result<()> {
+    if json {
+        println!("{response_json}");
+        return Ok(());
+    }
+
+    if response_json.trim() == "null" {
+        println!("not found");
+        return Ok(());
+    }
+
+    let entity = serde_json::from_str::<Entity>(response_json)?;
+    println!("entity\t{}", entity.uri);
+    for (field, value) in entity.fields {
+        println!("field\t{}\t{}", field, serde_json::to_string(&value)?);
     }
     Ok(())
 }
