@@ -8,6 +8,7 @@ These instructions apply to `crates/` unless a deeper `AGENTS.md` overrides them
 
 - When work is scoped to `crates/poneglyph-core`, read `crates/poneglyph-core/AGENTS.md`.
 - When work is scoped to `crates/poneglyph-cli`, read `crates/poneglyph-cli/AGENTS.md`.
+- When work is scoped to `crates/poneglyph-db`, read `crates/poneglyph-db/AGENTS.md`.
 
 ## Purpose
 
@@ -15,7 +16,7 @@ These instructions apply to `crates/` unless a deeper `AGENTS.md` overrides them
 - `poneglyph-cli` builds the user-facing `poneglyph` binary.
 - `poneglyph-api` owns local gRPC API/protobuf definitions and service adapters.
 - `poneglyph-core` owns the append-only fact log, consolidation, projections, schema/entity services, query engine, and workspace runtime.
-- `poneglyph-db` is planned for storage/Datafox-specific database implementation if the core storage modules warrant a split.
+- `poneglyph-db` owns the durable storage adapter boundary and is the staging point for moving SQLite/Datafox-specific database implementation out of core.
 
 ## Working rules
 

@@ -50,7 +50,9 @@ runtime/service tests that should not depend on disk.
    `poneglyph-core` first, so runtime assembly calls an adapter boundary rather
    than concrete modules directly. This seam currently lives in
    `crates/poneglyph-core/src/storage.rs`.
-3. Introduce `poneglyph-db` with a dependency on `poneglyph-core`.
+3. Introduce `poneglyph-db` with a dependency on `poneglyph-core`. Initially it
+   can wrap the existing core SQLite implementations so callers can target the
+   storage adapter crate before the physical module move.
 4. Move SQLite fact/entity store implementations and their SQLite-specific tests
    into `poneglyph-db`.
 5. Re-export database adapters from `poneglyph-core` only if needed for CLI/tests;
@@ -70,6 +72,7 @@ runtime/service tests that should not depend on disk.
 
 ## Consequences
 
-This defers the physical `poneglyph-db` crate extraction but reduces risk. The
-next implementation step should be a small adapter seam in `poneglyph-core`, not
-a broad cross-crate move.
+This staged extraction reduces risk. `poneglyph-core` now has a local adapter
+seam, and `poneglyph-db` can mirror that seam before concrete SQLite modules move
+out of core. The next implementation step should be moving one SQLite adapter and
+its tests at a time, preserving the core semantic contracts.

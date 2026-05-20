@@ -1,0 +1,11 @@
+[package]
+name = "poneglyph-db"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+poneglyph-core = { path = "../poneglyph-core" }
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio.workspace = true
