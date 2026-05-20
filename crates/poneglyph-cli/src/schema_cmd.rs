@@ -36,19 +36,7 @@ pub async fn run(
             let facts = schema_definition_to_facts(schema)?;
             let fact_count = facts.len();
             let tx_id = state_facts(&workspace, &config, facts).await?;
-            if json {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&serde_json::json!({
-                        "status": "applied",
-                        "fact_count": fact_count,
-                        "tx_id": tx_id,
-                    }))?
-                );
-            } else {
-                println!("applied {fact_count} schema facts in {tx_id}");
-            }
-            Ok(())
+            print_schema_apply_outcome(fact_count, &tx_id, json)
         }
     }
 }
@@ -75,12 +63,7 @@ async fn get_schema(
 
 fn print_schema_list(schema: &SchemaDefinition, json: bool) -> Result<()> {
     if json {
-        let entries = serde_json::json!({
-            "namespaces": schema.namespaces.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
-            "kinds": schema.kinds.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
-            "fields": schema.fields.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
-        });
-        println!("{}", serde_json::to_string_pretty(&entries)?);
+        println!("{}", schema_list_json(schema)?);
         return Ok(());
     }
 
@@ -214,12 +197,43 @@ fn schema_fact(entity: Uri, field: &str, value: Value) -> Result<Fact> {
         .build()?)
 }
 
-fn print_schema_entry(schema: SchemaDefinition, uri: &str, json: bool) -> Result<()> {
-    let matches = serde_json::json!({
+fn print_schema_apply_outcome(fact_count: usize, tx_id: &str, json: bool) -> Result<()> {
+    if json {
+        println!("{}", schema_apply_json(fact_count, tx_id)?);
+    } else {
+        println!("applied {fact_count} schema facts in {tx_id}");
+    }
+    Ok(())
+}
+
+fn schema_list_json(schema: &SchemaDefinition) -> Result<String> {
+    serde_json::to_string_pretty(&serde_json::json!({
+        "namespaces": schema.namespaces.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
+        "kinds": schema.kinds.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
+        "fields": schema.fields.iter().map(|entry| entry.uri.as_str()).collect::<Vec<_>>(),
+    }))
+    .map_err(Into::into)
+}
+
+fn schema_apply_json(fact_count: usize, tx_id: &str) -> Result<String> {
+    serde_json::to_string_pretty(&serde_json::json!({
+        "status": "applied",
+        "fact_count": fact_count,
+        "tx_id": tx_id,
+    }))
+    .map_err(Into::into)
+}
+
+fn schema_entry_matches(schema: SchemaDefinition, uri: &str) -> serde_json::Value {
+    serde_json::json!({
         "namespaces": schema.namespaces.into_iter().filter(|entry| entry.uri.as_str() == uri).collect::<Vec<_>>(),
         "kinds": schema.kinds.into_iter().filter(|entry| entry.uri.as_str() == uri).collect::<Vec<_>>(),
         "fields": schema.fields.into_iter().filter(|entry| entry.uri.as_str() == uri).collect::<Vec<_>>(),
-    });
+    })
+}
+
+fn print_schema_entry(schema: SchemaDefinition, uri: &str, json: bool) -> Result<()> {
+    let matches = schema_entry_matches(schema, uri);
     if json {
         println!("{}", serde_json::to_string_pretty(&matches)?);
     } else if matches["namespaces"]
@@ -263,5 +277,73 @@ async fn state_facts(
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
             Ok(poneglyph.state_facts(facts).await?.to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use poneglyph_core::{FieldSchema, NamespaceSchema, SchemaDefinition};
+
+    use super::{schema_apply_json, schema_entry_matches, schema_list_json};
+    use crate::util::parse_uri;
+
+    #[test]
+    fn schema_list_json_summarizes_entry_uris() {
+        let schema = SchemaDefinition {
+            namespaces: vec![NamespaceSchema {
+                uri: parse_uri("spotify:namespace").expect("uri"),
+                name: Some("Spotify".to_string()),
+                doc: None,
+            }],
+            fields: vec![FieldSchema {
+                uri: parse_uri("spotify:displayName").expect("uri"),
+                name: None,
+                doc: None,
+                same_as: None,
+                domain: None,
+                range: None,
+                value_type: None,
+                cardinality: None,
+                deprecated: None,
+                identity: None,
+            }],
+            ..Default::default()
+        };
+
+        let json = schema_list_json(&schema).expect("schema list json");
+
+        assert!(json.contains(r#""namespaces": ["#));
+        assert!(json.contains(r#""spotify:namespace""#));
+        assert!(json.contains(r#""spotify:displayName""#));
+    }
+
+    #[test]
+    fn schema_entry_matches_filters_by_uri() {
+        let schema = SchemaDefinition {
+            namespaces: vec![NamespaceSchema {
+                uri: parse_uri("spotify:namespace").expect("uri"),
+                name: None,
+                doc: None,
+            }],
+            ..Default::default()
+        };
+
+        let matches = schema_entry_matches(schema, "spotify:namespace");
+
+        assert_eq!(
+            matches["namespaces"].as_array().expect("namespaces").len(),
+            1
+        );
+        assert!(matches["kinds"].as_array().expect("kinds").is_empty());
+        assert!(matches["fields"].as_array().expect("fields").is_empty());
+    }
+
+    #[test]
+    fn schema_apply_json_reports_status_count_and_tx() {
+        let json = schema_apply_json(3, "poneglyph:tx:abc").expect("apply json");
+
+        assert!(json.contains(r#""status": "applied""#));
+        assert!(json.contains(r#""fact_count": 3"#));
+        assert!(json.contains(r#""tx_id": "poneglyph:tx:abc""#));
     }
 }
