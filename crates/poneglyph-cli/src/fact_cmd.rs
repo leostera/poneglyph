@@ -1,7 +1,10 @@
 use anyhow::Result;
-use poneglyph_api::proto::{
-    ListFactsRequest, RetractFactByIdRequest, StateFactRequest,
-    poneglyph_daemon_client::PoneglyphDaemonClient,
+use poneglyph_api::{
+    active_fact_from_proto, fact_from_proto,
+    proto::{
+        ListFactsRequest, ListFactsResponse, RetractFactByIdRequest, StateFactRequest,
+        poneglyph_daemon_client::PoneglyphDaemonClient,
+    },
 };
 use poneglyph_core::{ActiveFact, ActiveFilter, Fact, Filter, Value, Workspace};
 
@@ -225,7 +228,7 @@ async fn list_facts_via_daemon(
     offset: usize,
 ) -> Result<FactList> {
     let response = client
-        .list_facts(ListFactsRequest {
+        .list_facts_typed(ListFactsRequest {
             entity_uri: entity.unwrap_or_default().to_string(),
             tx_id: tx.unwrap_or_default().to_string(),
             active,
@@ -234,10 +237,26 @@ async fn list_facts_via_daemon(
         })
         .await?
         .into_inner();
-    if active {
-        Ok(FactList::Active(serde_json::from_str(&response.json)?))
+    fact_list_from_typed_response(response)
+}
+
+fn fact_list_from_typed_response(response: ListFactsResponse) -> Result<FactList> {
+    if response.active {
+        let facts = response
+            .active_facts
+            .into_iter()
+            .map(active_fact_from_proto)
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(anyhow::Error::msg)?;
+        Ok(FactList::Active(facts))
     } else {
-        Ok(FactList::Log(serde_json::from_str(&response.json)?))
+        let facts = response
+            .facts
+            .into_iter()
+            .map(fact_from_proto)
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(anyhow::Error::msg)?;
+        Ok(FactList::Log(facts))
     }
 }
 
@@ -379,9 +398,10 @@ fn parse_cli_value(value: &str) -> Result<Value> {
 
 #[cfg(test)]
 mod tests {
+    use poneglyph_api::{active_fact_to_proto, fact_to_proto, proto::ListFactsResponse};
     use poneglyph_core::{ActiveFact, Fact, Value};
 
-    use super::{FactList, plain_fact_list_lines};
+    use super::{FactList, fact_list_from_typed_response, plain_fact_list_lines};
     use crate::util::parse_uri;
 
     fn assertion_fact() -> Fact {
@@ -429,18 +449,20 @@ mod tests {
         );
     }
 
-    #[test]
-    fn plain_fact_list_lines_formats_active_facts_and_empty_lists() {
-        let fact = ActiveFact {
+    fn active_fact() -> ActiveFact {
+        ActiveFact {
             source: parse_uri("poneglyph:cli").expect("source"),
             entity: parse_uri("spotify:album:signals").expect("entity"),
             field: parse_uri("spotify:displayName").expect("field"),
             value: Value::text("Signals"),
             fact_id: parse_uri("poneglyph:fact:1").expect("fact id"),
             tx_id: parse_uri("poneglyph:tx:1").expect("tx id"),
-        };
+        }
+    }
 
-        let lines = plain_fact_list_lines(&FactList::Active(vec![fact])).expect("lines");
+    #[test]
+    fn plain_fact_list_lines_formats_active_facts_and_empty_lists() {
+        let lines = plain_fact_list_lines(&FactList::Active(vec![active_fact()])).expect("lines");
 
         assert_eq!(
             lines,
@@ -452,5 +474,30 @@ mod tests {
             plain_fact_list_lines(&FactList::Active(vec![])).expect("empty"),
             vec!["no facts"]
         );
+    }
+
+    #[test]
+    fn fact_list_from_typed_response_converts_log_and_active_payloads() {
+        let log = fact_list_from_typed_response(ListFactsResponse {
+            active: false,
+            facts: vec![fact_to_proto(&assertion_fact())],
+            active_facts: vec![],
+        })
+        .expect("log facts");
+        let active = fact_list_from_typed_response(ListFactsResponse {
+            active: true,
+            facts: vec![],
+            active_facts: vec![active_fact_to_proto(&active_fact())],
+        })
+        .expect("active facts");
+
+        match log {
+            FactList::Log(facts) => assert_eq!(facts.len(), 1),
+            FactList::Active(_) => panic!("expected log facts"),
+        }
+        match active {
+            FactList::Active(facts) => assert_eq!(facts.len(), 1),
+            FactList::Log(_) => panic!("expected active facts"),
+        }
     }
 }

@@ -158,6 +158,17 @@ pub fn active_fact_to_proto(fact: &ActiveFact) -> proto::ActiveFact {
     }
 }
 
+pub fn active_fact_from_proto(fact: proto::ActiveFact) -> Result<ActiveFact, String> {
+    Ok(ActiveFact {
+        fact_id: parse_core_uri(fact.fact_id)?,
+        tx_id: parse_core_uri(fact.tx_id)?,
+        source: parse_core_uri(fact.source)?,
+        entity: parse_core_uri(fact.entity)?,
+        field: parse_core_uri(fact.field)?,
+        value: value_from_proto(fact.value.ok_or("missing active fact value")?)?,
+    })
+}
+
 pub fn fact_from_proto(fact: proto::Fact) -> Result<Fact, String> {
     Ok(Fact {
         fact_id: parse_core_uri(fact.fact_id)?,
@@ -503,7 +514,10 @@ mod tests {
 
     use super::proto::poneglyph_daemon_server::PoneglyphDaemon;
     use super::proto::{ListEntitiesRequest, ListFactsRequest, SearchEntitiesRequest};
-    use super::{DaemonApi, fact_from_proto, fact_to_proto, value_from_proto, value_to_proto};
+    use super::{
+        DaemonApi, active_fact_from_proto, active_fact_to_proto, fact_from_proto, fact_to_proto,
+        value_from_proto, value_to_proto,
+    };
 
     async fn api() -> DaemonApi {
         api_with_runtime().await.0
@@ -563,6 +577,23 @@ mod tests {
             .expect("timestamp");
 
         let round_tripped = fact_from_proto(fact_to_proto(&fact)).expect("fact round-trip");
+
+        assert_eq!(round_tripped, fact);
+    }
+
+    #[test]
+    fn typed_active_fact_proto_round_trips_fact_metadata() {
+        let fact = ActiveFact {
+            source: uri!("poneglyph:cli"),
+            entity: uri!("spotify:album:signals"),
+            field: uri!("spotify:displayName"),
+            value: Value::text("Signals"),
+            fact_id: uri!("poneglyph:fact:1"),
+            tx_id: uri!("poneglyph:tx:1"),
+        };
+
+        let round_tripped =
+            active_fact_from_proto(active_fact_to_proto(&fact)).expect("active fact round-trip");
 
         assert_eq!(round_tripped, fact);
     }

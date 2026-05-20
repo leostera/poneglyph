@@ -67,9 +67,10 @@ Typed protobuf migration sketch and current audit:
   not wired into RPC responses yet; conversion helpers and round-trip tests live
   in `poneglyph-api` so future RPC migrations can happen one method at a time.
 - First service slice: `ListFactsTyped` now exposes a typed `ListFactsResponse`
-  alongside the existing JSON `ListFacts` response. The CLI still uses JSON so
-  user-facing output remains unchanged while clients can start testing the typed
-  fact/value payloads.
+  alongside the existing JSON `ListFacts` response. The CLI daemon path now uses
+  the typed response and converts it back into domain structs before applying the
+  existing plain/JSON renderers, so user-facing output remains unchanged while
+  the process boundary is no longer JSON for fact listing.
 - Later candidates: typed entity/list/search responses once entity field maps and
   search score semantics have settled; schema messages mirroring
   `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`; query
