@@ -166,6 +166,37 @@ impl PoneglyphDaemon for DaemonApi {
         request: Request<ListFactsRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
         let request = request.into_inner();
+        if request.active {
+            if !request.tx_id.is_empty() {
+                return Err(Status::invalid_argument(
+                    "active fact listing does not support tx_id filtering",
+                ));
+            }
+            let filter = if request.entity_uri.is_empty() {
+                poneglyph_core::ActiveFilter::All
+            } else {
+                poneglyph_core::ActiveFilter::ByEntity(
+                    Uri::parse(request.entity_uri)
+                        .map_err(|error| Status::invalid_argument(error.to_string()))?,
+                )
+            };
+            let mut stream = self
+                .poneglyph
+                .fact_service()
+                .store()
+                .get_active_facts(filter)
+                .await
+                .map_err(|error| Status::internal(error.to_string()))?;
+            let mut facts = Vec::new();
+            while let Some(fact) = stream.recv().await {
+                facts.push(fact.map_err(|error| Status::internal(error.to_string()))?);
+            }
+            let json = serde_json::to_string_pretty(&facts)
+                .map_err(|error| Status::internal(error.to_string()))?;
+
+            return Ok(Response::new(JsonResponse { json }));
+        }
+
         let filter = match (request.entity_uri.as_str(), request.tx_id.as_str()) {
             ("", "") => Filter::All,
             (entity_uri, "") => Filter::ByEntityUri(

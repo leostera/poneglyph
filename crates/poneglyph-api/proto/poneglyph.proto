@@ -45,6 +45,7 @@ message RetractFactByIdRequest {
 message ListFactsRequest {
   string entity_uri = 1;
   string tx_id = 2;
+  bool active = 3;
 }
 
 message StateFactResponse {

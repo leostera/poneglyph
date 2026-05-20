@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::facts::store::tuple_key;
 use crate::{Fact, PoneResult, Uri, Value};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ActiveFact {
     pub source: Uri,
     pub entity: Uri,

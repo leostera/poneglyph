@@ -136,8 +136,11 @@ pub enum FactSubcommand {
         #[arg(long, conflicts_with = "tx")]
         entity: Option<String>,
         /// Restrict output to facts from one transaction URI.
-        #[arg(long, conflicts_with = "entity")]
+        #[arg(long, conflicts_with_all = ["entity", "active"])]
         tx: Option<String>,
+        /// Show only active assertions.
+        #[arg(long, conflicts_with = "tx")]
+        active: bool,
         /// Print machine-readable JSON.
         #[arg(long)]
         json: bool,

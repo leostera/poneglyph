@@ -1,6 +1,6 @@
 use anyhow::Result;
 use poneglyph_api::proto::{ListFactsRequest, RetractFactByIdRequest, StateFactRequest};
-use poneglyph_core::{Fact, Filter, Uri, Value, Workspace};
+use poneglyph_core::{ActiveFact, ActiveFilter, Fact, Filter, Uri, Value, Workspace};
 
 use crate::cli::{FactCommand, FactSubcommand};
 use crate::client::{daemon_client, open_runtime};
@@ -12,8 +12,20 @@ pub async fn run(
     command: FactCommand,
 ) -> Result<()> {
     match command.command {
-        FactSubcommand::List { entity, tx, json } => {
-            let facts = list_facts(&workspace, &config, entity.as_deref(), tx.as_deref()).await?;
+        FactSubcommand::List {
+            entity,
+            tx,
+            active,
+            json,
+        } => {
+            let facts = list_facts(
+                &workspace,
+                &config,
+                entity.as_deref(),
+                tx.as_deref(),
+                active,
+            )
+            .await?;
             print_fact_list(&facts, json)
         }
         FactSubcommand::State {
@@ -87,32 +99,54 @@ fn print_fact_outcome(outcome: &FactOutcome, json: bool) -> Result<()> {
     Ok(())
 }
 
-fn print_fact_list(facts: &[Fact], json: bool) -> Result<()> {
+enum FactList {
+    Log(Vec<Fact>),
+    Active(Vec<ActiveFact>),
+}
+
+fn print_fact_list(facts: &FactList, json: bool) -> Result<()> {
     if json {
-        println!("{}", serde_json::to_string_pretty(facts)?);
+        match facts {
+            FactList::Log(facts) => println!("{}", serde_json::to_string_pretty(facts)?),
+            FactList::Active(facts) => println!("{}", serde_json::to_string_pretty(facts)?),
+        }
         return Ok(());
     }
 
-    if facts.is_empty() {
-        println!("no facts");
-    } else {
-        for fact in facts {
-            println!(
-                "fact\t{}\t{}\t{}\t{}\t{}\t{}",
-                fact.fact_id,
-                fact.tx_id
-                    .as_ref()
-                    .map(ToString::to_string)
-                    .unwrap_or_else(|| "pending".to_string()),
-                fact.entity,
-                fact.field,
-                serde_json::to_string(&fact.value)?,
-                if fact.retraction {
-                    "retraction"
-                } else {
-                    "assertion"
-                }
-            );
+    match facts {
+        FactList::Log(facts) if facts.is_empty() => println!("no facts"),
+        FactList::Log(facts) => {
+            for fact in facts {
+                println!(
+                    "fact\t{}\t{}\t{}\t{}\t{}\t{}",
+                    fact.fact_id,
+                    fact.tx_id
+                        .as_ref()
+                        .map(ToString::to_string)
+                        .unwrap_or_else(|| "pending".to_string()),
+                    fact.entity,
+                    fact.field,
+                    serde_json::to_string(&fact.value)?,
+                    if fact.retraction {
+                        "retraction"
+                    } else {
+                        "assertion"
+                    }
+                );
+            }
+        }
+        FactList::Active(facts) if facts.is_empty() => println!("no facts"),
+        FactList::Active(facts) => {
+            for fact in facts {
+                println!(
+                    "active\t{}\t{}\t{}\t{}\t{}",
+                    fact.fact_id,
+                    fact.tx_id,
+                    fact.entity,
+                    fact.field,
+                    serde_json::to_string(&fact.value)?
+                );
+            }
         }
     }
     Ok(())
@@ -123,20 +157,46 @@ async fn list_facts(
     config: &PoneglyphDaemonConfig,
     entity: Option<&str>,
     tx: Option<&str>,
-) -> Result<Vec<Fact>> {
+    active: bool,
+) -> Result<FactList> {
     match daemon_client(config).await {
         Ok(mut client) => {
             let response = client
                 .list_facts(ListFactsRequest {
                     entity_uri: entity.unwrap_or_default().to_string(),
                     tx_id: tx.unwrap_or_default().to_string(),
+                    active,
                 })
                 .await?
                 .into_inner();
-            Ok(serde_json::from_str(&response.json)?)
+            if active {
+                Ok(FactList::Active(serde_json::from_str(&response.json)?))
+            } else {
+                Ok(FactList::Log(serde_json::from_str(&response.json)?))
+            }
         }
         Err(_) => {
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+            if active {
+                if tx.is_some() {
+                    anyhow::bail!("active fact listing does not support --tx");
+                }
+                let filter = match entity {
+                    Some(entity) => ActiveFilter::ByEntity(parse_uri(entity)?),
+                    None => ActiveFilter::All,
+                };
+                let mut stream = poneglyph
+                    .fact_service()
+                    .store()
+                    .get_active_facts(filter)
+                    .await?;
+                let mut facts = Vec::new();
+                while let Some(fact) = stream.recv().await {
+                    facts.push(fact?);
+                }
+                return Ok(FactList::Active(facts));
+            }
+
             let filter = match (entity, tx) {
                 (Some(entity), None) => Filter::ByEntityUri(parse_uri(entity)?),
                 (None, Some(tx)) => Filter::ByTx(parse_uri(tx)?),
@@ -150,7 +210,7 @@ async fn list_facts(
             while let Some(fact) = stream.recv().await {
                 facts.push(fact?);
             }
-            Ok(facts)
+            Ok(FactList::Log(facts))
         }
     }
 }

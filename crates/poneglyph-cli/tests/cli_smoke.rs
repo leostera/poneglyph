@@ -88,6 +88,12 @@ async fn cli_states_queries_and_retracts_facts_without_daemon() {
     let facts_by_tx = poneglyph(workspace, &["fact", "list", "--tx", tx_id]);
     assert!(facts_by_tx.contains("spotify:album:2112"));
 
+    let active_facts = poneglyph(
+        workspace,
+        &["fact", "list", "--entity", "spotify:album:2112", "--active"],
+    );
+    assert!(active_facts.contains("active\t"));
+
     let fact_id = first_fact_id(workspace, "spotify:album:2112").await;
     let retraction = poneglyph(
         workspace,
@@ -103,6 +109,12 @@ async fn cli_states_queries_and_retracts_facts_without_daemon() {
         &["query", r#"spotify:displayName(Album, "2112")"#],
     );
     assert_eq!(query.trim(), "no results");
+
+    let active_facts = poneglyph(
+        workspace,
+        &["fact", "list", "--entity", "spotify:album:2112", "--active"],
+    );
+    assert_eq!(active_facts.trim(), "no facts");
 }
 
 #[test]
@@ -320,6 +332,19 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
         .to_string();
     let facts_by_tx = poneglyph(workspace, &["fact", "list", "--tx", &tx_id]);
     assert!(facts_by_tx.contains("spotify:album:signals"));
+
+    let active_facts = poneglyph(
+        workspace,
+        &[
+            "fact",
+            "list",
+            "--entity",
+            "spotify:album:signals",
+            "--active",
+            "--json",
+        ],
+    );
+    assert!(active_facts.contains("spotify:displayName"));
 
     let applied = poneglyph(
         workspace,
