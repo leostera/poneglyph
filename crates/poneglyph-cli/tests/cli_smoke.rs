@@ -75,6 +75,8 @@ async fn cli_states_queries_and_retracts_facts_without_daemon() {
     );
     assert!(retraction.contains("tx_id"));
     assert!(retraction.contains("fact_id"));
+    assert!(retraction.contains("retracted_fact_id"));
+    assert!(retraction.contains(&fact_id));
 
     let query = poneglyph(
         workspace,

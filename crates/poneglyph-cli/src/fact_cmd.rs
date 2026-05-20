@@ -64,6 +64,8 @@ struct FactOutcome {
     tx_id: String,
     fact_id: String,
     fact_ids: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    retracted_fact_id: Option<String>,
 }
 
 fn print_fact_outcome(outcome: &FactOutcome, json: bool) -> Result<()> {
@@ -73,6 +75,9 @@ fn print_fact_outcome(outcome: &FactOutcome, json: bool) -> Result<()> {
         println!("tx_id: {}", outcome.tx_id);
         if !outcome.fact_id.is_empty() {
             println!("fact_id: {}", outcome.fact_id);
+        }
+        if let Some(retracted_fact_id) = &outcome.retracted_fact_id {
+            println!("retracted_fact_id: {retracted_fact_id}");
         }
     }
     Ok(())
@@ -95,6 +100,7 @@ async fn state_fact(
                 tx_id: response.tx_id,
                 fact_id: response.fact_id,
                 fact_ids: response.fact_ids,
+                retracted_fact_id: None,
             })
         }
         Err(_) => {
@@ -105,6 +111,7 @@ async fn state_fact(
                 tx_id,
                 fact_id: fact_id.clone(),
                 fact_ids: vec![fact_id],
+                retracted_fact_id: None,
             })
         }
     }
@@ -127,6 +134,7 @@ async fn retract_fact_by_id(
                 tx_id: response.tx_id,
                 fact_id: response.fact_id,
                 fact_ids: response.fact_ids,
+                retracted_fact_id: Some(fact_id.to_string()),
             })
         }
         Err(_) => {
@@ -153,6 +161,7 @@ async fn retract_fact_by_id(
                 tx_id,
                 fact_id: retraction_id.clone(),
                 fact_ids: vec![retraction_id],
+                retracted_fact_id: Some(fact_id.to_string()),
             })
         }
     }

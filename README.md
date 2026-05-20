@@ -85,7 +85,11 @@ the original assertion.
 
 ```sh
 poneglyph --workspace "$PONE" fact retract --fact poneglyph:fact:...
+poneglyph --workspace "$PONE" fact retract --fact poneglyph:fact:... --json
 ```
+
+Retraction output includes the new retraction fact id and, for `--fact`, the
+`retracted_fact_id` that was targeted.
 
 Get a consolidated entity:
 
