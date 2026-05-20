@@ -336,7 +336,9 @@ impl PoneglyphDaemon for DaemonApi {
 mod tests {
     use std::sync::Arc;
 
-    use poneglyph_core::{InMemoryEntityStore, InMemoryFactStore, Poneglyph, SearchProjection};
+    use poneglyph_core::{
+        Fact, InMemoryEntityStore, InMemoryFactStore, Poneglyph, SearchProjection, Value, fact, uri,
+    };
     use tonic::{Code, Request};
 
     use super::DaemonApi;
@@ -344,20 +346,26 @@ mod tests {
     use super::proto::{ListEntitiesRequest, ListFactsRequest, SearchEntitiesRequest};
 
     async fn api() -> DaemonApi {
-        let runtime = Poneglyph::builder()
-            .with_fact_service(
-                poneglyph_core::FactService::builder()
-                    .with_store(InMemoryFactStore::new())
-                    .build()
-                    .expect("fact service"),
-            )
-            .with_entity_store(InMemoryEntityStore::new())
-            .with_search_projection(SearchProjection::create_in_memory().expect("search"))
-            .build()
-            .await
-            .expect("runtime");
+        api_with_runtime().await.0
+    }
+
+    async fn api_with_runtime() -> (DaemonApi, Arc<Poneglyph>) {
+        let runtime = Arc::new(
+            Poneglyph::builder()
+                .with_fact_service(
+                    poneglyph_core::FactService::builder()
+                        .with_store(InMemoryFactStore::new())
+                        .build()
+                        .expect("fact service"),
+                )
+                .with_entity_store(InMemoryEntityStore::new())
+                .with_search_projection(SearchProjection::create_in_memory().expect("search"))
+                .build()
+                .await
+                .expect("runtime"),
+        );
         let (shutdown, _receiver) = tokio::sync::oneshot::channel();
-        DaemonApi::new(Arc::new(runtime), shutdown)
+        (DaemonApi::new(runtime.clone(), shutdown), runtime)
     }
 
     #[tokio::test]
@@ -376,6 +384,58 @@ mod tests {
 
         assert_eq!(error.code(), Code::InvalidArgument);
         assert!(error.message().contains("greater than 0"));
+    }
+
+    #[tokio::test]
+    async fn list_facts_applies_limit_and_offset() {
+        let (api, runtime) = api_with_runtime().await;
+        let tx_id = runtime
+            .state_facts(vec![
+                fact!(
+                    uri!("spotify:album:a-farewell-to-kings"),
+                    uri!("spotify:displayName"),
+                    Value::text("A Farewell to Kings")
+                ),
+                fact!(
+                    uri!("spotify:album:hemispheres"),
+                    uri!("spotify:displayName"),
+                    Value::text("Hemispheres")
+                ),
+            ])
+            .await
+            .expect("state facts");
+
+        let first_response = api
+            .list_facts(Request::new(ListFactsRequest {
+                entity_uri: String::new(),
+                tx_id: tx_id.to_string(),
+                active: false,
+                limit: 1,
+                offset: 0,
+            }))
+            .await
+            .expect("list facts")
+            .into_inner();
+        let first_facts =
+            serde_json::from_str::<Vec<Fact>>(&first_response.json).expect("facts json");
+
+        let second_response = api
+            .list_facts(Request::new(ListFactsRequest {
+                entity_uri: String::new(),
+                tx_id: tx_id.to_string(),
+                active: false,
+                limit: 1,
+                offset: 1,
+            }))
+            .await
+            .expect("list facts")
+            .into_inner();
+        let second_facts =
+            serde_json::from_str::<Vec<Fact>>(&second_response.json).expect("facts json");
+
+        assert_eq!(first_facts.len(), 1);
+        assert_eq!(second_facts.len(), 1);
+        assert_ne!(first_facts[0].fact_id, second_facts[0].fact_id);
     }
 
     #[tokio::test]
