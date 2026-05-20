@@ -20,6 +20,7 @@ service PoneglyphDaemon {
   rpc SearchEntities(SearchEntitiesRequest) returns (JsonResponse);
   rpc SearchEntitiesTyped(SearchEntitiesRequest) returns (SearchEntitiesResponse);
   rpc GetSchema(GetSchemaRequest) returns (JsonResponse);
+  rpc GetSchemaTyped(GetSchemaRequest) returns (SchemaDefinition);
 }
 
 message StatusRequest {}
@@ -121,6 +122,44 @@ message SearchHit {
 
 message SearchEntitiesResponse {
   repeated SearchHit hits = 1;
+}
+
+message NamespaceSchema {
+  string uri = 1;
+  optional string name = 2;
+  optional string doc = 3;
+}
+
+message KindSchema {
+  string uri = 1;
+  optional string name = 2;
+  optional string doc = 3;
+}
+
+message FieldSchema {
+  string uri = 1;
+  optional string name = 2;
+  optional string doc = 3;
+  optional string same_as = 4;
+  optional string domain = 5;
+  optional string range = 6;
+  optional string value_type = 7;
+  optional string cardinality = 8;
+  optional bool deprecated = 9;
+  optional bool identity = 10;
+}
+
+message SchemaEntries {
+  repeated NamespaceSchema namespaces = 1;
+  repeated KindSchema kinds = 2;
+  repeated FieldSchema fields = 3;
+}
+
+message SchemaDefinition {
+  SchemaEntries base = 1;
+  repeated NamespaceSchema namespaces = 2;
+  repeated KindSchema kinds = 3;
+  repeated FieldSchema fields = 4;
 }
 
 message Value {

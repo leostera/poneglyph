@@ -4,6 +4,7 @@ use anyhow::Result;
 use poneglyph_api::{
     fact_to_proto,
     proto::{GetSchemaRequest, StateFactsTypedRequest},
+    schema_from_proto,
 };
 use poneglyph_core::{Fact, SchemaDefinition, Uri, Value, Workspace};
 
@@ -50,12 +51,11 @@ async fn get_schema(
 ) -> Result<SchemaDefinition> {
     match daemon_client(config).await {
         Ok(mut client) => {
-            let json = client
-                .get_schema(GetSchemaRequest {})
+            let schema = client
+                .get_schema_typed(GetSchemaRequest {})
                 .await?
-                .into_inner()
-                .json;
-            serde_json::from_str(&json).map_err(Into::into)
+                .into_inner();
+            schema_from_proto(schema).map_err(anyhow::Error::msg)
         }
         Err(_) => {
             let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;

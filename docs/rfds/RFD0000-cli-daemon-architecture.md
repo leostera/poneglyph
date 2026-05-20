@@ -78,6 +78,10 @@ Typed protobuf migration sketch and current audit:
   `GetEntityTyped`, `ListEntitiesTyped`, and `SearchEntitiesTyped` are available,
   and the CLI daemon path uses them before converting back into the existing
   plain/JSON renderers.
+- Schema reads have typed protobuf shapes mirroring `BaseSchema`,
+  `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`.
+  `schema list/get` uses `GetSchemaTyped` on the daemon path and keeps the
+  existing CLI renderers unchanged.
 - Later candidates: typed entity/list/search responses once entity field maps and
   search score semantics have settled; schema messages mirroring
   `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`; query

@@ -8,8 +8,8 @@ use std::time::Instant;
 
 use chrono::{DateTime, NaiveDate, Utc};
 use poneglyph_core::{
-    ActiveFact, ActiveFilter, Entity, Fact, Filter, PoneResult, Poneglyph, Query, SearchHit, Uri,
-    Value,
+    ActiveFact, ActiveFilter, BaseSchema, Entity, Fact, FieldSchema, Filter, KindSchema,
+    NamespaceSchema, PoneResult, Poneglyph, Query, SchemaDefinition, SearchHit, Uri, Value,
 };
 use serde::Serialize;
 use tonic::{Request, Response, Status};
@@ -18,8 +18,8 @@ use self::proto::poneglyph_daemon_server::PoneglyphDaemon;
 use self::proto::{
     GetEntityRequest, GetEntityResponse, GetSchemaRequest, JsonResponse, ListEntitiesRequest,
     ListEntitiesResponse, ListFactsRequest, ListFactsResponse, QueryRequest,
-    RetractFactByIdRequest, SearchEntitiesRequest, SearchEntitiesResponse, ShutdownRequest,
-    ShutdownResponse, StateFactRequest, StateFactResponse, StateFactTypedRequest,
+    RetractFactByIdRequest, SchemaEntries, SearchEntitiesRequest, SearchEntitiesResponse,
+    ShutdownRequest, ShutdownResponse, StateFactRequest, StateFactResponse, StateFactTypedRequest,
     StateFactsRequest, StateFactsTypedRequest, StatusRequest, StatusResponse,
 };
 
@@ -327,6 +327,135 @@ pub fn search_hit_from_proto(hit: proto::SearchHit) -> Result<SearchHit, String>
     })
 }
 
+pub fn schema_to_proto(schema: &SchemaDefinition) -> proto::SchemaDefinition {
+    proto::SchemaDefinition {
+        base: Some(schema_entries_to_proto(
+            &schema.base.namespaces,
+            &schema.base.kinds,
+            &schema.base.fields,
+        )),
+        namespaces: schema
+            .namespaces
+            .iter()
+            .map(namespace_schema_to_proto)
+            .collect(),
+        kinds: schema.kinds.iter().map(kind_schema_to_proto).collect(),
+        fields: schema.fields.iter().map(field_schema_to_proto).collect(),
+    }
+}
+
+pub fn schema_from_proto(schema: proto::SchemaDefinition) -> Result<SchemaDefinition, String> {
+    let base = schema.base.unwrap_or_default();
+    Ok(SchemaDefinition {
+        base: BaseSchema {
+            namespaces: base
+                .namespaces
+                .into_iter()
+                .map(namespace_schema_from_proto)
+                .collect::<Result<_, _>>()?,
+            kinds: base
+                .kinds
+                .into_iter()
+                .map(kind_schema_from_proto)
+                .collect::<Result<_, _>>()?,
+            fields: base
+                .fields
+                .into_iter()
+                .map(field_schema_from_proto)
+                .collect::<Result<_, _>>()?,
+        },
+        namespaces: schema
+            .namespaces
+            .into_iter()
+            .map(namespace_schema_from_proto)
+            .collect::<Result<_, _>>()?,
+        kinds: schema
+            .kinds
+            .into_iter()
+            .map(kind_schema_from_proto)
+            .collect::<Result<_, _>>()?,
+        fields: schema
+            .fields
+            .into_iter()
+            .map(field_schema_from_proto)
+            .collect::<Result<_, _>>()?,
+    })
+}
+
+fn schema_entries_to_proto(
+    namespaces: &[NamespaceSchema],
+    kinds: &[KindSchema],
+    fields: &[FieldSchema],
+) -> SchemaEntries {
+    SchemaEntries {
+        namespaces: namespaces.iter().map(namespace_schema_to_proto).collect(),
+        kinds: kinds.iter().map(kind_schema_to_proto).collect(),
+        fields: fields.iter().map(field_schema_to_proto).collect(),
+    }
+}
+
+fn namespace_schema_to_proto(schema: &NamespaceSchema) -> proto::NamespaceSchema {
+    proto::NamespaceSchema {
+        uri: schema.uri.to_string(),
+        name: schema.name.clone(),
+        doc: schema.doc.clone(),
+    }
+}
+
+fn namespace_schema_from_proto(schema: proto::NamespaceSchema) -> Result<NamespaceSchema, String> {
+    Ok(NamespaceSchema {
+        uri: parse_core_uri(schema.uri)?,
+        name: schema.name,
+        doc: schema.doc,
+    })
+}
+
+fn kind_schema_to_proto(schema: &KindSchema) -> proto::KindSchema {
+    proto::KindSchema {
+        uri: schema.uri.to_string(),
+        name: schema.name.clone(),
+        doc: schema.doc.clone(),
+    }
+}
+
+fn kind_schema_from_proto(schema: proto::KindSchema) -> Result<KindSchema, String> {
+    Ok(KindSchema {
+        uri: parse_core_uri(schema.uri)?,
+        name: schema.name,
+        doc: schema.doc,
+    })
+}
+
+fn field_schema_to_proto(schema: &FieldSchema) -> proto::FieldSchema {
+    proto::FieldSchema {
+        uri: schema.uri.to_string(),
+        name: schema.name.clone(),
+        doc: schema.doc.clone(),
+        same_as: schema.same_as.as_ref().map(ToString::to_string),
+        domain: schema.domain.as_ref().map(ToString::to_string),
+        range: schema.range.as_ref().map(ToString::to_string),
+        value_type: schema.value_type.clone(),
+        cardinality: schema.cardinality.clone(),
+        deprecated: schema.deprecated,
+        identity: schema.identity,
+    }
+}
+
+fn field_schema_from_proto(schema: proto::FieldSchema) -> Result<FieldSchema, String> {
+    Ok(FieldSchema {
+        uri: parse_core_uri(schema.uri)?,
+        name: schema.name,
+        doc: schema.doc,
+        same_as: schema.same_as.map(parse_core_uri).transpose()?,
+        domain: schema.domain.map(parse_core_uri).transpose()?,
+        range: schema.range.map(parse_core_uri).transpose()?,
+        value_type: schema.value_type,
+        cardinality: schema.cardinality,
+        deprecated: schema.deprecated,
+        identity: schema.identity,
+    })
+}
+
 fn list_facts_response(items: &FactListItems) -> ListFactsResponse {
     match items {
         FactListItems::Active(facts) => ListFactsResponse {
@@ -591,6 +720,14 @@ impl PoneglyphDaemon for DaemonApi {
         let schema = self.poneglyph.get_schema().await.map_err(internal)?;
         json_response(&schema)
     }
+
+    async fn get_schema_typed(
+        &self,
+        _request: Request<GetSchemaRequest>,
+    ) -> Result<Response<proto::SchemaDefinition>, Status> {
+        let schema = self.poneglyph.get_schema().await.map_err(internal)?;
+        Ok(Response::new(schema_to_proto(&schema)))
+    }
 }
 
 #[cfg(test)]
@@ -601,8 +738,8 @@ mod tests {
 
     use chrono::{NaiveDate, TimeZone, Utc};
     use poneglyph_core::{
-        ActiveFact, Entity, Fact, InMemoryEntityStore, InMemoryFactStore, Poneglyph,
-        SearchProjection, Value, fact, uri,
+        ActiveFact, BaseSchema, Entity, Fact, FieldSchema, InMemoryEntityStore, InMemoryFactStore,
+        NamespaceSchema, Poneglyph, SchemaDefinition, SearchProjection, Value, fact, uri,
     };
     use tonic::{Code, Request};
 
@@ -613,8 +750,8 @@ mod tests {
     };
     use super::{
         DaemonApi, active_fact_from_proto, active_fact_to_proto, entity_from_proto,
-        entity_to_proto, fact_from_proto, fact_to_proto, search_hit_from_proto,
-        search_hit_to_proto, value_from_proto, value_to_proto,
+        entity_to_proto, fact_from_proto, fact_to_proto, schema_from_proto, schema_to_proto,
+        search_hit_from_proto, search_hit_to_proto, value_from_proto, value_to_proto,
     };
 
     async fn api() -> DaemonApi {
@@ -723,6 +860,37 @@ mod tests {
             search_hit_from_proto(search_hit_to_proto(&hit)).expect("search hit round-trip");
 
         assert_eq!(round_tripped, hit);
+    }
+
+    #[test]
+    fn typed_schema_proto_round_trips_entries() {
+        let schema = SchemaDefinition {
+            base: BaseSchema {
+                namespaces: vec![NamespaceSchema {
+                    uri: uri!("schema:namespace"),
+                    name: Some("Schema".to_string()),
+                    doc: None,
+                }],
+                ..Default::default()
+            },
+            fields: vec![FieldSchema {
+                uri: uri!("spotify:displayName"),
+                name: Some("Display name".to_string()),
+                doc: None,
+                same_as: Some(uri!("schema:name")),
+                domain: Some(uri!("spotify:album")),
+                range: None,
+                value_type: Some("text".to_string()),
+                cardinality: Some("one".to_string()),
+                deprecated: Some(false),
+                identity: Some(true),
+            }],
+            ..Default::default()
+        };
+
+        let round_tripped = schema_from_proto(schema_to_proto(&schema)).expect("schema round-trip");
+
+        assert_eq!(round_tripped, schema);
     }
 
     #[test]
