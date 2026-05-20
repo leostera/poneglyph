@@ -3,6 +3,7 @@ mod cli;
 mod client;
 mod cmd;
 mod config;
+mod config_cmd;
 mod daemon;
 mod server;
 

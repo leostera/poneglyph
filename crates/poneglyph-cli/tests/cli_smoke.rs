@@ -240,6 +240,26 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
 }
 
 #[test]
+fn daemon_cli_stop_offline_fails_and_restart_from_offline_starts() {
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = tempdir.path();
+    let bind_addr = free_bind_addr();
+
+    poneglyph(workspace, &["config", "set", "poneglyph.log_level", "off"]);
+    poneglyph(workspace, &["config", "set", "rpc.bind_addr", &bind_addr]);
+
+    let stop_error = poneglyph_fails(workspace, &["server", "stop"]);
+    assert!(stop_error.contains("transport error") || stop_error.contains("Connection refused"));
+
+    let restarted = poneglyph(workspace, &["server", "restart", "--json"]);
+    assert!(restarted.contains("\"status\": \"restarted\""));
+    let status = poneglyph(workspace, &["server", "status", "--json"]);
+    assert!(status.contains("\"status\": \"running\""));
+    poneglyph(workspace, &["server", "stop"]);
+    wait_for_offline(workspace);
+}
+
+#[test]
 fn daemon_cli_restarts_detached_server() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = tempdir.path();
