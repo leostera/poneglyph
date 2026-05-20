@@ -272,6 +272,16 @@ async fn daemon_cli_serves_status_fact_query_entity_schema_and_stop() {
     let entity_list_json = poneglyph(workspace, &["entity", "list", "--json"]);
     assert!(entity_list_json.contains("spotify:album:signals"));
 
+    let entity_search = wait_for_output(
+        workspace,
+        &["entity", "search", "Signals"],
+        "hit\tspotify:album:signals",
+    );
+    assert!(entity_search.contains("spotify:album:signals"));
+
+    let entity_search_json = poneglyph(workspace, &["entity", "search", "Signals", "--json"]);
+    assert!(entity_search_json.contains("spotify:album:signals"));
+
     let applied = poneglyph(
         workspace,
         &["schema", "apply", path_str(&schema_path), "--json"],

@@ -11,6 +11,7 @@ service PoneglyphDaemon {
   rpc Query(QueryRequest) returns (JsonResponse);
   rpc GetEntity(GetEntityRequest) returns (JsonResponse);
   rpc ListEntities(ListEntitiesRequest) returns (JsonResponse);
+  rpc SearchEntities(SearchEntitiesRequest) returns (JsonResponse);
   rpc GetSchema(GetSchemaRequest) returns (JsonResponse);
 }
 
@@ -57,6 +58,11 @@ message GetEntityRequest {
 message ListEntitiesRequest {
   uint64 limit = 1;
   uint64 offset = 2;
+}
+
+message SearchEntitiesRequest {
+  string query = 1;
+  uint64 limit = 2;
 }
 
 message GetSchemaRequest {}

@@ -1,6 +1,6 @@
 use anyhow::Result;
-use poneglyph_api::proto::{GetEntityRequest, ListEntitiesRequest};
-use poneglyph_core::{Entity, Uri, Workspace};
+use poneglyph_api::proto::{GetEntityRequest, ListEntitiesRequest, SearchEntitiesRequest};
+use poneglyph_core::{Entity, SearchHit, Uri, Workspace};
 
 use crate::cli::{EntityCommand, EntitySubcommand};
 use crate::client::{daemon_client, open_runtime};
@@ -34,6 +34,25 @@ pub async fn run(
                 }
             };
             print_entity_list(&response_json, json)?;
+        }
+        EntitySubcommand::Search { query, limit, json } => {
+            let response_json = match daemon_client(&config).await {
+                Ok(mut client) => {
+                    client
+                        .search_entities(SearchEntitiesRequest {
+                            query,
+                            limit: limit as u64,
+                        })
+                        .await?
+                        .into_inner()
+                        .json
+                }
+                Err(_) => {
+                    let poneglyph = open_runtime(workspace, config).await?;
+                    serde_json::to_string_pretty(&poneglyph.search(&query, limit)?)?
+                }
+            };
+            print_search_hits(&response_json, json)?;
         }
         EntitySubcommand::Get { uri, json } => {
             let response_json = match daemon_client(&config).await {
@@ -70,6 +89,23 @@ fn print_entity_list(response_json: &str, json: bool) -> Result<()> {
     } else {
         for entity in entities {
             println!("entity\t{}", entity.uri);
+        }
+    }
+    Ok(())
+}
+
+fn print_search_hits(response_json: &str, json: bool) -> Result<()> {
+    if json {
+        println!("{response_json}");
+        return Ok(());
+    }
+
+    let hits = serde_json::from_str::<Vec<SearchHit>>(response_json)?;
+    if hits.is_empty() {
+        println!("no results");
+    } else {
+        for hit in hits {
+            println!("hit\t{}\t{}", hit.entity_uri, hit.score);
         }
     }
     Ok(())

@@ -178,6 +178,15 @@ pub enum EntitySubcommand {
         #[arg(long)]
         json: bool,
     },
+    Search {
+        query: String,
+        /// Maximum number of hits to print.
+        #[arg(long, default_value_t = 10)]
+        limit: usize,
+        /// Print machine-readable JSON.
+        #[arg(long)]
+        json: bool,
+    },
     Get {
         uri: String,
         /// Print machine-readable JSON.
@@ -334,7 +343,7 @@ mod tests {
 
         let mut command = Cli::command();
         let entity = command.find_subcommand_mut("entity").expect("entity help");
-        for subcommand in ["get", "list"] {
+        for subcommand in ["get", "list", "search"] {
             let help = entity
                 .find_subcommand_mut(subcommand)
                 .expect("entity subcommand help")

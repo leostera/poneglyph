@@ -12,13 +12,13 @@ use tracing::debug;
 use crate::projections::{Projection, ProjectionBatch};
 use crate::{Entity, Error, PoneResult, Uri, Value};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SearchHit {
     pub entity_uri: Uri,
     pub score: f32,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct IndexedEntity {
     pub entity_uri: Uri,
     pub namespace: String,
