@@ -21,8 +21,8 @@ pub async fn run(
                 Ok(mut client) => {
                     client
                         .list_entities(ListEntitiesRequest {
-                            limit: limit as u64,
-                            offset: offset as u64,
+                            limit: usize_to_u64(limit)?,
+                            offset: usize_to_u64(offset)?,
                         })
                         .await?
                         .into_inner()
@@ -41,7 +41,7 @@ pub async fn run(
                     client
                         .search_entities(SearchEntitiesRequest {
                             query,
-                            limit: limit as u64,
+                            limit: usize_to_u64(limit)?,
                         })
                         .await?
                         .into_inner()
@@ -128,6 +128,10 @@ fn print_entity(response_json: &str, json: bool) -> Result<()> {
         println!("field\t{}\t{}", field, serde_json::to_string(&value)?);
     }
     Ok(())
+}
+
+fn usize_to_u64(value: usize) -> Result<u64> {
+    u64::try_from(value).map_err(Into::into)
 }
 
 fn parse_uri(value: &str) -> Result<Uri> {

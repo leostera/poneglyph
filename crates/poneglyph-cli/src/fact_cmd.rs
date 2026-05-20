@@ -1,6 +1,6 @@
 use anyhow::Result;
 use poneglyph_api::proto::{ListFactsRequest, RetractFactByIdRequest, StateFactRequest};
-use poneglyph_core::{ActiveFact, ActiveFilter, Fact, Filter, Uri, Value, Workspace};
+use poneglyph_core::{ActiveFact, ActiveFilter, Fact, Filter, PoneResult, Uri, Value, Workspace};
 
 use crate::cli::{FactCommand, FactSubcommand};
 use crate::client::{daemon_client, open_runtime};
@@ -185,8 +185,8 @@ async fn list_facts(
                     entity_uri: entity.unwrap_or_default().to_string(),
                     tx_id: tx.unwrap_or_default().to_string(),
                     active,
-                    limit: limit as u64,
-                    offset: offset as u64,
+                    limit: usize_to_u64(limit)?,
+                    offset: usize_to_u64(offset)?,
                 })
                 .await?
                 .into_inner();
@@ -206,16 +206,12 @@ async fn list_facts(
                     Some(entity) => ActiveFilter::ByEntity(parse_uri(entity)?),
                     None => ActiveFilter::All,
                 };
-                let mut stream = poneglyph
+                let facts = poneglyph
                     .fact_service()
                     .store()
                     .get_active_facts(filter)
                     .await?;
-                let mut facts = Vec::new();
-                while let Some(fact) = stream.recv().await {
-                    facts.push(fact?);
-                }
-                return Ok(FactList::Active(facts).paginate(limit, offset));
+                return Ok(FactList::Active(collect_results(facts).await?).paginate(limit, offset));
             }
 
             let filter = match (entity, tx) {
@@ -226,12 +222,8 @@ async fn list_facts(
                     anyhow::bail!("fact list accepts only one filter: --entity or --tx")
                 }
             };
-            let mut stream = poneglyph.fact_service().get_facts(filter).await?;
-            let mut facts = Vec::new();
-            while let Some(fact) = stream.recv().await {
-                facts.push(fact?);
-            }
-            Ok(FactList::Log(facts).paginate(limit, offset))
+            let facts = poneglyph.fact_service().get_facts(filter).await?;
+            Ok(FactList::Log(collect_results(facts).await?).paginate(limit, offset))
         }
     }
 }
@@ -318,6 +310,20 @@ async fn retract_fact_by_id(
             })
         }
     }
+}
+
+async fn collect_results<T>(
+    mut stream: tokio::sync::mpsc::Receiver<PoneResult<T>>,
+) -> Result<Vec<T>> {
+    let mut items = Vec::new();
+    while let Some(item) = stream.recv().await {
+        items.push(item?);
+    }
+    Ok(items)
+}
+
+fn usize_to_u64(value: usize) -> Result<u64> {
+    u64::try_from(value).map_err(Into::into)
 }
 
 fn parse_uri(value: &str) -> Result<Uri> {
