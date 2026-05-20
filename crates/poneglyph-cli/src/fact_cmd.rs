@@ -1,11 +1,16 @@
 use anyhow::Result;
-use poneglyph_api::proto::{ListFactsRequest, RetractFactByIdRequest, StateFactRequest};
+use poneglyph_api::proto::{
+    ListFactsRequest, RetractFactByIdRequest, StateFactRequest,
+    poneglyph_daemon_client::PoneglyphDaemonClient,
+};
 use poneglyph_core::{ActiveFact, ActiveFilter, Fact, Filter, Value, Workspace};
 
 use crate::cli::{FactCommand, FactSubcommand};
 use crate::client::{daemon_client, open_runtime};
 use crate::config::PoneglyphDaemonConfig;
 use crate::util::{collect_results, parse_uri, usize_to_u64};
+
+type DaemonClient = PoneglyphDaemonClient<tonic::transport::Channel>;
 
 pub async fn run(
     workspace: Workspace,
@@ -40,12 +45,7 @@ pub async fn run(
             source,
             json,
         } => {
-            let fact = Fact::builder()
-                .source(parse_uri(source.as_deref().unwrap_or("poneglyph:cli"))?)
-                .entity(parse_uri(&entity)?)
-                .field(parse_uri(&attribute)?)
-                .value(parse_cli_value(&value)?)
-                .build()?;
+            let fact = build_assertion_fact(&entity, &attribute, &value, source.as_deref())?;
             let outcome = state_fact(&workspace, &config, fact).await?;
             print_fact_outcome(&outcome, json)
         }
@@ -64,13 +64,7 @@ pub async fn run(
             value: Some(value),
             json,
         } => {
-            let fact = Fact::builder()
-                .source(parse_uri("poneglyph:cli")?)
-                .entity(parse_uri(&entity)?)
-                .field(parse_uri(&attribute)?)
-                .value(parse_cli_value(&value)?)
-                .retract()
-                .build()?;
+            let fact = build_retraction_fact(&entity, &attribute, &value)?;
             let outcome = state_fact(&workspace, &config, fact).await?;
             print_fact_outcome(&outcome, json)
         }
@@ -78,6 +72,30 @@ pub async fn run(
             anyhow::bail!("retract requires --fact or entity attribute value")
         }
     }
+}
+
+fn build_assertion_fact(
+    entity: &str,
+    attribute: &str,
+    value: &str,
+    source: Option<&str>,
+) -> Result<Fact> {
+    Ok(Fact::builder()
+        .source(parse_uri(source.unwrap_or("poneglyph:cli"))?)
+        .entity(parse_uri(entity)?)
+        .field(parse_uri(attribute)?)
+        .value(parse_cli_value(value)?)
+        .build()?)
+}
+
+fn build_retraction_fact(entity: &str, attribute: &str, value: &str) -> Result<Fact> {
+    Ok(Fact::builder()
+        .source(parse_uri("poneglyph:cli")?)
+        .entity(parse_uri(entity)?)
+        .field(parse_uri(attribute)?)
+        .value(parse_cli_value(value)?)
+        .retract()
+        .build()?)
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -180,53 +198,70 @@ async fn list_facts(
     offset: usize,
 ) -> Result<FactList> {
     match daemon_client(config).await {
-        Ok(mut client) => {
-            let response = client
-                .list_facts(ListFactsRequest {
-                    entity_uri: entity.unwrap_or_default().to_string(),
-                    tx_id: tx.unwrap_or_default().to_string(),
-                    active,
-                    limit: usize_to_u64(limit)?,
-                    offset: usize_to_u64(offset)?,
-                })
-                .await?
-                .into_inner();
-            if active {
-                Ok(FactList::Active(serde_json::from_str(&response.json)?))
-            } else {
-                Ok(FactList::Log(serde_json::from_str(&response.json)?))
-            }
-        }
-        Err(_) => {
-            let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
-            if active {
-                if tx.is_some() {
-                    anyhow::bail!("active fact listing does not support --tx");
-                }
-                let filter = match entity {
-                    Some(entity) => ActiveFilter::ByEntity(parse_uri(entity)?),
-                    None => ActiveFilter::All,
-                };
-                let facts = poneglyph
-                    .fact_service()
-                    .store()
-                    .get_active_facts(filter)
-                    .await?;
-                return Ok(FactList::Active(collect_results(facts).await?).paginate(limit, offset));
-            }
-
-            let filter = match (entity, tx) {
-                (Some(entity), None) => Filter::ByEntityUri(parse_uri(entity)?),
-                (None, Some(tx)) => Filter::ByTx(parse_uri(tx)?),
-                (None, None) => Filter::All,
-                (Some(_), Some(_)) => {
-                    anyhow::bail!("fact list accepts only one filter: --entity or --tx")
-                }
-            };
-            let facts = poneglyph.fact_service().get_facts(filter).await?;
-            Ok(FactList::Log(collect_results(facts).await?).paginate(limit, offset))
-        }
+        Ok(client) => list_facts_via_daemon(client, entity, tx, active, limit, offset).await,
+        Err(_) => list_facts_direct(workspace, config, entity, tx, active, limit, offset).await,
     }
+}
+
+async fn list_facts_via_daemon(
+    mut client: DaemonClient,
+    entity: Option<&str>,
+    tx: Option<&str>,
+    active: bool,
+    limit: usize,
+    offset: usize,
+) -> Result<FactList> {
+    let response = client
+        .list_facts(ListFactsRequest {
+            entity_uri: entity.unwrap_or_default().to_string(),
+            tx_id: tx.unwrap_or_default().to_string(),
+            active,
+            limit: usize_to_u64(limit)?,
+            offset: usize_to_u64(offset)?,
+        })
+        .await?
+        .into_inner();
+    if active {
+        Ok(FactList::Active(serde_json::from_str(&response.json)?))
+    } else {
+        Ok(FactList::Log(serde_json::from_str(&response.json)?))
+    }
+}
+
+async fn list_facts_direct(
+    workspace: &Workspace,
+    config: &PoneglyphDaemonConfig,
+    entity: Option<&str>,
+    tx: Option<&str>,
+    active: bool,
+    limit: usize,
+    offset: usize,
+) -> Result<FactList> {
+    let poneglyph = open_runtime(workspace.clone(), config.clone()).await?;
+    if active {
+        if tx.is_some() {
+            anyhow::bail!("active fact listing does not support --tx");
+        }
+        let filter = match entity {
+            Some(entity) => ActiveFilter::ByEntity(parse_uri(entity)?),
+            None => ActiveFilter::All,
+        };
+        let facts = poneglyph
+            .fact_service()
+            .store()
+            .get_active_facts(filter)
+            .await?;
+        return Ok(FactList::Active(collect_results(facts).await?).paginate(limit, offset));
+    }
+
+    let filter = match (entity, tx) {
+        (Some(entity), None) => Filter::ByEntityUri(parse_uri(entity)?),
+        (None, Some(tx)) => Filter::ByTx(parse_uri(tx)?),
+        (None, None) => Filter::All,
+        (Some(_), Some(_)) => anyhow::bail!("fact list accepts only one filter: --entity or --tx"),
+    };
+    let facts = poneglyph.fact_service().get_facts(filter).await?;
+    Ok(FactList::Log(collect_results(facts).await?).paginate(limit, offset))
 }
 
 async fn state_fact(
