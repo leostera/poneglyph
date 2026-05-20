@@ -8,9 +8,11 @@
 use std::sync::Arc;
 
 use poneglyph_core::{
-    EntityStore, FactService, PoneResult, Poneglyph, PoneglyphConfig, SearchProjection,
-    SqliteEntityStore, SqliteFactStore, Store, Workspace,
+    EntityStore, FactService, PoneResult, Poneglyph, PoneglyphConfig, SearchProjection, Store,
+    Workspace,
 };
+
+pub use poneglyph_core::{SqliteEntityStore, SqliteFactStore};
 
 /// Opens a full Poneglyph runtime using this crate's durable storage adapters.
 ///
