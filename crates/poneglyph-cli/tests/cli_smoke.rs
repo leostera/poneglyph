@@ -240,6 +240,19 @@ fn cli_reports_invalid_inputs() {
     fs::write(&schema_path, "{ nope").expect("write bad schema");
     let error = poneglyph_fails(workspace, &["schema", "apply", path_str(&schema_path)]);
     assert!(error.contains("expected") || error.contains("JSON") || error.contains("key"));
+
+    let error = poneglyph_fails(
+        workspace,
+        &[
+            "fact",
+            "list",
+            "--entity",
+            "spotify:album:2112",
+            "--tx",
+            "poneglyph:tx:bad",
+        ],
+    );
+    assert!(error.contains("cannot be used") || error.contains("conflict"));
 }
 
 #[tokio::test]

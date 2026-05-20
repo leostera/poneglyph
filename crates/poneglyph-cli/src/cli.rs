@@ -343,6 +343,32 @@ mod tests {
     }
 
     #[test]
+    fn fact_list_rejects_conflicting_filters() {
+        let error = Cli::try_parse_from([
+            "poneglyph",
+            "fact",
+            "list",
+            "--entity",
+            "spotify:album:2112",
+            "--tx",
+            "poneglyph:tx:1",
+        ])
+        .expect_err("entity and tx conflict");
+        assert!(error.to_string().contains("cannot be used"));
+
+        let error = Cli::try_parse_from([
+            "poneglyph",
+            "fact",
+            "list",
+            "--active",
+            "--tx",
+            "poneglyph:tx:1",
+        ])
+        .expect_err("active and tx conflict");
+        assert!(error.to_string().contains("cannot be used"));
+    }
+
+    #[test]
     fn fact_help_mentions_json_output_flags() {
         let mut command = Cli::command();
         let fact = command.find_subcommand_mut("fact").expect("fact help");
