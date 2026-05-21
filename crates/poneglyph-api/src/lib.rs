@@ -1,3 +1,7 @@
+// Tonic service methods conventionally return `Result<_, tonic::Status>`;
+// boxing every gRPC error would make the service boundary less idiomatic.
+#![allow(clippy::result_large_err)]
+
 pub mod proto {
     tonic::include_proto!("poneglyph.daemon.v1");
 }

@@ -104,6 +104,7 @@ impl Poneglyph {
     }
 }
 
+#[derive(Default)]
 pub struct PoneglyphBuilder {
     workspace: Option<Workspace>,
     config: Option<PoneglyphConfig>,
@@ -111,19 +112,6 @@ pub struct PoneglyphBuilder {
     entity_store: Option<Arc<dyn EntityStore>>,
     search_projection: Option<Arc<SearchProjection>>,
     storage_factory: Option<Arc<dyn RuntimeStorageFactory>>,
-}
-
-impl Default for PoneglyphBuilder {
-    fn default() -> Self {
-        Self {
-            workspace: None,
-            config: None,
-            fact_service: None,
-            entity_store: None,
-            search_projection: None,
-            storage_factory: None,
-        }
-    }
 }
 
 impl PoneglyphBuilder {
@@ -237,10 +225,10 @@ impl PoneglyphBuilder {
     }
 }
 
+type RuntimeWorkerHandle = JoinHandle<PoneResult<()>>;
+
 impl Poneglyph {
-    fn spawn_background_workers(
-        &self,
-    ) -> PoneResult<(JoinHandle<PoneResult<()>>, JoinHandle<PoneResult<()>>)> {
+    fn spawn_background_workers(&self) -> PoneResult<(RuntimeWorkerHandle, RuntimeWorkerHandle)> {
         let consolidator = Consolidator::builder()
             .with_entity_store_arc(self.entity_store.clone())
             .with_fact_subscription(self.fact_service.subscribe())

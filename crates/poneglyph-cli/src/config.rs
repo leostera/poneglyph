@@ -31,7 +31,7 @@ impl Default for PoneglyphDaemonRpcConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Builder)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default, Builder)]
 #[builder(pattern = "owned")]
 pub struct PoneglyphDaemonConfig {
     #[serde(default)]
@@ -43,16 +43,6 @@ pub struct PoneglyphDaemonConfig {
     #[serde(default)]
     #[builder(default)]
     pub logging: PoneglyphDaemonLoggingConfig,
-}
-
-impl Default for PoneglyphDaemonConfig {
-    fn default() -> Self {
-        Self {
-            poneglyph: PoneglyphConfig::default(),
-            rpc: PoneglyphDaemonRpcConfig::default(),
-            logging: PoneglyphDaemonLoggingConfig::default(),
-        }
-    }
 }
 
 fn default_rpc_bind_addr() -> SocketAddr {
