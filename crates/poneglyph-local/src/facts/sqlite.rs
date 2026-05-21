@@ -125,11 +125,12 @@ impl SqliteFactStore {
             .await?;
         }
 
-        sqlx::query(
+        for statement in [
+            "CREATE INDEX IF NOT EXISTS idx_active_facts_field ON active_facts(field)",
             "CREATE INDEX IF NOT EXISTS idx_schema_entries_type ON schema_entries(schema_type)",
-        )
-        .execute(&self.pool)
-        .await?;
+        ] {
+            sqlx::query(statement).execute(&self.pool).await?;
+        }
 
         Ok(())
     }
