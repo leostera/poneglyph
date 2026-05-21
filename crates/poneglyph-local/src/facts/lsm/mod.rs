@@ -17,7 +17,7 @@ use poneglyph::schema::{SchemaDefinition, SchemaSnapshot};
 use poneglyph::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Store, Uri, Value};
 use tokio::sync::mpsc;
 
-use self::manifest::{Manifest, SegmentMetadata};
+use self::manifest::{Manifest, ManifestEdit, SegmentMetadata};
 use self::memtable::Memtable;
 use self::sst::SstReader;
 use self::wal::Wal;
@@ -451,12 +451,14 @@ impl Inner {
         let reader = sst::write_memtable(&path, &compacted)
             .map_err(|source| Error::FactStoreIo { source })?;
 
-        self.manifest.replace_segments(
-            previous_segments.clone(),
-            vec![SegmentMetadata::level_zero(filename)],
-        );
         self.manifest
-            .save(&self.dir)
+            .persist_edit(
+                &self.dir,
+                ManifestEdit::ReplaceSegments {
+                    removed: previous_segments.clone(),
+                    added: vec![SegmentMetadata::level_zero(filename)],
+                },
+            )
             .map_err(|source| Error::FactStoreIo { source })?;
         self.segments_newest_first = vec![reader];
         for segment in previous_segments {
@@ -481,9 +483,11 @@ impl Inner {
         let path = self.dir.join(&filename);
         let reader = sst::write_memtable(&path, &self.memtable)
             .map_err(|source| Error::FactStoreIo { source })?;
-        self.manifest.add_newest_segment(filename);
         self.manifest
-            .save(&self.dir)
+            .persist_edit(
+                &self.dir,
+                ManifestEdit::AddSegment(SegmentMetadata::level_zero(filename)),
+            )
             .map_err(|source| Error::FactStoreIo { source })?;
         self.segments_newest_first.insert(0, reader);
         self.memtable = Memtable::new();

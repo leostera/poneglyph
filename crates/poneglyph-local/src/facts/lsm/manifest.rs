@@ -1,9 +1,10 @@
-use std::io;
+use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 const MANIFEST_FILE: &str = "MANIFEST.json";
+const MANIFEST_EDIT_LOG_FILE: &str = "MANIFEST.log";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Manifest {
@@ -23,7 +24,8 @@ pub(crate) struct SegmentMetadata {
     pub(crate) file_size_bytes: Option<u64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case")]
 pub(crate) enum ManifestEdit {
     AddSegment(SegmentMetadata),
     ReplaceSegments {
@@ -44,16 +46,17 @@ impl Default for Manifest {
 
 impl Manifest {
     pub(crate) fn load(dir: impl AsRef<Path>) -> io::Result<Self> {
-        let path = dir.as_ref().join(MANIFEST_FILE);
-        match std::fs::read(&path) {
-            Ok(bytes) => {
-                let mut manifest: Self = serde_json::from_slice(&bytes).map_err(invalid_data)?;
-                manifest.normalize();
-                Ok(manifest)
-            }
-            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Self::default()),
-            Err(error) => Err(error),
-        }
+        let dir = dir.as_ref();
+        let path = dir.join(MANIFEST_FILE);
+        let mut manifest = match std::fs::read(&path) {
+            Ok(bytes) => serde_json::from_slice(&bytes).map_err(invalid_data)?,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Self::default(),
+            Err(error) => return Err(error),
+        };
+        manifest.normalize();
+        manifest.replay_edit_log(dir)?;
+        manifest.normalize();
+        Ok(manifest)
     }
 
     pub(crate) fn save(&self, dir: impl AsRef<Path>) -> io::Result<()> {
@@ -64,7 +67,20 @@ impl Manifest {
         let bytes = serde_json::to_vec_pretty(self).map_err(invalid_data)?;
         std::fs::write(&temp_path, bytes)?;
         std::fs::rename(temp_path, path)?;
+        clear_edit_log(dir)?;
         Ok(())
+    }
+
+    pub(crate) fn persist_edit(
+        &mut self,
+        dir: impl AsRef<Path>,
+        edit: ManifestEdit,
+    ) -> io::Result<()> {
+        let dir = dir.as_ref();
+        append_edit_log(dir, &edit)?;
+        self.apply_edit(edit);
+        self.normalize();
+        self.save(dir)
     }
 
     pub(crate) fn allocate_segment(&mut self) -> String {
@@ -76,10 +92,12 @@ impl Manifest {
     pub(crate) fn add_newest_segment(&mut self, filename: String) {
         let metadata = SegmentMetadata::level_zero(filename);
         self.apply_edit(ManifestEdit::AddSegment(metadata));
+        self.normalize();
     }
 
     pub(crate) fn replace_segments(&mut self, removed: Vec<String>, added: Vec<SegmentMetadata>) {
         self.apply_edit(ManifestEdit::ReplaceSegments { removed, added });
+        self.normalize();
     }
 
     pub(crate) fn segment_paths(&self, dir: impl AsRef<Path>) -> Vec<PathBuf> {
@@ -90,35 +108,60 @@ impl Manifest {
             .collect()
     }
 
+    fn replay_edit_log(&mut self, dir: &Path) -> io::Result<()> {
+        let path = dir.join(MANIFEST_EDIT_LOG_FILE);
+        let file = match std::fs::File::open(&path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+            Err(error) => return Err(error),
+        };
+        for line in io::BufReader::new(file).lines() {
+            let line = line?;
+            if line.trim().is_empty() {
+                continue;
+            }
+            let edit: ManifestEdit = serde_json::from_str(&line).map_err(invalid_data)?;
+            self.apply_edit(edit);
+        }
+        Ok(())
+    }
+
     fn apply_edit(&mut self, edit: ManifestEdit) {
         match edit {
             ManifestEdit::AddSegment(metadata) => {
+                self.remove_segment_references(std::slice::from_ref(&metadata.filename));
                 self.ensure_level(metadata.level as usize);
                 self.segments_newest_first
                     .insert(0, metadata.filename.clone());
-                if metadata.level == 0 {
+                let level = metadata.level as usize;
+                if level == 0 {
                     self.levels[0].insert(0, metadata);
                 } else {
-                    self.levels[metadata.level as usize].push(metadata);
+                    self.levels[level].push(metadata);
                 }
             }
             ManifestEdit::ReplaceSegments { removed, added } => {
-                self.segments_newest_first
-                    .retain(|filename| !removed.contains(filename));
-                for level in &mut self.levels {
-                    level.retain(|segment| !removed.contains(&segment.filename));
-                }
+                self.remove_segment_references(&removed);
                 for metadata in added {
                     self.ensure_level(metadata.level as usize);
                     self.segments_newest_first
                         .insert(0, metadata.filename.clone());
-                    if metadata.level == 0 {
+                    let level = metadata.level as usize;
+                    if level == 0 {
                         self.levels[0].insert(0, metadata);
                     } else {
-                        self.levels[metadata.level as usize].push(metadata);
+                        self.levels[level].push(metadata);
                     }
                 }
             }
+        }
+    }
+
+    fn remove_segment_references(&mut self, removed: &[String]) {
+        self.segments_newest_first
+            .retain(|filename| !removed.contains(filename));
+        for level in &mut self.levels {
+            level.retain(|segment| !removed.contains(&segment.filename));
         }
     }
 
@@ -140,6 +183,15 @@ impl Manifest {
                 .map(SegmentMetadata::level_zero)
                 .collect();
         }
+        let next_from_segments = self
+            .segments_newest_first
+            .iter()
+            .filter_map(|filename| filename.strip_suffix(".sst"))
+            .filter_map(|number| number.parse::<u64>().ok())
+            .max()
+            .map(|number| number + 1)
+            .unwrap_or(1);
+        self.next_file_number = self.next_file_number.max(next_from_segments);
     }
 }
 
@@ -155,6 +207,28 @@ impl SegmentMetadata {
     }
 }
 
+fn append_edit_log(dir: &Path, edit: &ManifestEdit) -> io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    let path = dir.join(MANIFEST_EDIT_LOG_FILE);
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)?;
+    serde_json::to_writer(&mut file, edit).map_err(invalid_data)?;
+    file.write_all(b"\n")?;
+    file.sync_data()?;
+    Ok(())
+}
+
+fn clear_edit_log(dir: &Path) -> io::Result<()> {
+    let path = dir.join(MANIFEST_EDIT_LOG_FILE);
+    match std::fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
 fn invalid_data(error: impl std::error::Error + Send + Sync + 'static) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, error)
 }
@@ -163,7 +237,7 @@ fn invalid_data(error: impl std::error::Error + Send + Sync + 'static) -> io::Er
 mod tests {
     use tempfile::tempdir;
 
-    use super::{Manifest, SegmentMetadata};
+    use super::{Manifest, ManifestEdit, SegmentMetadata, append_edit_log};
 
     #[test]
     fn manifest_allocates_padded_segment_names_and_roundtrips() {
@@ -186,6 +260,47 @@ mod tests {
         assert_eq!(loaded.levels[0][0].filename, second);
         assert_eq!(loaded.levels[0][1].filename, first);
         assert_eq!(loaded.segment_paths(tempdir.path()).len(), 2);
+    }
+
+    #[test]
+    fn manifest_persists_and_replays_edit_log_entries() {
+        let tempdir = tempdir().expect("tempdir");
+        append_edit_log(
+            tempdir.path(),
+            &ManifestEdit::AddSegment(SegmentMetadata::level_zero(
+                "00000000000000000007.sst".to_string(),
+            )),
+        )
+        .expect("append edit");
+
+        let loaded = Manifest::load(tempdir.path()).expect("load");
+        assert_eq!(
+            loaded.segments_newest_first,
+            vec!["00000000000000000007.sst"]
+        );
+        assert_eq!(loaded.levels[0][0].filename, "00000000000000000007.sst");
+        assert_eq!(loaded.next_file_number, 8);
+    }
+
+    #[test]
+    fn manifest_persist_edit_snapshots_and_clears_log() {
+        let tempdir = tempdir().expect("tempdir");
+        let mut manifest = Manifest::default();
+        manifest
+            .persist_edit(
+                tempdir.path(),
+                ManifestEdit::AddSegment(SegmentMetadata::level_zero(
+                    "00000000000000000002.sst".to_string(),
+                )),
+            )
+            .expect("persist edit");
+
+        assert!(!tempdir.path().join("MANIFEST.log").exists());
+        let loaded = Manifest::load(tempdir.path()).expect("load");
+        assert_eq!(
+            loaded.segments_newest_first,
+            vec!["00000000000000000002.sst"]
+        );
     }
 
     #[test]
