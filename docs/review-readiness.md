@@ -48,3 +48,15 @@ For a quick user-surface smoke check after building, `poneglyph --help` and
 
 The GitHub Actions workflow runs the same checks and checks out the sibling
 `datafox` repository.
+
+## Follow-up queue
+
+These are intentionally not part of the reset review unless the scope changes:
+
+- Remove legacy JSON semantic RPCs after one compatibility window, keeping the
+  typed protobuf RPCs as the only semantic daemon API.
+- Revisit RFD0001 and decide whether core keeps, removes, or feature-gates its
+  compatibility SQLite/search defaults before physically moving those modules to
+  `poneglyph-db`.
+- Design the Unix-domain-socket daemon transport and socket cleanup lifecycle;
+  keep localhost TCP as the portable fallback.

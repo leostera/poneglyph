@@ -48,20 +48,32 @@ fn cli_help_and_version_exit_without_opening_workspace() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = tempdir.path().join("unused-workspace");
 
-    for args in [
-        vec!["--workspace", path_str(&workspace), "--help"],
-        vec!["--workspace", path_str(&workspace), "--version"],
-    ] {
+    let cases = [
+        (
+            vec!["--workspace", path_str(&workspace), "--help"],
+            "Poneglyph semantic graph database CLI",
+        ),
+        (
+            vec!["--workspace", path_str(&workspace), "--version"],
+            env!("CARGO_PKG_VERSION"),
+        ),
+    ];
+
+    for (args, expected_stdout) in cases {
         let output = Command::new(env!("CARGO_BIN_EXE_poneglyph"))
             .args(args)
             .output()
             .expect("run poneglyph");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
 
         assert!(
             output.status.success(),
-            "poneglyph metadata command failed\nstdout:\n{}\nstderr:\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
+            "poneglyph metadata command failed\nstdout:\n{stdout}\nstderr:\n{stderr}"
+        );
+        assert!(
+            stdout.contains(expected_stdout),
+            "metadata stdout should contain {expected_stdout:?}:\n{stdout}"
         );
     }
 
