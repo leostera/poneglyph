@@ -48,6 +48,9 @@ impl SqliteFactStore {
         sqlx::query("PRAGMA busy_timeout = 5000")
             .execute(&pool)
             .await?;
+        sqlx::query("PRAGMA locking_mode = EXCLUSIVE")
+            .execute(&pool)
+            .await?;
 
         let store = Self { pool };
         store.migrate().await?;
