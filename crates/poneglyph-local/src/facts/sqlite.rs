@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use async_trait::async_trait;
@@ -173,6 +174,7 @@ impl Store for SqliteFactStore {
         let mut tx = self.pool.begin().await?;
         let mut saw_fact = false;
         let mut persisted = Vec::new();
+        let mut schema_batch = SchemaBatchUpdate::default();
 
         while let Some(mut fact) = fact_stream.recv().await {
             saw_fact = true;
@@ -189,7 +191,7 @@ impl Store for SqliteFactStore {
             fact.tx_id = Some(tx_id.clone());
             insert_fact(&mut tx, &fact).await?;
             update_active_graph(&mut tx, &fact).await?;
-            update_schema_snapshot(&mut tx, &fact).await?;
+            schema_batch.observe_fact(&fact);
             persisted.push(fact);
         }
 
@@ -197,6 +199,7 @@ impl Store for SqliteFactStore {
             return Err(Error::EmptyFactBatch);
         }
 
+        schema_batch.apply(&mut tx).await?;
         tx.commit().await?;
         Ok((tx_id, persisted))
     }
@@ -488,6 +491,143 @@ async fn update_active_graph(
     }
 
     Ok(())
+}
+
+#[derive(Default)]
+struct SchemaBatchUpdate {
+    namespaces: BTreeSet<Uri>,
+    kinds: BTreeSet<Uri>,
+    fields: BTreeSet<Uri>,
+    entries: BTreeMap<Uri, PartialSchemaEntry>,
+}
+
+impl SchemaBatchUpdate {
+    fn observe_fact(&mut self, fact: &Fact) {
+        if fact.retraction {
+            return;
+        }
+
+        if let Some(namespace_uri) = namespace_uri_for(&fact.entity) {
+            self.namespaces.insert(namespace_uri);
+        }
+        if let Some(namespace_uri) = namespace_uri_for(&fact.field) {
+            self.namespaces.insert(namespace_uri);
+        }
+        if let Value::Reference(reference) = &fact.value
+            && let Some(namespace_uri) = namespace_uri_for(reference)
+        {
+            self.namespaces.insert(namespace_uri);
+        }
+
+        self.fields.insert(fact.field.clone());
+
+        if let Some(kind_uri) = observed_kind_uri_for(&fact.entity) {
+            self.kinds.insert(kind_uri);
+        }
+
+        if fact.field.as_str() == SCHEMA_TYPE
+            && let Value::Reference(kind_uri) = &fact.value
+            && kind_uri.as_str() != "schema:namespace"
+            && kind_uri.as_str() != "schema:kind"
+            && kind_uri.as_str() != "schema:field"
+        {
+            self.kinds.insert(kind_uri.clone());
+        }
+
+        match (fact.field.as_str(), &fact.value) {
+            (SCHEMA_TYPE, Value::Reference(value)) => {
+                self.entries
+                    .entry(fact.entity.clone())
+                    .or_default()
+                    .schema_type = Some(value.clone());
+            }
+            (SCHEMA_NAME, Value::Text(value)) => {
+                self.entries.entry(fact.entity.clone()).or_default().name = Some(value.clone());
+            }
+            (SCHEMA_DOC, Value::Text(value)) => {
+                self.entries.entry(fact.entity.clone()).or_default().doc = Some(value.clone());
+            }
+            (SCHEMA_SAME_AS, Value::Reference(value)) => {
+                self.entries.entry(fact.entity.clone()).or_default().same_as = Some(value.clone());
+            }
+            (SCHEMA_FIELD_DOMAIN, Value::Reference(value)) => {
+                self.entries.entry(fact.entity.clone()).or_default().domain = Some(value.clone());
+            }
+            (SCHEMA_FIELD_RANGE, Value::Reference(value)) => {
+                self.entries.entry(fact.entity.clone()).or_default().range = Some(value.clone());
+            }
+            (SCHEMA_FIELD_VALUE_TYPE, Value::Text(value)) => {
+                self.entries
+                    .entry(fact.entity.clone())
+                    .or_default()
+                    .value_type = Some(value.clone());
+            }
+            (SCHEMA_FIELD_CARDINALITY, Value::Text(value)) => {
+                self.entries
+                    .entry(fact.entity.clone())
+                    .or_default()
+                    .cardinality = Some(value.clone());
+            }
+            (SCHEMA_FIELD_DEPRECATED, Value::Boolean(value)) => {
+                self.entries
+                    .entry(fact.entity.clone())
+                    .or_default()
+                    .deprecated = Some(*value);
+            }
+            (SCHEMA_FIELD_IDENTITY, Value::Boolean(value)) => {
+                self.entries
+                    .entry(fact.entity.clone())
+                    .or_default()
+                    .identity = Some(*value);
+            }
+            _ => {}
+        }
+    }
+
+    async fn apply(self, tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>) -> PoneResult<()> {
+        for uri in self.namespaces {
+            insert_observed_uri(tx, "schema_namespaces", &uri).await?;
+        }
+        for uri in self.fields {
+            insert_observed_uri(tx, "schema_fields", &uri).await?;
+        }
+        for uri in self.kinds {
+            insert_observed_uri(tx, "schema_kinds", &uri).await?;
+        }
+        for (uri, entry) in self.entries {
+            if let Some(value) = entry.schema_type.as_ref() {
+                upsert_schema_entry_column(tx, &uri, "schema_type", Some(value.as_str())).await?;
+            }
+            if let Some(value) = entry.name.as_deref() {
+                upsert_schema_entry_column(tx, &uri, "name", Some(value)).await?;
+            }
+            if let Some(value) = entry.doc.as_deref() {
+                upsert_schema_entry_column(tx, &uri, "doc", Some(value)).await?;
+            }
+            if let Some(value) = entry.same_as.as_ref() {
+                upsert_schema_entry_column(tx, &uri, "same_as", Some(value.as_str())).await?;
+            }
+            if let Some(value) = entry.domain.as_ref() {
+                upsert_schema_entry_column(tx, &uri, "domain_uri", Some(value.as_str())).await?;
+            }
+            if let Some(value) = entry.range.as_ref() {
+                upsert_schema_entry_column(tx, &uri, "range_uri", Some(value.as_str())).await?;
+            }
+            if let Some(value) = entry.value_type.as_deref() {
+                upsert_schema_entry_column(tx, &uri, "value_type", Some(value)).await?;
+            }
+            if let Some(value) = entry.cardinality.as_deref() {
+                upsert_schema_entry_column(tx, &uri, "cardinality", Some(value)).await?;
+            }
+            if let Some(value) = entry.deprecated {
+                upsert_schema_entry_bool(tx, &uri, "deprecated", value).await?;
+            }
+            if let Some(value) = entry.identity {
+                upsert_schema_entry_bool(tx, &uri, "identity", value).await?;
+            }
+        }
+        Ok(())
+    }
 }
 
 async fn update_schema_snapshot(
