@@ -178,11 +178,12 @@ impl Store for SqliteFactStore {
             saw_fact = true;
             validate_pending_fact(&fact)?;
 
-            match current_tuple_state(&mut tx, &fact).await? {
-                Some(current) if fact.retraction && current.retraction => continue,
-                Some(current) if fact.retraction && !current.retraction => {}
-                None if fact.retraction => return Err(Error::CannotRetractUnknownFact),
-                _ => {}
+            if fact.retraction {
+                match current_tuple_state(&mut tx, &fact).await? {
+                    Some(current) if current.retraction => continue,
+                    Some(_) => {}
+                    None => return Err(Error::CannotRetractUnknownFact),
+                }
             }
 
             fact.tx_id = Some(tx_id.clone());
