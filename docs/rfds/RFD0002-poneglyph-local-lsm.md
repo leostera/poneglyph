@@ -111,6 +111,7 @@ The current implementation has a synchronous full-store `compact()` method. It i
 1. Extend the manifest from a newest-first flat segment list to level metadata:
    - `L0`: newest-first overlapping flush segments;
    - `L1+`: non-overlapping sorted runs with `smallest_key`/`largest_key`, byte size, record count, and tombstone count.
+   - Status: the experimental manifest now stores level vectors plus `smallest_key`/`largest_key` and byte-size metadata for new segments while retaining the flat newest-first compatibility view.
 2. Keep flush cheap:
    - `flush_memtable` only writes a new L0 SST and appends a manifest edit;
    - it may enqueue compaction work but should not synchronously compact on the foreground write path unless explicitly requested by tests/tools.
@@ -124,7 +125,7 @@ The current implementation has a synchronous full-store `compact()` method. It i
 5. Preserve crash safety:
    - startup loads the manifest and treats unreferenced SST files as garbage;
    - files referenced by the manifest are never removed until replacement files are durable and published;
-   - a future append-only MANIFEST log should replace the current full JSON manifest once compaction edits become frequent.
+   - manifest edits are appended to `MANIFEST.log` and replayed over the latest JSON snapshot on startup; the current implementation snapshots after each edit and clears the log, but the edit-log path now covers interrupted snapshot/publish flows.
 6. Add dedicated tests before enabling automatic compaction:
    - crash after output SST write but before manifest publish;
    - crash after manifest publish but before obsolete file deletion;
@@ -171,9 +172,10 @@ These are acceptable for the experimental backend but need production bounds bef
 - prefer active-index compaction/rebuild over preserving derived tombstones indefinitely;
 - measure startup/open time after large WAL replay and after SST-heavy compaction;
 - optimize SST open/query-after-reopen separately from warm in-process cache performance;
+- use persisted segment bounds during reopen/read planning before falling back to deriving bounds from SST contents;
 - evaluate mmap/block-cache SST reads instead of always loading whole SST files into memory.
 
-The experimental implementation currently keeps the fastest decoded-active cache path unbounded by default and exposes `PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES` as an opt-in safety bound. Autoresearch showed unconditional hot-path bounds regressed the warm One Piece query benchmark, so production policy should remain configurable until a lower-overhead eviction strategy exists. It also exposes `PONEGLYPH_LSM_FLUSH_THRESHOLD_BYTES`; the default is intentionally high for medium local graph workloads but should be revisited once compaction is leveled/background rather than manual full compaction. A prewarmed runtime opener can fill the active cache on startup; this improves first-query latency after reopen but shifts the cost into startup and currently needs better SST scan/index performance.
+The experimental implementation currently keeps the fastest decoded-active cache path unbounded by default and exposes `PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES` as an opt-in safety bound. Autoresearch showed unconditional hot-path bounds regressed the warm One Piece query benchmark, so production policy should remain configurable until a lower-overhead eviction strategy exists. It also exposes `PONEGLYPH_LSM_FLUSH_THRESHOLD_BYTES`; the default is intentionally high for medium local graph workloads but should be revisited once compaction is leveled/background rather than manual full compaction. A prewarmed runtime opener can fill the active cache on startup; this improves first-query latency after reopen but shifts the cost into startup and currently needs better SST scan/index performance. Reopen now uses persisted segment bounds when available, so future cold-start work should focus on avoiding whole-file SST byte loads or replacing them with mmap/block-cache reads.
 
 ## Open questions
 
