@@ -142,7 +142,8 @@ These are acceptable for the experimental backend but need production bounds bef
 - expose cold-query and warm-query metrics separately;
 - add segment compaction before lowering the flush threshold for larger datasets;
 - prefer active-index compaction/rebuild over preserving derived tombstones indefinitely;
-- measure startup/open time after large WAL replay and after SST-heavy compaction.
+- measure startup/open time after large WAL replay and after SST-heavy compaction;
+- optimize SST open/query-after-reopen separately from warm in-process cache performance.
 
 The experimental implementation currently keeps the fastest decoded-active cache path unbounded by default and exposes `PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES` as an opt-in safety bound. Autoresearch showed unconditional hot-path bounds regressed the warm One Piece query benchmark, so production policy should remain configurable until a lower-overhead eviction strategy exists. It also exposes `PONEGLYPH_LSM_FLUSH_THRESHOLD_BYTES`; the default is intentionally high for medium local graph workloads but should be revisited once compaction is leveled/background rather than manual full compaction.
 
