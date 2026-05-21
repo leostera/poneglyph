@@ -46,10 +46,17 @@ fn generated_fact(index: usize) -> Fact {
 }
 
 async fn state_batches(store: &dyn Store, total: usize, batch_size: usize) -> PoneResult<()> {
-    for start in (0..total).step_by(batch_size) {
-        let end = (start + batch_size).min(total);
-        let facts = (start..end).map(generated_fact).collect::<Vec<_>>();
-        store.state_facts(fact_channel(facts)).await?;
+    let facts = (0..total).map(generated_fact).collect::<Vec<_>>();
+    state_prebuilt_batches(store, &facts, batch_size).await
+}
+
+async fn state_prebuilt_batches(
+    store: &dyn Store,
+    facts: &[Fact],
+    batch_size: usize,
+) -> PoneResult<()> {
+    for chunk in facts.chunks(batch_size) {
+        store.state_facts(fact_channel(chunk.to_vec())).await?;
     }
     Ok(())
 }
@@ -125,8 +132,10 @@ async fn local_backend_write_heavy_stress() {
         .await
         .expect("fact store");
 
+    let facts = (0..total).map(generated_fact).collect::<Vec<_>>();
+
     let started = Instant::now();
-    state_batches(store.as_ref(), total, batch_size)
+    state_prebuilt_batches(store.as_ref(), &facts, batch_size)
         .await
         .expect("write batches");
     let elapsed = started.elapsed();
