@@ -52,7 +52,7 @@ impl TantivySearchProjection {
             vec![self.fields.namespace, self.fields.kind, self.fields.content],
         );
         let query = parser.parse_query(query)?;
-        let hits = searcher.search(&query, &TopDocs::with_limit(limit).order_by_score())?;
+        let hits = searcher.search(&query, &TopDocs::with_limit(limit))?;
 
         let hits = hits
             .into_iter()
@@ -75,12 +75,7 @@ impl TantivySearchProjection {
     pub fn list_entities(&self, limit: usize, offset: usize) -> PoneResult<Vec<IndexedEntity>> {
         let searcher = self.reader.searcher();
         let query = tantivy::query::AllQuery;
-        let hits = searcher.search(
-            &query,
-            &TopDocs::with_limit(limit)
-                .and_offset(offset)
-                .order_by_score(),
-        )?;
+        let hits = searcher.search(&query, &TopDocs::with_limit(limit).and_offset(offset))?;
 
         let entities = hits
             .into_iter()
