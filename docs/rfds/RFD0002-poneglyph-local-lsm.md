@@ -104,6 +104,33 @@ A point/range iterator merges memtable and SST iterators newest-to-oldest, respe
 - Tombstones can be dropped once shadowed entries are gone from older levels.
 - Active indexes can compact aggressively because they are derived and latest-state only.
 
+### Leveled/background compaction plan
+
+The current implementation has a synchronous full-store `compact()` method. It is useful for correctness and small-store experiments but is not the production shape. The replacement plan is:
+
+1. Extend the manifest from a newest-first flat segment list to level metadata:
+   - `L0`: newest-first overlapping flush segments;
+   - `L1+`: non-overlapping sorted runs with `smallest_key`/`largest_key`, byte size, record count, and tombstone count.
+2. Keep flush cheap:
+   - `flush_memtable` only writes a new L0 SST and appends a manifest edit;
+   - it may enqueue compaction work but should not synchronously compact on the foreground write path unless explicitly requested by tests/tools.
+3. Add a background/manual compaction planner:
+   - compact L0 when segment count or byte budget is exceeded;
+   - compact lower levels by picking overlapping key ranges in the next level;
+   - write replacement SSTs first, fsync them, then atomically publish a manifest edit that removes input segments and adds output segments.
+4. Split keyspace policies:
+   - `log/*` compaction preserves every fact entry and drops only obsolete internal tombstones;
+   - `active/*` compaction keeps newest visible entries and can drop shadowed older values/tombstones because active indexes are rebuildable projections.
+5. Preserve crash safety:
+   - startup loads the manifest and treats unreferenced SST files as garbage;
+   - files referenced by the manifest are never removed until replacement files are durable and published;
+   - a future append-only MANIFEST log should replace the current full JSON manifest once compaction edits become frequent.
+6. Add dedicated tests before enabling automatic compaction:
+   - crash after output SST write but before manifest publish;
+   - crash after manifest publish but before obsolete file deletion;
+   - overlapping L0 inputs plus L1 outputs preserve newest-visible semantics;
+   - active-index rebuild after compaction matches replay from `log/*`.
+
 ## Correctness plan
 
 - Port existing `Store` conformance/property tests to run against SQLite and LSM backends.
