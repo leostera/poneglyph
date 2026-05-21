@@ -784,8 +784,8 @@ mod tests {
 
     use super::proto::poneglyph_daemon_server::PoneglyphDaemon;
     use super::proto::{
-        ListEntitiesRequest, ListFactsRequest, SearchEntitiesRequest, StateFactTypedRequest,
-        StateFactsTypedRequest,
+        GetEntityRequest, ListEntitiesRequest, ListFactsRequest, QueryRequest,
+        SearchEntitiesRequest, StateFactTypedRequest, StateFactsTypedRequest,
     };
     use super::{
         DaemonApi, active_fact_from_proto, active_fact_to_proto, entity_from_proto,
@@ -954,6 +954,58 @@ mod tests {
             .expect_err("missing kind should fail");
 
         assert!(error.contains("missing value kind"));
+    }
+
+    #[tokio::test]
+    async fn query_typed_returns_typed_bindings() {
+        let (api, runtime) = api_with_runtime().await;
+        runtime
+            .state_facts(vec![fact!(
+                uri!("spotify:album:signals"),
+                uri!("spotify:displayName"),
+                Value::text("Signals")
+            )])
+            .await
+            .expect("state facts");
+
+        let response = api
+            .query_typed(Request::new(QueryRequest {
+                expression: r#"spotify:displayName(Album, "Signals")"#.to_string(),
+            }))
+            .await
+            .expect("query")
+            .into_inner();
+
+        assert_eq!(response.rows.len(), 1);
+        assert_eq!(response.rows[0].bindings.len(), 1);
+        assert_eq!(response.rows[0].bindings[0].variable, "Album");
+    }
+
+    #[tokio::test]
+    async fn query_typed_rejects_invalid_queries() {
+        let error = api()
+            .await
+            .query_typed(Request::new(QueryRequest {
+                expression: "not a query".to_string(),
+            }))
+            .await
+            .expect_err("invalid query should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+    }
+
+    #[tokio::test]
+    async fn get_entity_typed_returns_none_for_missing_entities() {
+        let response = api()
+            .await
+            .get_entity_typed(Request::new(GetEntityRequest {
+                uri: "spotify:album:missing".to_string(),
+            }))
+            .await
+            .expect("get entity")
+            .into_inner();
+
+        assert!(response.entity.is_none());
     }
 
     #[tokio::test]
@@ -1244,6 +1296,21 @@ mod tests {
         let error = api()
             .await
             .search_entities(Request::new(SearchEntitiesRequest {
+                query: "Signals".to_string(),
+                limit: 0,
+            }))
+            .await
+            .expect_err("zero limit should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("greater than 0"));
+    }
+
+    #[tokio::test]
+    async fn search_entities_typed_rejects_zero_limit() {
+        let error = api()
+            .await
+            .search_entities_typed(Request::new(SearchEntitiesRequest {
                 query: "Signals".to_string(),
                 limit: 0,
             }))
