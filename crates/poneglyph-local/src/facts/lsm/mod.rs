@@ -134,7 +134,10 @@ impl Store for LsmFactStore {
     }
 
     async fn repair(&self) -> PoneResult<()> {
-        Ok(())
+        self.inner
+            .lock()
+            .expect("LSM mutex poisoned")
+            .repair_active_indexes()
     }
 }
 
@@ -265,6 +268,47 @@ impl Inner {
             .into_iter()
             .map(|active| key::active_field_key(&active.field, &active.entity, &active.value))
             .collect())
+    }
+
+    fn repair_active_indexes(&mut self) -> PoneResult<()> {
+        let existing = self
+            .scan_values(key::active_all_prefix())?
+            .into_iter()
+            .map(|bytes| serde_json::from_slice::<ActiveFact>(&bytes).map_err(Error::from))
+            .collect::<PoneResult<Vec<_>>>()?;
+        for active in existing {
+            for key in active_index_keys(&active) {
+                self.delete(key)?;
+            }
+        }
+
+        let mut facts = self
+            .scan_facts(key::log_all_prefix())?
+            .into_iter()
+            .collect::<PoneResult<Vec<_>>>()?;
+        facts.sort_by(|left, right| {
+            left.stated_at
+                .cmp(&right.stated_at)
+                .then_with(|| left.fact_id.as_str().cmp(right.fact_id.as_str()))
+        });
+
+        let mut active = std::collections::BTreeMap::new();
+        for fact in facts {
+            let tuple_key = active_tuple_key(&fact);
+            if fact.retraction {
+                active.remove(&tuple_key);
+            } else {
+                active.insert(tuple_key, fact);
+            }
+        }
+
+        for fact in active.into_values() {
+            self.apply_active_indexes(&fact)?;
+        }
+        self.wal
+            .sync()
+            .map_err(|source| Error::FactStoreIo { source })?;
+        Ok(())
     }
 
     fn scan_facts(&self, prefix: Vec<u8>) -> PoneResult<Vec<PoneResult<Fact>>> {
