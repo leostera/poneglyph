@@ -139,6 +139,10 @@ See [`docs/rfds/RFD0000-cli-daemon-architecture.md`](docs/rfds/RFD0000-cli-daemo
 ## Development
 
 ```sh
-cargo check --workspace
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
+
+CI expects this repository and Datafox to be checked out as siblings, matching
+the local `../datafox` path dependency layout.
