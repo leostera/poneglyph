@@ -1,19 +1,24 @@
 # Review Readiness
 
-This reset is ready to review as a narrow Rust-only Poneglyph slice.
+This reset is ready to review as a narrow Rust-only Poneglyph library slice.
 
 ## Review scope
 
-- One user-facing binary: `poneglyph` from `crates/poneglyph-cli`.
-- Product crates only: `poneglyph-cli`, `poneglyph-api`, `poneglyph-core`, and
-  `poneglyph-db`.
-- Local daemon transport: tonic/prost gRPC over localhost TCP.
+- Primary reusable surface: Rust graph database crates for building specific
+  disk-backed daemons, such as a future `codedb` daemon.
+- Product crates only: `poneglyph-core`, `poneglyph-db`, `poneglyph-api`, and the
+  `poneglyph-cli` operator/reference harness.
+- One in-repo binary: `poneglyph` from `crates/poneglyph-cli`.
+- Local daemon transport: tonic/prost gRPC over localhost TCP when using the
+  reference daemon/API boundary.
 - Durable truth: append-only facts. Retractions append facts and do not mutate or
   delete assertions.
 - Derived views: entities and search indexes are replayable projections.
 
 ## Intentional temporary seams
 
+- The in-repo CLI/daemon should be treated as an operator/reference harness for
+  the library crates, not as the only long-term application shape.
 - Legacy JSON semantic RPCs remain in `poneglyph-api` for one compatibility
   window. The CLI uses typed protobuf RPCs for semantic daemon operations, and
   API parity tests protect the legacy shims until removal.
@@ -43,8 +48,14 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
-For a quick user-surface smoke check after building, `poneglyph --help` and
-`poneglyph --version` should exit without opening or repairing a workspace.
+For a quick user-surface smoke check after building:
+
+```sh
+cargo run -p poneglyph-cli -- --help
+cargo run -p poneglyph-cli -- --version
+```
+
+Both commands should exit without opening or repairing a workspace.
 
 The GitHub Actions workflow runs the same checks and checks out the sibling
 `datafox` repository.
@@ -61,6 +72,8 @@ RFD text.
 
 These are intentionally not part of the reset review unless the scope changes:
 
+- Add an embedding guide/API example for a domain daemon that uses Poneglyph as
+  its disk-backed graph database library.
 - Remove legacy JSON semantic RPCs after one compatibility window, keeping the
   typed protobuf RPCs as the only semantic daemon API.
 - Revisit RFD0001 and decide whether core keeps, removes, or feature-gates its

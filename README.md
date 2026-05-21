@@ -1,10 +1,13 @@
 # Poneglyph
 
-Poneglyph is a local-first semantic graph database for agents.
+Poneglyph is a local-first semantic graph database library for agents.
 
-The repository now has one product surface: a Rust `poneglyph` CLI that hosts a
-local daemon and manages append-only facts, schemas, consolidated entities, and
-Datafox-backed Datalog queries.
+The intended product shape is a reusable Rust database layer for building
+specific disk-backed daemon applications. For example, a `codedb` daemon can use
+Poneglyph as its embedded append-only fact store, schema/entity projection
+runtime, and Datafox-backed Datalog query engine. The in-repo `poneglyph` CLI is
+a thin operator/reference harness for exercising those library crates locally,
+not the long-term application surface by itself.
 
 ## Current workspace
 
@@ -19,7 +22,9 @@ Datafox-backed Datalog queries.
 
 The Rust reset is intentionally narrow and reviewable:
 
-- the user-facing binary is only `poneglyph`;
+- the primary reusable surface is the Rust graph database library split across
+  `poneglyph-core`, `poneglyph-db`, and `poneglyph-api`;
+- the only in-repo binary is the `poneglyph` operator/reference CLI;
 - semantic CLI operations prefer typed protobuf daemon RPCs and retain direct
   workspace fallback when the daemon is offline;
 - legacy JSON semantic RPCs remain only as compatibility shims for one migration
@@ -42,7 +47,13 @@ Clone/check out Datafox next to this repository before building:
 cargo check --workspace
 ```
 
-## CLI shape
+## Embedding and CLI shape
+
+Downstream daemons should embed `poneglyph-core` for semantic runtime contracts,
+`poneglyph-db` for disk-backed workspace/storage assembly, and `poneglyph-api`
+when they want the local gRPC service boundary. The CLI below remains useful for
+local inspection, smoke tests, and operations while domain-specific daemons build
+on the library crates.
 
 ```text
 poneglyph --help
@@ -165,6 +176,15 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
+
+After building, a quick binary smoke check is:
+
+```sh
+cargo run -p poneglyph-cli -- --help
+cargo run -p poneglyph-cli -- --version
+```
+
+Both commands should exit without creating or repairing a workspace.
 
 CI expects this repository and Datafox to be checked out as siblings, matching
 the local `../datafox` path dependency layout. The protobuf compiler (`protoc`)

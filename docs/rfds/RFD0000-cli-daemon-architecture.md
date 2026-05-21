@@ -11,20 +11,25 @@ agents. The repository previously mixed a desktop app, web/app packages,
 connectors, API servers, MCP integration, and an in-tree Datafox copy. That made
 it hard to stabilize the core append-only graph runtime.
 
-The new product surface is a single `poneglyph` CLI. The CLI manages a local
-daemon and exposes facts, schemas, entities, and Datalog queries.
+The reset originally stabilized a single `poneglyph` CLI and local daemon so the
+append-only graph runtime could be exercised end-to-end. The smaller long-term
+scope is library-first: Poneglyph should be a reusable Rust graph database layer
+for building specific disk-backed daemon applications, such as a `codedb` daemon
+that embeds Poneglyph as its main database. The CLI remains a reference/operator
+harness for local inspection and smoke testing.
 
 ## Decision
 
-- The only user-facing binary is `poneglyph`.
-- `crates/poneglyph-cli` is the CLI/process host crate and builds the `poneglyph`
-  binary.
-- `crates/poneglyph-api` owns local gRPC protobuf definitions, generated client/server
-  types, and daemon service adapters.
+- The primary reusable surface is the Rust library/database layer.
 - `crates/poneglyph-core` is the core runtime/library crate.
 - `crates/poneglyph-db` owns the durable storage adapter boundary and is the
   staging point for the SQLite/Datafox split; see
   `RFD0001-storage-crate-boundary.md` for the proposed extraction boundary.
+- `crates/poneglyph-api` owns local gRPC protobuf definitions, generated client/server
+  types, and daemon service adapters for embedders that want a daemon boundary.
+- The only in-repo binary is `poneglyph`.
+- `crates/poneglyph-cli` is the reference CLI/process host crate and builds the
+  `poneglyph` operator harness.
 - Durable truth remains the append-only fact log.
 - Entity and search data are derived projections and must remain replayable.
 - The CLI talks to the daemon over gRPC when the daemon is available.
