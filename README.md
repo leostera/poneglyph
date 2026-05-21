@@ -149,7 +149,9 @@ Typed CLI values:
 
 ## Architecture
 
-See [`docs/rfds/RFD0000-cli-daemon-architecture.md`](docs/rfds/RFD0000-cli-daemon-architecture.md).
+See [`docs/rfds/RFD0000-cli-daemon-architecture.md`](docs/rfds/RFD0000-cli-daemon-architecture.md),
+[`docs/rfds/RFD0001-storage-crate-boundary.md`](docs/rfds/RFD0001-storage-crate-boundary.md),
+and [`docs/review-readiness.md`](docs/review-readiness.md).
 
 ## Development
 
