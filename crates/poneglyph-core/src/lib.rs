@@ -1,4 +1,9 @@
-//! Poneglyph backend library.
+//! Poneglyph semantic graph database library.
+//!
+//! This crate owns the append-only fact model, schema/entity/query semantics,
+//! replayable projections, and runtime builder used by domain-specific daemons.
+//! Use `poneglyph-db` for the default durable workspace-backed adapters, and use
+//! this crate directly for in-memory tests or custom daemon assembly.
 //!
 //! Public API:
 //! - [`Fact`], [`Builder`], [`fact!`], [`retraction!`] and [`Filter`] for the append-only fact model.

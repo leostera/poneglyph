@@ -1,9 +1,38 @@
-//! Durable storage adapters for Poneglyph.
+//! Durable storage adapters for embedding Poneglyph in disk-backed daemons.
 //!
-//! This crate is the staging point for moving concrete database-backed
+//! Domain-specific daemons should use this crate when they want Poneglyph's
+//! default workspace-backed runtime assembly. Graph semantics, facts, schemas,
+//! entities, and queries remain in `poneglyph-core`; this crate supplies the
+//! durable adapter boundary and repair/open helpers.
+//!
+//! This crate is also the staging point for moving concrete database-backed
 //! implementations out of `poneglyph-core`. For now it exposes adapter-opening
 //! functions over the existing core SQLite implementations so downstream wiring
 //! can depend on a stable storage boundary before the physical module move.
+//!
+//! ```no_run
+//! use poneglyph_core::{Value, Workspace, fact, uri};
+//! use poneglyph_db::open_runtime;
+//!
+//! async fn open_codedb() -> poneglyph_core::PoneResult<()> {
+//!     let workspace = Workspace::at("./codedb.poneglyph");
+//!     let runtime = open_runtime(workspace, Default::default()).await?;
+//!
+//!     runtime
+//!         .state_facts(vec![fact!(
+//!             uri!("code:file:main-rs"),
+//!             uri!("code:displayName"),
+//!             Value::text("src/main.rs")
+//!         )])
+//!         .await?;
+//!
+//!     let _rows = runtime
+//!         .query_str(r#"code:displayName(File, \"src/main.rs\")"#)
+//!         .await?;
+//!
+//!     Ok(())
+//! }
+//! ```
 
 #![allow(deprecated)]
 
