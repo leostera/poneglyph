@@ -799,8 +799,9 @@ mod tests {
 
     use super::proto::poneglyph_daemon_server::PoneglyphDaemon;
     use super::proto::{
-        GetEntityRequest, ListEntitiesRequest, ListFactsRequest, QueryRequest,
-        SearchEntitiesRequest, StateFactTypedRequest, StateFactsTypedRequest,
+        GetEntityRequest, GetSchemaRequest, ListEntitiesRequest, ListFactsRequest, QueryRequest,
+        SearchEntitiesRequest, StateFactRequest, StateFactTypedRequest, StateFactsRequest,
+        StateFactsTypedRequest,
     };
     use super::{
         DaemonApi, active_fact_from_proto, active_fact_to_proto, entity_from_proto,
@@ -972,6 +973,58 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn query_legacy_json_matches_typed_row_count() {
+        let (api, runtime) = api_with_runtime().await;
+        runtime
+            .state_facts(vec![fact!(
+                uri!("spotify:album:signals"),
+                uri!("spotify:displayName"),
+                Value::text("Signals")
+            )])
+            .await
+            .expect("state facts");
+        let request = QueryRequest {
+            expression: r#"spotify:displayName(Album, "Signals")"#.to_string(),
+        };
+
+        let legacy = api
+            .query(Request::new(request.clone()))
+            .await
+            .expect("legacy query")
+            .into_inner();
+        let typed = api
+            .query_typed(Request::new(request))
+            .await
+            .expect("typed query")
+            .into_inner();
+        let substitutions = serde_json::from_str::<Vec<datafox::Substitution>>(&legacy.json)
+            .expect("legacy substitutions json");
+
+        assert_eq!(substitutions.len(), typed.rows.len());
+    }
+
+    #[tokio::test]
+    async fn get_schema_legacy_json_matches_typed_base_schema() {
+        let api = api().await;
+
+        let legacy = api
+            .get_schema(Request::new(GetSchemaRequest {}))
+            .await
+            .expect("legacy schema")
+            .into_inner();
+        let typed = api
+            .get_schema_typed(Request::new(GetSchemaRequest {}))
+            .await
+            .expect("typed schema")
+            .into_inner();
+        let legacy_schema =
+            serde_json::from_str::<SchemaDefinition>(&legacy.json).expect("legacy schema json");
+        let typed_schema = schema_from_proto(typed).expect("typed schema proto");
+
+        assert_eq!(legacy_schema.base, typed_schema.base);
+    }
+
+    #[tokio::test]
     async fn query_typed_returns_typed_bindings() {
         let (api, runtime) = api_with_runtime().await;
         runtime
@@ -1021,6 +1074,40 @@ mod tests {
             .into_inner();
 
         assert!(response.entity.is_none());
+    }
+
+    #[tokio::test]
+    async fn state_fact_legacy_states_one_json_fact() {
+        let fact = fact!(
+            uri!("spotify:album:signals"),
+            uri!("spotify:displayName"),
+            Value::text("Signals")
+        );
+        let fact_id = fact.fact_id.to_string();
+        let response = api()
+            .await
+            .state_fact(Request::new(StateFactRequest {
+                fact_json: serde_json::to_string(&fact).expect("fact json"),
+            }))
+            .await
+            .expect("state fact")
+            .into_inner();
+
+        assert_eq!(response.fact_id, fact_id);
+        assert_eq!(response.fact_ids, vec![fact_id]);
+        assert!(!response.tx_id.is_empty());
+    }
+
+    #[tokio::test]
+    async fn state_facts_legacy_rejects_empty_batches() {
+        let error = api()
+            .await
+            .state_facts(Request::new(StateFactsRequest { fact_json: vec![] }))
+            .await
+            .expect_err("empty batch should fail");
+
+        assert_eq!(error.code(), Code::InvalidArgument);
+        assert!(error.message().contains("empty fact batch"));
     }
 
     #[tokio::test]
