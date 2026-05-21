@@ -75,7 +75,10 @@ impl QueryEngine {
 
     pub async fn query(&self, query: Query) -> PoneResult<QueryResult> {
         let storage = self.active_graph_storage().await?;
-        let datafox = DatafoxClient::new(DatafoxConfig::new(&storage))?;
+        let threads = std::thread::available_parallelism()
+            .map(usize::from)
+            .unwrap_or(1);
+        let datafox = DatafoxClient::new(DatafoxConfig::new(&storage).parallel().threads(threads))?;
         let results = datafox.eval(query.as_inner())?.collect::<Vec<_>>();
 
         debug!(result_count = results.len(), "query evaluated");
