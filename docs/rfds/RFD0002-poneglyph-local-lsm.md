@@ -129,6 +129,21 @@ A point/range iterator merges memtable and SST iterators newest-to-oldest, respe
 6. Add Datafox `FactRequest`-native active scans.
 7. Optimize with autoresearch against One Piece single-query latency and ingest throughput.
 
+## Cache and compaction follow-up plan
+
+The first benchmarked LSM backend uses two pragmatic query accelerators:
+
+- a larger memtable flush threshold for medium local working sets;
+- an in-memory decoded active-fact cache keyed by active index key.
+
+These are acceptable for the experimental backend but need production bounds before LSM can replace SQLite:
+
+- keep the decoded active cache bounded and invalidate on active-index writes;
+- expose cold-query and warm-query metrics separately;
+- add segment compaction before lowering the flush threshold for larger datasets;
+- prefer active-index compaction/rebuild over preserving derived tombstones indefinitely;
+- measure startup/open time after large WAL replay and after SST-heavy compaction.
+
 ## Open questions
 
 - Whether to persist schema snapshot in the same LSM or keep schema in a separate projection store.

@@ -294,6 +294,27 @@ fn extract_wiki_links<'a>(text: &'a str, prefix: &'a str) -> impl Iterator<Item 
     })
 }
 
+fn onepiece_datafox_queries() -> [(&'static str, &'static str); 4] {
+    [
+        (
+            "captains_and_seconds",
+            r#"wiki:crew:captain(Crew, Captain), wiki:crew:second(Crew, Second), wiki:page:title(Crew, CrewName), wiki:page:title(Captain, CaptainName), wiki:page:title(Second, SecondName)"#,
+        ),
+        (
+            "islands_and_leaders",
+            r#"wiki:island:leader(Island, Leader), wiki:page:title(Island, IslandName), wiki:page:title(Leader, LeaderName)"#,
+        ),
+        (
+            "joyboy_to_luffy_chain",
+            r#"wiki:lore:directConnection(A, B), wiki:lore:directConnection(B, C), wiki:lore:directConnection(C, D), wiki:lore:directConnection(D, E), wiki:page:title(A, "Joy Boy"), wiki:page:title(E, "Monkey D. Luffy")"#,
+        ),
+        (
+            "people_with_d_name",
+            r#"wiki:page:title(Person, Name), contains(Name, " D. ")"#,
+        ),
+    ]
+}
+
 fn slug_uri_component(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for ch in value.chars() {
@@ -666,6 +687,64 @@ async fn local_lsm_backend_onepiece_wiki_query_stress() {
         facts.len(),
         pages.len(),
         elapsed
+    );
+}
+
+#[tokio::test]
+#[ignore = "download One Piece fixture and run with --ignored"]
+async fn local_lsm_backend_onepiece_wiki_query_cold_warm_stress() {
+    let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(5_000);
+    let batch_size = std::env::var("PONEGLYPH_ONEPIECE_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(10_000);
+    let warm_queries = std::env::var("PONEGLYPH_ONEPIECE_QUERIES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(20);
+
+    let pages = load_onepiece_pages(&onepiece_fixture_path(), Some(max_pages))
+        .expect("load One Piece XML fixture");
+    let facts = onepiece_pages_to_facts(&pages);
+
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = Workspace::at(tempdir.path());
+    let runtime = poneglyph_local::open_lsm_workspace(workspace)
+        .await
+        .expect("runtime");
+    for chunk in facts.chunks(batch_size) {
+        runtime
+            .state_facts(chunk.to_vec())
+            .await
+            .expect("write fixture facts");
+    }
+
+    let datafox_queries = onepiece_datafox_queries();
+    let cold_started = Instant::now();
+    for (name, query) in datafox_queries {
+        let rows = runtime.query_str(query).await.expect("cold datafox query");
+        assert!(!rows.is_empty(), "{name} should return rows");
+    }
+    let cold_elapsed = cold_started.elapsed();
+
+    let warm_started = Instant::now();
+    for query in 0..warm_queries {
+        let (_, source) = datafox_queries[query % datafox_queries.len()];
+        let rows = runtime.query_str(source).await.expect("warm datafox query");
+        assert!(!rows.is_empty());
+    }
+    let warm_elapsed = warm_started.elapsed();
+
+    eprintln!(
+        "lsm onepiece cold/warm query stress: cold {} queries in {:?}; warm {warm_queries} queries in {:?}; {} facts from {} pages",
+        datafox_queries.len(),
+        cold_elapsed,
+        warm_elapsed,
+        facts.len(),
+        pages.len()
     );
 }
 
