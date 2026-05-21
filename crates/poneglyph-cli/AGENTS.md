@@ -6,9 +6,10 @@ These instructions apply to `crates/poneglyph-cli/`.
 
 ## Purpose
 
-- `poneglyph-cli` builds the single user-facing `poneglyph` binary.
+- `poneglyph-cli` builds the in-repo `poneglyph` operator/reference binary.
 - Keep process concerns here: CLI parsing, daemon lifecycle, shutdown, configuration commands, and client adapters.
-- Prefer daemon-mediated operations for state, query, schema, and entity commands.
+- Prefer daemon-mediated operations for state, query, schema, and entity commands in this reference harness.
+- Do not treat this crate as the only long-term application surface; domain daemons should embed the library crates directly.
 
 ## Working rules
 

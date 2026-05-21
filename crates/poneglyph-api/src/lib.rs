@@ -1,3 +1,11 @@
+//! Optional local gRPC boundary for embedding Poneglyph behind a daemon.
+//!
+//! Domain-specific daemons can use this crate when they want the reference
+//! tonic/prost service adapter and generated protobuf client/server types.
+//! Stable semantic operations should use the typed protobuf RPCs. Legacy
+//! `JsonResponse` RPCs remain compatibility shims for one migration window and
+//! share validation/retrieval helpers with the typed handlers until removal.
+
 // Tonic service methods conventionally return `Result<_, tonic::Status>`;
 // boxing every gRPC error would make the service boundary less idiomatic.
 #![allow(clippy::result_large_err)]

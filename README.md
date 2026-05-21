@@ -11,11 +11,16 @@ not the long-term application surface by itself.
 
 ## Current workspace
 
-- `crates/poneglyph-cli` — CLI/process host that builds the `poneglyph` binary.
-- `crates/poneglyph-api` — local gRPC API/protobuf definitions and daemon service adapter. Typed protobuf RPCs are the primary path for semantic CLI operations; legacy JSON RPCs remain only as compatibility shims.
-- `crates/poneglyph-core` — core append-only fact store, schema/entity services,
-  projections, query engine, runtime, and disk-backed workspace layout.
-- `crates/poneglyph-db` — durable storage adapter boundary and staging point for the SQLite/Datafox split; see `docs/rfds/RFD0001-storage-crate-boundary.md` for the proposed boundary.
+- `crates/poneglyph-core` — core append-only fact model, schema/entity services,
+  projections, query engine, runtime contracts, and workspace layout.
+- `crates/poneglyph-db` — preferred durable storage adapter boundary and
+  disk-backed runtime opener; see `docs/rfds/RFD0001-storage-crate-boundary.md`
+  for the staged SQLite/search extraction decision.
+- `crates/poneglyph-api` — optional local gRPC API/protobuf definitions and
+  daemon service adapter. Typed protobuf RPCs are the primary semantic API;
+  legacy JSON RPCs remain only as compatibility shims.
+- `crates/poneglyph-cli` — operator/reference harness that builds the in-repo
+  `poneglyph` binary.
 - `../datafox` — external sibling path dependency for Datalog parsing/evaluation.
 
 ## Review status
@@ -51,9 +56,11 @@ cargo check --workspace
 
 Downstream daemons should embed `poneglyph-core` for semantic runtime contracts,
 `poneglyph-db` for disk-backed workspace/storage assembly, and `poneglyph-api`
-when they want the local gRPC service boundary. The CLI below remains useful for
-local inspection, smoke tests, and operations while domain-specific daemons build
-on the library crates.
+when they want the local gRPC service boundary. Prefer importing durable runtime
+open/repair helpers and SQLite adapter types from `poneglyph-db`; direct
+`poneglyph-core` SQLite re-exports are deprecated compatibility paths. The CLI
+below remains useful for local inspection, smoke tests, and operations while
+domain-specific daemons build on the library crates.
 
 ```text
 poneglyph --help

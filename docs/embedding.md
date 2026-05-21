@@ -8,9 +8,15 @@ A daemon such as `codedb` should generally depend on these crates:
 
 - `poneglyph-core` for facts, URIs, values, schema/entity/query contracts, and
   the runtime builder.
-- `poneglyph-db` for the default durable workspace-backed runtime assembly.
+- `poneglyph-db` for the default durable workspace-backed runtime assembly,
+  repair helpers, and preferred SQLite adapter import paths.
 - `poneglyph-api` only if the daemon wants to expose the local tonic/prost gRPC
   boundary or reuse the reference daemon service adapter.
+
+Prefer `poneglyph_db::open_runtime` for disk-backed runtime assembly. Import
+`SqliteFactStore` and `SqliteEntityStore` from `poneglyph-db` if a daemon needs
+adapter-level access; the matching `poneglyph-core` re-exports are deprecated
+compatibility paths while the physical module move is staged.
 
 ## Minimal disk-backed runtime
 
