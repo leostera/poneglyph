@@ -12,34 +12,78 @@ pub(crate) enum KeyKind {
 }
 
 pub(crate) fn log_tx_key(tx_id: &Uri, seq: u64) -> Vec<u8> {
-    let mut key = key_prefix(KeyKind::LogTx);
-    push_str(&mut key, tx_id.as_str());
+    let mut key = log_tx_prefix(tx_id);
     key.extend_from_slice(&seq.to_be_bytes());
     key
 }
 
+pub(crate) fn log_tx_prefix(tx_id: &Uri) -> Vec<u8> {
+    let mut key = key_prefix(KeyKind::LogTx);
+    push_str(&mut key, tx_id.as_str());
+    key
+}
+
+pub(crate) fn log_fact_key(fact_id: &Uri) -> Vec<u8> {
+    let mut key = key_prefix(KeyKind::LogFact);
+    push_str(&mut key, fact_id.as_str());
+    key
+}
+
+pub(crate) fn log_all_prefix() -> Vec<u8> {
+    key_prefix(KeyKind::LogTx)
+}
+
 pub(crate) fn active_field_key(field: &Uri, entity: &Uri, value: &Value) -> Vec<u8> {
+    let mut key = active_field_entity_prefix(field, entity);
+    push_value(&mut key, value);
+    key
+}
+
+pub(crate) fn active_field_prefix(field: &Uri) -> Vec<u8> {
     let mut key = key_prefix(KeyKind::ActiveField);
     push_str(&mut key, field.as_str());
+    key
+}
+
+pub(crate) fn active_field_entity_prefix(field: &Uri, entity: &Uri) -> Vec<u8> {
+    let mut key = active_field_prefix(field);
     push_str(&mut key, entity.as_str());
-    push_value(&mut key, value);
     key
 }
 
 pub(crate) fn active_entity_key(entity: &Uri, field: &Uri, value: &Value) -> Vec<u8> {
+    let mut key = active_entity_field_prefix(entity, field);
+    push_value(&mut key, value);
+    key
+}
+
+pub(crate) fn active_entity_prefix(entity: &Uri) -> Vec<u8> {
     let mut key = key_prefix(KeyKind::ActiveEntity);
     push_str(&mut key, entity.as_str());
+    key
+}
+
+pub(crate) fn active_entity_field_prefix(entity: &Uri, field: &Uri) -> Vec<u8> {
+    let mut key = active_entity_prefix(entity);
+    push_str(&mut key, field.as_str());
+    key
+}
+
+pub(crate) fn active_value_key(field: &Uri, value: &Value, entity: &Uri) -> Vec<u8> {
+    let mut key = active_value_prefix(field, value);
+    push_str(&mut key, entity.as_str());
+    key
+}
+
+pub(crate) fn active_value_prefix(field: &Uri, value: &Value) -> Vec<u8> {
+    let mut key = key_prefix(KeyKind::ActiveValue);
     push_str(&mut key, field.as_str());
     push_value(&mut key, value);
     key
 }
 
-pub(crate) fn active_value_key(field: &Uri, value: &Value, entity: &Uri) -> Vec<u8> {
-    let mut key = key_prefix(KeyKind::ActiveValue);
-    push_str(&mut key, field.as_str());
-    push_value(&mut key, value);
-    push_str(&mut key, entity.as_str());
-    key
+pub(crate) fn active_all_prefix() -> Vec<u8> {
+    key_prefix(KeyKind::ActiveField)
 }
 
 fn key_prefix(kind: KeyKind) -> Vec<u8> {

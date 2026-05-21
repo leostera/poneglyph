@@ -44,6 +44,17 @@ impl Wal {
         self.file.sync_data()
     }
 
+    pub(crate) fn reset(&mut self) -> io::Result<()> {
+        self.file.set_len(0)?;
+        self.file.sync_data()?;
+        self.file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .read(true)
+            .open(&self.path)?;
+        Ok(())
+    }
+
     pub(crate) fn path(&self) -> &Path {
         &self.path
     }

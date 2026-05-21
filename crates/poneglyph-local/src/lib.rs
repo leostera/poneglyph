@@ -46,7 +46,7 @@ use poneglyph::{
 };
 
 pub use entities::SqliteEntityStore;
-pub use facts::SqliteFactStore;
+pub use facts::{LsmFactStore, SqliteFactStore};
 pub use projections::TantivySearchProjection;
 
 /// Durable runtime storage factory backed by this crate's local adapters.
@@ -103,6 +103,14 @@ pub async fn open_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>
     Ok(Arc::new(
         SqliteFactStore::open(workspace.facts_db_path()).await?,
     ))
+}
+
+/// Opens the experimental custom LSM fact store for a workspace.
+///
+/// SQLite remains the default fact store; this helper is explicit so tests and
+/// benchmarks can opt into the LSM backend during bring-up.
+pub fn open_lsm_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
+    Ok(Arc::new(LsmFactStore::open(workspace.facts_db_path())?))
 }
 
 /// Opens the default durable entity projection store for a workspace.
