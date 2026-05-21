@@ -140,9 +140,11 @@ See [`docs/rfds/RFD0000-cli-daemon-architecture.md`](docs/rfds/RFD0000-cli-daemo
 
 ```sh
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --locked
 ```
 
 CI expects this repository and Datafox to be checked out as siblings, matching
-the local `../datafox` path dependency layout.
+the local `../datafox` path dependency layout. The protobuf compiler (`protoc`)
+is also required because `poneglyph-api` generates tonic/prost bindings at build
+time.

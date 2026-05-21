@@ -26,6 +26,9 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
         with:
@@ -37,8 +40,8 @@ jobs:
 
       - name: Run clippy
         working-directory: poneglyph
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Run tests
         working-directory: poneglyph
-        run: cargo test --workspace
+        run: cargo test --workspace --locked
