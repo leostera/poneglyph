@@ -22,7 +22,7 @@ struct IndexEntry {
     offset: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct SstReader {
     path: PathBuf,
     index: Vec<IndexEntry>,
