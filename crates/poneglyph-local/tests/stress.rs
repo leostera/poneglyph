@@ -865,6 +865,75 @@ async fn local_lsm_backend_onepiece_compact_reopen_query_stress() {
 }
 
 #[tokio::test]
+#[ignore = "download One Piece fixture and run with --ignored"]
+async fn local_lsm_backend_onepiece_fact_store_reopen_stress() {
+    let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(5_000);
+    let batch_size = std::env::var("PONEGLYPH_ONEPIECE_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(10_000);
+
+    let pages = load_onepiece_pages(&onepiece_fixture_path(), Some(max_pages))
+        .expect("load One Piece XML fixture");
+    let facts = onepiece_pages_to_facts(&pages);
+
+    let tempdir = tempdir().expect("tempdir");
+    let lsm_path = tempdir.path().join("facts.lsm");
+    {
+        let store = poneglyph_local::LsmFactStore::open(&lsm_path).expect("fact store");
+        state_prebuilt_batches(&store, &facts, batch_size)
+            .await
+            .expect("write fixture facts");
+    }
+
+    let wal_open_started = Instant::now();
+    let wal_store = poneglyph_local::LsmFactStore::open(&lsm_path).expect("reopen wal store");
+    let wal_open_elapsed = wal_open_started.elapsed();
+    let active_started = Instant::now();
+    let active = collect_active_facts(
+        wal_store
+            .get_active_facts(ActiveFilter::ByField(uri!("wiki:page:title")))
+            .await
+            .expect("active title facts"),
+    )
+    .await
+    .expect("collect active titles");
+    assert!(active.len() >= pages.len());
+    let wal_first_active_elapsed = active_started.elapsed();
+    wal_store.compact().expect("compact");
+    drop(wal_store);
+
+    let compact_open_started = Instant::now();
+    let compact_store =
+        poneglyph_local::LsmFactStore::open(&lsm_path).expect("reopen compacted store");
+    let compact_open_elapsed = compact_open_started.elapsed();
+    let compact_active_started = Instant::now();
+    let active = collect_active_facts(
+        compact_store
+            .get_active_facts(ActiveFilter::ByField(uri!("wiki:page:title")))
+            .await
+            .expect("active title facts"),
+    )
+    .await
+    .expect("collect active titles");
+    assert!(active.len() >= pages.len());
+    let compact_first_active_elapsed = compact_active_started.elapsed();
+
+    eprintln!(
+        "lsm onepiece fact-store reopen stress: wal reopen {:?}, first active {:?}; compacted reopen {:?}, first active {:?}; {} facts from {} pages",
+        wal_open_elapsed,
+        wal_first_active_elapsed,
+        compact_open_elapsed,
+        compact_first_active_elapsed,
+        facts.len(),
+        pages.len()
+    );
+}
+
+#[tokio::test]
 #[ignore = "set PONEGLYPH_STRESS_READS and run with --ignored"]
 async fn local_backend_read_heavy_stress() {
     let reads = std::env::var("PONEGLYPH_STRESS_READS")

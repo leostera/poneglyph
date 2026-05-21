@@ -184,9 +184,8 @@ fn write_record(file: &mut File, key: &[u8], entry: &MemtableEntry) -> io::Resul
 
 fn read_record_at(
     file: &mut File,
-    offset: u64,
+    _offset: u64,
 ) -> io::Result<Option<(u64, Vec<u8>, MemtableEntry)>> {
-    file.seek(SeekFrom::Start(offset))?;
     let mut header = [0; RECORD_HEADER_LEN];
     match file.read_exact(&mut header) {
         Ok(()) => {}
