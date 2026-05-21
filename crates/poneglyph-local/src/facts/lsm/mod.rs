@@ -376,7 +376,7 @@ fn encode_active_fact(active: &ActiveFact) -> PoneResult<Vec<u8>> {
     push_component(&mut out, active.source.as_str())?;
     push_component(&mut out, active.entity.as_str())?;
     push_component(&mut out, active.field.as_str())?;
-    push_component(&mut out, &serde_json::to_string(&active.value)?)?;
+    push_value_component(&mut out, &active.value)?;
     push_component(&mut out, active.fact_id.as_str())?;
     push_component(&mut out, active.tx_id.as_str())?;
     Ok(out)
@@ -390,7 +390,7 @@ fn decode_active_fact(bytes: &[u8]) -> PoneResult<ActiveFact> {
     let source = Uri::parse(read_component(bytes, &mut cursor)?)?;
     let entity = Uri::parse(read_component(bytes, &mut cursor)?)?;
     let field = Uri::parse(read_component(bytes, &mut cursor)?)?;
-    let value = serde_json::from_str::<Value>(read_component(bytes, &mut cursor)?)?;
+    let value = read_value_component(bytes, &mut cursor)?;
     let fact_id = Uri::parse(read_component(bytes, &mut cursor)?)?;
     let tx_id = Uri::parse(read_component(bytes, &mut cursor)?)?;
     Ok(ActiveFact {
@@ -410,6 +410,74 @@ fn push_component(out: &mut Vec<u8>, value: &str) -> PoneResult<()> {
     out.extend_from_slice(&len.to_be_bytes());
     out.extend_from_slice(value.as_bytes());
     Ok(())
+}
+
+fn push_value_component(out: &mut Vec<u8>, value: &Value) -> PoneResult<()> {
+    match value {
+        Value::Null => out.push(0),
+        Value::Text(value) => {
+            out.push(1);
+            push_component(out, value)?;
+        }
+        Value::Number(value) => {
+            out.push(2);
+            push_component(out, value)?;
+        }
+        Value::Boolean(value) => {
+            out.push(3);
+            out.push(u8::from(*value));
+        }
+        Value::Reference(value) => {
+            out.push(5);
+            push_component(out, value.as_str())?;
+        }
+        _ => {
+            out.push(255);
+            push_component(out, &serde_json::to_string(value)?)?;
+        }
+    }
+    Ok(())
+}
+
+fn read_value_component(bytes: &[u8], cursor: &mut usize) -> PoneResult<Value> {
+    if *cursor >= bytes.len() {
+        return Err(Error::FactStoreIo {
+            source: std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "missing active fact value tag",
+            ),
+        });
+    }
+    let tag = bytes[*cursor];
+    *cursor += 1;
+    match tag {
+        0 => Ok(Value::Null),
+        1 => Ok(Value::Text(read_component(bytes, cursor)?.to_string())),
+        2 => Ok(Value::Number(read_component(bytes, cursor)?.to_string())),
+        3 => {
+            if *cursor >= bytes.len() {
+                return Err(Error::FactStoreIo {
+                    source: std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "missing active fact boolean value",
+                    ),
+                });
+            }
+            let value = bytes[*cursor] != 0;
+            *cursor += 1;
+            Ok(Value::Boolean(value))
+        }
+        5 => Ok(Value::Reference(Uri::parse(read_component(
+            bytes, cursor,
+        )?)?)),
+        255 => Ok(serde_json::from_str(read_component(bytes, cursor)?)?),
+        _ => Err(Error::FactStoreIo {
+            source: std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "invalid active fact value tag",
+            ),
+        }),
+    }
 }
 
 fn read_component<'a>(bytes: &'a [u8], cursor: &mut usize) -> PoneResult<&'a str> {
