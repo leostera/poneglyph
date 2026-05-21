@@ -1,9 +1,12 @@
+use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{self, ErrorKind, Read, Seek, SeekFrom, Write};
+#[cfg(unix)]
+use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, Mutex};
 
 use super::memtable::{Memtable, MemtableEntry};
 
@@ -16,6 +19,7 @@ const INDEX_STRIDE: usize = 32;
 const RECORD_HEADER_LEN: usize = 1 + 4 + 4;
 const CHECKSUM_LEN: usize = 8;
 const FOOTER_LEN: u64 = 8 + 4;
+const BLOCK_CACHE_BYTES: u64 = 256 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct IndexEntry {
@@ -28,8 +32,8 @@ pub(crate) struct SstReader {
     path: PathBuf,
     index: Vec<IndexEntry>,
     data_end: u64,
-    data: Arc<OnceLock<Arc<[u8]>>>,
     file_len: u64,
+    block_cache: Arc<Mutex<HashMap<u64, Arc<[u8]>>>>,
     smallest_key: Option<Vec<u8>>,
     largest_key: Option<Vec<u8>>,
 }
@@ -77,14 +81,11 @@ impl SstReader {
         let index = read_index(&mut file)?;
         let smallest_key =
             smallest_key.or_else(|| index.first().map(|entry| entry.first_key.clone()));
-        let data = Arc::new(OnceLock::new());
         let largest_key = match largest_key {
             Some(largest_key) => Some(largest_key),
             None => {
                 let bytes = load_data(&path)?;
-                let largest_key = largest_record_key_from_index(&bytes, index_offset, &index)?;
-                let _ = data.set(bytes);
-                largest_key
+                largest_record_key_from_index(&bytes, index_offset, &index)?
             }
         };
         let file_len = file_len;
@@ -92,8 +93,8 @@ impl SstReader {
             path,
             index,
             data_end: index_offset,
-            data,
             file_len,
+            block_cache: Arc::new(Mutex::new(HashMap::new())),
             smallest_key,
             largest_key,
         })
@@ -103,12 +104,9 @@ impl SstReader {
         if !self.may_contain_key(key) {
             return Ok(None);
         }
-        let data = self.data_bytes()?;
         let mut offset = self.seek_offset_for(key);
         while offset < self.data_end {
-            let Some((next_offset, record_key, entry)) =
-                read_record_from_slice(&data, self.data_end, offset)?
-            else {
+            let Some((next_offset, record_key, entry)) = self.read_record(offset)? else {
                 return Ok(None);
             };
             match record_key.as_slice().cmp(key) {
@@ -124,13 +122,10 @@ impl SstReader {
         if !self.may_contain_prefix(prefix) {
             return Ok(Vec::new());
         }
-        let data = self.data_bytes()?;
         let mut offset = self.seek_offset_for(prefix);
         let mut rows = Vec::new();
         while offset < self.data_end {
-            let Some((next_offset, key, entry)) =
-                read_record_from_slice(&data, self.data_end, offset)?
-            else {
+            let Some((next_offset, key, entry)) = self.read_record(offset)? else {
                 break;
             };
             if key.starts_with(prefix) {
@@ -179,13 +174,69 @@ impl SstReader {
         self.file_len
     }
 
-    fn data_bytes(&self) -> io::Result<Arc<[u8]>> {
-        if let Some(data) = self.data.get() {
-            return Ok(data.clone());
+    fn read_record(&self, offset: u64) -> io::Result<Option<(u64, Vec<u8>, MemtableEntry)>> {
+        if offset >= self.data_end {
+            return Ok(None);
         }
-        let data = load_data(&self.path)?;
-        let _ = self.data.set(data.clone());
-        Ok(data)
+        let header = self.read_range(offset, RECORD_HEADER_LEN as u64)?;
+        if header.len() < RECORD_HEADER_LEN {
+            return Ok(None);
+        }
+        let key_len = u32::from_be_bytes(header[1..5].try_into().expect("key length")) as u64;
+        let value_len = u32::from_be_bytes(header[5..9].try_into().expect("value length")) as u64;
+        let record_len = RECORD_HEADER_LEN as u64 + key_len + value_len + CHECKSUM_LEN as u64;
+        if offset + record_len > self.data_end {
+            return Ok(None);
+        }
+        let record = self.read_range(offset, record_len)?;
+        let Some((next_offset, key, entry)) = read_record_from_slice(&record, record_len, 0)?
+        else {
+            return Ok(None);
+        };
+        Ok(Some((offset + next_offset, key, entry)))
+    }
+
+    fn read_range(&self, offset: u64, len: u64) -> io::Result<Vec<u8>> {
+        let mut remaining = len;
+        let mut cursor = offset;
+        let mut out = Vec::with_capacity(len as usize);
+        while remaining > 0 {
+            let block_index = cursor / BLOCK_CACHE_BYTES;
+            let block_offset = (cursor % BLOCK_CACHE_BYTES) as usize;
+            let block = self.load_block(block_index)?;
+            if block_offset >= block.len() {
+                break;
+            }
+            let available = (block.len() - block_offset).min(remaining as usize);
+            out.extend_from_slice(&block[block_offset..block_offset + available]);
+            cursor += available as u64;
+            remaining -= available as u64;
+        }
+        Ok(out)
+    }
+
+    fn load_block(&self, block_index: u64) -> io::Result<Arc<[u8]>> {
+        if let Some(block) = self
+            .block_cache
+            .lock()
+            .expect("SST block cache mutex poisoned")
+            .get(&block_index)
+            .cloned()
+        {
+            return Ok(block);
+        }
+
+        let start = block_index * BLOCK_CACHE_BYTES;
+        let len = BLOCK_CACHE_BYTES.min(self.file_len.saturating_sub(start));
+        let mut bytes = vec![0; len as usize];
+        let file = File::open(&self.path)?;
+        read_exact_at(&file, &mut bytes, start)?;
+        let block: Arc<[u8]> = bytes.into();
+        self.block_cache
+            .lock()
+            .expect("SST block cache mutex poisoned")
+            .insert(block_index, block.clone());
+        Ok(block)
     }
 
     fn seek_offset_for(&self, key: &[u8]) -> u64 {
@@ -203,6 +254,30 @@ pub(crate) fn write_memtable(path: impl AsRef<Path>, memtable: &Memtable) -> io:
 
 fn load_data(path: &Path) -> io::Result<Arc<[u8]>> {
     Ok(std::fs::read(path)?.into())
+}
+
+#[cfg(unix)]
+fn read_exact_at(file: &File, mut buf: &mut [u8], mut offset: u64) -> io::Result<()> {
+    while !buf.is_empty() {
+        let read = file.read_at(buf, offset)?;
+        if read == 0 {
+            return Err(io::Error::new(
+                ErrorKind::UnexpectedEof,
+                "short SST block read",
+            ));
+        }
+        offset += read as u64;
+        let (_, rest) = std::mem::take(&mut buf).split_at_mut(read);
+        buf = rest;
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn read_exact_at(file: &File, buf: &mut [u8], offset: u64) -> io::Result<()> {
+    let mut file = file.try_clone()?;
+    file.seek(SeekFrom::Start(offset))?;
+    file.read_exact(buf)
 }
 
 fn largest_record_key_from_index(
