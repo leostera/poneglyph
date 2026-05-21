@@ -7,6 +7,7 @@ mod merge;
 mod sst;
 mod wal;
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -140,18 +141,29 @@ impl Store for LsmFactStore {
 impl Inner {
     fn state_facts_vec(&mut self, incoming: Vec<Fact>) -> PoneResult<(Uri, Vec<Fact>)> {
         let tx_id = new_tx_id();
+        let mut active_tuples = self.active_tuple_keys()?;
         let mut persisted = Vec::with_capacity(incoming.len());
 
-        for (seq, mut fact) in incoming.into_iter().enumerate() {
-            if fact.retraction && self.visible_active_fact(&fact)?.is_none() {
-                return Err(Error::CannotRetractUnknownFact);
+        for fact in incoming {
+            let tuple_key = active_tuple_key(&fact);
+            if fact.retraction {
+                if active_tuples.remove(&tuple_key) {
+                    persisted.push(fact);
+                } else if !self.tuple_ever_stated(&fact)? {
+                    return Err(Error::CannotRetractUnknownFact);
+                }
+            } else {
+                active_tuples.insert(tuple_key);
+                persisted.push(fact);
             }
+        }
+
+        for (seq, fact) in persisted.iter_mut().enumerate() {
             fact.tx_id = Some(tx_id.clone());
             let fact_bytes = serde_json::to_vec(&fact)?;
             self.put(key::log_tx_key(&tx_id, seq as u64), fact_bytes.clone())?;
             self.put(key::log_fact_key(&fact.fact_id), fact_bytes)?;
-            self.apply_active_indexes(&fact)?;
-            persisted.push(fact);
+            self.apply_active_indexes(fact)?;
         }
 
         self.wal
@@ -164,7 +176,7 @@ impl Inner {
     }
 
     fn get_facts(&self, filter: Filter) -> PoneResult<Vec<PoneResult<Fact>>> {
-        let needs_global_sort = matches!(filter, Filter::All | Filter::ByEntityUri(_));
+        let needs_sort = !matches!(filter, Filter::ById(_));
         let mut facts = match filter {
             Filter::All => self.scan_facts(key::log_all_prefix())?,
             Filter::ById(fact_id) => self
@@ -182,7 +194,7 @@ impl Inner {
                 })
                 .collect(),
         };
-        if needs_global_sort {
+        if needs_sort {
             let mut decoded = facts.into_iter().collect::<PoneResult<Vec<_>>>()?;
             sort_facts(&mut decoded);
             facts = decoded.into_iter().map(Ok).collect();
@@ -235,14 +247,24 @@ impl Inner {
         Ok(())
     }
 
-    fn visible_active_fact(&self, fact: &Fact) -> PoneResult<Option<ActiveFact>> {
-        self.get_value(&key::active_field_key(
-            &fact.field,
-            &fact.entity,
-            &fact.value,
-        ))?
-        .map(|bytes| serde_json::from_slice(&bytes).map_err(Error::from))
-        .transpose()
+    fn tuple_ever_stated(&self, candidate: &Fact) -> PoneResult<bool> {
+        Ok(self
+            .scan_facts(key::log_all_prefix())?
+            .into_iter()
+            .collect::<PoneResult<Vec<_>>>()?
+            .into_iter()
+            .any(|fact| same_tuple(&fact, candidate)))
+    }
+
+    fn active_tuple_keys(&self) -> PoneResult<BTreeSet<Vec<u8>>> {
+        Ok(self
+            .scan_values(key::active_all_prefix())?
+            .into_iter()
+            .map(|bytes| serde_json::from_slice::<ActiveFact>(&bytes).map_err(Error::from))
+            .collect::<PoneResult<Vec<_>>>()?
+            .into_iter()
+            .map(|active| key::active_field_key(&active.field, &active.entity, &active.value))
+            .collect())
     }
 
     fn scan_facts(&self, prefix: Vec<u8>) -> PoneResult<Vec<PoneResult<Fact>>> {
@@ -302,6 +324,17 @@ impl Inner {
             .map_err(|source| Error::FactStoreIo { source })?;
         Ok(())
     }
+}
+
+fn same_tuple(left: &Fact, right: &Fact) -> bool {
+    left.source == right.source
+        && left.entity == right.entity
+        && left.field == right.field
+        && left.value == right.value
+}
+
+fn active_tuple_key(fact: &Fact) -> Vec<u8> {
+    key::active_field_key(&fact.field, &fact.entity, &fact.value)
 }
 
 fn active_index_keys(active: &ActiveFact) -> [Vec<u8>; 3] {
