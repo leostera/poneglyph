@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
+use std::env;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{self, ErrorKind, Read, Seek, SeekFrom, Write};
@@ -7,6 +8,8 @@ use std::io::{self, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+
+use memmap2::Mmap;
 
 use super::memtable::{Memtable, MemtableEntry};
 
@@ -20,11 +23,23 @@ const RECORD_HEADER_LEN: usize = 1 + 4 + 4;
 const CHECKSUM_LEN: usize = 8;
 const FOOTER_LEN: u64 = 8 + 4;
 const BLOCK_CACHE_BYTES: u64 = 256 * 1024;
+const SST_READ_MODE_ENV: &str = "PONEGLYPH_LSM_SST_READ_MODE";
+const SST_BLOCK_CACHE_BLOCKS_ENV: &str = "PONEGLYPH_LSM_SST_BLOCK_CACHE_BLOCKS";
+const DEFAULT_BLOCK_CACHE_MAX_BLOCKS: usize = 64;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct IndexEntry {
     first_key: Vec<u8>,
     offset: u64,
+}
+
+#[derive(Debug)]
+enum SstReadCache {
+    Blocks {
+        blocks: Mutex<HashMap<u64, Arc<[u8]>>>,
+        max_blocks: usize,
+    },
+    Mmap(Arc<Mmap>),
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +48,7 @@ pub(crate) struct SstReader {
     index: Vec<IndexEntry>,
     data_end: u64,
     file_len: u64,
-    block_cache: Arc<Mutex<HashMap<u64, Arc<[u8]>>>>,
+    read_cache: Arc<SstReadCache>,
     smallest_key: Option<Vec<u8>>,
     largest_key: Option<Vec<u8>>,
 }
@@ -89,12 +104,13 @@ impl SstReader {
             }
         };
         let file_len = file_len;
+        let read_cache = Arc::new(open_read_cache(&path)?);
         Ok(Self {
             path,
             index,
             data_end: index_offset,
             file_len,
-            block_cache: Arc::new(Mutex::new(HashMap::new())),
+            read_cache,
             smallest_key,
             largest_key,
         })
@@ -197,6 +213,20 @@ impl SstReader {
     }
 
     fn read_range(&self, offset: u64, len: u64) -> io::Result<Vec<u8>> {
+        match self.read_cache.as_ref() {
+            SstReadCache::Blocks { .. } => self.read_range_from_blocks(offset, len),
+            SstReadCache::Mmap(mmap) => {
+                let start = usize::try_from(offset)
+                    .map_err(|_| io::Error::new(ErrorKind::InvalidData, "SST offset too large"))?;
+                let end = usize::try_from(offset + len).map_err(|_| {
+                    io::Error::new(ErrorKind::InvalidData, "SST read length too large")
+                })?;
+                Ok(mmap[start..end].to_vec())
+            }
+        }
+    }
+
+    fn read_range_from_blocks(&self, offset: u64, len: u64) -> io::Result<Vec<u8>> {
         let mut remaining = len;
         let mut cursor = offset;
         let mut out = Vec::with_capacity(len as usize);
@@ -216,8 +246,10 @@ impl SstReader {
     }
 
     fn load_block(&self, block_index: u64) -> io::Result<Arc<[u8]>> {
-        if let Some(block) = self
-            .block_cache
+        let SstReadCache::Blocks { blocks, max_blocks } = self.read_cache.as_ref() else {
+            unreachable!("block loads are only used in block-cache mode");
+        };
+        if let Some(block) = blocks
             .lock()
             .expect("SST block cache mutex poisoned")
             .get(&block_index)
@@ -232,10 +264,15 @@ impl SstReader {
         let file = File::open(&self.path)?;
         read_exact_at(&file, &mut bytes, start)?;
         let block: Arc<[u8]> = bytes.into();
-        self.block_cache
-            .lock()
-            .expect("SST block cache mutex poisoned")
-            .insert(block_index, block.clone());
+        let mut blocks = blocks.lock().expect("SST block cache mutex poisoned");
+        if *max_blocks > 0 {
+            if blocks.len() >= *max_blocks
+                && let Some(evicted) = blocks.keys().next().copied()
+            {
+                blocks.remove(&evicted);
+            }
+            blocks.insert(block_index, block.clone());
+        }
         Ok(block)
     }
 
@@ -254,6 +291,23 @@ pub(crate) fn write_memtable(path: impl AsRef<Path>, memtable: &Memtable) -> io:
 
 fn load_data(path: &Path) -> io::Result<Arc<[u8]>> {
     Ok(std::fs::read(path)?.into())
+}
+
+fn open_read_cache(path: &Path) -> io::Result<SstReadCache> {
+    if env::var(SST_READ_MODE_ENV).is_ok_and(|mode| mode.eq_ignore_ascii_case("mmap")) {
+        let file = File::open(path)?;
+        // SAFETY: SST files are immutable after publication. Writers create a temporary file,
+        // fsync it, and atomically rename it before readers open the path.
+        let mmap = unsafe { Mmap::map(&file)? };
+        return Ok(SstReadCache::Mmap(Arc::new(mmap)));
+    }
+    Ok(SstReadCache::Blocks {
+        blocks: Mutex::new(HashMap::new()),
+        max_blocks: env::var(SST_BLOCK_CACHE_BLOCKS_ENV)
+            .ok()
+            .and_then(|value| value.parse().ok())
+            .unwrap_or(DEFAULT_BLOCK_CACHE_MAX_BLOCKS),
+    })
 }
 
 #[cfg(unix)]

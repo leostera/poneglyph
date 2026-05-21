@@ -1755,6 +1755,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "futures-util",
+ "memmap2",
  "poneglyph",
  "proptest",
  "serde",
