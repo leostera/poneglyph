@@ -32,6 +32,15 @@ pub struct LsmFactStore {
     inner: Arc<Mutex<Inner>>,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct LsmStats {
+    pub active_requests: u64,
+    pub active_rows_scanned: u64,
+    pub active_cache_hits: u64,
+    pub active_cache_misses: u64,
+    pub active_rows_decoded: u64,
+}
+
 struct Inner {
     dir: PathBuf,
     manifest: Manifest,
@@ -41,6 +50,7 @@ struct Inner {
     active_cache: HashMap<Vec<u8>, ActiveFact>,
     active_cache_max_entries: Option<usize>,
     flush_threshold_bytes: usize,
+    stats: LsmStats,
 }
 
 impl LsmFactStore {
@@ -68,6 +78,7 @@ impl LsmFactStore {
                 active_cache: HashMap::new(),
                 active_cache_max_entries: active_cache_max_entries_from_env(),
                 flush_threshold_bytes: flush_threshold_bytes_from_env(),
+                stats: LsmStats::default(),
             })),
         })
     }
@@ -91,6 +102,14 @@ impl LsmFactStore {
             .lock()
             .expect("LSM mutex poisoned")
             .prewarm_active_cache()
+    }
+
+    pub fn stats(&self) -> LsmStats {
+        self.inner.lock().expect("LSM mutex poisoned").stats
+    }
+
+    pub fn reset_stats(&self) {
+        self.inner.lock().expect("LSM mutex poisoned").stats = LsmStats::default();
     }
 }
 
@@ -245,19 +264,25 @@ impl Inner {
                 value,
             } => key::active_field_key(&field, &entity, &value),
         };
-        self.scan_entries(prefix).map(|rows| {
-            let mut uri_cache = HashMap::new();
-            rows.into_iter()
-                .map(|(key, bytes)| {
-                    if let Some(active) = self.active_cache.get(&key) {
-                        return Ok(active.clone());
-                    }
-                    let active = decode_active_fact_with_cache(&bytes, &mut uri_cache)?;
-                    self.cache_active_fact(key, active.clone());
-                    Ok(active)
-                })
-                .collect()
-        })
+        let rows = self.scan_entries(prefix)?;
+        self.stats.active_requests += 1;
+        self.stats.active_rows_scanned += rows.len() as u64;
+        let mut uri_cache = HashMap::new();
+        let active = rows
+            .into_iter()
+            .map(|(key, bytes)| {
+                if let Some(active) = self.active_cache.get(&key) {
+                    self.stats.active_cache_hits += 1;
+                    return Ok(active.clone());
+                }
+                self.stats.active_cache_misses += 1;
+                self.stats.active_rows_decoded += 1;
+                let active = decode_active_fact_with_cache(&bytes, &mut uri_cache)?;
+                self.cache_active_fact(key, active.clone());
+                Ok(active)
+            })
+            .collect::<PoneResult<Vec<_>>>()?;
+        Ok(active.into_iter().map(Ok).collect())
     }
 
     fn prewarm_active_cache(&mut self) -> PoneResult<usize> {
@@ -266,6 +291,7 @@ impl Inner {
         for (key, bytes) in rows {
             if !self.active_cache.contains_key(&key) {
                 let active = decode_active_fact_with_cache(&bytes, &mut uri_cache)?;
+                self.stats.active_rows_decoded += 1;
                 self.cache_active_fact(key, active);
             }
         }
@@ -778,6 +804,29 @@ mod tests {
         inner.cache_active_fact(b"two".to_vec(), second);
         assert_eq!(inner.active_cache.len(), 1);
         assert!(inner.active_cache.contains_key(&b"two".to_vec()));
+    }
+
+    #[tokio::test]
+    async fn lsm_fact_store_tracks_active_cache_stats() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        let fact = fact!(uri!("e:one"), uri!("f:name"), Value::text("one"));
+        store.state_facts_vec(vec![fact]).await.expect("state");
+        store.reset_stats();
+
+        for _ in 0..2 {
+            let mut rows = store
+                .get_active_facts(ActiveFilter::ByField(uri!("f:name")))
+                .await
+                .expect("active");
+            assert!(rows.recv().await.expect("row").is_ok());
+        }
+
+        let stats = store.stats();
+        assert_eq!(stats.active_requests, 2);
+        assert_eq!(stats.active_rows_scanned, 2);
+        assert_eq!(stats.active_cache_hits, 2);
+        assert_eq!(stats.active_cache_misses, 0);
     }
 
     #[tokio::test]
