@@ -7,7 +7,7 @@ mod merge;
 mod sst;
 mod wal;
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -221,8 +221,9 @@ impl Inner {
             } => key::active_field_key(&field, &entity, &value),
         };
         self.scan_values(prefix).map(|rows| {
+            let mut uri_cache = HashMap::new();
             rows.into_iter()
-                .map(|bytes| decode_active_fact(&bytes))
+                .map(|bytes| decode_active_fact_with_cache(&bytes, &mut uri_cache))
                 .collect()
         })
     }
@@ -383,16 +384,23 @@ fn encode_active_fact(active: &ActiveFact) -> PoneResult<Vec<u8>> {
 }
 
 fn decode_active_fact(bytes: &[u8]) -> PoneResult<ActiveFact> {
+    decode_active_fact_with_cache(bytes, &mut HashMap::new())
+}
+
+fn decode_active_fact_with_cache(
+    bytes: &[u8],
+    uri_cache: &mut HashMap<String, Uri>,
+) -> PoneResult<ActiveFact> {
     if !bytes.starts_with(b"PLA1") {
         return Ok(serde_json::from_slice(bytes)?);
     }
     let mut cursor = 4;
-    let source = Uri::parse(read_component(bytes, &mut cursor)?)?;
-    let entity = Uri::parse(read_component(bytes, &mut cursor)?)?;
-    let field = Uri::parse(read_component(bytes, &mut cursor)?)?;
-    let value = read_value_component(bytes, &mut cursor)?;
-    let fact_id = Uri::parse(read_component(bytes, &mut cursor)?)?;
-    let tx_id = Uri::parse(read_component(bytes, &mut cursor)?)?;
+    let source = read_uri_component(bytes, &mut cursor, uri_cache)?;
+    let entity = read_uri_component(bytes, &mut cursor, uri_cache)?;
+    let field = read_uri_component(bytes, &mut cursor, uri_cache)?;
+    let value = read_value_component(bytes, &mut cursor, uri_cache)?;
+    let fact_id = read_uri_component(bytes, &mut cursor, uri_cache)?;
+    let tx_id = read_uri_component(bytes, &mut cursor, uri_cache)?;
     Ok(ActiveFact {
         source,
         entity,
@@ -439,7 +447,11 @@ fn push_value_component(out: &mut Vec<u8>, value: &Value) -> PoneResult<()> {
     Ok(())
 }
 
-fn read_value_component(bytes: &[u8], cursor: &mut usize) -> PoneResult<Value> {
+fn read_value_component(
+    bytes: &[u8],
+    cursor: &mut usize,
+    uri_cache: &mut HashMap<String, Uri>,
+) -> PoneResult<Value> {
     if *cursor >= bytes.len() {
         return Err(Error::FactStoreIo {
             source: std::io::Error::new(
@@ -467,9 +479,9 @@ fn read_value_component(bytes: &[u8], cursor: &mut usize) -> PoneResult<Value> {
             *cursor += 1;
             Ok(Value::Boolean(value))
         }
-        5 => Ok(Value::Reference(Uri::parse(read_component(
-            bytes, cursor,
-        )?)?)),
+        5 => Ok(Value::Reference(read_uri_component(
+            bytes, cursor, uri_cache,
+        )?)),
         255 => Ok(serde_json::from_str(read_component(bytes, cursor)?)?),
         _ => Err(Error::FactStoreIo {
             source: std::io::Error::new(
@@ -478,6 +490,20 @@ fn read_value_component(bytes: &[u8], cursor: &mut usize) -> PoneResult<Value> {
             ),
         }),
     }
+}
+
+fn read_uri_component(
+    bytes: &[u8],
+    cursor: &mut usize,
+    uri_cache: &mut HashMap<String, Uri>,
+) -> PoneResult<Uri> {
+    let value = read_component(bytes, cursor)?;
+    if let Some(uri) = uri_cache.get(value) {
+        return Ok(uri.clone());
+    }
+    let uri = Uri::parse(value)?;
+    uri_cache.insert(value.to_string(), uri.clone());
+    Ok(uri)
 }
 
 fn read_component<'a>(bytes: &'a [u8], cursor: &mut usize) -> PoneResult<&'a str> {
