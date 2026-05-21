@@ -806,6 +806,65 @@ async fn local_lsm_backend_onepiece_reopen_query_stress() {
 }
 
 #[tokio::test]
+#[ignore = "download One Piece fixture and run with --ignored"]
+async fn local_lsm_backend_onepiece_compact_reopen_query_stress() {
+    let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(5_000);
+    let batch_size = std::env::var("PONEGLYPH_ONEPIECE_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(10_000);
+
+    let pages = load_onepiece_pages(&onepiece_fixture_path(), Some(max_pages))
+        .expect("load One Piece XML fixture");
+    let facts = onepiece_pages_to_facts(&pages);
+
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = Workspace::at(tempdir.path());
+    {
+        let store = poneglyph_local::LsmFactStore::open(workspace.store_dir().join("facts.lsm"))
+            .expect("fact store");
+        state_prebuilt_batches(&store, &facts, batch_size)
+            .await
+            .expect("write fixture facts");
+        let compact_started = Instant::now();
+        store.compact().expect("compact lsm store");
+        eprintln!(
+            "lsm onepiece compact before reopen took {:?}",
+            compact_started.elapsed()
+        );
+    }
+
+    let open_started = Instant::now();
+    let runtime = poneglyph_local::open_lsm_workspace(workspace)
+        .await
+        .expect("reopen runtime");
+    let open_elapsed = open_started.elapsed();
+
+    let datafox_queries = onepiece_datafox_queries();
+    let query_started = Instant::now();
+    for (name, query) in datafox_queries {
+        let rows = runtime
+            .query_str(query)
+            .await
+            .expect("compacted reopened datafox query");
+        assert!(!rows.is_empty(), "{name} should return rows");
+    }
+    let query_elapsed = query_started.elapsed();
+
+    eprintln!(
+        "lsm onepiece compact+reopen query stress: reopen in {:?}; first {} queries in {:?}; {} facts from {} pages",
+        open_elapsed,
+        datafox_queries.len(),
+        query_elapsed,
+        facts.len(),
+        pages.len()
+    );
+}
+
+#[tokio::test]
 #[ignore = "set PONEGLYPH_STRESS_READS and run with --ignored"]
 async fn local_backend_read_heavy_stress() {
     let reads = std::env::var("PONEGLYPH_STRESS_READS")
