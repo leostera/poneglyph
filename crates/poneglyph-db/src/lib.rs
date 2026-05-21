@@ -27,7 +27,7 @@
 //!         .await?;
 //!
 //!     let _rows = runtime
-//!         .query_str(r#"code:displayName(File, \"src/main.rs\")"#)
+//!         .query_str(r#"code:displayName(File, "src/main.rs")"#)
 //!         .await?;
 //!
 //!     Ok(())

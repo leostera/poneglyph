@@ -31,7 +31,7 @@ async fn main() -> poneglyph_core::PoneResult<()> {
         )])
         .await?;
 
-    let rows = runtime.query_str(r#"code:displayName(File, \"src/main.rs\")"#).await?;
+    let rows = runtime.query_str(r#"code:displayName(File, "src/main.rs")"#).await?;
     println!("{rows:#?}");
 
     Ok(())
@@ -39,8 +39,10 @@ async fn main() -> poneglyph_core::PoneResult<()> {
 ```
 
 This path opens the durable fact store, entity projection store, and search index
-through `poneglyph-db`. Facts remain the durable source of truth; entities and
-search results are derived views that can be replayed.
+through `poneglyph-db`. The same flow is compiled in
+`crates/poneglyph-db/examples/codedb_daemon.rs` and covered by
+`crates/poneglyph-db/tests/embedding.rs`. Facts remain the durable source of
+truth; entities and search results are derived views that can be replayed.
 
 ## Daemon pattern
 
