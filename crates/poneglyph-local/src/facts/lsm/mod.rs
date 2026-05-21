@@ -451,12 +451,13 @@ impl Inner {
         let reader = sst::write_memtable(&path, &compacted)
             .map_err(|source| Error::FactStoreIo { source })?;
 
+        let metadata = segment_metadata(filename, &reader, 0);
         self.manifest
             .persist_edit(
                 &self.dir,
                 ManifestEdit::ReplaceSegments {
                     removed: previous_segments.clone(),
-                    added: vec![SegmentMetadata::level_zero(filename)],
+                    added: vec![metadata],
                 },
             )
             .map_err(|source| Error::FactStoreIo { source })?;
@@ -483,11 +484,9 @@ impl Inner {
         let path = self.dir.join(&filename);
         let reader = sst::write_memtable(&path, &self.memtable)
             .map_err(|source| Error::FactStoreIo { source })?;
+        let metadata = segment_metadata(filename, &reader, 0);
         self.manifest
-            .persist_edit(
-                &self.dir,
-                ManifestEdit::AddSegment(SegmentMetadata::level_zero(filename)),
-            )
+            .persist_edit(&self.dir, ManifestEdit::AddSegment(metadata))
             .map_err(|source| Error::FactStoreIo { source })?;
         self.segments_newest_first.insert(0, reader);
         self.memtable = Memtable::new();
@@ -495,6 +494,20 @@ impl Inner {
             .reset()
             .map_err(|source| Error::FactStoreIo { source })?;
         Ok(())
+    }
+}
+
+fn segment_metadata(filename: String, reader: &sst::SstReader, level: u32) -> SegmentMetadata {
+    let (smallest_key, largest_key) = reader
+        .key_bounds()
+        .map(|(smallest, largest)| (Some(smallest.to_vec()), Some(largest.to_vec())))
+        .unwrap_or((None, None));
+    SegmentMetadata {
+        filename,
+        level,
+        smallest_key,
+        largest_key,
+        file_size_bytes: Some(reader.file_size_bytes()),
     }
 }
 
@@ -781,6 +794,27 @@ mod tests {
     #[test]
     fn lsm_parse_optional_usize_env_ignores_missing_or_invalid_values() {
         assert_eq!(parse_optional_usize_env("PONEGLYPH_TEST_MISSING"), None);
+    }
+
+    #[tokio::test]
+    async fn lsm_flush_records_segment_metadata_bounds() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store
+            .state_facts_vec(vec![fact!(
+                uri!("e:one"),
+                uri!("f:name"),
+                Value::text("one")
+            )])
+            .await
+            .expect("state");
+        store.flush().expect("flush");
+
+        let inner = store.inner.lock().expect("lock");
+        let segment = inner.manifest.levels[0].first().expect("segment metadata");
+        assert!(segment.smallest_key.is_some());
+        assert!(segment.largest_key.is_some());
+        assert!(segment.file_size_bytes.is_some_and(|size| size > 0));
     }
 
     #[tokio::test]

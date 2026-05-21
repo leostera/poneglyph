@@ -68,7 +68,7 @@ impl SstReader {
         let index = read_index(&mut file)?;
         let data: Arc<[u8]> = std::fs::read(&path)?.into();
         let smallest_key = index.first().map(|entry| entry.first_key.clone());
-        let largest_key = largest_record_key(&data, index_offset)?;
+        let largest_key = largest_record_key_from_index(&data, index_offset, &index)?;
         Ok(Self {
             path,
             index,
@@ -153,6 +153,10 @@ impl SstReader {
         Some((self.smallest_key.as_deref()?, self.largest_key.as_deref()?))
     }
 
+    pub(crate) fn file_size_bytes(&self) -> u64 {
+        self.data.len() as u64
+    }
+
     fn seek_offset_for(&self, key: &[u8]) -> u64 {
         self.index
             .partition_point(|entry| entry.first_key.as_slice() <= key)
@@ -166,8 +170,12 @@ pub(crate) fn write_memtable(path: impl AsRef<Path>, memtable: &Memtable) -> io:
     write_entries(path.as_ref(), memtable.iter())
 }
 
-fn largest_record_key(data: &[u8], data_end: u64) -> io::Result<Option<Vec<u8>>> {
-    let mut offset = 4;
+fn largest_record_key_from_index(
+    data: &[u8],
+    data_end: u64,
+    index: &[IndexEntry],
+) -> io::Result<Option<Vec<u8>>> {
+    let mut offset = index.last().map_or(4, |entry| entry.offset);
     let mut largest = None;
     while offset < data_end {
         let Some((next_offset, key, _entry)) = read_record_from_slice(data, data_end, offset)?
