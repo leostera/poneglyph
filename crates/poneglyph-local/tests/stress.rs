@@ -70,6 +70,16 @@ struct WikiPage {
     text: String,
 }
 
+fn onepiece_fixture_path() -> std::path::PathBuf {
+    if let Ok(path) = std::env::var("PONEGLYPH_ONEPIECE_XML") {
+        return Path::new(&path).to_path_buf();
+    }
+
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .join("tests/fixtures/cache/onepiece-pages-current.xml")
+}
+
 fn load_onepiece_pages(path: &Path, max_pages: Option<usize>) -> std::io::Result<Vec<WikiPage>> {
     let xml = fs::read_to_string(path)?;
     Ok(parse_mediawiki_pages(&xml, max_pages))
@@ -308,8 +318,7 @@ async fn local_backend_write_heavy_stress() {
 #[tokio::test]
 #[ignore = "download tests/fixtures/onepiece-pages-current.xml or set PONEGLYPH_ONEPIECE_XML"]
 async fn local_backend_onepiece_wiki_ingest_stress() {
-    let fixture_path = std::env::var("PONEGLYPH_ONEPIECE_XML")
-        .unwrap_or_else(|_| "tests/fixtures/cache/onepiece-pages-current.xml".to_string());
+    let fixture_path = onepiece_fixture_path();
     let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
         .ok()
         .and_then(|value| value.parse().ok());
@@ -318,11 +327,11 @@ async fn local_backend_onepiece_wiki_ingest_stress() {
         .and_then(|value| value.parse().ok())
         .unwrap_or(10_000);
 
-    let pages = load_onepiece_pages(Path::new(&fixture_path), max_pages).unwrap_or_else(|error| {
-        eprintln!(
-            "could not load {fixture_path}: {error}; using deterministic synthetic wiki fixture"
-        );
-        synthetic_onepiece_pages(max_pages.unwrap_or(5_000))
+    let pages = load_onepiece_pages(&fixture_path, max_pages).unwrap_or_else(|error| {
+        panic!(
+            "could not load One Piece XML fixture at {}: {error}; run tests/fixtures/download_onepiece_fandom.sh or set PONEGLYPH_ONEPIECE_XML",
+            fixture_path.display()
+        )
     });
     let facts = onepiece_pages_to_facts(&pages);
 
