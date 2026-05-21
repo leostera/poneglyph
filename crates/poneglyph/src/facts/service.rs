@@ -23,11 +23,18 @@ impl FactService {
     }
 
     pub async fn state_facts(&self, facts: Vec<Fact>) -> PoneResult<Uri> {
-        self.stream_facts(fact_stream(facts)).await
+        let (tx_id, committed_facts) = self.store.state_facts_vec(facts).await?;
+        self.broadcast_committed_facts(&tx_id, committed_facts);
+        Ok(tx_id)
     }
 
     pub async fn stream_facts(&self, facts: mpsc::Receiver<Fact>) -> PoneResult<Uri> {
         let (tx_id, committed_facts) = self.store.state_facts(facts).await?;
+        self.broadcast_committed_facts(&tx_id, committed_facts);
+        Ok(tx_id)
+    }
+
+    fn broadcast_committed_facts(&self, tx_id: &Uri, committed_facts: Vec<Fact>) {
         let fact_count = committed_facts.len();
         debug!(%tx_id, fact_count, "stored fact batch");
         for fact in committed_facts {
@@ -35,7 +42,6 @@ impl FactService {
                 warn!("fact batch committed without active subscribers");
             }
         }
-        Ok(tx_id)
     }
 
     pub async fn get_facts(&self, filter: Filter) -> PoneResult<mpsc::Receiver<PoneResult<Fact>>> {
@@ -61,18 +67,6 @@ impl FactService {
     pub async fn get_schema(&self) -> PoneResult<SchemaDefinition> {
         self.store.get_schema().await
     }
-}
-
-fn fact_stream(facts: Vec<Fact>) -> mpsc::Receiver<Fact> {
-    let (tx, rx) = mpsc::channel(facts.len().max(1));
-    tokio::spawn(async move {
-        for fact in facts {
-            if tx.send(fact).await.is_err() {
-                break;
-            }
-        }
-    });
-    rx
 }
 
 impl FactServiceBuilder {

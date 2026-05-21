@@ -56,7 +56,7 @@ async fn state_prebuilt_batches(
     batch_size: usize,
 ) -> PoneResult<()> {
     for chunk in facts.chunks(batch_size) {
-        store.state_facts(fact_channel(chunk.to_vec())).await?;
+        store.state_facts_vec(chunk.to_vec()).await?;
     }
     Ok(())
 }

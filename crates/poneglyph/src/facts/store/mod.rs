@@ -12,6 +12,18 @@ pub use memory::InMemoryFactStore;
 #[async_trait]
 pub trait Store: Send + Sync {
     async fn state_facts(&self, fact_stream: mpsc::Receiver<Fact>) -> PoneResult<(Uri, Vec<Fact>)>;
+
+    async fn state_facts_vec(&self, facts: Vec<Fact>) -> PoneResult<(Uri, Vec<Fact>)> {
+        let (tx, rx) = mpsc::channel(facts.len().max(1));
+        tokio::spawn(async move {
+            for fact in facts {
+                if tx.send(fact).await.is_err() {
+                    break;
+                }
+            }
+        });
+        self.state_facts(rx).await
+    }
     async fn get_facts(&self, filter: Filter) -> PoneResult<mpsc::Receiver<PoneResult<Fact>>>;
     async fn get_active_facts(
         &self,

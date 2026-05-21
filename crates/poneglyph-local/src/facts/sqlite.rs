@@ -170,17 +170,22 @@ impl Store for SqliteFactStore {
         &self,
         mut fact_stream: mpsc::Receiver<Fact>,
     ) -> PoneResult<(Uri, Vec<Fact>)> {
-        let tx_id = new_tx_id();
-        let mut incoming = Vec::new();
+        let mut facts = Vec::new();
         while let Some(fact) = fact_stream.recv().await {
-            validate_pending_fact(&fact)?;
-            incoming.push(fact);
+            facts.push(fact);
         }
+        self.state_facts_vec(facts).await
+    }
 
+    async fn state_facts_vec(&self, incoming: Vec<Fact>) -> PoneResult<(Uri, Vec<Fact>)> {
         if incoming.is_empty() {
             return Err(Error::EmptyFactBatch);
         }
+        for fact in &incoming {
+            validate_pending_fact(fact)?;
+        }
 
+        let tx_id = new_tx_id();
         let mut tx = self.pool.begin().await?;
         let mut persisted = Vec::new();
         let mut schema_batch = SchemaBatchUpdate::default();
