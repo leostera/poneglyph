@@ -1,4 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::fs;
+use std::path::Path;
 use std::time::Instant;
 
 use poneglyph::{
@@ -59,6 +61,162 @@ async fn state_prebuilt_batches(
         store.state_facts_vec(chunk.to_vec()).await?;
     }
     Ok(())
+}
+
+#[derive(Debug)]
+struct WikiPage {
+    title: String,
+    namespace: String,
+    text: String,
+}
+
+fn load_onepiece_pages(path: &Path, max_pages: Option<usize>) -> std::io::Result<Vec<WikiPage>> {
+    let xml = fs::read_to_string(path)?;
+    Ok(parse_mediawiki_pages(&xml, max_pages))
+}
+
+fn parse_mediawiki_pages(xml: &str, max_pages: Option<usize>) -> Vec<WikiPage> {
+    let mut pages = Vec::new();
+    let mut rest = xml;
+    while let Some(start) = rest.find("<page>") {
+        rest = &rest[start + "<page>".len()..];
+        let Some(end) = rest.find("</page>") else {
+            break;
+        };
+        let page_xml = &rest[..end];
+        rest = &rest[end + "</page>".len()..];
+
+        let title = xml_text(page_xml, "title").unwrap_or_default();
+        if title.is_empty() {
+            continue;
+        }
+        let namespace = xml_text(page_xml, "ns").unwrap_or_else(|| "0".to_string());
+        let text = xml_text(page_xml, "text").unwrap_or_default();
+        pages.push(WikiPage {
+            title,
+            namespace,
+            text,
+        });
+        if max_pages.is_some_and(|limit| pages.len() >= limit) {
+            break;
+        }
+    }
+    pages
+}
+
+fn xml_text(xml: &str, tag: &str) -> Option<String> {
+    let open_start = xml.find(&format!("<{tag}"))?;
+    let after_open = &xml[open_start..];
+    let content_start = after_open.find('>')? + 1;
+    let content_and_rest = &after_open[content_start..];
+    let close = content_and_rest.find(&format!("</{tag}>"))?;
+    Some(unescape_xml(&content_and_rest[..close]))
+}
+
+fn unescape_xml(value: &str) -> String {
+    value
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("&amp;", "&")
+}
+
+fn synthetic_onepiece_pages(count: usize) -> Vec<WikiPage> {
+    (0..count)
+        .map(|index| WikiPage {
+            title: format!("Character {index}"),
+            namespace: "0".to_string(),
+            text: format!(
+                "{{{{Infobox character|name=Character {index}|affiliation=Straw Hat Pirates}}}}\n[[Category:Characters]]\n[[Monkey D. Luffy]] appears in chapter {}.",
+                index % 1_100
+            ),
+        })
+        .collect()
+}
+
+fn onepiece_pages_to_facts(pages: &[WikiPage]) -> Vec<Fact> {
+    let source = uri!("fixture:onepiece-fandom");
+    let mut facts = Vec::with_capacity(pages.len() * 5);
+    for (index, page) in pages.iter().enumerate() {
+        let entity = uri!(format!(
+            "wiki:onepiece:page:{}",
+            slug_uri_component(&page.title)
+        ));
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("wiki:page:title"),
+            Value::text(page.title.clone())
+        ));
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("wiki:page:namespace"),
+            Value::number(page.namespace.clone())
+        ));
+        facts.push(fact!(
+            source.clone(),
+            entity.clone(),
+            uri!("wiki:page:text_bytes"),
+            Value::integer(page.text.len() as i64)
+        ));
+        for category in extract_wiki_links(&page.text, "Category:").take(8) {
+            facts.push(fact!(
+                source.clone(),
+                entity.clone(),
+                uri!("wiki:page:category"),
+                Value::text(category)
+            ));
+        }
+        for link in extract_wiki_links(&page.text, "").take(16) {
+            if !link.starts_with("Category:") {
+                facts.push(fact!(
+                    source.clone(),
+                    entity.clone(),
+                    uri!("wiki:page:link"),
+                    Value::text(link)
+                ));
+            }
+        }
+        if index % 10 == 0 {
+            facts.push(fact!(
+                source.clone(),
+                entity,
+                uri!("wiki:page:sampled"),
+                Value::boolean(true)
+            ));
+        }
+    }
+    facts
+}
+
+fn extract_wiki_links<'a>(text: &'a str, prefix: &'a str) -> impl Iterator<Item = String> + 'a {
+    text.match_indices("[[").filter_map(move |(start, _)| {
+        let after = &text[start + 2..];
+        let end = after.find("]] ").or_else(|| after.find("]]"))?;
+        let target = after[..end].split('|').next()?.trim();
+        if target.is_empty() || !target.starts_with(prefix) {
+            return None;
+        }
+        Some(target.to_string())
+    })
+}
+
+fn slug_uri_component(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for ch in value.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+        } else if matches!(ch, ' ' | '_' | '-' | ':' | '/') {
+            out.push('-');
+        }
+    }
+    if out.is_empty() {
+        "untitled".to_string()
+    } else {
+        out
+    }
 }
 
 #[tokio::test]
@@ -145,6 +303,57 @@ async fn local_backend_write_heavy_stress() {
         .expect("collect log");
     assert_eq!(log.len(), total);
     eprintln!("write-heavy stress wrote {total} facts in {elapsed:?}");
+}
+
+#[tokio::test]
+#[ignore = "download tests/fixtures/onepiece-pages-current.xml or set PONEGLYPH_ONEPIECE_XML"]
+async fn local_backend_onepiece_wiki_ingest_stress() {
+    let fixture_path = std::env::var("PONEGLYPH_ONEPIECE_XML")
+        .unwrap_or_else(|_| "tests/fixtures/cache/onepiece-pages-current.xml".to_string());
+    let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
+        .ok()
+        .and_then(|value| value.parse().ok());
+    let batch_size = std::env::var("PONEGLYPH_ONEPIECE_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(10_000);
+
+    let pages = load_onepiece_pages(Path::new(&fixture_path), max_pages).unwrap_or_else(|error| {
+        eprintln!(
+            "could not load {fixture_path}: {error}; using deterministic synthetic wiki fixture"
+        );
+        synthetic_onepiece_pages(max_pages.unwrap_or(5_000))
+    });
+    let facts = onepiece_pages_to_facts(&pages);
+
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = Workspace::at(tempdir.path());
+    let store = poneglyph_local::open_fact_store(&workspace)
+        .await
+        .expect("fact store");
+
+    let started = Instant::now();
+    state_prebuilt_batches(store.as_ref(), &facts, batch_size)
+        .await
+        .expect("write fixture facts");
+    let elapsed = started.elapsed();
+
+    let active = collect_active_facts(
+        store
+            .get_active_facts(ActiveFilter::ByField(uri!("wiki:page:title")))
+            .await
+            .expect("active title facts"),
+    )
+    .await
+    .expect("collect active titles");
+    assert_eq!(active.len(), pages.len());
+
+    eprintln!(
+        "onepiece wiki ingest wrote {} facts from {} pages in {:?}",
+        facts.len(),
+        pages.len(),
+        elapsed
+    );
 }
 
 #[tokio::test]
