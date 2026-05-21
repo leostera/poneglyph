@@ -793,7 +793,8 @@ mod tests {
     use chrono::{NaiveDate, TimeZone, Utc};
     use poneglyph_core::{
         ActiveFact, BaseSchema, Entity, Fact, FieldSchema, InMemoryEntityStore, InMemoryFactStore,
-        NamespaceSchema, Poneglyph, SchemaDefinition, SearchProjection, Value, fact, uri,
+        NamespaceSchema, Poneglyph, Projection, ProjectionBatch, SchemaDefinition, SearchHit,
+        SearchProjection, Value, fact, uri,
     };
     use tonic::{Code, Request};
 
@@ -1062,6 +1063,15 @@ mod tests {
         assert_eq!(error.code(), Code::InvalidArgument);
     }
 
+    fn signals_entity() -> Entity {
+        Entity {
+            uri: uri!("spotify:album:signals"),
+            namespace: "spotify".to_string(),
+            kind: "album".to_string(),
+            fields: BTreeMap::from([(uri!("spotify:displayName"), Value::text("Signals"))]),
+        }
+    }
+
     #[tokio::test]
     async fn get_entity_typed_returns_none_for_missing_entities() {
         let response = api()
@@ -1074,6 +1084,111 @@ mod tests {
             .into_inner();
 
         assert!(response.entity.is_none());
+    }
+
+    #[tokio::test]
+    async fn get_entity_legacy_json_matches_typed_entity() {
+        let (api, runtime) = api_with_runtime().await;
+        runtime
+            .entity_store()
+            .put_entity(signals_entity(), None)
+            .await
+            .expect("put entity");
+        let request = GetEntityRequest {
+            uri: "spotify:album:signals".to_string(),
+        };
+
+        let legacy = api
+            .get_entity(Request::new(request.clone()))
+            .await
+            .expect("legacy entity")
+            .into_inner();
+        let typed = api
+            .get_entity_typed(Request::new(request))
+            .await
+            .expect("typed entity")
+            .into_inner();
+        let legacy_entity =
+            serde_json::from_str::<Option<Entity>>(&legacy.json).expect("legacy entity json");
+        let typed_entity = typed
+            .entity
+            .map(entity_from_proto)
+            .transpose()
+            .expect("entity proto");
+
+        assert_eq!(legacy_entity, typed_entity);
+    }
+
+    #[tokio::test]
+    async fn list_entities_legacy_json_matches_typed_entities() {
+        let (api, runtime) = api_with_runtime().await;
+        runtime
+            .entity_store()
+            .put_entity(signals_entity(), None)
+            .await
+            .expect("put entity");
+        let request = ListEntitiesRequest {
+            limit: 100,
+            offset: 0,
+        };
+
+        let legacy = api
+            .list_entities(Request::new(request))
+            .await
+            .expect("legacy entities")
+            .into_inner();
+        let typed = api
+            .list_entities_typed(Request::new(request))
+            .await
+            .expect("typed entities")
+            .into_inner();
+        let legacy_entities =
+            serde_json::from_str::<Vec<Entity>>(&legacy.json).expect("legacy entities json");
+        let typed_entities = typed
+            .entities
+            .into_iter()
+            .map(entity_from_proto)
+            .collect::<Result<Vec<_>, _>>()
+            .expect("typed entities");
+
+        assert_eq!(legacy_entities, typed_entities);
+    }
+
+    #[tokio::test]
+    async fn search_entities_legacy_json_matches_typed_hits() {
+        let (api, runtime) = api_with_runtime().await;
+        runtime
+            .search_projection()
+            .handle_events(ProjectionBatch {
+                entities: vec![signals_entity()],
+            })
+            .await
+            .expect("index entity");
+        let request = SearchEntitiesRequest {
+            query: "Signals".to_string(),
+            limit: 100,
+        };
+
+        let legacy = api
+            .search_entities(Request::new(request.clone()))
+            .await
+            .expect("legacy search")
+            .into_inner();
+        let typed = api
+            .search_entities_typed(Request::new(request))
+            .await
+            .expect("typed search")
+            .into_inner();
+        let legacy_hits =
+            serde_json::from_str::<Vec<SearchHit>>(&legacy.json).expect("legacy search json");
+        let typed_hits = typed
+            .hits
+            .into_iter()
+            .map(search_hit_from_proto)
+            .collect::<Result<Vec<_>, _>>()
+            .expect("typed search hits");
+
+        assert_eq!(legacy_hits, typed_hits);
     }
 
     #[tokio::test]
@@ -1300,6 +1415,47 @@ mod tests {
         assert_eq!(first_facts.len(), 1);
         assert_eq!(second_facts.len(), 1);
         assert_ne!(first_facts[0].fact_id, second_facts[0].fact_id);
+    }
+
+    #[tokio::test]
+    async fn list_facts_legacy_json_matches_typed_log_facts() {
+        let (api, runtime) = api_with_runtime().await;
+        let tx_id = runtime
+            .state_facts(vec![fact!(
+                uri!("spotify:album:signals"),
+                uri!("spotify:displayName"),
+                Value::text("Signals")
+            )])
+            .await
+            .expect("state facts");
+        let request = ListFactsRequest {
+            entity_uri: String::new(),
+            tx_id: tx_id.to_string(),
+            active: false,
+            limit: 100,
+            offset: 0,
+        };
+
+        let legacy = api
+            .list_facts(Request::new(request.clone()))
+            .await
+            .expect("legacy facts")
+            .into_inner();
+        let typed = api
+            .list_facts_typed(Request::new(request))
+            .await
+            .expect("typed facts")
+            .into_inner();
+        let legacy_facts =
+            serde_json::from_str::<Vec<Fact>>(&legacy.json).expect("legacy facts json");
+        let typed_facts = typed
+            .facts
+            .into_iter()
+            .map(fact_from_proto)
+            .collect::<Result<Vec<_>, _>>()
+            .expect("typed facts");
+
+        assert_eq!(legacy_facts, typed_facts);
     }
 
     #[tokio::test]
