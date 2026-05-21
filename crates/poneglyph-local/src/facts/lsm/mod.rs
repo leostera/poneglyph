@@ -26,6 +26,8 @@ const WAL_FILE: &str = "facts.wal";
 const DEFAULT_FLUSH_THRESHOLD_BYTES: usize = 128 * 1024 * 1024;
 const FLUSH_THRESHOLD_ENV: &str = "PONEGLYPH_LSM_FLUSH_THRESHOLD_BYTES";
 const ACTIVE_CACHE_LIMIT_ENV: &str = "PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES";
+const L0_COMPACTION_SEGMENTS_ENV: &str = "PONEGLYPH_LSM_L0_COMPACTION_SEGMENTS";
+const DEFAULT_L0_COMPACTION_SEGMENTS: usize = 16;
 
 #[derive(Clone)]
 pub struct LsmFactStore {
@@ -50,6 +52,7 @@ struct Inner {
     active_cache: HashMap<Vec<u8>, ActiveFact>,
     active_cache_max_entries: Option<usize>,
     flush_threshold_bytes: usize,
+    l0_compaction_segments: usize,
     stats: LsmStats,
 }
 
@@ -74,6 +77,7 @@ impl LsmFactStore {
                 active_cache: HashMap::new(),
                 active_cache_max_entries: active_cache_max_entries_from_env(),
                 flush_threshold_bytes: flush_threshold_bytes_from_env(),
+                l0_compaction_segments: l0_compaction_segments_from_env(),
                 stats: LsmStats::default(),
             })),
         })
@@ -94,11 +98,10 @@ impl LsmFactStore {
     }
 
     pub fn needs_compaction(&self) -> bool {
-        self.inner
-            .lock()
-            .expect("LSM mutex poisoned")
+        let inner = self.inner.lock().expect("LSM mutex poisoned");
+        inner
             .manifest
-            .compaction_plan()
+            .compaction_plan_with_l0_threshold(inner.l0_compaction_segments)
             .is_some()
     }
 
@@ -443,7 +446,10 @@ impl Inner {
             return Ok(());
         }
 
-        if let Some(plan) = self.manifest.compaction_plan() {
+        if let Some(plan) = self
+            .manifest
+            .compaction_plan_with_l0_threshold(self.l0_compaction_segments)
+        {
             let input_set = plan
                 .inputs_newest_first
                 .iter()
@@ -608,6 +614,10 @@ fn active_cache_max_entries_from_env() -> Option<usize> {
 
 fn flush_threshold_bytes_from_env() -> usize {
     parse_optional_usize_env(FLUSH_THRESHOLD_ENV).unwrap_or(DEFAULT_FLUSH_THRESHOLD_BYTES)
+}
+
+fn l0_compaction_segments_from_env() -> usize {
+    parse_optional_usize_env(L0_COMPACTION_SEGMENTS_ENV).unwrap_or(DEFAULT_L0_COMPACTION_SEGMENTS)
 }
 
 fn parse_optional_usize_env(name: &str) -> Option<usize> {
@@ -988,6 +998,7 @@ mod tests {
     async fn lsm_fact_store_reports_planned_l0_compaction() {
         let tempdir = tempdir().expect("tempdir");
         let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store.inner.lock().expect("lock").l0_compaction_segments = 4;
         for index in 0..4 {
             store
                 .state_facts_vec(vec![fact!(
@@ -1017,6 +1028,7 @@ mod tests {
     async fn lsm_fact_store_executes_planned_l0_compaction_to_level_one() {
         let tempdir = tempdir().expect("tempdir");
         let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store.inner.lock().expect("lock").l0_compaction_segments = 4;
         for index in 0..5 {
             store
                 .state_facts_vec(vec![fact!(
@@ -1034,7 +1046,12 @@ mod tests {
         let inner = store.inner.lock().expect("lock");
         assert_eq!(inner.manifest.levels[0].len(), 0);
         assert_eq!(inner.manifest.levels[1].len(), 1);
-        assert!(!inner.manifest.compaction_plan().is_some());
+        assert!(
+            !inner
+                .manifest
+                .compaction_plan_with_l0_threshold(inner.l0_compaction_segments)
+                .is_some()
+        );
         drop(inner);
 
         let mut rows = store
@@ -1099,6 +1116,7 @@ mod tests {
     async fn planned_l0_compaction_preserves_active_tombstones_over_older_levels() {
         let tempdir = tempdir().expect("tempdir");
         let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store.inner.lock().expect("lock").l0_compaction_segments = 4;
         let target = fact!(uri!("e:target"), uri!("f:name"), Value::text("target"));
         store
             .state_facts_vec(vec![target])
