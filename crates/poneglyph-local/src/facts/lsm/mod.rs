@@ -28,8 +28,10 @@ const FLUSH_THRESHOLD_ENV: &str = "PONEGLYPH_LSM_FLUSH_THRESHOLD_BYTES";
 const ACTIVE_CACHE_LIMIT_ENV: &str = "PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES";
 const L0_COMPACTION_SEGMENTS_ENV: &str = "PONEGLYPH_LSM_L0_COMPACTION_SEGMENTS";
 const L0_COMPACTION_MAX_INPUTS_ENV: &str = "PONEGLYPH_LSM_L0_COMPACTION_MAX_INPUTS";
+const L0_COMPACTION_MAX_BYTES_ENV: &str = "PONEGLYPH_LSM_L0_COMPACTION_MAX_BYTES";
 const DEFAULT_L0_COMPACTION_SEGMENTS: usize = 16;
 const DEFAULT_L0_COMPACTION_MAX_INPUTS: usize = 4;
+const DEFAULT_L0_COMPACTION_MAX_BYTES: u64 = 16 * 1024 * 1024;
 
 #[derive(Clone)]
 pub struct LsmFactStore {
@@ -56,6 +58,7 @@ struct Inner {
     flush_threshold_bytes: usize,
     l0_compaction_segments: usize,
     l0_compaction_max_inputs: usize,
+    l0_compaction_max_bytes: u64,
     stats: LsmStats,
 }
 
@@ -82,6 +85,7 @@ impl LsmFactStore {
                 flush_threshold_bytes: flush_threshold_bytes_from_env(),
                 l0_compaction_segments: l0_compaction_segments_from_env(),
                 l0_compaction_max_inputs: l0_compaction_max_inputs_from_env(),
+                l0_compaction_max_bytes: l0_compaction_max_bytes_from_env(),
                 stats: LsmStats::default(),
             })),
         })
@@ -125,6 +129,7 @@ impl LsmFactStore {
             .compaction_plan_with_l0_limits(
                 inner.l0_compaction_segments,
                 inner.l0_compaction_max_inputs,
+                inner.l0_compaction_max_bytes,
             )
             .is_some()
     }
@@ -487,6 +492,7 @@ impl Inner {
         let Some(plan) = self.manifest.compaction_plan_with_l0_limits(
             self.l0_compaction_segments,
             self.l0_compaction_max_inputs,
+            self.l0_compaction_max_bytes,
         ) else {
             return Ok(false);
         };
@@ -659,7 +665,17 @@ fn l0_compaction_max_inputs_from_env() -> usize {
         .unwrap_or(DEFAULT_L0_COMPACTION_MAX_INPUTS)
 }
 
+fn l0_compaction_max_bytes_from_env() -> u64 {
+    parse_optional_u64_env(L0_COMPACTION_MAX_BYTES_ENV).unwrap_or(DEFAULT_L0_COMPACTION_MAX_BYTES)
+}
+
 fn parse_optional_usize_env(name: &str) -> Option<usize> {
+    std::env::var(name)
+        .ok()
+        .and_then(|value| value.parse().ok())
+}
+
+fn parse_optional_u64_env(name: &str) -> Option<u64> {
     std::env::var(name)
         .ok()
         .and_then(|value| value.parse().ok())
@@ -861,8 +877,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        LsmFactStore, ManifestEdit, encode_active_fact, key, merge, parse_optional_usize_env,
-        segment_metadata, sst,
+        LsmFactStore, ManifestEdit, encode_active_fact, key, merge, parse_optional_u64_env,
+        parse_optional_usize_env, segment_metadata, sst,
     };
     use crate::facts::lsm::memtable::Memtable;
     use poneglyph::{ActiveFact, ActiveFilter, Filter, Store, Value, fact, retraction, uri};
@@ -938,6 +954,11 @@ mod tests {
     #[test]
     fn lsm_parse_optional_usize_env_ignores_missing_or_invalid_values() {
         assert_eq!(parse_optional_usize_env("PONEGLYPH_TEST_MISSING"), None);
+    }
+
+    #[test]
+    fn lsm_parse_optional_u64_env_ignores_missing_or_invalid_values() {
+        assert_eq!(parse_optional_u64_env("PONEGLYPH_TEST_MISSING"), None);
     }
 
     #[tokio::test]
@@ -1041,6 +1062,7 @@ mod tests {
             let mut inner = store.inner.lock().expect("lock");
             inner.l0_compaction_segments = 4;
             inner.l0_compaction_max_inputs = usize::MAX;
+            inner.l0_compaction_max_bytes = u64::MAX;
         }
         for index in 0..4 {
             store
@@ -1075,6 +1097,7 @@ mod tests {
             let mut inner = store.inner.lock().expect("lock");
             inner.l0_compaction_segments = 4;
             inner.l0_compaction_max_inputs = usize::MAX;
+            inner.l0_compaction_max_bytes = u64::MAX;
         }
         store
             .state_facts_vec(vec![fact!(
@@ -1110,6 +1133,7 @@ mod tests {
             let mut inner = store.inner.lock().expect("lock");
             inner.l0_compaction_segments = 4;
             inner.l0_compaction_max_inputs = usize::MAX;
+            inner.l0_compaction_max_bytes = u64::MAX;
         }
         assert!(store.compact_in_background_if_needed().is_none());
 
@@ -1139,6 +1163,7 @@ mod tests {
             let mut inner = store.inner.lock().expect("lock");
             inner.l0_compaction_segments = 4;
             inner.l0_compaction_max_inputs = 2;
+            inner.l0_compaction_max_bytes = u64::MAX;
         }
         for index in 0..5 {
             store
@@ -1158,6 +1183,41 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn planned_compaction_can_limit_inputs_by_bytes() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        {
+            let mut inner = store.inner.lock().expect("lock");
+            inner.l0_compaction_segments = 4;
+            inner.l0_compaction_max_inputs = usize::MAX;
+        }
+        for index in 0..5 {
+            store
+                .state_facts_vec(vec![fact!(
+                    uri!(format!("e:byte-bounded:{index}")),
+                    uri!("f:name"),
+                    Value::text("x".repeat(512))
+                )])
+                .await
+                .expect("state");
+            store.flush().expect("flush");
+        }
+        {
+            let mut inner = store.inner.lock().expect("lock");
+            let oldest = inner.manifest.levels[0].last().expect("oldest");
+            inner.l0_compaction_max_bytes = oldest.file_size_bytes.expect("file size");
+        }
+        assert!(
+            store
+                .compact_if_needed()
+                .expect("compact byte bounded inputs")
+        );
+        let inner = store.inner.lock().expect("lock");
+        assert_eq!(inner.manifest.levels[0].len(), 4);
+        assert_eq!(inner.manifest.levels[1].len(), 1);
+    }
+
+    #[tokio::test]
     async fn lsm_fact_store_executes_planned_l0_compaction_to_level_one() {
         let tempdir = tempdir().expect("tempdir");
         let store = LsmFactStore::open(tempdir.path()).expect("open");
@@ -1165,6 +1225,7 @@ mod tests {
             let mut inner = store.inner.lock().expect("lock");
             inner.l0_compaction_segments = 4;
             inner.l0_compaction_max_inputs = usize::MAX;
+            inner.l0_compaction_max_bytes = u64::MAX;
         }
         for index in 0..5 {
             store
@@ -1189,6 +1250,7 @@ mod tests {
                 .compaction_plan_with_l0_limits(
                     inner.l0_compaction_segments,
                     inner.l0_compaction_max_inputs,
+                    inner.l0_compaction_max_bytes,
                 )
                 .is_some()
         );
@@ -1260,6 +1322,7 @@ mod tests {
             let mut inner = store.inner.lock().expect("lock");
             inner.l0_compaction_segments = 4;
             inner.l0_compaction_max_inputs = usize::MAX;
+            inner.l0_compaction_max_bytes = u64::MAX;
         }
         let target = fact!(uri!("e:target"), uri!("f:name"), Value::text("target"));
         store

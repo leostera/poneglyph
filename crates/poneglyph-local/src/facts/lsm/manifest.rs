@@ -130,27 +130,37 @@ impl Manifest {
         &self,
         threshold: usize,
     ) -> Option<CompactionPlan> {
-        self.compaction_plan_with_l0_limits(threshold, usize::MAX)
+        self.compaction_plan_with_l0_limits(threshold, usize::MAX, u64::MAX)
     }
 
     pub(crate) fn compaction_plan_with_l0_limits(
         &self,
         threshold: usize,
         max_inputs: usize,
+        max_bytes: u64,
     ) -> Option<CompactionPlan> {
         let level_zero = self.levels.first()?;
-        if level_zero.len() <= threshold || max_inputs == 0 {
+        if level_zero.len() <= threshold || max_inputs == 0 || max_bytes == 0 {
             return None;
         }
-        let input_count = level_zero.len().min(max_inputs);
-        let first_input = level_zero.len().saturating_sub(input_count);
+        let mut selected = Vec::new();
+        let mut selected_bytes = 0_u64;
+        for segment in level_zero.iter().rev() {
+            if selected.len() >= max_inputs {
+                break;
+            }
+            let segment_bytes = segment.file_size_bytes.unwrap_or(0);
+            if !selected.is_empty() && selected_bytes.saturating_add(segment_bytes) > max_bytes {
+                break;
+            }
+            selected.push(segment.filename.clone());
+            selected_bytes = selected_bytes.saturating_add(segment_bytes);
+        }
+        selected.reverse();
         Some(CompactionPlan {
             input_level: 0,
             output_level: 1,
-            inputs_newest_first: level_zero[first_input..]
-                .iter()
-                .map(|segment| segment.filename.clone())
-                .collect(),
+            inputs_newest_first: selected,
             reason: CompactionReason::LevelZeroSegmentCount {
                 actual: level_zero.len(),
                 threshold,
@@ -411,10 +421,35 @@ mod tests {
         }
 
         let plan = manifest
-            .compaction_plan_with_l0_limits(4, 2)
+            .compaction_plan_with_l0_limits(4, 2, u64::MAX)
             .expect("bounded plan");
         assert_eq!(plan.inputs_newest_first, vec!["two.sst", "one.sst"]);
-        assert!(manifest.compaction_plan_with_l0_limits(4, 0).is_none());
+        assert!(
+            manifest
+                .compaction_plan_with_l0_limits(4, 0, u64::MAX)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn manifest_can_bound_level_zero_compaction_inputs_by_bytes() {
+        let mut manifest = Manifest::default();
+        for (filename, size) in [
+            ("one.sst", 10),
+            ("two.sst", 10),
+            ("three.sst", 10),
+            ("four.sst", 10),
+            ("five.sst", 10),
+        ] {
+            let mut segment = SegmentMetadata::level_zero(filename.to_string());
+            segment.file_size_bytes = Some(size);
+            manifest.apply_edit(ManifestEdit::AddSegment(segment));
+        }
+
+        let plan = manifest
+            .compaction_plan_with_l0_limits(4, usize::MAX, 15)
+            .expect("byte bounded plan");
+        assert_eq!(plan.inputs_newest_first, vec!["one.sst"]);
     }
 
     #[test]
