@@ -23,7 +23,7 @@ use self::sst::SstReader;
 use self::wal::Wal;
 
 const WAL_FILE: &str = "facts.wal";
-const FLUSH_THRESHOLD_BYTES: usize = 8 * 1024 * 1024;
+const FLUSH_THRESHOLD_BYTES: usize = 128 * 1024 * 1024;
 
 #[derive(Clone)]
 pub struct LsmFactStore {
