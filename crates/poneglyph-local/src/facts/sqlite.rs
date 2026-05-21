@@ -686,7 +686,7 @@ async fn bulk_upsert_active_facts(
     for chunk in facts.chunks(CHUNK_SIZE) {
         let mut query = QueryBuilder::<Sqlite>::new(
             r#"
-            INSERT INTO active_facts (
+            INSERT OR REPLACE INTO active_facts (
                 tuple_key, fact_id, source, entity, field, value_json, tx_id
             )
             "#,
@@ -700,17 +700,6 @@ async fn bulk_upsert_active_facts(
                 .push_bind(serde_json::to_string(&fact.value).expect("serialize fact value"))
                 .push_bind(fact.tx_id.as_ref().expect("tx_id assigned").as_str());
         });
-        query.push(
-            r#"
-            ON CONFLICT(tuple_key) DO UPDATE SET
-                fact_id = excluded.fact_id,
-                source = excluded.source,
-                entity = excluded.entity,
-                field = excluded.field,
-                value_json = excluded.value_json,
-                tx_id = excluded.tx_id
-            "#,
-        );
         query.build().execute(&mut **tx).await?;
     }
 
