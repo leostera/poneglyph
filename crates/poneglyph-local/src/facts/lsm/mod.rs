@@ -36,6 +36,7 @@ struct Inner {
     memtable: Memtable,
     wal: Wal,
     segments_newest_first: Vec<SstReader>,
+    active_cache: HashMap<Vec<u8>, ActiveFact>,
 }
 
 impl LsmFactStore {
@@ -60,6 +61,7 @@ impl LsmFactStore {
                 memtable,
                 wal,
                 segments_newest_first,
+                active_cache: HashMap::new(),
             })),
         })
     }
@@ -205,7 +207,10 @@ impl Inner {
         Ok(facts)
     }
 
-    fn get_active_facts(&self, filter: ActiveFilter) -> PoneResult<Vec<PoneResult<ActiveFact>>> {
+    fn get_active_facts(
+        &mut self,
+        filter: ActiveFilter,
+    ) -> PoneResult<Vec<PoneResult<ActiveFact>>> {
         let prefix = match filter {
             ActiveFilter::All => key::active_all_prefix(),
             ActiveFilter::ByEntity(entity) => key::active_entity_prefix(&entity),
@@ -220,10 +225,17 @@ impl Inner {
                 value,
             } => key::active_field_key(&field, &entity, &value),
         };
-        self.scan_values(prefix).map(|rows| {
+        self.scan_entries(prefix).map(|rows| {
             let mut uri_cache = HashMap::new();
             rows.into_iter()
-                .map(|bytes| decode_active_fact_with_cache(&bytes, &mut uri_cache))
+                .map(|(key, bytes)| {
+                    if let Some(active) = self.active_cache.get(&key) {
+                        return Ok(active.clone());
+                    }
+                    let active = decode_active_fact_with_cache(&bytes, &mut uri_cache)?;
+                    self.active_cache.insert(key, active.clone());
+                    Ok(active)
+                })
                 .collect()
         })
     }
@@ -240,11 +252,13 @@ impl Inner {
         let keys = active_index_keys(&active);
         if fact.retraction {
             for key in keys {
+                self.active_cache.remove(&key);
                 self.delete(key)?;
             }
         } else {
             let bytes = encode_active_fact(&active)?;
             for key in keys {
+                self.active_cache.insert(key.clone(), active.clone());
                 self.put(key, bytes.clone())?;
             }
         }
@@ -321,8 +335,12 @@ impl Inner {
     }
 
     fn scan_values(&self, prefix: Vec<u8>) -> PoneResult<Vec<Vec<u8>>> {
-        merge::scan_prefix_merged(&self.memtable, &self.segments_newest_first, &prefix)
+        self.scan_entries(prefix)
             .map(|rows| rows.into_iter().map(|(_, value)| value).collect())
+    }
+
+    fn scan_entries(&self, prefix: Vec<u8>) -> PoneResult<Vec<(Vec<u8>, Vec<u8>)>> {
+        merge::scan_prefix_merged(&self.memtable, &self.segments_newest_first, &prefix)
             .map_err(|source| Error::FactStoreIo { source })
     }
 
