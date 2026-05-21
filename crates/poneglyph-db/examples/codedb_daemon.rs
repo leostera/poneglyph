@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use poneglyph_core::{PoneResult, Value, Workspace, fact, uri};
-use poneglyph_db::open_runtime;
+use poneglyph_db::open_workspace;
 
 #[tokio::main]
 async fn main() -> PoneResult<()> {
@@ -9,7 +9,7 @@ async fn main() -> PoneResult<()> {
         .nth(1)
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("./codedb.poneglyph"));
-    let runtime = open_runtime(Workspace::at(workspace_path), Default::default()).await?;
+    let runtime = open_workspace(Workspace::at(workspace_path)).await?;
 
     runtime
         .state_facts(vec![fact!(

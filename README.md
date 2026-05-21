@@ -56,8 +56,9 @@ cargo check --workspace
 
 Downstream daemons should embed `poneglyph-core` for semantic runtime contracts,
 `poneglyph-db` for disk-backed workspace/storage assembly, and `poneglyph-api`
-when they want the local gRPC service boundary. Prefer importing durable runtime
-open/repair helpers and SQLite adapter types from `poneglyph-db`; direct
+when they want the local gRPC service boundary. Prefer
+`poneglyph_db::open_workspace` for durable runtime assembly that loads workspace
+configuration, and import SQLite adapter types from `poneglyph-db`; direct
 `poneglyph-core` SQLite re-exports are deprecated compatibility paths. The CLI
 below remains useful for local inspection, smoke tests, and operations while
 domain-specific daemons build on the library crates.

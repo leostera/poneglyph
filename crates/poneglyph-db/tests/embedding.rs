@@ -6,7 +6,7 @@ async fn disk_backed_runtime_states_and_queries_facts_without_cli() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
 
-    let runtime = poneglyph_db::open_runtime(workspace.clone(), Default::default())
+    let runtime = poneglyph_db::open_workspace(workspace.clone())
         .await
         .expect("runtime");
 

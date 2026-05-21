@@ -12,11 +12,11 @@
 //!
 //! ```no_run
 //! use poneglyph_core::{Value, Workspace, fact, uri};
-//! use poneglyph_db::open_runtime;
+//! use poneglyph_db::open_workspace;
 //!
 //! async fn open_codedb() -> poneglyph_core::PoneResult<()> {
 //!     let workspace = Workspace::at("./codedb.poneglyph");
-//!     let runtime = open_runtime(workspace, Default::default()).await?;
+//!     let runtime = open_workspace(workspace).await?;
 //!
 //!     runtime
 //!         .state_facts(vec![fact!(
@@ -70,12 +70,21 @@ impl RuntimeStorageFactory for DbRuntimeStorageFactory {
 /// assembly while `poneglyph-core` retains semantic contracts and injectable
 /// runtime construction.
 pub async fn open_runtime(workspace: Workspace, config: PoneglyphConfig) -> PoneResult<Poneglyph> {
+    runtime_builder(workspace).with_config(config).build().await
+}
+
+/// Opens a full Poneglyph runtime using durable storage and workspace config.
+///
+/// This is the preferred embedding helper for domain daemons that want the
+/// standard disk-backed workspace layout and `config.toml` loading behavior.
+pub async fn open_workspace(workspace: Workspace) -> PoneResult<Poneglyph> {
+    runtime_builder(workspace).build().await
+}
+
+fn runtime_builder(workspace: Workspace) -> poneglyph_core::PoneglyphBuilder {
     Poneglyph::builder()
         .with_workspace(workspace)
-        .with_config(config)
         .with_storage_factory(DbRuntimeStorageFactory)
-        .build()
-        .await
 }
 
 /// Opens a runtime and runs storage repair for the workspace.
@@ -110,7 +119,7 @@ mod tests {
 
     use super::{
         DbRuntimeStorageFactory, open_entity_store, open_fact_store, open_runtime,
-        open_search_projection, repair_workspace,
+        open_search_projection, open_workspace, repair_workspace,
     };
     use poneglyph_core::{Poneglyph, PoneglyphConfig, Workspace};
 
@@ -161,6 +170,22 @@ mod tests {
         assert!(workspace.facts_db_path().exists());
         assert!(workspace.entities_db_path().exists());
         assert!(workspace.search_db_path().exists());
+    }
+
+    #[tokio::test]
+    async fn db_open_workspace_loads_workspace_config() {
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+        let config = PoneglyphConfig::builder()
+            .log_level(Some("debug".to_string()))
+            .build()
+            .expect("config");
+        config.save_to(&workspace).await.expect("save config");
+
+        let runtime = open_workspace(workspace.clone()).await.expect("runtime");
+
+        assert_eq!(runtime.config(), &config);
+        assert!(workspace.facts_db_path().exists());
     }
 
     #[tokio::test]
