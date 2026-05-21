@@ -118,7 +118,6 @@ impl SqliteFactStore {
 
         for statement in [
             "CREATE INDEX IF NOT EXISTS idx_facts_tx_id ON facts(tx_id)",
-            "CREATE INDEX IF NOT EXISTS idx_facts_tuple ON facts(source, entity, field, value_json, stated_at DESC, fact_id DESC)",
             "CREATE INDEX IF NOT EXISTS idx_active_facts_entity ON active_facts(entity)",
             "CREATE INDEX IF NOT EXISTS idx_active_facts_field ON active_facts(field)",
             "CREATE INDEX IF NOT EXISTS idx_schema_entries_type ON schema_entries(schema_type)",
