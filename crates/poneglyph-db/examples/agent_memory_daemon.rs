@@ -8,21 +8,21 @@ async fn main() -> PoneResult<()> {
     let workspace_path = std::env::args_os()
         .nth(1)
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("./codedb.poneglyph"));
+        .unwrap_or_else(|| PathBuf::from("./agent-memory.poneglyph"));
     let runtime = open_workspace(Workspace::at(workspace_path)).await?;
 
     runtime
         .state_facts(vec![fact!(
-            uri!("code:file:main-rs"),
-            uri!("code:displayName"),
-            Value::text("src/main.rs")
+            uri!("memory:item:first-note"),
+            uri!("memory:title"),
+            Value::text("First note")
         )])
         .await?;
 
     let rows = runtime
-        .query_str(r#"code:displayName(File, "src/main.rs")"#)
+        .query_str(r#"memory:title(File, "First note")"#)
         .await?;
-    println!("matched {} file(s)", rows.len());
+    println!("matched {} memory item(s)", rows.len());
 
     Ok(())
 }

@@ -1,10 +1,10 @@
 # Embedding Poneglyph
 
 Poneglyph is intended to be embedded by domain-specific, disk-backed daemon
-applications. The in-repo `poneglyph` CLI is a reference/operator harness; it is
-not the only expected application shape.
+applications. This repository intentionally contains no product CLI; downstream
+daemons embed the library crates directly.
 
-A daemon such as `codedb` should generally depend on these crates:
+A daemon such as `agent-memory` should generally depend on these crates:
 
 - `poneglyph-core` for facts, URIs, values, schema/entity/query contracts, and
   the runtime builder.
@@ -29,18 +29,18 @@ use poneglyph_db::open_workspace;
 
 #[tokio::main]
 async fn main() -> poneglyph_core::PoneResult<()> {
-    let workspace = Workspace::at("./codedb.poneglyph");
+    let workspace = Workspace::at("./agent-memory.poneglyph");
     let runtime = open_workspace(workspace).await?;
 
     runtime
         .state_facts(vec![fact!(
-            uri!("code:file:main-rs"),
-            uri!("code:displayName"),
-            Value::text("src/main.rs")
+            uri!("memory:item:first-note"),
+            uri!("memory:title"),
+            Value::text("First note")
         )])
         .await?;
 
-    let rows = runtime.query_str(r#"code:displayName(File, "src/main.rs")"#).await?;
+    let rows = runtime.query_str(r#"memory:title(File, "First note")"#).await?;
     println!("{rows:#?}");
 
     Ok(())
@@ -49,7 +49,7 @@ async fn main() -> poneglyph_core::PoneResult<()> {
 
 This path opens the durable fact store, entity projection store, and search index
 through `poneglyph-db`. The same flow is compiled in
-`crates/poneglyph-db/examples/codedb_daemon.rs` and covered by
+`crates/poneglyph-db/examples/agent_memory_daemon.rs` and covered by
 `crates/poneglyph-db/tests/embedding.rs`. Facts remain the durable source of
 truth; entities and search results are derived views that can be replayed.
 
@@ -58,7 +58,7 @@ truth; entities and search results are derived views that can be replayed.
 An embedding daemon typically owns its domain protocol and lifecycle while using
 Poneglyph for storage and semantic queries:
 
-1. Choose a domain workspace path, for example `~/.codedb/poneglyph`.
+1. Choose a domain workspace path, for example `~/.agent-memory/poneglyph`.
 2. Open the runtime through `poneglyph_db::open_workspace`.
 3. Start background runtime workers with `Arc<Poneglyph>::run()` if the daemon
    needs live entity/search projection updates.

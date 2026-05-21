@@ -8,15 +8,14 @@ resolved.
 
 ## Context
 
-The reset workspace now has the requested Rust-only crate shape in progress:
+The reset workspace now has a Rust-only library crate shape:
 
-- `poneglyph-cli` builds the user-facing `poneglyph` binary.
-- `poneglyph-api` owns the local gRPC API and daemon service adapter.
 - `poneglyph-core` owns graph semantics, service contracts, in-memory stores, and core runtime types.
-- `poneglyph-db` exists as the storage adapter staging crate and is the preferred disk-backed opener for CLI/daemon runtime assembly and repair.
+- `poneglyph-db` exists as the storage adapter staging crate and is the preferred disk-backed opener for embedded daemon runtime assembly and repair.
+- `poneglyph-api` owns the optional local gRPC API and daemon service adapter for embedders that want that boundary.
 
-The remaining split is harder than the CLI/API/core rename because current
-storage code is not yet a physically isolated adapter layer. Store traits,
+The remaining split is hard because current storage code is not yet a physically
+isolated adapter layer. Store traits,
 in-memory stores, SQLite stores, schema replay, and many adapter-specific tests
 still live in `poneglyph-core` and share core domain types (`Fact`, `Entity`,
 `Uri`, `Value`, `SchemaDefinition`, `Filter`, `ActiveFact`, and
@@ -94,9 +93,9 @@ The near-term extraction work is complete for review readiness:
    existing core SQLite/search implementations so callers can target the storage
    adapter crate before any physical module move.
 4. Non-core consumers and integration tests call `poneglyph-db` adapter/runtime
-   functions rather than constructing core SQLite types directly. The CLI opens
-   disk-backed direct fallback, daemon runtimes, and repair through
-   `poneglyph_db::open_runtime` / `poneglyph_db::repair_workspace`.
+   functions rather than constructing core SQLite types directly. Embedders open
+   disk-backed runtimes and repair through `poneglyph_db::open_workspace`,
+   `poneglyph_db::open_runtime`, and `poneglyph_db::repair_workspace`.
 5. `poneglyph-db` re-exports the current SQLite adapter types as the preferred
    external import path while the physical modules remain in core. The old
    `poneglyph-core` SQLite re-exports are deprecated to discourage new external

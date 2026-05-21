@@ -864,7 +864,7 @@ mod tests {
     #[test]
     fn typed_fact_proto_round_trips_fact_metadata() {
         let mut fact = fact!(
-            uri!("poneglyph:cli"),
+            uri!("poneglyph:api-test"),
             uri!("spotify:album:signals"),
             uri!("spotify:displayName"),
             Value::text("Signals")
@@ -884,7 +884,7 @@ mod tests {
     #[test]
     fn typed_active_fact_proto_round_trips_fact_metadata() {
         let fact = ActiveFact {
-            source: uri!("poneglyph:cli"),
+            source: uri!("poneglyph:api-test"),
             entity: uri!("spotify:album:signals"),
             field: uri!("spotify:displayName"),
             value: Value::text("Signals"),

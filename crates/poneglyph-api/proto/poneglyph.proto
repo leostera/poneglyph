@@ -7,9 +7,8 @@ service PoneglyphDaemon {
   rpc Status(StatusRequest) returns (StatusResponse);
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
 
-  // Legacy JSON compatibility RPCs. The CLI no longer uses these for semantic
-  // operations; keep them only for one migration window alongside the typed
-  // replacements below.
+  // Legacy JSON compatibility RPCs. Typed RPCs are the primary semantic API; keep these only for one migration
+  // window alongside the typed replacements below.
   rpc StateFact(StateFactRequest) returns (StateFactResponse);
   rpc StateFacts(StateFactsRequest) returns (StateFactResponse);
   rpc ListFacts(ListFactsRequest) returns (JsonResponse);
@@ -80,8 +79,8 @@ message StateFactResponse {
 }
 
 // Typed domain payloads for the migration away from JsonResponse.
-// The CLI has moved to these payloads for semantic daemon operations; the
-// remaining JsonResponse RPCs are compatibility shims for external callers.
+// Typed payloads are the primary semantic daemon API; the remaining
+// JsonResponse RPCs are compatibility shims for external callers.
 message Fact {
   string fact_id = 1;
   string source = 2;

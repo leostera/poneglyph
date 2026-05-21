@@ -8,10 +8,9 @@ moved out, or deleted rather than grown here.
 ## Review scope
 
 - Primary reusable surface: Rust graph database crates for building specific
-  disk-backed daemons, such as a future `codedb` daemon.
-- Product crates only: `poneglyph-core`, `poneglyph-db`, `poneglyph-api`, and the
-  `poneglyph-cli` operator/reference harness.
-- One in-repo binary: `poneglyph` from `crates/poneglyph-cli`.
+  disk-backed daemons, such as a future `agent-memory` daemon.
+- Product crates only: `poneglyph-core`, `poneglyph-db`, and `poneglyph-api`.
+- No in-repo product CLI or application crate.
 - Local daemon transport: tonic/prost gRPC over localhost TCP when using the
   reference daemon/API boundary.
 - Durable truth: append-only facts. Retractions append facts and do not mutate or
@@ -20,11 +19,11 @@ moved out, or deleted rather than grown here.
 
 ## Intentional temporary seams
 
-- The in-repo CLI/daemon should be treated as an operator/reference harness for
-  the library crates, not as the only long-term application shape.
+- Downstream daemons should embed the library crates directly; this repository
+  should not grow unrelated product/application surfaces.
 - Legacy JSON semantic RPCs remain in `poneglyph-api` for one compatibility
-  window. The CLI uses typed protobuf RPCs for semantic daemon operations, and
-  API parity tests protect the legacy shims until removal.
+  window. Typed protobuf RPCs are the primary semantic daemon boundary, and API parity
+  tests protect the legacy shims until removal.
 - Physical SQLite/search module movement from `poneglyph-core` to
   `poneglyph-db` is deferred by RFD0001. `poneglyph-db` is already the preferred
   disk-backed opener and adapter boundary.
@@ -51,15 +50,6 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
-For a quick user-surface smoke check after building:
-
-```sh
-cargo run -p poneglyph-cli -- --help
-cargo run -p poneglyph-cli -- --version
-```
-
-Both commands should exit without opening or repairing a workspace.
-
 The GitHub Actions workflow runs the same checks and checks out the sibling
 `datafox` repository.
 
@@ -67,9 +57,8 @@ The GitHub Actions workflow runs the same checks and checks out the sibling
 
 The review branch should contain only the current Rust workspace crates and docs.
 A final stale-reference audit should find no tracked legacy app/web/MCP/connector
-crates, root reset notes, `opencode`/`.codex` config, or `poneglyphd` product
-crate references outside historical Ralph notes and intentional compatibility
-RFD text. Future additions should pass the same scope test: they must directly
+crates, root reset notes, `opencode`/`.codex` config, or removed CLI/product crate references outside historical Ralph notes and
+intentional compatibility RFD text. Future additions should pass the same scope test: they must directly
 help embedders build semantic knowledge graph daemons for agents.
 
 ## Follow-up queue

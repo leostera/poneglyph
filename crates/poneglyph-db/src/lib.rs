@@ -14,20 +14,20 @@
 //! use poneglyph_core::{Value, Workspace, fact, uri};
 //! use poneglyph_db::open_workspace;
 //!
-//! async fn open_codedb() -> poneglyph_core::PoneResult<()> {
-//!     let workspace = Workspace::at("./codedb.poneglyph");
+//! async fn open_agent_memory() -> poneglyph_core::PoneResult<()> {
+//!     let workspace = Workspace::at("./agent-memory.poneglyph");
 //!     let runtime = open_workspace(workspace).await?;
 //!
 //!     runtime
 //!         .state_facts(vec![fact!(
-//!             uri!("code:file:main-rs"),
-//!             uri!("code:displayName"),
-//!             Value::text("src/main.rs")
+//!             uri!("memory:item:first-note"),
+//!             uri!("memory:title"),
+//!             Value::text("First note")
 //!         )])
 //!         .await?;
 //!
 //!     let _rows = runtime
-//!         .query_str(r#"code:displayName(File, "src/main.rs")"#)
+//!         .query_str(r#"memory:title(File, "First note")"#)
 //!         .await?;
 //!
 //!     Ok(())
