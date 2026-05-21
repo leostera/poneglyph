@@ -39,8 +39,8 @@ daemon and exposes facts, schemas, entities, and Datalog queries.
 poneglyph server start|stop|restart|status|repair
 poneglyph config list|get|set
 poneglyph schema list|get|apply
-poneglyph fact state|retract
-poneglyph entity get
+poneglyph fact state|retract|list
+poneglyph entity get|list|search
 poneglyph query <datalog>
 ```
 
@@ -75,6 +75,24 @@ Typed protobuf migration status:
 - Compatibility plan: keep legacy JSON RPCs until external callers have one
   release window to migrate, then remove `JsonResponse` read RPCs and JSON fact
   write RPCs in favor of the typed methods.
+
+Legacy JSON RPC audit:
+
+| Legacy RPC | Typed replacement | Current CLI use | Removal note |
+| --- | --- | --- | --- |
+| `StateFact` | `StateFactTyped` | none | Remove with JSON fact write compatibility. |
+| `StateFacts` | `StateFactsTyped` | none | Remove with JSON fact write compatibility. |
+| `ListFacts` | `ListFactsTyped` | none | Remove after read clients migrate. |
+| `Query` | `QueryTyped` | none | Remove after read clients migrate. |
+| `GetEntity` | `GetEntityTyped` | none | Remove after read clients migrate. |
+| `ListEntities` | `ListEntitiesTyped` | none | Remove after read clients migrate. |
+| `SearchEntities` | `SearchEntitiesTyped` | none | Remove after read clients migrate. |
+| `GetSchema` | `GetSchemaTyped` | none | Remove after read clients migrate. |
+
+The CLI is intentionally no longer a legacy JSON RPC client for semantic
+operations. Compatibility handlers must share retrieval/validation helpers with
+the typed handlers until removal so behavior does not diverge during the
+transition window.
 
 ## Invariants
 

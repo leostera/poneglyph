@@ -9,7 +9,7 @@ Datafox-backed Datalog queries.
 ## Current workspace
 
 - `crates/poneglyph-cli` — CLI/process host that builds the `poneglyph` binary.
-- `crates/poneglyph-api` — local gRPC API/protobuf definitions and daemon service adapter.
+- `crates/poneglyph-api` — local gRPC API/protobuf definitions and daemon service adapter. Typed protobuf RPCs are the primary path for semantic CLI operations; legacy JSON RPCs remain only as compatibility shims.
 - `crates/poneglyph-core` — core append-only fact store, schema/entity services,
   projections, query engine, runtime, and disk-backed workspace layout.
 - `crates/poneglyph-db` — durable storage adapter boundary and staging point for the SQLite/Datafox split; see `docs/rfds/RFD0001-storage-crate-boundary.md` for the proposed boundary.
@@ -30,8 +30,8 @@ cargo check --workspace
 poneglyph server start|stop|restart|status|repair
 poneglyph config list|get|set
 poneglyph schema list|get|apply
-poneglyph fact state|retract
-poneglyph entity get
+poneglyph fact state|retract|list
+poneglyph entity get|list|search
 poneglyph query <datalog>
 ```
 

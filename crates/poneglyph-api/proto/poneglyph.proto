@@ -3,24 +3,31 @@ syntax = "proto3";
 package poneglyph.daemon.v1;
 
 service PoneglyphDaemon {
+  // Lifecycle RPCs are intentionally small typed payloads.
   rpc Status(StatusRequest) returns (StatusResponse);
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+
+  // Legacy JSON compatibility RPCs. The CLI no longer uses these for semantic
+  // operations; keep them only for one migration window alongside the typed
+  // replacements below.
   rpc StateFact(StateFactRequest) returns (StateFactResponse);
-  rpc StateFactTyped(StateFactTypedRequest) returns (StateFactResponse);
   rpc StateFacts(StateFactsRequest) returns (StateFactResponse);
+  rpc ListFacts(ListFactsRequest) returns (JsonResponse);
+  rpc Query(QueryRequest) returns (JsonResponse);
+  rpc GetEntity(GetEntityRequest) returns (JsonResponse);
+  rpc ListEntities(ListEntitiesRequest) returns (JsonResponse);
+  rpc SearchEntities(SearchEntitiesRequest) returns (JsonResponse);
+  rpc GetSchema(GetSchemaRequest) returns (JsonResponse);
+
+  // Primary typed semantic RPCs.
+  rpc StateFactTyped(StateFactTypedRequest) returns (StateFactResponse);
   rpc StateFactsTyped(StateFactsTypedRequest) returns (StateFactResponse);
   rpc RetractFactById(RetractFactByIdRequest) returns (StateFactResponse);
-  rpc ListFacts(ListFactsRequest) returns (JsonResponse);
   rpc ListFactsTyped(ListFactsRequest) returns (ListFactsResponse);
-  rpc Query(QueryRequest) returns (JsonResponse);
   rpc QueryTyped(QueryRequest) returns (QueryResponse);
-  rpc GetEntity(GetEntityRequest) returns (JsonResponse);
   rpc GetEntityTyped(GetEntityRequest) returns (GetEntityResponse);
-  rpc ListEntities(ListEntitiesRequest) returns (JsonResponse);
   rpc ListEntitiesTyped(ListEntitiesRequest) returns (ListEntitiesResponse);
-  rpc SearchEntities(SearchEntitiesRequest) returns (JsonResponse);
   rpc SearchEntitiesTyped(SearchEntitiesRequest) returns (SearchEntitiesResponse);
-  rpc GetSchema(GetSchemaRequest) returns (JsonResponse);
   rpc GetSchemaTyped(GetSchemaRequest) returns (SchemaDefinition);
 }
 
@@ -72,9 +79,9 @@ message StateFactResponse {
   repeated string fact_ids = 3;
 }
 
-// Typed domain payloads for the planned migration away from JsonResponse.
-// Current RPCs continue to use JsonResponse until each CLI call site can move
-// independently without changing user-facing output.
+// Typed domain payloads for the migration away from JsonResponse.
+// The CLI has moved to these payloads for semantic daemon operations; the
+// remaining JsonResponse RPCs are compatibility shims for external callers.
 message Fact {
   string fact_id = 1;
   string source = 2;
