@@ -811,7 +811,11 @@ fn send_rows<T: Send + 'static>(rows: Vec<PoneResult<T>>) -> mpsc::Receiver<Pone
 mod tests {
     use tempfile::tempdir;
 
-    use super::{LsmFactStore, parse_optional_usize_env};
+    use super::{
+        LsmFactStore, ManifestEdit, encode_active_fact, key, merge, parse_optional_usize_env,
+        segment_metadata, sst,
+    };
+    use crate::facts::lsm::memtable::Memtable;
     use poneglyph::{ActiveFact, ActiveFilter, Filter, Store, Value, fact, retraction, uri};
 
     #[tokio::test]
@@ -1149,6 +1153,122 @@ mod tests {
             .await
             .expect("active after reopen");
         assert!(rows.recv().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn reopen_ignores_sst_written_before_manifest_publish() {
+        let tempdir = tempdir().expect("tempdir");
+        let field = uri!("f:name");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store
+            .state_facts_vec(vec![fact!(
+                uri!("e:kept"),
+                field.clone(),
+                Value::text("kept")
+            )])
+            .await
+            .expect("state kept");
+        store.flush().expect("flush kept");
+
+        let stray_active = ActiveFact {
+            source: uri!("source:stray"),
+            entity: uri!("e:stray"),
+            field: field.clone(),
+            value: Value::text("stray"),
+            fact_id: uri!("fact:stray"),
+            tx_id: uri!("tx:stray"),
+        };
+        let mut stray = Memtable::new();
+        stray.insert(
+            key::active_field_key(
+                &stray_active.field,
+                &stray_active.entity,
+                &stray_active.value,
+            ),
+            encode_active_fact(&stray_active).expect("encode active"),
+        );
+        sst::write_memtable(tempdir.path().join("99999999999999999999.sst"), &stray)
+            .expect("write stray sst");
+        drop(store);
+
+        let store = LsmFactStore::open(tempdir.path()).expect("reopen");
+        let mut rows = store
+            .get_active_facts(ActiveFilter::ByEntity(uri!("e:stray")))
+            .await
+            .expect("stray active");
+        assert!(rows.recv().await.is_none());
+        let mut rows = store
+            .get_active_facts(ActiveFilter::ByEntity(uri!("e:kept")))
+            .await
+            .expect("kept active");
+        assert!(rows.recv().await.expect("kept").is_ok());
+    }
+
+    #[tokio::test]
+    async fn reopen_honors_manifest_publish_before_obsolete_segment_deletion() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        for index in 0..5 {
+            store
+                .state_facts_vec(vec![fact!(
+                    uri!(format!("e:{index}")),
+                    uri!("f:name"),
+                    Value::text(format!("{index}"))
+                )])
+                .await
+                .expect("state");
+            store.flush().expect("flush");
+        }
+
+        let obsolete_segments = {
+            let mut inner = store.inner.lock().expect("lock");
+            let removed = inner.manifest.segments_newest_first.clone();
+            let rows = merge::scan_prefix_merged(
+                &Memtable::new(),
+                &inner.segments_newest_first.clone(),
+                &[],
+            )
+            .expect("merge rows");
+            let mut compacted = Memtable::new();
+            for (key, value) in rows {
+                compacted.insert(key, value);
+            }
+            let filename = inner.manifest.allocate_segment();
+            let reader = sst::write_memtable(inner.dir.join(&filename), &compacted)
+                .expect("write compacted");
+            let metadata = segment_metadata(filename, &reader, 1);
+            let dir = inner.dir.clone();
+            inner
+                .manifest
+                .persist_edit(
+                    &dir,
+                    ManifestEdit::ReplaceSegments {
+                        removed: removed.clone(),
+                        added: vec![metadata],
+                    },
+                )
+                .expect("publish manifest edit");
+            removed
+        };
+        drop(store);
+        for filename in &obsolete_segments {
+            assert!(
+                tempdir.path().join(filename).exists(),
+                "obsolete file remains"
+            );
+        }
+
+        let store = LsmFactStore::open(tempdir.path()).expect("reopen");
+        let mut rows = store
+            .get_active_facts(ActiveFilter::ByField(uri!("f:name")))
+            .await
+            .expect("active");
+        let mut count = 0;
+        while let Some(row) = rows.recv().await {
+            row.expect("row");
+            count += 1;
+        }
+        assert_eq!(count, 5);
     }
 
     #[tokio::test]

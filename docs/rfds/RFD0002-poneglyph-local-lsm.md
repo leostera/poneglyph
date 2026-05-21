@@ -131,6 +131,7 @@ The current implementation has a synchronous full-store `compact()` method. It i
 6. Add dedicated tests before enabling automatic compaction:
    - crash after output SST write but before manifest publish;
    - crash after manifest publish but before obsolete file deletion;
+   - Status: unit coverage now simulates both planned-compaction crash windows: unreferenced output SSTs are ignored after reopen, and manifest-published replacements remain authoritative even if obsolete input SST files were not deleted before crash.
    - overlapping L0 inputs plus L1 outputs preserve newest-visible semantics;
    - active-index rebuild after compaction matches replay from `log/*`.
 
