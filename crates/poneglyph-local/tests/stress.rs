@@ -991,11 +991,13 @@ async fn local_lsm_backend_onepiece_planned_compaction_reopen_stress() {
     let active_elapsed = active_started.elapsed();
 
     eprintln!(
-        "lsm onepiece planned-compaction reopen stress: {} planned compactions in {:?}; reopen {:?}; first active {:?}; {} facts from {} pages",
+        "lsm onepiece planned-compaction reopen stress: {} planned compactions in {:?}; reopen {:?}; first active {:?}; threshold {}; max_inputs {}; {} facts from {} pages",
         planned_compactions,
         compact_elapsed,
         open_elapsed,
         active_elapsed,
+        std::env::var("PONEGLYPH_LSM_L0_COMPACTION_SEGMENTS").unwrap_or_else(|_| "16".to_string()),
+        std::env::var("PONEGLYPH_LSM_L0_COMPACTION_MAX_INPUTS").unwrap_or_else(|_| "4".to_string()),
         facts.len(),
         pages.len()
     );

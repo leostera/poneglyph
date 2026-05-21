@@ -130,14 +130,24 @@ impl Manifest {
         &self,
         threshold: usize,
     ) -> Option<CompactionPlan> {
+        self.compaction_plan_with_l0_limits(threshold, usize::MAX)
+    }
+
+    pub(crate) fn compaction_plan_with_l0_limits(
+        &self,
+        threshold: usize,
+        max_inputs: usize,
+    ) -> Option<CompactionPlan> {
         let level_zero = self.levels.first()?;
-        if level_zero.len() <= threshold {
+        if level_zero.len() <= threshold || max_inputs == 0 {
             return None;
         }
+        let input_count = level_zero.len().min(max_inputs);
+        let first_input = level_zero.len().saturating_sub(input_count);
         Some(CompactionPlan {
             input_level: 0,
             output_level: 1,
-            inputs_newest_first: level_zero
+            inputs_newest_first: level_zero[first_input..]
                 .iter()
                 .map(|segment| segment.filename.clone())
                 .collect(),
@@ -391,6 +401,20 @@ mod tests {
             plan.inputs_newest_first,
             vec!["three.sst", "two.sst", "one.sst"]
         );
+    }
+
+    #[test]
+    fn manifest_can_bound_level_zero_compaction_inputs_to_oldest_segments() {
+        let mut manifest = Manifest::default();
+        for filename in ["one.sst", "two.sst", "three.sst", "four.sst", "five.sst"] {
+            manifest.add_newest_segment(filename.to_string());
+        }
+
+        let plan = manifest
+            .compaction_plan_with_l0_limits(4, 2)
+            .expect("bounded plan");
+        assert_eq!(plan.inputs_newest_first, vec!["two.sst", "one.sst"]);
+        assert!(manifest.compaction_plan_with_l0_limits(4, 0).is_none());
     }
 
     #[test]
