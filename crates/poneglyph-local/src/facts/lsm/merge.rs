@@ -27,6 +27,13 @@ pub(crate) fn scan_prefix_merged(
     segments_newest_first: &[SstReader],
     prefix: &[u8],
 ) -> io::Result<Vec<(Vec<u8>, Vec<u8>)>> {
+    if segments_newest_first.is_empty() {
+        return Ok(memtable
+            .scan_prefix(prefix)
+            .filter_map(|(key, entry)| entry.value().map(|value| (key.to_vec(), value.to_vec())))
+            .collect());
+    }
+
     let mut seen = BTreeSet::new();
     let mut rows = Vec::new();
 
