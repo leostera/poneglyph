@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures_util::StreamExt;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteRow};
-use sqlx::{Row, SqlitePool};
+use sqlx::{QueryBuilder, Row, Sqlite, SqlitePool};
 use tokio::sync::mpsc;
 use tracing::debug;
 
@@ -171,32 +171,44 @@ impl Store for SqliteFactStore {
         mut fact_stream: mpsc::Receiver<Fact>,
     ) -> PoneResult<(Uri, Vec<Fact>)> {
         let tx_id = new_tx_id();
+        let mut incoming = Vec::new();
+        while let Some(fact) = fact_stream.recv().await {
+            validate_pending_fact(&fact)?;
+            incoming.push(fact);
+        }
+
+        if incoming.is_empty() {
+            return Err(Error::EmptyFactBatch);
+        }
+
         let mut tx = self.pool.begin().await?;
-        let mut saw_fact = false;
         let mut persisted = Vec::new();
         let mut schema_batch = SchemaBatchUpdate::default();
 
-        while let Some(mut fact) = fact_stream.recv().await {
-            saw_fact = true;
-            validate_pending_fact(&fact)?;
-
-            if fact.retraction {
-                match current_tuple_state(&mut tx, &fact).await? {
-                    Some(current) if current.retraction => continue,
-                    Some(_) => {}
-                    None => return Err(Error::CannotRetractUnknownFact),
-                }
+        if incoming.iter().all(|fact| !fact.retraction) {
+            for mut fact in incoming {
+                fact.tx_id = Some(tx_id.clone());
+                schema_batch.observe_fact(&fact);
+                persisted.push(fact);
             }
+            bulk_insert_facts(&mut tx, &persisted).await?;
+            bulk_upsert_active_facts(&mut tx, &persisted).await?;
+        } else {
+            for mut fact in incoming {
+                if fact.retraction {
+                    match current_tuple_state(&mut tx, &fact).await? {
+                        Some(current) if current.retraction => continue,
+                        Some(_) => {}
+                        None => return Err(Error::CannotRetractUnknownFact),
+                    }
+                }
 
-            fact.tx_id = Some(tx_id.clone());
-            insert_fact(&mut tx, &fact).await?;
-            update_active_graph(&mut tx, &fact).await?;
-            schema_batch.observe_fact(&fact);
-            persisted.push(fact);
-        }
-
-        if !saw_fact {
-            return Err(Error::EmptyFactBatch);
+                fact.tx_id = Some(tx_id.clone());
+                insert_fact(&mut tx, &fact).await?;
+                update_active_graph(&mut tx, &fact).await?;
+                schema_batch.observe_fact(&fact);
+                persisted.push(fact);
+            }
         }
 
         schema_batch.apply(&mut tx).await?;
@@ -447,6 +459,36 @@ async fn insert_fact(tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, fact: &Fact) 
     Ok(())
 }
 
+async fn bulk_insert_facts(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    facts: &[Fact],
+) -> PoneResult<()> {
+    const CHUNK_SIZE: usize = 500;
+
+    for chunk in facts.chunks(CHUNK_SIZE) {
+        let mut query = QueryBuilder::<Sqlite>::new(
+            r#"
+            INSERT INTO facts (
+                fact_id, source, entity, field, value_json, retraction, stated_at, tx_id
+            )
+            "#,
+        );
+        query.push_values(chunk, |mut row, fact| {
+            row.push_bind(fact.fact_id.as_str())
+                .push_bind(fact.source.as_str())
+                .push_bind(fact.entity.as_str())
+                .push_bind(fact.field.as_str())
+                .push_bind(serde_json::to_string(&fact.value).expect("serialize fact value"))
+                .push_bind(i64::from(fact.retraction))
+                .push_bind(fact.stated_at)
+                .push_bind(fact.tx_id.as_ref().expect("tx_id assigned").as_str());
+        });
+        query.build().execute(&mut **tx).await?;
+    }
+
+    Ok(())
+}
+
 async fn update_active_graph(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     fact: &Fact,
@@ -628,6 +670,46 @@ impl SchemaBatchUpdate {
         }
         Ok(())
     }
+}
+
+async fn bulk_upsert_active_facts(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    facts: &[Fact],
+) -> PoneResult<()> {
+    const CHUNK_SIZE: usize = 500;
+
+    for chunk in facts.chunks(CHUNK_SIZE) {
+        let mut query = QueryBuilder::<Sqlite>::new(
+            r#"
+            INSERT INTO active_facts (
+                tuple_key, fact_id, source, entity, field, value_json, tx_id
+            )
+            "#,
+        );
+        query.push_values(chunk, |mut row, fact| {
+            row.push_bind(poneglyph::facts::store::tuple_key(fact).expect("tuple key"))
+                .push_bind(fact.fact_id.as_str())
+                .push_bind(fact.source.as_str())
+                .push_bind(fact.entity.as_str())
+                .push_bind(fact.field.as_str())
+                .push_bind(serde_json::to_string(&fact.value).expect("serialize fact value"))
+                .push_bind(fact.tx_id.as_ref().expect("tx_id assigned").as_str());
+        });
+        query.push(
+            r#"
+            ON CONFLICT(tuple_key) DO UPDATE SET
+                fact_id = excluded.fact_id,
+                source = excluded.source,
+                entity = excluded.entity,
+                field = excluded.field,
+                value_json = excluded.value_json,
+                tx_id = excluded.tx_id
+            "#,
+        );
+        query.build().execute(&mut **tx).await?;
+    }
+
+    Ok(())
 }
 
 async fn update_schema_snapshot(
