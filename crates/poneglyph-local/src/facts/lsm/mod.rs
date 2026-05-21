@@ -103,6 +103,15 @@ impl LsmFactStore {
             .compact_segments()
     }
 
+    pub fn needs_compaction(&self) -> bool {
+        self.inner
+            .lock()
+            .expect("LSM mutex poisoned")
+            .manifest
+            .compaction_plan()
+            .is_some()
+    }
+
     pub fn prewarm_active_cache(&self) -> PoneResult<usize> {
         self.inner
             .lock()
@@ -893,6 +902,35 @@ mod tests {
             .await
             .expect("active");
         assert!(rows.recv().await.expect("row").is_ok());
+    }
+
+    #[tokio::test]
+    async fn lsm_fact_store_reports_planned_l0_compaction() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        for index in 0..4 {
+            store
+                .state_facts_vec(vec![fact!(
+                    uri!(format!("e:{index}")),
+                    uri!("f:name"),
+                    Value::text(format!("{index}"))
+                )])
+                .await
+                .expect("state");
+            store.flush().expect("flush");
+        }
+        assert!(!store.needs_compaction());
+
+        store
+            .state_facts_vec(vec![fact!(
+                uri!("e:five"),
+                uri!("f:name"),
+                Value::text("five")
+            )])
+            .await
+            .expect("state");
+        store.flush().expect("flush fifth");
+        assert!(store.needs_compaction());
     }
 
     #[tokio::test]

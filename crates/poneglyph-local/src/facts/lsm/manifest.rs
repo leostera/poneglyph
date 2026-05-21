@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 const MANIFEST_FILE: &str = "MANIFEST.json";
 const MANIFEST_EDIT_LOG_FILE: &str = "MANIFEST.log";
+pub(crate) const DEFAULT_L0_COMPACTION_SEGMENTS: usize = 4;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Manifest {
@@ -32,6 +33,19 @@ pub(crate) enum ManifestEdit {
         removed: Vec<String>,
         added: Vec<SegmentMetadata>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CompactionPlan {
+    pub(crate) input_level: u32,
+    pub(crate) output_level: u32,
+    pub(crate) inputs_newest_first: Vec<String>,
+    pub(crate) reason: CompactionReason,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum CompactionReason {
+    LevelZeroSegmentCount { actual: usize, threshold: usize },
 }
 
 impl Default for Manifest {
@@ -106,6 +120,32 @@ impl Manifest {
             .iter()
             .map(|filename| dir.join(filename))
             .collect()
+    }
+
+    pub(crate) fn compaction_plan(&self) -> Option<CompactionPlan> {
+        self.compaction_plan_with_l0_threshold(DEFAULT_L0_COMPACTION_SEGMENTS)
+    }
+
+    pub(crate) fn compaction_plan_with_l0_threshold(
+        &self,
+        threshold: usize,
+    ) -> Option<CompactionPlan> {
+        let level_zero = self.levels.first()?;
+        if level_zero.len() <= threshold {
+            return None;
+        }
+        Some(CompactionPlan {
+            input_level: 0,
+            output_level: 1,
+            inputs_newest_first: level_zero
+                .iter()
+                .map(|segment| segment.filename.clone())
+                .collect(),
+            reason: CompactionReason::LevelZeroSegmentCount {
+                actual: level_zero.len(),
+                threshold,
+            },
+        })
     }
 
     pub(crate) fn segments_with_metadata_newest_first(
@@ -334,6 +374,23 @@ mod tests {
         assert_eq!(manifest.segments_newest_first, vec!["merged.sst"]);
         assert_eq!(manifest.levels[0].len(), 1);
         assert_eq!(manifest.levels[0][0].filename, "merged.sst");
+    }
+
+    #[test]
+    fn manifest_plans_level_zero_compaction_when_segment_threshold_is_exceeded() {
+        let mut manifest = Manifest::default();
+        manifest.add_newest_segment("one.sst".to_string());
+        manifest.add_newest_segment("two.sst".to_string());
+        assert!(manifest.compaction_plan_with_l0_threshold(2).is_none());
+
+        manifest.add_newest_segment("three.sst".to_string());
+        let plan = manifest.compaction_plan_with_l0_threshold(2).expect("plan");
+        assert_eq!(plan.input_level, 0);
+        assert_eq!(plan.output_level, 1);
+        assert_eq!(
+            plan.inputs_newest_first,
+            vec!["three.sst", "two.sst", "one.sst"]
+        );
     }
 
     #[test]

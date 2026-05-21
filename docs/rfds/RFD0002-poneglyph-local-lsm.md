@@ -119,6 +119,7 @@ The current implementation has a synchronous full-store `compact()` method. It i
    - compact L0 when segment count or byte budget is exceeded;
    - compact lower levels by picking overlapping key ranges in the next level;
    - write replacement SSTs first, fsync them, then atomically publish a manifest edit that removes input segments and adds output segments.
+   - Status: the experimental planner now reports an L0 segment-count compaction plan when more than four L0 segments exist. It is exposed through `LsmFactStore::needs_compaction()` but still uses the existing full manual compaction executor.
 4. Split keyspace policies:
    - `log/*` compaction preserves every fact entry and drops only obsolete internal tombstones;
    - `active/*` compaction keeps newest visible entries and can drop shadowed older values/tombstones because active indexes are rebuildable projections.
