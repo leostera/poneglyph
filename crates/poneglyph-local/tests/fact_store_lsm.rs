@@ -1,5 +1,6 @@
 mod common;
 
+use poneglyph::{ActiveFilter, Filter, Store, Value, fact, retraction, uri};
 use poneglyph_local::LsmFactStore;
 use tempfile::TempDir;
 
@@ -10,7 +11,7 @@ use common::{
     assert_invalid_retractions_fail_cleanly, assert_missing_fact_returns_none,
     assert_mixed_batch_rolls_back, assert_retract_then_assert_in_same_batch_keeps_new_fact_active,
     assert_retracting_an_already_retracted_fact_is_a_noop, assert_retractions_are_append_only,
-    assert_tx_ids_are_unique_per_batch,
+    assert_tx_ids_are_unique_per_batch, collect_active_facts, collect_facts,
 };
 
 fn make_store() -> (TempDir, LsmFactStore) {
@@ -89,4 +90,50 @@ async fn lsm_retract_then_assert_in_same_batch_keeps_new_fact_active() {
 async fn lsm_active_facts_can_be_narrowed_by_field_and_entity() {
     let (_dir, store) = make_store();
     assert_active_facts_can_be_narrowed_by_field_and_entity(&store).await;
+}
+
+#[tokio::test]
+async fn lsm_compaction_preserves_reopenable_log_and_active_state() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let store = LsmFactStore::open(dir.path()).expect("store");
+    let entity = uri!("compact:item:one");
+    let field = uri!("compact:name");
+    let value = Value::text("one");
+
+    store
+        .state_facts_vec(vec![fact!(entity.clone(), field.clone(), value.clone())])
+        .await
+        .expect("assert");
+    store.flush().expect("flush assertion");
+    store
+        .state_facts_vec(vec![retraction!(entity.clone(), field, value)])
+        .await
+        .expect("retract");
+    store.flush().expect("flush retraction");
+    store.compact().expect("compact");
+    drop(store);
+
+    let store = LsmFactStore::open(dir.path()).expect("reopen");
+    let log = collect_facts(
+        store
+            .get_facts(Filter::ByEntityUri(entity.clone()))
+            .await
+            .expect("log"),
+    )
+    .await
+    .expect("collect log");
+    assert_eq!(log.len(), 2, "compaction preserves append-only fact log");
+
+    let active = collect_active_facts(
+        store
+            .get_active_facts(ActiveFilter::ByEntity(entity))
+            .await
+            .expect("active"),
+    )
+    .await
+    .expect("collect active");
+    assert!(
+        active.is_empty(),
+        "compaction preserves retracted active state"
+    );
 }
