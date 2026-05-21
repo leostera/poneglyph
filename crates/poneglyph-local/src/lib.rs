@@ -49,13 +49,36 @@ pub use entities::SqliteEntityStore;
 pub use facts::{LsmFactStore, SqliteFactStore};
 pub use projections::TantivySearchProjection;
 
-/// Durable runtime storage factory backed by this crate's local adapters.
+/// Durable runtime storage factory backed by this crate's default local adapters.
 pub struct LocalRuntimeStorageFactory;
+
+/// Experimental runtime storage factory that swaps only the fact store to LSM.
+///
+/// Entity and search projections remain on the mature SQLite/Tantivy adapters.
+pub struct LsmRuntimeStorageFactory;
 
 #[async_trait]
 impl RuntimeStorageFactory for LocalRuntimeStorageFactory {
     async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
         open_fact_store(workspace).await
+    }
+
+    async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>> {
+        open_entity_store(workspace).await
+    }
+
+    fn open_search_projection(
+        &self,
+        workspace: &Workspace,
+    ) -> PoneResult<Arc<dyn SearchProjection>> {
+        open_search_projection(workspace).map(|projection| projection as Arc<dyn SearchProjection>)
+    }
+}
+
+#[async_trait]
+impl RuntimeStorageFactory for LsmRuntimeStorageFactory {
+    async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
+        open_lsm_fact_store(workspace)
     }
 
     async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>> {
@@ -79,12 +102,34 @@ pub async fn open_runtime(workspace: Workspace, config: PoneglyphConfig) -> Pone
     runtime_builder(workspace).with_config(config).build().await
 }
 
+/// Opens a full Poneglyph runtime using the experimental LSM fact store.
+pub async fn open_lsm_runtime(
+    workspace: Workspace,
+    config: PoneglyphConfig,
+) -> PoneResult<Poneglyph> {
+    Poneglyph::builder()
+        .with_workspace(workspace)
+        .with_config(config)
+        .with_storage_factory(LsmRuntimeStorageFactory)
+        .build()
+        .await
+}
+
 /// Opens a full Poneglyph runtime using durable storage and workspace config.
 ///
 /// This is the preferred embedding helper for domain daemons that want the
 /// standard disk-backed workspace layout and `config.toml` loading behavior.
 pub async fn open_workspace(workspace: Workspace) -> PoneResult<Poneglyph> {
     runtime_builder(workspace).build().await
+}
+
+/// Opens a full Poneglyph runtime with the LSM fact store and workspace config.
+pub async fn open_lsm_workspace(workspace: Workspace) -> PoneResult<Poneglyph> {
+    Poneglyph::builder()
+        .with_workspace(workspace)
+        .with_storage_factory(LsmRuntimeStorageFactory)
+        .build()
+        .await
 }
 
 fn runtime_builder(workspace: Workspace) -> poneglyph::PoneglyphBuilder {
@@ -110,7 +155,9 @@ pub async fn open_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>
 /// SQLite remains the default fact store; this helper is explicit so tests and
 /// benchmarks can opt into the LSM backend during bring-up.
 pub fn open_lsm_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
-    Ok(Arc::new(LsmFactStore::open(workspace.facts_db_path())?))
+    Ok(Arc::new(LsmFactStore::open(
+        workspace.store_dir().join("facts.lsm"),
+    )?))
 }
 
 /// Opens the default durable entity projection store for a workspace.
@@ -132,8 +179,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        LocalRuntimeStorageFactory, open_entity_store, open_fact_store, open_runtime,
-        open_search_projection, open_workspace, repair_workspace,
+        LocalRuntimeStorageFactory, open_entity_store, open_fact_store, open_lsm_fact_store,
+        open_lsm_workspace, open_runtime, open_search_projection, open_workspace, repair_workspace,
     };
     use poneglyph::{Poneglyph, PoneglyphConfig, Workspace};
 
@@ -169,6 +216,21 @@ mod tests {
         assert!(workspace.facts_db_path().exists());
         assert!(workspace.entities_db_path().exists());
         assert!(workspace.search_db_path().exists());
+    }
+
+    #[tokio::test]
+    async fn db_lsm_fact_store_opens_explicitly_without_changing_default() {
+        let tempdir = tempdir().expect("tempdir");
+        let workspace = Workspace::at(tempdir.path());
+
+        let _default_store = open_fact_store(&workspace).await.expect("default store");
+        let _lsm_store = open_lsm_fact_store(&workspace).expect("lsm store");
+        let _lsm_runtime = open_lsm_workspace(workspace.clone())
+            .await
+            .expect("lsm runtime");
+
+        assert!(workspace.facts_db_path().exists());
+        assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
     }
 
     #[tokio::test]

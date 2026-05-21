@@ -397,6 +397,37 @@ async fn local_backend_write_heavy_stress() {
 }
 
 #[tokio::test]
+#[ignore = "set PONEGLYPH_STRESS_FACTS/PONEGLYPH_STRESS_BATCH and run with --ignored"]
+async fn local_lsm_backend_write_heavy_stress() {
+    let total = std::env::var("PONEGLYPH_STRESS_FACTS")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(50_000);
+    let batch_size = std::env::var("PONEGLYPH_STRESS_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(1_000);
+
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = Workspace::at(tempdir.path());
+    let store = poneglyph_local::open_lsm_fact_store(&workspace).expect("fact store");
+
+    let facts = (0..total).map(generated_fact).collect::<Vec<_>>();
+
+    let started = Instant::now();
+    state_prebuilt_batches(store.as_ref(), &facts, batch_size)
+        .await
+        .expect("write batches");
+    let elapsed = started.elapsed();
+
+    let log = collect_facts(store.get_facts(Filter::All).await.expect("log"))
+        .await
+        .expect("collect log");
+    assert_eq!(log.len(), total);
+    eprintln!("lsm write-heavy stress wrote {total} facts in {elapsed:?}");
+}
+
+#[tokio::test]
 #[ignore = "download tests/fixtures/onepiece-pages-current.xml or set PONEGLYPH_ONEPIECE_XML"]
 async fn local_backend_onepiece_wiki_ingest_stress() {
     let fixture_path = onepiece_fixture_path();
@@ -440,6 +471,54 @@ async fn local_backend_onepiece_wiki_ingest_stress() {
 
     eprintln!(
         "onepiece wiki ingest wrote {} facts from {} pages in {:?}",
+        facts.len(),
+        pages.len(),
+        elapsed
+    );
+}
+
+#[tokio::test]
+#[ignore = "download tests/fixtures/onepiece-pages-current.xml or set PONEGLYPH_ONEPIECE_XML"]
+async fn local_lsm_backend_onepiece_wiki_ingest_stress() {
+    let fixture_path = onepiece_fixture_path();
+    let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
+        .ok()
+        .and_then(|value| value.parse().ok());
+    let batch_size = std::env::var("PONEGLYPH_ONEPIECE_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(10_000);
+
+    let pages = load_onepiece_pages(&fixture_path, max_pages).unwrap_or_else(|error| {
+        panic!(
+            "could not load One Piece XML fixture at {}: {error}; run tests/fixtures/download_onepiece_fandom.sh or set PONEGLYPH_ONEPIECE_XML",
+            fixture_path.display()
+        )
+    });
+    let facts = onepiece_pages_to_facts(&pages);
+
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = Workspace::at(tempdir.path());
+    let store = poneglyph_local::open_lsm_fact_store(&workspace).expect("fact store");
+
+    let started = Instant::now();
+    state_prebuilt_batches(store.as_ref(), &facts, batch_size)
+        .await
+        .expect("write fixture facts");
+    let elapsed = started.elapsed();
+
+    let active = collect_active_facts(
+        store
+            .get_active_facts(ActiveFilter::ByField(uri!("wiki:page:title")))
+            .await
+            .expect("active title facts"),
+    )
+    .await
+    .expect("collect active titles");
+    assert_eq!(active.len(), pages.len());
+
+    eprintln!(
+        "lsm onepiece wiki ingest wrote {} facts from {} pages in {:?}",
         facts.len(),
         pages.len(),
         elapsed
@@ -512,6 +591,78 @@ async fn local_backend_onepiece_wiki_query_stress() {
     let elapsed = started.elapsed();
     eprintln!(
         "onepiece wiki datafox query stress completed {queries} queries over {} facts from {} pages in {:?}",
+        facts.len(),
+        pages.len(),
+        elapsed
+    );
+}
+
+#[tokio::test]
+#[ignore = "download One Piece fixture and run with --ignored"]
+async fn local_lsm_backend_onepiece_wiki_query_stress() {
+    let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(5_000);
+    let batch_size = std::env::var("PONEGLYPH_ONEPIECE_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(10_000);
+    let queries = std::env::var("PONEGLYPH_ONEPIECE_QUERIES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(200);
+
+    let pages = load_onepiece_pages(&onepiece_fixture_path(), Some(max_pages))
+        .expect("load One Piece XML fixture");
+    let facts = onepiece_pages_to_facts(&pages);
+
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = Workspace::at(tempdir.path());
+    let runtime = poneglyph_local::open_lsm_workspace(workspace)
+        .await
+        .expect("runtime");
+    for chunk in facts.chunks(batch_size) {
+        runtime
+            .state_facts(chunk.to_vec())
+            .await
+            .expect("write fixture facts");
+    }
+
+    let datafox_queries = [
+        (
+            "captains_and_seconds",
+            r#"wiki:crew:captain(Crew, Captain), wiki:crew:second(Crew, Second), wiki:page:title(Crew, CrewName), wiki:page:title(Captain, CaptainName), wiki:page:title(Second, SecondName)"#,
+        ),
+        (
+            "islands_and_leaders",
+            r#"wiki:island:leader(Island, Leader), wiki:page:title(Island, IslandName), wiki:page:title(Leader, LeaderName)"#,
+        ),
+        (
+            "joyboy_to_luffy_chain",
+            r#"wiki:lore:directConnection(A, B), wiki:lore:directConnection(B, C), wiki:lore:directConnection(C, D), wiki:lore:directConnection(D, E), wiki:page:title(A, "Joy Boy"), wiki:page:title(E, "Monkey D. Luffy")"#,
+        ),
+        (
+            "people_with_d_name",
+            r#"wiki:page:title(Person, Name), contains(Name, " D. ")"#,
+        ),
+    ];
+
+    for (name, query) in datafox_queries {
+        let rows = runtime.query_str(query).await.expect("datafox query");
+        assert!(!rows.is_empty(), "{name} should return rows");
+        eprintln!("lsm onepiece datafox {name}: {:?}", rows.substitutions());
+    }
+
+    let started = Instant::now();
+    for query in 0..queries {
+        let (_, source) = datafox_queries[query % datafox_queries.len()];
+        let rows = runtime.query_str(source).await.expect("datafox query");
+        assert!(!rows.is_empty());
+    }
+    let elapsed = started.elapsed();
+    eprintln!(
+        "lsm onepiece wiki datafox query stress completed {queries} queries over {} facts from {} pages in {:?}",
         facts.len(),
         pages.len(),
         elapsed
