@@ -29,6 +29,8 @@ pub(crate) struct SstReader {
     index: Vec<IndexEntry>,
     data_end: u64,
     data: Arc<[u8]>,
+    smallest_key: Option<Vec<u8>>,
+    largest_key: Option<Vec<u8>>,
 }
 
 impl SstReader {
@@ -64,16 +66,23 @@ impl SstReader {
 
         file.seek(SeekFrom::Start(index_offset))?;
         let index = read_index(&mut file)?;
-        let data = std::fs::read(&path)?.into();
+        let data: Arc<[u8]> = std::fs::read(&path)?.into();
+        let smallest_key = index.first().map(|entry| entry.first_key.clone());
+        let largest_key = largest_record_key(&data, index_offset)?;
         Ok(Self {
             path,
             index,
             data_end: index_offset,
             data,
+            smallest_key,
+            largest_key,
         })
     }
 
     pub(crate) fn get(&self, key: &[u8]) -> io::Result<Option<MemtableEntry>> {
+        if !self.may_contain_key(key) {
+            return Ok(None);
+        }
         let mut offset = self.seek_offset_for(key);
         while offset < self.data_end {
             let Some((next_offset, record_key, entry)) =
@@ -91,6 +100,9 @@ impl SstReader {
     }
 
     pub(crate) fn scan_prefix(&self, prefix: &[u8]) -> io::Result<Vec<(Vec<u8>, MemtableEntry)>> {
+        if !self.may_contain_prefix(prefix) {
+            return Ok(Vec::new());
+        }
         let mut offset = self.seek_offset_for(prefix);
         let mut rows = Vec::new();
         while offset < self.data_end {
@@ -111,6 +123,36 @@ impl SstReader {
         Ok(rows)
     }
 
+    pub(crate) fn may_contain_key(&self, key: &[u8]) -> bool {
+        match (&self.smallest_key, &self.largest_key) {
+            (Some(smallest), Some(largest)) => {
+                smallest.as_slice() <= key && key <= largest.as_slice()
+            }
+            _ => false,
+        }
+    }
+
+    pub(crate) fn may_contain_prefix(&self, prefix: &[u8]) -> bool {
+        match (&self.smallest_key, &self.largest_key) {
+            (Some(smallest), Some(largest)) => {
+                if largest.as_slice() < prefix {
+                    return false;
+                }
+                if let Some(successor) = prefix_successor(prefix)
+                    && successor.as_slice() <= smallest.as_slice()
+                {
+                    return false;
+                }
+                true
+            }
+            _ => false,
+        }
+    }
+
+    pub(crate) fn key_bounds(&self) -> Option<(&[u8], &[u8])> {
+        Some((self.smallest_key.as_deref()?, self.largest_key.as_deref()?))
+    }
+
     fn seek_offset_for(&self, key: &[u8]) -> u64 {
         self.index
             .partition_point(|entry| entry.first_key.as_slice() <= key)
@@ -122,6 +164,32 @@ impl SstReader {
 
 pub(crate) fn write_memtable(path: impl AsRef<Path>, memtable: &Memtable) -> io::Result<SstReader> {
     write_entries(path.as_ref(), memtable.iter())
+}
+
+fn largest_record_key(data: &[u8], data_end: u64) -> io::Result<Option<Vec<u8>>> {
+    let mut offset = 4;
+    let mut largest = None;
+    while offset < data_end {
+        let Some((next_offset, key, _entry)) = read_record_from_slice(data, data_end, offset)?
+        else {
+            break;
+        };
+        largest = Some(key);
+        offset = next_offset;
+    }
+    Ok(largest)
+}
+
+fn prefix_successor(prefix: &[u8]) -> Option<Vec<u8>> {
+    let mut successor = prefix.to_vec();
+    for index in (0..successor.len()).rev() {
+        if successor[index] != u8::MAX {
+            successor[index] += 1;
+            successor.truncate(index + 1);
+            return Some(successor);
+        }
+    }
+    None
 }
 
 fn write_entries<'a>(
@@ -361,5 +429,25 @@ mod tests {
             Some(MemtableEntry::Value(vec![99]))
         );
         assert_eq!(reader.scan_prefix(b"key/09").expect("scan").len(), 10);
+    }
+
+    #[test]
+    fn sst_tracks_key_bounds_for_read_planning() {
+        let tempdir = tempdir().expect("tempdir");
+        let path = tempdir.path().join("000001.sst");
+        let mut memtable = Memtable::new();
+        memtable.insert(b"b/1".to_vec(), b"one".to_vec());
+        memtable.insert(b"c/1".to_vec(), b"two".to_vec());
+        memtable.insert(b"d/1".to_vec(), b"three".to_vec());
+
+        let reader = write_memtable(&path, &memtable).expect("write sst");
+        let bounds = reader.key_bounds().expect("bounds");
+        assert_eq!(bounds, (&b"b/1"[..], &b"d/1"[..]));
+        assert!(!reader.may_contain_key(b"a/9"));
+        assert!(reader.may_contain_key(b"c/1"));
+        assert!(!reader.may_contain_key(b"e/0"));
+        assert!(!reader.may_contain_prefix(b"a/"));
+        assert!(reader.may_contain_prefix(b"c/"));
+        assert!(!reader.may_contain_prefix(b"e/"));
     }
 }

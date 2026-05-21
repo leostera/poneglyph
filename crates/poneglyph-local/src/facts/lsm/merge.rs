@@ -14,6 +14,9 @@ pub(crate) fn get_merged(
     }
 
     for segment in segments_newest_first {
+        if !segment.may_contain_key(key) {
+            continue;
+        }
         if let Some(entry) = segment.get(key)? {
             return Ok(entry.value().map(ToOwned::to_owned));
         }
@@ -45,6 +48,9 @@ pub(crate) fn scan_prefix_merged(
     }
 
     for segment in segments_newest_first {
+        if !segment.may_contain_prefix(prefix) {
+            continue;
+        }
         for (key, entry) in segment.scan_prefix(prefix)? {
             if seen.insert(key.clone())
                 && let Some(value) = entry.value()
