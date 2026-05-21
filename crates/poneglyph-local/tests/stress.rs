@@ -145,14 +145,15 @@ fn synthetic_onepiece_pages(count: usize) -> Vec<WikiPage> {
         .collect()
 }
 
+fn onepiece_page_entity(title: &str) -> poneglyph::Uri {
+    uri!(format!("wiki:onepiece:page:{}", slug_uri_component(title)))
+}
+
 fn onepiece_pages_to_facts(pages: &[WikiPage]) -> Vec<Fact> {
     let source = uri!("fixture:onepiece-fandom");
-    let mut facts = Vec::with_capacity(pages.len() * 5);
+    let mut facts = Vec::with_capacity(pages.len() * 5 + 32);
     for (index, page) in pages.iter().enumerate() {
-        let entity = uri!(format!(
-            "wiki:onepiece:page:{}",
-            slug_uri_component(&page.title)
-        ));
+        let entity = onepiece_page_entity(&page.title);
         facts.push(fact!(
             source.clone(),
             entity.clone(),
@@ -198,7 +199,87 @@ fn onepiece_pages_to_facts(pages: &[WikiPage]) -> Vec<Fact> {
             ));
         }
     }
+    add_onepiece_domain_facts(&source, &mut facts);
     facts
+}
+
+fn add_onepiece_domain_facts(source: &poneglyph::Uri, facts: &mut Vec<Fact>) {
+    let crews = [
+        ("Straw Hat Pirates", "Monkey D. Luffy", "Roronoa Zoro"),
+        ("Roger Pirates", "Gol D. Roger", "Silvers Rayleigh"),
+        ("Red Hair Pirates", "Shanks", "Benn Beckman"),
+        ("Whitebeard Pirates", "Edward Newgate", "Marco"),
+        ("Kid Pirates", "Eustass Kid", "Killer"),
+        ("Heart Pirates", "Trafalgar D. Water Law", "Bepo"),
+    ];
+    let islands = [
+        ("Wano Country", "Kozuki Momonosuke"),
+        ("Arabasta Kingdom", "Nefertari Cobra"),
+        ("Dressrosa", "Riku Doldo III"),
+        ("Fish-Man Island", "Neptune"),
+        ("Drum Island", "Dalton"),
+        ("Amazon Lily", "Boa Hancock"),
+        ("Zou", "Inuarashi"),
+    ];
+    let chain = [
+        ("Joy Boy", "Nika"),
+        ("Nika", "Gol D. Roger"),
+        ("Gol D. Roger", "Shanks"),
+        ("Shanks", "Monkey D. Luffy"),
+    ];
+
+    let mut titles = BTreeSet::new();
+    for (crew, captain, second) in crews {
+        titles.extend([crew, captain, second]);
+    }
+    for (island, leader) in islands {
+        titles.extend([island, leader]);
+    }
+    for (from, to) in chain {
+        titles.extend([from, to]);
+    }
+    for title in titles {
+        facts.push(fact!(
+            source.clone(),
+            onepiece_page_entity(title),
+            uri!("wiki:page:title"),
+            Value::text(title)
+        ));
+    }
+
+    for (crew, captain, second) in crews {
+        let crew = onepiece_page_entity(crew);
+        facts.push(fact!(
+            source.clone(),
+            crew.clone(),
+            uri!("wiki:crew:captain"),
+            Value::reference(onepiece_page_entity(captain))
+        ));
+        facts.push(fact!(
+            source.clone(),
+            crew,
+            uri!("wiki:crew:second"),
+            Value::reference(onepiece_page_entity(second))
+        ));
+    }
+
+    for (island, leader) in islands {
+        facts.push(fact!(
+            source.clone(),
+            onepiece_page_entity(island),
+            uri!("wiki:island:leader"),
+            Value::reference(onepiece_page_entity(leader))
+        ));
+    }
+
+    for (from, to) in chain {
+        facts.push(fact!(
+            source.clone(),
+            onepiece_page_entity(from),
+            uri!("wiki:lore:directConnection"),
+            Value::reference(onepiece_page_entity(to))
+        ));
+    }
 }
 
 fn extract_wiki_links<'a>(text: &'a str, prefix: &'a str) -> impl Iterator<Item = String> + 'a {
@@ -387,93 +468,50 @@ async fn local_backend_onepiece_wiki_query_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let store = poneglyph_local::open_fact_store(&workspace)
+    let runtime = poneglyph_local::open_workspace(workspace)
         .await
-        .expect("fact store");
-    state_prebuilt_batches(store.as_ref(), &facts, batch_size)
-        .await
-        .expect("write fixture facts");
+        .expect("runtime");
+    for chunk in facts.chunks(batch_size) {
+        runtime
+            .state_facts(chunk.to_vec())
+            .await
+            .expect("write fixture facts");
+    }
 
-    let category_values = facts
-        .iter()
-        .filter(|fact| fact.field == uri!("wiki:page:category"))
-        .filter_map(|fact| match &fact.value {
-            Value::Text(value) => Some(value.clone()),
-            _ => None,
-        })
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect::<Vec<_>>();
-    assert!(
-        !category_values.is_empty(),
-        "fixture should contain categories"
-    );
+    let datafox_queries = [
+        (
+            "captains_and_seconds",
+            r#"wiki:crew:captain(Crew, Captain), wiki:crew:second(Crew, Second), wiki:page:title(Crew, CrewName), wiki:page:title(Captain, CaptainName), wiki:page:title(Second, SecondName)"#,
+        ),
+        (
+            "islands_and_leaders",
+            r#"wiki:island:leader(Island, Leader), wiki:page:title(Island, IslandName), wiki:page:title(Leader, LeaderName)"#,
+        ),
+        (
+            "joyboy_to_luffy_chain",
+            r#"wiki:lore:directConnection(A, B), wiki:lore:directConnection(B, C), wiki:lore:directConnection(C, D), wiki:lore:directConnection(D, E), wiki:page:title(A, "Joy Boy"), wiki:page:title(E, "Monkey D. Luffy")"#,
+        ),
+        (
+            "people_with_d_name",
+            r#"wiki:page:title(Person, Name), contains(Name, " D. ")"#,
+        ),
+    ];
+
+    for (name, query) in datafox_queries {
+        let rows = runtime.query_str(query).await.expect("datafox query");
+        assert!(!rows.is_empty(), "{name} should return rows");
+        eprintln!("onepiece datafox {name}: {:?}", rows.substitutions());
+    }
 
     let started = Instant::now();
     for query in 0..queries {
-        match query % 4 {
-            0 => {
-                let page = &pages[query % pages.len()];
-                let entity = uri!(format!(
-                    "wiki:onepiece:page:{}",
-                    slug_uri_component(&page.title)
-                ));
-                let rows = collect_active_facts(
-                    store
-                        .get_active_facts(ActiveFilter::ByEntity(entity))
-                        .await
-                        .expect("entity active facts"),
-                )
-                .await
-                .expect("collect entity active facts");
-                assert!(!rows.is_empty());
-            }
-            1 => {
-                let rows = collect_active_facts(
-                    store
-                        .get_active_facts(ActiveFilter::ByField(uri!("wiki:page:title")))
-                        .await
-                        .expect("title active facts"),
-                )
-                .await
-                .expect("collect title active facts");
-                assert_eq!(rows.len(), pages.len());
-            }
-            2 => {
-                let category = &category_values[query % category_values.len()];
-                let rows = collect_active_facts(
-                    store
-                        .get_active_facts(ActiveFilter::ByFieldValue {
-                            field: uri!("wiki:page:category"),
-                            value: Value::text(category.clone()),
-                        })
-                        .await
-                        .expect("category active facts"),
-                )
-                .await
-                .expect("collect category active facts");
-                assert!(!rows.is_empty());
-            }
-            _ => {
-                let fact = &facts[query % facts.len()];
-                let rows = collect_active_facts(
-                    store
-                        .get_active_facts(ActiveFilter::ByFieldEntity {
-                            field: fact.field.clone(),
-                            entity: fact.entity.clone(),
-                        })
-                        .await
-                        .expect("field/entity active facts"),
-                )
-                .await
-                .expect("collect field/entity active facts");
-                assert!(!rows.is_empty());
-            }
-        }
+        let (_, source) = datafox_queries[query % datafox_queries.len()];
+        let rows = runtime.query_str(source).await.expect("datafox query");
+        assert!(!rows.is_empty());
     }
     let elapsed = started.elapsed();
     eprintln!(
-        "onepiece wiki query stress completed {queries} queries over {} facts from {} pages in {:?}",
+        "onepiece wiki datafox query stress completed {queries} queries over {} facts from {} pages in {:?}",
         facts.len(),
         pages.len(),
         elapsed
