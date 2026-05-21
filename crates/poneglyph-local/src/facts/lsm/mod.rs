@@ -72,6 +72,13 @@ impl LsmFactStore {
             .expect("LSM mutex poisoned")
             .flush_memtable()
     }
+
+    pub fn compact(&self) -> PoneResult<()> {
+        self.inner
+            .lock()
+            .expect("LSM mutex poisoned")
+            .compact_segments()
+    }
 }
 
 #[async_trait]
@@ -365,6 +372,41 @@ impl Inner {
         Ok(())
     }
 
+    fn compact_segments(&mut self) -> PoneResult<()> {
+        self.flush_memtable()?;
+        if self.segments_newest_first.len() <= 1 {
+            return Ok(());
+        }
+
+        let previous_segments = self.manifest.segments_newest_first.clone();
+        let rows = merge::scan_prefix_merged(&Memtable::new(), &self.segments_newest_first, &[])
+            .map_err(|source| Error::FactStoreIo { source })?;
+
+        let filename = self.manifest.allocate_segment();
+        let path = self.dir.join(&filename);
+        let mut compacted = Memtable::new();
+        for (key, value) in rows {
+            compacted.insert(key, value);
+        }
+        let reader = sst::write_memtable(&path, &compacted)
+            .map_err(|source| Error::FactStoreIo { source })?;
+
+        self.manifest.segments_newest_first = vec![filename];
+        self.manifest
+            .save(&self.dir)
+            .map_err(|source| Error::FactStoreIo { source })?;
+        self.segments_newest_first = vec![reader];
+        for segment in previous_segments {
+            let path = self.dir.join(segment);
+            match std::fs::remove_file(path) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(source) => return Err(Error::FactStoreIo { source }),
+            }
+        }
+        Ok(())
+    }
+
     fn flush_memtable(&mut self) -> PoneResult<()> {
         if self.memtable.approximate_size() == 0 {
             return Ok(());
@@ -653,6 +695,52 @@ mod tests {
             .await
             .expect("active");
         assert!(rows.recv().await.expect("row").is_ok());
+    }
+
+    #[tokio::test]
+    async fn lsm_fact_store_compacts_flushed_segments() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        let first = fact!(uri!("e:one"), uri!("f:name"), Value::text("one"));
+        let second = fact!(uri!("e:two"), uri!("f:name"), Value::text("two"));
+        store.state_facts_vec(vec![first]).await.expect("first");
+        store.flush().expect("flush first");
+        store.state_facts_vec(vec![second]).await.expect("second");
+        store.flush().expect("flush second");
+
+        assert_eq!(
+            std::fs::read_dir(tempdir.path())
+                .expect("read dir")
+                .filter(|entry| entry
+                    .as_ref()
+                    .expect("entry")
+                    .path()
+                    .extension()
+                    .is_some_and(|extension| extension == "sst"))
+                .count(),
+            2
+        );
+        store.compact().expect("compact");
+        assert_eq!(
+            std::fs::read_dir(tempdir.path())
+                .expect("read dir")
+                .filter(|entry| entry
+                    .as_ref()
+                    .expect("entry")
+                    .path()
+                    .extension()
+                    .is_some_and(|extension| extension == "sst"))
+                .count(),
+            1
+        );
+
+        let mut rows = store
+            .get_active_facts(ActiveFilter::ByField(uri!("f:name")))
+            .await
+            .expect("active");
+        assert!(rows.recv().await.expect("row").is_ok());
+        assert!(rows.recv().await.expect("row").is_ok());
+        assert!(rows.recv().await.is_none());
     }
 
     #[tokio::test]
