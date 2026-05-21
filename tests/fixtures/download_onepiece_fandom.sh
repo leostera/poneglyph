@@ -3,49 +3,35 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OUT_DIR="${PONEGLYPH_FIXTURE_DIR:-$ROOT/tests/fixtures/cache}"
-STATS_URL="${PONEGLYPH_ONEPIECE_STATS_URL:-https://onepiece.fandom.com/wiki/Special:Statistics}"
+DUMP_URL="${PONEGLYPH_ONEPIECE_DUMP_URL:-https://s3.amazonaws.com/wikia_xml_dumps/o/on/onepiece_pages_current.xml.7z}"
 mkdir -p "$OUT_DIR"
 
-stats_html="$OUT_DIR/onepiece-special-statistics.html"
-echo "Fetching $STATS_URL" >&2
-curl -L --fail --retry 3 --retry-delay 2 \
-  -A 'poneglyph-fixture-fetcher/0.1 (+https://github.com/leostera/poneglyph)' \
-  -o "$stats_html" "$STATS_URL"
-
-archive_url="$(python3 - "$stats_html" <<'PY'
-import html, re, sys
-text = open(sys.argv[1], encoding='utf-8', errors='ignore').read()
-links = [html.unescape(m) for m in re.findall(r'href=["\']([^"\']+)["\']', text)]
-ranked = []
-for link in links:
-    low = link.lower()
-    if any(n in low for n in ('.xml.gz', '.xml.bz2', '.xml')) and any(w in low for w in ('pages', 'articles', 'current', 'dump')):
-        ranked.append(link)
-if not ranked:
-    sys.exit(2)
-url = ranked[0]
-if url.startswith('//'):
-    url = 'https:' + url
-elif url.startswith('/'):
-    url = 'https://onepiece.fandom.com' + url
-print(url)
-PY
-)" || {
-  echo "Could not find an XML dump link on $STATS_URL" >&2
-  echo "Set PONEGLYPH_ONEPIECE_DUMP_URL to a latest pages XML dump URL if Fandom changes the page." >&2
-  exit 2
-}
-
-archive_name="$(basename "${archive_url%%\?*}")"
+archive_name="$(basename "${DUMP_URL%%\?*}")"
 archive_path="$OUT_DIR/$archive_name"
-echo "Downloading $archive_url" >&2
-curl -L --fail --retry 3 --retry-delay 2 \
-  -A 'poneglyph-fixture-fetcher/0.1 (+https://github.com/leostera/poneglyph)' \
-  -o "$archive_path" "$archive_url"
+xml_path="$OUT_DIR/${archive_name%.7z}"
+
+if [[ ! -s "$archive_path" ]]; then
+  echo "Downloading $DUMP_URL" >&2
+  curl -L --fail --retry 3 --retry-delay 2 \
+    -A 'Mozilla/5.0 poneglyph-fixture-fetcher/0.1' \
+    -o "$archive_path" "$DUMP_URL"
+fi
 
 case "$archive_path" in
-  *.gz) xml_path="${archive_path%.gz}"; gzip -cd "$archive_path" > "$xml_path" ;;
-  *.bz2) xml_path="${archive_path%.bz2}"; bzip2 -cd "$archive_path" > "$xml_path" ;;
+  *.gz) xml_path="${archive_path%.gz}"; [[ -s "$xml_path" ]] || gzip -cd "$archive_path" > "$xml_path" ;;
+  *.bz2) xml_path="${archive_path%.bz2}"; [[ -s "$xml_path" ]] || bzip2 -cd "$archive_path" > "$xml_path" ;;
+  *.7z)
+    xml_path="${archive_path%.7z}"
+    if [[ ! -s "$xml_path" ]]; then
+      if command -v 7z >/dev/null 2>&1; then
+        7z x -so "$archive_path" > "$xml_path"
+      elif command -v 7zz >/dev/null 2>&1; then
+        7zz x -so "$archive_path" > "$xml_path"
+      else
+        bsdtar -xOf "$archive_path" > "$xml_path"
+      fi
+    fi
+    ;;
   *) xml_path="$archive_path" ;;
 esac
 
