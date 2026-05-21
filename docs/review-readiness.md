@@ -72,8 +72,8 @@ RFD text.
 
 These are intentionally not part of the reset review unless the scope changes:
 
-- Add an embedding guide/API example for a domain daemon that uses Poneglyph as
-  its disk-backed graph database library.
+- Expand `docs/embedding.md` into a compiled example once crate publishing/API
+  polish starts.
 - Remove legacy JSON semantic RPCs after one compatibility window, keeping the
   typed protobuf RPCs as the only semantic daemon API.
 - Revisit RFD0001 and decide whether core keeps, removes, or feature-gates its
