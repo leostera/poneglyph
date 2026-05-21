@@ -10,8 +10,8 @@ use tantivy::{Index, IndexReader, IndexWriter, Term, doc};
 use tracing::debug;
 
 use poneglyph::{
-    Entity, Error, IndexedEntity, PoneResult, Projection, ProjectionBatch, SearchHit, SearchIndex,
-    Uri, Value,
+    Entity, Error, IndexedEntity, PoneResult, Projection, ProjectionBatch, SearchHit,
+    SearchProjection as CoreSearchProjection, Uri, Value,
 };
 
 #[derive(Clone, Copy)]
@@ -22,14 +22,14 @@ struct SearchFields {
     content: tantivy::schema::Field,
 }
 
-pub struct SearchProjection {
+pub struct TantivySearchProjection {
     index: Index,
     reader: IndexReader,
     writer: Mutex<IndexWriter>,
     fields: SearchFields,
 }
 
-impl SearchProjection {
+impl TantivySearchProjection {
     pub fn create_in_memory() -> PoneResult<Self> {
         let (schema, fields) = schema();
         let index = Index::create_in_ram(schema);
@@ -125,7 +125,7 @@ impl SearchProjection {
 }
 
 #[async_trait]
-impl Projection for SearchProjection {
+impl Projection for TantivySearchProjection {
     fn name(&self) -> &'static str {
         "search"
     }
@@ -166,9 +166,9 @@ impl Projection for SearchProjection {
     }
 }
 
-impl SearchIndex for SearchProjection {
+impl CoreSearchProjection for TantivySearchProjection {
     fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>> {
-        SearchProjection::search(self, query, limit)
+        TantivySearchProjection::search(self, query, limit)
     }
 }
 
@@ -239,7 +239,7 @@ mod tests {
     use poneglyph::projections::{Projection, ProjectionBatch};
     use poneglyph::{Entity, Uri, Value, uri};
 
-    use super::SearchProjection;
+    use super::TantivySearchProjection;
 
     fn entity(uri: Uri, fields: BTreeMap<Uri, Value>) -> Entity {
         Entity {
@@ -250,7 +250,7 @@ mod tests {
         }
     }
 
-    async fn wait_for_hit(projection: &SearchProjection, query: &str, expected_uri: &Uri) {
+    async fn wait_for_hit(projection: &TantivySearchProjection, query: &str, expected_uri: &Uri) {
         timeout(Duration::from_secs(1), async {
             loop {
                 let hits = projection.search(query, 10).expect("search");
@@ -266,7 +266,7 @@ mod tests {
 
     #[tokio::test]
     async fn search_projection_indexes_entities_by_text_content() {
-        let projection = SearchProjection::create_in_memory().expect("projection");
+        let projection = TantivySearchProjection::create_in_memory().expect("projection");
         let entity_uri = uri!("spotify:album:signals");
         let entity = entity(
             entity_uri.clone(),
@@ -285,7 +285,7 @@ mod tests {
 
     #[tokio::test]
     async fn search_projection_indexes_entity_uri_terms() {
-        let projection = SearchProjection::create_in_memory().expect("projection");
+        let projection = TantivySearchProjection::create_in_memory().expect("projection");
         let entity_uri = uri!("spotify:album:uri-search-target");
         let entity = entity(
             entity_uri.clone(),
@@ -306,7 +306,7 @@ mod tests {
 
     #[tokio::test]
     async fn search_projection_indexes_field_uri_terms() {
-        let projection = SearchProjection::create_in_memory().expect("projection");
+        let projection = TantivySearchProjection::create_in_memory().expect("projection");
         let entity_uri = uri!("spotify:album:field-search-target");
         let entity = entity(
             entity_uri.clone(),
@@ -328,7 +328,7 @@ mod tests {
 
     #[tokio::test]
     async fn search_projection_rewrites_existing_entity_documents() {
-        let projection = SearchProjection::create_in_memory().expect("projection");
+        let projection = TantivySearchProjection::create_in_memory().expect("projection");
         let entity_uri = uri!("spotify:album:2112");
 
         projection
@@ -359,7 +359,7 @@ mod tests {
 
     #[tokio::test]
     async fn search_projection_removes_documents_for_empty_entities() {
-        let projection = SearchProjection::create_in_memory().expect("projection");
+        let projection = TantivySearchProjection::create_in_memory().expect("projection");
         let entity_uri = uri!("spotify:album:grace-under-pressure");
 
         projection
@@ -396,7 +396,7 @@ mod tests {
                 .expect("runtime");
 
             runtime.block_on(async move {
-                let projection = SearchProjection::create_in_memory().expect("projection");
+                let projection = TantivySearchProjection::create_in_memory().expect("projection");
                 let entity_uri = uri!("spotify:album:property-search");
                 projection
                     .handle_events(ProjectionBatch {
@@ -424,7 +424,7 @@ mod tests {
                 .expect("runtime");
 
             runtime.block_on(async move {
-                let projection = SearchProjection::create_in_memory().expect("projection");
+                let projection = TantivySearchProjection::create_in_memory().expect("projection");
                 let entity_uri = uri!("spotify:album:property-delete-search");
                 projection
                     .handle_events(ProjectionBatch {

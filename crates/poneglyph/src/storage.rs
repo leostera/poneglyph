@@ -3,8 +3,8 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::{
-    EntityStore, InMemoryEntityStore, InMemoryFactStore, InMemorySearchIndex, PoneResult,
-    SearchIndex, Store, Workspace,
+    EntityStore, InMemoryEntityStore, InMemoryFactStore, InMemorySearchProjection, PoneResult,
+    SearchProjection, Store, Workspace,
 };
 
 /// Factory for opening runtime storage adapters.
@@ -18,7 +18,10 @@ pub trait RuntimeStorageFactory: Send + Sync {
 
     async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>>;
 
-    fn open_search_index(&self, workspace: &Workspace) -> PoneResult<Arc<dyn SearchIndex>>;
+    fn open_search_projection(
+        &self,
+        workspace: &Workspace,
+    ) -> PoneResult<Arc<dyn SearchProjection>>;
 }
 
 pub(crate) struct DefaultRuntimeStorageFactory;
@@ -33,8 +36,11 @@ impl RuntimeStorageFactory for DefaultRuntimeStorageFactory {
         open_entity_store(workspace).await
     }
 
-    fn open_search_index(&self, workspace: &Workspace) -> PoneResult<Arc<dyn SearchIndex>> {
-        open_search_index(workspace)
+    fn open_search_projection(
+        &self,
+        workspace: &Workspace,
+    ) -> PoneResult<Arc<dyn SearchProjection>> {
+        open_search_projection(workspace)
     }
 }
 
@@ -49,15 +55,17 @@ pub(crate) async fn open_entity_store(_workspace: &Workspace) -> PoneResult<Arc<
 }
 
 /// Opens the default in-memory search index for a core-only runtime.
-pub(crate) fn open_search_index(_workspace: &Workspace) -> PoneResult<Arc<dyn SearchIndex>> {
-    Ok(Arc::new(InMemorySearchIndex::new()))
+pub(crate) fn open_search_projection(
+    _workspace: &Workspace,
+) -> PoneResult<Arc<dyn SearchProjection>> {
+    Ok(Arc::new(InMemorySearchProjection::new()))
 }
 
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
 
-    use super::{open_entity_store, open_fact_store, open_search_index};
+    use super::{open_entity_store, open_fact_store, open_search_projection};
     use crate::Workspace;
 
     #[tokio::test]
@@ -68,6 +76,6 @@ mod tests {
 
         let _fact_store = open_fact_store(&workspace).await.expect("fact store");
         let _entity_store = open_entity_store(&workspace).await.expect("entity store");
-        let _search_projection = open_search_index(&workspace).expect("search index");
+        let _search_projection = open_search_projection(&workspace).expect("search index");
     }
 }

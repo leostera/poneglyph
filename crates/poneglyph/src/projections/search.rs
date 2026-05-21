@@ -20,7 +20,7 @@ pub struct IndexedEntity {
     pub kind: String,
 }
 
-pub trait SearchIndex: Projection {
+pub trait SearchProjection: Projection {
     fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>>;
 }
 
@@ -29,11 +29,11 @@ pub trait SearchIndex: Projection {
 /// Durable/local full-text implementations live in backend crates such as
 /// `poneglyph-local`.
 #[derive(Default)]
-pub struct InMemorySearchIndex {
+pub struct InMemorySearchProjection {
     entities: Mutex<BTreeMap<Uri, Entity>>,
 }
 
-impl InMemorySearchIndex {
+impl InMemorySearchProjection {
     pub fn new() -> Self {
         Self::default()
     }
@@ -55,7 +55,7 @@ impl InMemorySearchIndex {
 }
 
 #[async_trait]
-impl Projection for InMemorySearchIndex {
+impl Projection for InMemorySearchProjection {
     fn name(&self) -> &'static str {
         "in-memory-search"
     }
@@ -73,7 +73,7 @@ impl Projection for InMemorySearchIndex {
     }
 }
 
-impl SearchIndex for InMemorySearchIndex {
+impl SearchProjection for InMemorySearchProjection {
     fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>> {
         let needle = query.to_lowercase();
         let hits = self
@@ -133,14 +133,14 @@ fn flatten_value(value: &Value, parts: &mut Vec<String>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{InMemorySearchIndex, SearchIndex};
+    use super::{InMemorySearchProjection, SearchProjection};
     use std::collections::BTreeMap;
 
     use crate::{Entity, Projection, ProjectionBatch, Value, uri};
 
     #[tokio::test]
-    async fn in_memory_search_indexes_and_removes_entities() {
-        let index = InMemorySearchIndex::new();
+    async fn in_memory_search_projection_indexes_and_removes_entities() {
+        let index = InMemorySearchProjection::new();
         let entity_uri = uri!("memory:item:first");
         let mut entity = Entity {
             uri: entity_uri.clone(),

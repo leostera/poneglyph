@@ -801,7 +801,7 @@ mod tests {
     use chrono::{NaiveDate, TimeZone, Utc};
     use poneglyph::{
         ActiveFact, BaseSchema, Entity, Fact, FieldSchema, InMemoryEntityStore, InMemoryFactStore,
-        InMemorySearchIndex, NamespaceSchema, Poneglyph, ProjectionBatch, SchemaDefinition,
+        InMemorySearchProjection, NamespaceSchema, Poneglyph, ProjectionBatch, SchemaDefinition,
         SearchHit, Value, fact, uri,
     };
     use tonic::{Code, Request};
@@ -833,7 +833,7 @@ mod tests {
                         .expect("fact service"),
                 )
                 .with_entity_store(InMemoryEntityStore::new())
-                .with_search_index(InMemorySearchIndex::new())
+                .with_search_projection(InMemorySearchProjection::new())
                 .build()
                 .await
                 .expect("runtime"),
@@ -1166,7 +1166,7 @@ mod tests {
     async fn search_entities_legacy_json_matches_typed_hits() {
         let (api, runtime) = api_with_runtime().await;
         runtime
-            .search_index()
+            .search_projection()
             .handle_events(ProjectionBatch {
                 entities: vec![signals_entity()],
             })

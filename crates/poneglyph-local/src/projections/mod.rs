@@ -1,3 +1,3 @@
 mod search;
 
-pub use search::SearchProjection;
+pub use search::TantivySearchProjection;

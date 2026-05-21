@@ -41,13 +41,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use poneglyph::{
-    EntityStore, PoneResult, Poneglyph, PoneglyphConfig, RuntimeStorageFactory, SearchIndex, Store,
-    Workspace,
+    EntityStore, PoneResult, Poneglyph, PoneglyphConfig, RuntimeStorageFactory, SearchProjection,
+    Store, Workspace,
 };
 
 pub use entities::SqliteEntityStore;
 pub use facts::SqliteFactStore;
-pub use projections::SearchProjection;
+pub use projections::TantivySearchProjection;
 
 /// Durable runtime storage factory backed by this crate's local adapters.
 pub struct LocalRuntimeStorageFactory;
@@ -62,8 +62,11 @@ impl RuntimeStorageFactory for LocalRuntimeStorageFactory {
         open_entity_store(workspace).await
     }
 
-    fn open_search_index(&self, workspace: &Workspace) -> PoneResult<Arc<dyn SearchIndex>> {
-        open_search_projection(workspace).map(|projection| projection as Arc<dyn SearchIndex>)
+    fn open_search_projection(
+        &self,
+        workspace: &Workspace,
+    ) -> PoneResult<Arc<dyn SearchProjection>> {
+        open_search_projection(workspace).map(|projection| projection as Arc<dyn SearchProjection>)
     }
 }
 
@@ -110,8 +113,8 @@ pub async fn open_entity_store(workspace: &Workspace) -> PoneResult<Arc<dyn Enti
 }
 
 /// Opens the default durable search projection index for a workspace.
-pub fn open_search_projection(workspace: &Workspace) -> PoneResult<Arc<SearchProjection>> {
-    Ok(Arc::new(SearchProjection::open(
+pub fn open_search_projection(workspace: &Workspace) -> PoneResult<Arc<TantivySearchProjection>> {
+    Ok(Arc::new(TantivySearchProjection::open(
         workspace.search_db_path(),
     )?))
 }

@@ -26,7 +26,7 @@ storage/search primitives.
 - `poneglyph-api` remains an optional gRPC/daemon boundary over a `poneglyph`
   runtime supplied by an embedder.
 - Runtime storage is injected through `poneglyph::RuntimeStorageFactory`.
-- Search is injected through the `poneglyph::SearchIndex` trait; `poneglyph-local`
+- Search is injected through the `poneglyph::SearchProjection` trait; `poneglyph-local`
   implements it with Tantivy, while core supplies an in-memory implementation for
   tests and custom assembly.
 
@@ -44,7 +44,7 @@ storage/search primitives.
   `poneglyph_local::open_workspace`, `poneglyph_local::open_runtime`, and
   `poneglyph_local::repair_workspace`.
 - Embedders wanting custom primitives can provide their own `Store`,
-  `EntityStore`, `SearchIndex`, and `RuntimeStorageFactory` implementations.
+  `EntityStore`, `SearchProjection`, and `RuntimeStorageFactory` implementations.
 - A future `poneglyph-cloudflare` crate can map the same contracts onto D1/R2/KV
   or other Worker-compatible storage/search primitives.
 - Some storage-specific error variants remain in `poneglyph::Error` for the
