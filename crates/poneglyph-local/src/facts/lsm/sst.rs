@@ -3,7 +3,7 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{self, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use super::memtable::{Memtable, MemtableEntry};
 
@@ -28,7 +28,8 @@ pub(crate) struct SstReader {
     path: PathBuf,
     index: Vec<IndexEntry>,
     data_end: u64,
-    data: Arc<[u8]>,
+    data: Arc<OnceLock<Arc<[u8]>>>,
+    file_len: u64,
     smallest_key: Option<Vec<u8>>,
     largest_key: Option<Vec<u8>>,
 }
@@ -74,18 +75,25 @@ impl SstReader {
 
         file.seek(SeekFrom::Start(index_offset))?;
         let index = read_index(&mut file)?;
-        let data: Arc<[u8]> = std::fs::read(&path)?.into();
         let smallest_key =
             smallest_key.or_else(|| index.first().map(|entry| entry.first_key.clone()));
+        let data = Arc::new(OnceLock::new());
         let largest_key = match largest_key {
             Some(largest_key) => Some(largest_key),
-            None => largest_record_key_from_index(&data, index_offset, &index)?,
+            None => {
+                let bytes = load_data(&path)?;
+                let largest_key = largest_record_key_from_index(&bytes, index_offset, &index)?;
+                let _ = data.set(bytes);
+                largest_key
+            }
         };
+        let file_len = file_len;
         Ok(Self {
             path,
             index,
             data_end: index_offset,
             data,
+            file_len,
             smallest_key,
             largest_key,
         })
@@ -95,10 +103,11 @@ impl SstReader {
         if !self.may_contain_key(key) {
             return Ok(None);
         }
+        let data = self.data_bytes()?;
         let mut offset = self.seek_offset_for(key);
         while offset < self.data_end {
             let Some((next_offset, record_key, entry)) =
-                read_record_from_slice(&self.data, self.data_end, offset)?
+                read_record_from_slice(&data, self.data_end, offset)?
             else {
                 return Ok(None);
             };
@@ -115,11 +124,12 @@ impl SstReader {
         if !self.may_contain_prefix(prefix) {
             return Ok(Vec::new());
         }
+        let data = self.data_bytes()?;
         let mut offset = self.seek_offset_for(prefix);
         let mut rows = Vec::new();
         while offset < self.data_end {
             let Some((next_offset, key, entry)) =
-                read_record_from_slice(&self.data, self.data_end, offset)?
+                read_record_from_slice(&data, self.data_end, offset)?
             else {
                 break;
             };
@@ -166,7 +176,16 @@ impl SstReader {
     }
 
     pub(crate) fn file_size_bytes(&self) -> u64 {
-        self.data.len() as u64
+        self.file_len
+    }
+
+    fn data_bytes(&self) -> io::Result<Arc<[u8]>> {
+        if let Some(data) = self.data.get() {
+            return Ok(data.clone());
+        }
+        let data = load_data(&self.path)?;
+        let _ = self.data.set(data.clone());
+        Ok(data)
     }
 
     fn seek_offset_for(&self, key: &[u8]) -> u64 {
@@ -180,6 +199,10 @@ impl SstReader {
 
 pub(crate) fn write_memtable(path: impl AsRef<Path>, memtable: &Memtable) -> io::Result<SstReader> {
     write_entries(path.as_ref(), memtable.iter())
+}
+
+fn load_data(path: &Path) -> io::Result<Arc<[u8]>> {
+    Ok(std::fs::read(path)?.into())
 }
 
 fn largest_record_key_from_index(
