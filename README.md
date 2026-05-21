@@ -15,6 +15,21 @@ Datafox-backed Datalog queries.
 - `crates/poneglyph-db` — durable storage adapter boundary and staging point for the SQLite/Datafox split; see `docs/rfds/RFD0001-storage-crate-boundary.md` for the proposed boundary.
 - `../datafox` — external sibling path dependency for Datalog parsing/evaluation.
 
+## Review status
+
+The Rust reset is intentionally narrow and reviewable:
+
+- the user-facing binary is only `poneglyph`;
+- semantic CLI operations prefer typed protobuf daemon RPCs and retain direct
+  workspace fallback when the daemon is offline;
+- legacy JSON semantic RPCs remain only as compatibility shims for one migration
+  window and are covered by parity tests against the typed RPCs;
+- `poneglyph-db` is the preferred durable storage boundary, while physical
+  SQLite/search module movement from `poneglyph-core` is deferred until the next
+  explicit storage architecture decision; and
+- the local daemon transport is localhost TCP for now, with Unix-domain sockets
+  documented as a future lifecycle/cleanup improvement in RFD0000.
+
 Clone/check out Datafox next to this repository before building:
 
 ```sh
