@@ -24,6 +24,7 @@ use self::wal::Wal;
 
 const WAL_FILE: &str = "facts.wal";
 const FLUSH_THRESHOLD_BYTES: usize = 128 * 1024 * 1024;
+const ACTIVE_CACHE_LIMIT_ENV: &str = "PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES";
 
 #[derive(Clone)]
 pub struct LsmFactStore {
@@ -37,6 +38,7 @@ struct Inner {
     wal: Wal,
     segments_newest_first: Vec<SstReader>,
     active_cache: HashMap<Vec<u8>, ActiveFact>,
+    active_cache_max_entries: Option<usize>,
 }
 
 impl LsmFactStore {
@@ -62,6 +64,7 @@ impl LsmFactStore {
                 wal,
                 segments_newest_first,
                 active_cache: HashMap::new(),
+                active_cache_max_entries: active_cache_max_entries_from_env(),
             })),
         })
     }
@@ -240,7 +243,7 @@ impl Inner {
                         return Ok(active.clone());
                     }
                     let active = decode_active_fact_with_cache(&bytes, &mut uri_cache)?;
-                    self.active_cache.insert(key, active.clone());
+                    self.cache_active_fact(key, active.clone());
                     Ok(active)
                 })
                 .collect()
@@ -265,7 +268,7 @@ impl Inner {
         } else {
             let bytes = encode_active_fact(&active)?;
             for key in keys {
-                self.active_cache.insert(key.clone(), active.clone());
+                self.cache_active_fact(key.clone(), active.clone());
                 self.put(key, bytes.clone())?;
             }
         }
@@ -331,6 +334,15 @@ impl Inner {
             .sync()
             .map_err(|source| Error::FactStoreIo { source })?;
         Ok(())
+    }
+
+    fn cache_active_fact(&mut self, key: Vec<u8>, active: ActiveFact) {
+        if let Some(max_entries) = self.active_cache_max_entries
+            && self.active_cache.len() >= max_entries
+        {
+            self.active_cache.clear();
+        }
+        self.active_cache.insert(key, active);
     }
 
     fn scan_facts(&self, prefix: Vec<u8>) -> PoneResult<Vec<PoneResult<Fact>>> {
@@ -429,6 +441,12 @@ impl Inner {
             .map_err(|source| Error::FactStoreIo { source })?;
         Ok(())
     }
+}
+
+fn active_cache_max_entries_from_env() -> Option<usize> {
+    std::env::var(ACTIVE_CACHE_LIMIT_ENV)
+        .ok()
+        .and_then(|value| value.parse().ok())
 }
 
 fn encode_active_fact(active: &ActiveFact) -> PoneResult<Vec<u8>> {
@@ -627,7 +645,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::LsmFactStore;
-    use poneglyph::{ActiveFilter, Filter, Store, Value, fact, retraction, uri};
+    use poneglyph::{ActiveFact, ActiveFilter, Filter, Store, Value, fact, retraction, uri};
 
     #[tokio::test]
     async fn lsm_fact_store_states_and_queries_active_facts() {
@@ -695,6 +713,36 @@ mod tests {
             .await
             .expect("active");
         assert!(rows.recv().await.expect("row").is_ok());
+    }
+
+    #[tokio::test]
+    async fn lsm_fact_store_supports_optional_active_cache_bound() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        let mut inner = store.inner.lock().expect("lock");
+        inner.active_cache_max_entries = Some(1);
+        let first = ActiveFact {
+            source: uri!("source:one"),
+            entity: uri!("entity:one"),
+            field: uri!("field:name"),
+            value: Value::text("one"),
+            fact_id: uri!("fact:one"),
+            tx_id: uri!("tx:one"),
+        };
+        let second = ActiveFact {
+            source: uri!("source:one"),
+            entity: uri!("entity:two"),
+            field: uri!("field:name"),
+            value: Value::text("two"),
+            fact_id: uri!("fact:two"),
+            tx_id: uri!("tx:one"),
+        };
+
+        inner.cache_active_fact(b"one".to_vec(), first);
+        assert_eq!(inner.active_cache.len(), 1);
+        inner.cache_active_fact(b"two".to_vec(), second);
+        assert_eq!(inner.active_cache.len(), 1);
+        assert!(inner.active_cache.contains_key(&b"two".to_vec()));
     }
 
     #[tokio::test]
