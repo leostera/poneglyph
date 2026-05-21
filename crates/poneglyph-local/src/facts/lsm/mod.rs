@@ -460,13 +460,11 @@ fn active_index_keys(active: &ActiveFact) -> [Vec<u8>; 3] {
 
 fn send_rows<T: Send + 'static>(rows: Vec<PoneResult<T>>) -> mpsc::Receiver<PoneResult<T>> {
     let (tx, rx) = mpsc::channel(rows.len().max(1));
-    tokio::spawn(async move {
-        for row in rows {
-            if tx.send(row).await.is_err() {
-                break;
-            }
+    for row in rows {
+        if tx.try_send(row).is_err() {
+            break;
         }
-    });
+    }
     rx
 }
 
