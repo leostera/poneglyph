@@ -23,7 +23,8 @@ use self::sst::SstReader;
 use self::wal::Wal;
 
 const WAL_FILE: &str = "facts.wal";
-const FLUSH_THRESHOLD_BYTES: usize = 128 * 1024 * 1024;
+const DEFAULT_FLUSH_THRESHOLD_BYTES: usize = 128 * 1024 * 1024;
+const FLUSH_THRESHOLD_ENV: &str = "PONEGLYPH_LSM_FLUSH_THRESHOLD_BYTES";
 const ACTIVE_CACHE_LIMIT_ENV: &str = "PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES";
 
 #[derive(Clone)]
@@ -39,6 +40,7 @@ struct Inner {
     segments_newest_first: Vec<SstReader>,
     active_cache: HashMap<Vec<u8>, ActiveFact>,
     active_cache_max_entries: Option<usize>,
+    flush_threshold_bytes: usize,
 }
 
 impl LsmFactStore {
@@ -65,6 +67,7 @@ impl LsmFactStore {
                 segments_newest_first,
                 active_cache: HashMap::new(),
                 active_cache_max_entries: active_cache_max_entries_from_env(),
+                flush_threshold_bytes: flush_threshold_bytes_from_env(),
             })),
         })
     }
@@ -184,7 +187,7 @@ impl Inner {
         self.wal
             .sync()
             .map_err(|source| Error::FactStoreIo { source })?;
-        if self.memtable.approximate_size() >= FLUSH_THRESHOLD_BYTES {
+        if self.memtable.approximate_size() >= self.flush_threshold_bytes {
             self.flush_memtable()?;
         }
         Ok((tx_id, persisted))
@@ -444,7 +447,15 @@ impl Inner {
 }
 
 fn active_cache_max_entries_from_env() -> Option<usize> {
-    std::env::var(ACTIVE_CACHE_LIMIT_ENV)
+    parse_optional_usize_env(ACTIVE_CACHE_LIMIT_ENV)
+}
+
+fn flush_threshold_bytes_from_env() -> usize {
+    parse_optional_usize_env(FLUSH_THRESHOLD_ENV).unwrap_or(DEFAULT_FLUSH_THRESHOLD_BYTES)
+}
+
+fn parse_optional_usize_env(name: &str) -> Option<usize> {
+    std::env::var(name)
         .ok()
         .and_then(|value| value.parse().ok())
 }
@@ -644,7 +655,7 @@ fn send_rows<T: Send + 'static>(rows: Vec<PoneResult<T>>) -> mpsc::Receiver<Pone
 mod tests {
     use tempfile::tempdir;
 
-    use super::LsmFactStore;
+    use super::{LsmFactStore, parse_optional_usize_env};
     use poneglyph::{ActiveFact, ActiveFilter, Filter, Store, Value, fact, retraction, uri};
 
     #[tokio::test]
@@ -713,6 +724,11 @@ mod tests {
             .await
             .expect("active");
         assert!(rows.recv().await.expect("row").is_ok());
+    }
+
+    #[test]
+    fn lsm_parse_optional_usize_env_ignores_missing_or_invalid_values() {
+        assert_eq!(parse_optional_usize_env("PONEGLYPH_TEST_MISSING"), None);
     }
 
     #[tokio::test]
