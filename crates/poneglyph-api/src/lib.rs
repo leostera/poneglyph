@@ -9,7 +9,8 @@ use std::time::Instant;
 use chrono::{DateTime, NaiveDate, Utc};
 use poneglyph_core::{
     ActiveFact, ActiveFilter, BaseSchema, Entity, Fact, FieldSchema, Filter, KindSchema,
-    NamespaceSchema, PoneResult, Poneglyph, Query, SchemaDefinition, SearchHit, Uri, Value,
+    NamespaceSchema, PoneResult, Poneglyph, Query, QueryResult, SchemaDefinition, SearchHit, Uri,
+    Value,
 };
 use serde::Serialize;
 use tonic::{Request, Response, Status};
@@ -54,6 +55,20 @@ impl DaemonApi {
             fact_id: fact_ids.first().cloned().unwrap_or_default(),
             fact_ids,
         })
+    }
+
+    async fn query_result(&self, request: QueryRequest) -> Result<QueryResult, Status> {
+        let query = Query::parse(&request.expression).map_err(invalid_argument)?;
+        self.poneglyph.query(query).await.map_err(internal)
+    }
+
+    async fn get_entity_item(&self, request: GetEntityRequest) -> Result<Option<Entity>, Status> {
+        let uri = parse_uri(request.uri)?;
+        self.poneglyph.get_entity(&uri).await.map_err(internal)
+    }
+
+    async fn schema_definition(&self) -> Result<SchemaDefinition, Status> {
+        self.poneglyph.get_schema().await.map_err(internal)
     }
 
     async fn list_entity_items(&self, request: ListEntitiesRequest) -> Result<Vec<Entity>, Status> {
@@ -680,8 +695,7 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         request: Request<QueryRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let query = Query::parse(&request.into_inner().expression).map_err(invalid_argument)?;
-        let result = self.poneglyph.query(query).await.map_err(internal)?;
+        let result = self.query_result(request.into_inner()).await?;
         json_response(result.substitutions())
     }
 
@@ -689,8 +703,7 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         request: Request<QueryRequest>,
     ) -> Result<Response<QueryResponse>, Status> {
-        let query = Query::parse(&request.into_inner().expression).map_err(invalid_argument)?;
-        let result = self.poneglyph.query(query).await.map_err(internal)?;
+        let result = self.query_result(request.into_inner()).await?;
         Ok(Response::new(query_response_to_proto(
             result.substitutions(),
         )))
@@ -700,8 +713,7 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         request: Request<GetEntityRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let uri = parse_uri(request.into_inner().uri)?;
-        let entity = self.poneglyph.get_entity(&uri).await.map_err(internal)?;
+        let entity = self.get_entity_item(request.into_inner()).await?;
         json_response(&entity)
     }
 
@@ -709,8 +721,7 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         request: Request<GetEntityRequest>,
     ) -> Result<Response<GetEntityResponse>, Status> {
-        let uri = parse_uri(request.into_inner().uri)?;
-        let entity = self.poneglyph.get_entity(&uri).await.map_err(internal)?;
+        let entity = self.get_entity_item(request.into_inner()).await?;
         Ok(Response::new(GetEntityResponse {
             entity: entity.as_ref().map(entity_to_proto),
         }))
@@ -756,7 +767,7 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         _request: Request<GetSchemaRequest>,
     ) -> Result<Response<JsonResponse>, Status> {
-        let schema = self.poneglyph.get_schema().await.map_err(internal)?;
+        let schema = self.schema_definition().await?;
         json_response(&schema)
     }
 
@@ -764,7 +775,7 @@ impl PoneglyphDaemon for DaemonApi {
         &self,
         _request: Request<GetSchemaRequest>,
     ) -> Result<Response<proto::SchemaDefinition>, Status> {
-        let schema = self.poneglyph.get_schema().await.map_err(internal)?;
+        let schema = self.schema_definition().await?;
         Ok(Response::new(schema_to_proto(&schema)))
     }
 }

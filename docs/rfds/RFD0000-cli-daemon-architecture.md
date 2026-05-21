@@ -56,42 +56,25 @@ path cleanup are designed. Named pipes or localhost TCP can remain the Windows
 fallback. For now, localhost TCP keeps the CLI portable while the command API is
 still changing.
 
-RPC payloads still use JSON for facts, schemas, entities, and query results in
-places. This keeps the boundary flexible during CLI design. Typed protobuf
-messages should replace JSON once the API stabilizes, but not before the fact,
-value, schema, and query-result shapes have stopped changing.
+The primary CLI daemon paths now use typed protobuf payloads for facts, state
+writes, entities/search, schemas, and query results. Legacy `JsonResponse` RPCs
+remain as compatibility shims during one transition window, but new CLI behavior
+should target typed RPCs first.
 
-Typed protobuf migration sketch and current audit:
+Typed protobuf migration status:
 
-- `Value` and `Fact` are the first typed domain payloads in the proto. They are
-  not wired into RPC responses yet; conversion helpers and round-trip tests live
-  in `poneglyph-api` so future RPC migrations can happen one method at a time.
-- First service slice: `ListFactsTyped` now exposes a typed `ListFactsResponse`
-  alongside the existing JSON `ListFacts` response. The CLI daemon path now uses
-  the typed response and converts it back into domain structs before applying the
-  existing plain/JSON renderers, so user-facing output remains unchanged while
-  the process boundary is no longer JSON for fact listing.
-- State writes also have typed RPCs (`StateFactTyped` and `StateFactsTyped`).
-  `fact state` and daemon-backed `schema apply` use them, preserving existing
-  outcome text/JSON while avoiding fact JSON serialization on those write paths.
-- Entity read paths have typed protobuf shapes for `Entity` and `SearchHit`.
-  `GetEntityTyped`, `ListEntitiesTyped`, and `SearchEntitiesTyped` are available,
-  and the CLI daemon path uses them before converting back into the existing
-  plain/JSON renderers.
-- Schema reads have typed protobuf shapes mirroring `BaseSchema`,
-  `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`.
-  `schema list/get` uses `GetSchemaTyped` on the daemon path and keeps the
-  existing CLI renderers unchanged.
-- Query reads have a typed `QueryResponse` made of rows, bindings, and scalar
-  query values. `query` uses `QueryTyped` on the daemon path, then adapts back to
-  the legacy substitution JSON shape used by existing plain/`--json` output.
-- Later candidates: typed entity/list/search responses once entity field maps and
-  search score semantics have settled; schema messages mirroring
-  `NamespaceSchema`, `KindSchema`, `FieldSchema`, and `SchemaDefinition`; query
-  result messages as repeated variable bindings rather than generic JSON
-  substitutions.
-- Keep JSON compatibility during one transition window before removing JSON RPC
-  fields.
+- Facts and values: `Value`, `Fact`, `ActiveFact`, `ListFactsResponse`,
+  `StateFactTyped`, and `StateFactsTyped` cover fact listing and fact writes.
+- Entities/search: `Entity`, `GetEntityResponse`, `ListEntitiesResponse`,
+  `SearchHit`, and `SearchEntitiesResponse` cover entity get/list/search.
+- Schema: `BaseSchema`-equivalent `SchemaEntries`, `NamespaceSchema`,
+  `KindSchema`, `FieldSchema`, and `SchemaDefinition` cover schema reads.
+- Query: `QueryResponse`, `QueryRow`, `QueryBinding`, and `QueryValue` cover
+  daemon query reads, while the CLI adapts the typed response back to the
+  established substitution JSON shape for `--json` compatibility.
+- Compatibility plan: keep legacy JSON RPCs until external callers have one
+  release window to migrate, then remove `JsonResponse` read RPCs and JSON fact
+  write RPCs in favor of the typed methods.
 
 ## Invariants
 
