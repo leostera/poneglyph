@@ -935,6 +935,73 @@ async fn local_lsm_backend_onepiece_fact_store_reopen_stress() {
 
 #[tokio::test]
 #[ignore = "download One Piece fixture and run with --ignored"]
+async fn local_lsm_backend_onepiece_planned_compaction_reopen_stress() {
+    let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(5_000);
+    let batch_size = std::env::var("PONEGLYPH_ONEPIECE_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(2_000);
+
+    let pages = load_onepiece_pages(&onepiece_fixture_path(), Some(max_pages))
+        .expect("load One Piece XML fixture");
+    let facts = onepiece_pages_to_facts(&pages);
+
+    let tempdir = tempdir().expect("tempdir");
+    let lsm_path = tempdir.path().join("facts.lsm");
+    let mut planned_compactions = 0;
+    let compact_elapsed;
+    {
+        let store = poneglyph_local::LsmFactStore::open(&lsm_path).expect("fact store");
+        let compact_started = Instant::now();
+        for chunk in facts.chunks(batch_size) {
+            store
+                .state_facts_vec(chunk.to_vec())
+                .await
+                .expect("write fixture chunk");
+            store.flush().expect("flush chunk");
+            if store.needs_compaction() {
+                store.compact().expect("planned compact");
+                planned_compactions += 1;
+            }
+        }
+        if store.needs_compaction() {
+            store.compact().expect("final planned compact");
+            planned_compactions += 1;
+        }
+        compact_elapsed = compact_started.elapsed();
+    }
+
+    let open_started = Instant::now();
+    let store = poneglyph_local::LsmFactStore::open(&lsm_path).expect("reopen planned store");
+    let open_elapsed = open_started.elapsed();
+    let active_started = Instant::now();
+    let active = collect_active_facts(
+        store
+            .get_active_facts(ActiveFilter::ByField(uri!("wiki:page:title")))
+            .await
+            .expect("active title facts"),
+    )
+    .await
+    .expect("collect active titles");
+    assert!(active.len() >= pages.len());
+    let active_elapsed = active_started.elapsed();
+
+    eprintln!(
+        "lsm onepiece planned-compaction reopen stress: {} planned compactions in {:?}; reopen {:?}; first active {:?}; {} facts from {} pages",
+        planned_compactions,
+        compact_elapsed,
+        open_elapsed,
+        active_elapsed,
+        facts.len(),
+        pages.len()
+    );
+}
+
+#[tokio::test]
+#[ignore = "download One Piece fixture and run with --ignored"]
 async fn local_lsm_backend_onepiece_prewarm_reopen_query_stress() {
     let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
         .ok()
