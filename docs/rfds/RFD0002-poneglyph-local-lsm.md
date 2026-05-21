@@ -123,6 +123,7 @@ The current implementation has a synchronous full-store `compact()` method. It i
 4. Split keyspace policies:
    - `log/*` compaction preserves every fact entry and drops only obsolete internal tombstones;
    - `active/*` compaction keeps newest visible entries and can drop shadowed older values/tombstones because active indexes are rebuildable projections.
+   - Status: planned L0 compaction now distinguishes active-index tombstones from other keyspaces. Active tombstones are dropped only when no older live segment may contain the same key; otherwise they are preserved so they continue shadowing older active assertions. Non-active tombstones are preserved by default.
 5. Preserve crash safety:
    - startup loads the manifest and treats unreferenced SST files as garbage;
    - files referenced by the manifest are never removed until replacement files are durable and published;

@@ -458,9 +458,19 @@ impl Inner {
                     input_set.contains(filename).then_some(reader.clone())
                 })
                 .collect::<Vec<_>>();
+            let older_readers = self
+                .manifest
+                .segments_newest_first
+                .iter()
+                .zip(self.segments_newest_first.iter())
+                .filter_map(|(filename, reader)| {
+                    (!input_set.contains(filename)).then_some(reader.clone())
+                })
+                .collect::<Vec<_>>();
             return self.compact_readers(
                 plan.inputs_newest_first,
                 &input_readers,
+                &older_readers,
                 plan.output_level,
                 true,
             );
@@ -468,13 +478,14 @@ impl Inner {
 
         let previous_segments = self.manifest.segments_newest_first.clone();
         let readers = self.segments_newest_first.clone();
-        self.compact_readers(previous_segments, &readers, 0, false)
+        self.compact_readers(previous_segments, &readers, &[], 0, false)
     }
 
     fn compact_readers(
         &mut self,
         removed: Vec<String>,
         readers: &[SstReader],
+        older_readers: &[SstReader],
         output_level: u32,
         preserve_tombstones: bool,
     ) -> PoneResult<()> {
@@ -487,7 +498,11 @@ impl Inner {
             {
                 match entry {
                     self::memtable::MemtableEntry::Value(value) => compacted.insert(key, value),
-                    self::memtable::MemtableEntry::Tombstone => compacted.delete(key),
+                    self::memtable::MemtableEntry::Tombstone => {
+                        if should_preserve_tombstone(&key, older_readers) {
+                            compacted.delete(key);
+                        }
+                    }
                 }
             }
         } else {
@@ -545,6 +560,15 @@ impl Inner {
             .map_err(|source| Error::FactStoreIo { source })?;
         Ok(())
     }
+}
+
+fn should_preserve_tombstone(key: &[u8], older_readers: &[SstReader]) -> bool {
+    if !key::is_active_key(key) {
+        return true;
+    }
+    older_readers
+        .iter()
+        .any(|reader| reader.may_contain_key(key))
 }
 
 fn open_manifest_segments(
@@ -1064,6 +1088,66 @@ mod tests {
             .expect("active");
         assert!(rows.recv().await.expect("row").is_ok());
         assert!(rows.recv().await.expect("row").is_ok());
+        assert!(rows.recv().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn planned_l0_compaction_preserves_active_tombstones_over_older_levels() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        let target = fact!(uri!("e:target"), uri!("f:name"), Value::text("target"));
+        store
+            .state_facts_vec(vec![target])
+            .await
+            .expect("state target");
+        store.flush().expect("flush target");
+        for index in 0..4 {
+            store
+                .state_facts_vec(vec![fact!(
+                    uri!(format!("e:old:{index}")),
+                    uri!("f:name"),
+                    Value::text(format!("old {index}"))
+                )])
+                .await
+                .expect("state old");
+            store.flush().expect("flush old");
+        }
+        store.compact().expect("compact old L0 into L1");
+
+        store
+            .state_facts_vec(vec![retraction!(
+                uri!("e:target"),
+                uri!("f:name"),
+                Value::text("target")
+            )])
+            .await
+            .expect("retract target");
+        store.flush().expect("flush retract");
+        for index in 0..4 {
+            store
+                .state_facts_vec(vec![fact!(
+                    uri!(format!("e:new:{index}")),
+                    uri!("f:name"),
+                    Value::text(format!("new {index}"))
+                )])
+                .await
+                .expect("state new");
+            store.flush().expect("flush new");
+        }
+        store.compact().expect("compact retraction L0 into L1");
+
+        let mut rows = store
+            .get_active_facts(ActiveFilter::ByEntity(uri!("e:target")))
+            .await
+            .expect("active");
+        assert!(rows.recv().await.is_none());
+        drop(store);
+
+        let store = LsmFactStore::open(tempdir.path()).expect("reopen");
+        let mut rows = store
+            .get_active_facts(ActiveFilter::ByEntity(uri!("e:target")))
+            .await
+            .expect("active after reopen");
         assert!(rows.recv().await.is_none());
     }
 

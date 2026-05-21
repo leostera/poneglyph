@@ -86,6 +86,16 @@ pub(crate) fn active_all_prefix() -> Vec<u8> {
     key_prefix(KeyKind::ActiveField)
 }
 
+pub(crate) fn is_active_key(key: &[u8]) -> bool {
+    matches!(
+        key.first().copied(),
+        Some(kind)
+            if kind == KeyKind::ActiveField as u8
+                || kind == KeyKind::ActiveEntity as u8
+                || kind == KeyKind::ActiveValue as u8
+    )
+}
+
 fn key_prefix(kind: KeyKind) -> Vec<u8> {
     vec![kind as u8]
 }
@@ -155,7 +165,7 @@ fn push_value(out: &mut Vec<u8>, value: &Value) {
 mod tests {
     use poneglyph::{Value, uri};
 
-    use super::{active_entity_key, active_field_key, active_value_key, log_tx_key};
+    use super::{active_entity_key, active_field_key, active_value_key, is_active_key, log_tx_key};
 
     #[test]
     fn log_tx_keys_sort_by_transaction_then_sequence() {
@@ -179,6 +189,17 @@ mod tests {
         assert!(by_value.starts_with(&[0x22]));
         assert_ne!(by_field, by_entity);
         assert_ne!(by_field, by_value);
+    }
+
+    #[test]
+    fn active_key_detection_matches_active_keyspaces() {
+        assert!(is_active_key(&active_field_key(
+            &uri!("field:name"),
+            &uri!("entity:one"),
+            &Value::text("one")
+        )));
+        assert!(!is_active_key(&log_tx_key(&uri!("tx:one"), 0)));
+        assert!(!is_active_key(&[]));
     }
 
     #[test]
