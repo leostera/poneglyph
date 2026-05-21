@@ -1,6 +1,9 @@
 # Review Readiness
 
 This reset is ready to review as a narrow Rust-only Poneglyph library slice.
+Poneglyph's scope is a reusable semantic knowledge graph database for agents;
+things that do not advance that library/embedding story should be put aside,
+moved out, or deleted rather than grown here.
 
 ## Review scope
 
@@ -66,7 +69,8 @@ The review branch should contain only the current Rust workspace crates and docs
 A final stale-reference audit should find no tracked legacy app/web/MCP/connector
 crates, root reset notes, `opencode`/`.codex` config, or `poneglyphd` product
 crate references outside historical Ralph notes and intentional compatibility
-RFD text.
+RFD text. Future additions should pass the same scope test: they must directly
+help embedders build semantic knowledge graph daemons for agents.
 
 ## Follow-up queue
 

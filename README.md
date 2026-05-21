@@ -1,13 +1,17 @@
 # Poneglyph
 
-Poneglyph is a local-first semantic graph database library for agents.
+Poneglyph is a local-first semantic knowledge graph database library for agents.
 
 The intended product shape is a reusable Rust database layer for building
-specific disk-backed daemon applications. For example, a `codedb` daemon can use
-Poneglyph as its embedded append-only fact store, schema/entity projection
-runtime, and Datafox-backed Datalog query engine. The in-repo `poneglyph` CLI is
-a thin operator/reference harness for exercising those library crates locally,
-not the long-term application surface by itself.
+specific semantic graph daemons. For example, a `codedb` daemon can use Poneglyph
+as its embedded append-only fact store, schema/entity projection runtime, and
+Datafox-backed Datalog query engine. The in-repo `poneglyph` CLI is a thin
+operator/reference harness for exercising those library crates locally, not the
+long-term application surface by itself.
+
+Scope guard: if a feature, crate, or workflow does not make Poneglyph better as a
+library for building agent knowledge graphs, it should be deferred, moved out, or
+deleted rather than expanded in this repository.
 
 ## Current workspace
 
