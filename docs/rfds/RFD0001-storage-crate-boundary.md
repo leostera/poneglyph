@@ -82,40 +82,43 @@ mistaken for accidental boundary leaks:
 - `poneglyph-db` wrappers and adapter contract tests, which are the preferred
   public disk-backed entry points.
 
-## Extraction Plan
+## Staged Implementation Status
 
-1. Keep store traits and in-memory implementations in `poneglyph-core`.
-2. Move SQLite-specific modules behind narrow constructor functions in
-   `poneglyph-core` first, so runtime assembly calls an adapter boundary rather
-   than concrete modules directly. This seam currently lives in
-   `crates/poneglyph-core/src/storage.rs`.
-3. Introduce `poneglyph-db` with a dependency on `poneglyph-core`. Initially it
-   can wrap the existing core SQLite implementations so callers can target the
-   storage adapter crate before the physical module move.
-4. Migrate non-core consumers and integration tests to call `poneglyph-db`
-   adapter functions rather than constructing core SQLite types directly. The
-   CLI now opens disk-backed direct fallback, daemon runtimes, and repair
-   through `poneglyph_db::open_runtime` / `poneglyph_db::repair_workspace`.
-   `poneglyph-db` also re-exports the current SQLite adapter types as the
-   preferred external import path while the physical modules remain in core.
-   The old `poneglyph-core` SQLite re-exports are deprecated to discourage new
-   external callers from binding directly to core storage implementations.
-5. Introduce an injected runtime storage factory trait so disk-backed runtime
-   construction can be supplied by `poneglyph-db` without making core depend on
-   db. This seam now exists as `poneglyph_core::RuntimeStorageFactory`, and
-   `poneglyph-db` implements it with `DbRuntimeStorageFactory`. Core and DB tests
-   prove injected factories avoid default SQLite paths and work through the core
+The near-term extraction work is complete for review readiness:
+
+1. Store traits and in-memory implementations remain in `poneglyph-core`.
+2. SQLite/search construction is behind narrow core seam functions in
+   `crates/poneglyph-core/src/storage.rs`; runtime assembly no longer directly
+   constructs concrete adapters outside that seam.
+3. `poneglyph-db` exists with a dependency on `poneglyph-core` and wraps the
+   existing core SQLite/search implementations so callers can target the storage
+   adapter crate before any physical module move.
+4. Non-core consumers and integration tests call `poneglyph-db` adapter/runtime
+   functions rather than constructing core SQLite types directly. The CLI opens
+   disk-backed direct fallback, daemon runtimes, and repair through
+   `poneglyph_db::open_runtime` / `poneglyph_db::repair_workspace`.
+5. `poneglyph-db` re-exports the current SQLite adapter types as the preferred
+   external import path while the physical modules remain in core. The old
+   `poneglyph-core` SQLite re-exports are deprecated to discourage new external
+   callers from binding directly to core storage implementations.
+6. `poneglyph_core::RuntimeStorageFactory` lets disk-backed runtime storage be
+   supplied by `poneglyph-db` without making core depend on db. `poneglyph-db`
+   implements this seam with `DbRuntimeStorageFactory`, and core/DB tests prove
+   injected factories avoid default SQLite paths and work through the core
    builder.
-6. Move SQLite fact/entity store implementations and their SQLite-specific tests
-   into `poneglyph-db` only if the project chooses option 2 or 3 above. Until
-   then, the remaining direct references are intentionally core-local: the SQLite
-   modules, deprecated core re-exports, the default core storage seam, and core
-   tests named `*_sqlite.rs`.
-7. Re-export database adapters from `poneglyph-core` only if needed for
-   compatibility; otherwise have disk-backed runtime construction happen through
-   `poneglyph-db` or through injected adapter factories.
-8. Keep `cargo test --workspace` green after each move and preserve existing
-   append-only/replay tests.
+
+## Deferred Physical Move
+
+Moving SQLite fact/entity store implementations and their SQLite-specific tests
+into `poneglyph-db` is explicitly deferred. It should happen only if a follow-up
+architecture change chooses option 2 or 3 from the recommendation section:
+removing core disk defaults or feature-gating them. Until then, the remaining
+direct references are intentionally core-local: the SQLite modules, deprecated
+core re-exports, the default core storage seam, and core tests named
+`*_sqlite.rs`.
+
+Any future move should keep `cargo test --workspace` green after each step and
+preserve existing append-only/replay tests.
 
 ## Non-goals
 

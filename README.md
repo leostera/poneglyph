@@ -25,8 +25,8 @@ The Rust reset is intentionally narrow and reviewable:
 - legacy JSON semantic RPCs remain only as compatibility shims for one migration
   window and are covered by parity tests against the typed RPCs;
 - `poneglyph-db` is the preferred durable storage boundary, while physical
-  SQLite/search module movement from `poneglyph-core` is deferred until the next
-  explicit storage architecture decision; and
+  SQLite/search module movement from `poneglyph-core` is explicitly deferred in
+  RFD0001 until the next storage architecture decision; and
 - the local daemon transport is localhost TCP for now, with Unix-domain sockets
   documented as a future lifecycle/cleanup improvement in RFD0000.
 
