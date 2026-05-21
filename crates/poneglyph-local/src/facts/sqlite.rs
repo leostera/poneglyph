@@ -54,6 +54,9 @@ impl SqliteFactStore {
         sqlx::query("PRAGMA wal_autocheckpoint = 0")
             .execute(&pool)
             .await?;
+        sqlx::query("PRAGMA cache_size = -65536")
+            .execute(&pool)
+            .await?;
 
         let store = Self { pool };
         store.migrate().await?;
