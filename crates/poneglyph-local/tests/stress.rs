@@ -366,6 +366,121 @@ async fn local_backend_onepiece_wiki_ingest_stress() {
 }
 
 #[tokio::test]
+#[ignore = "download One Piece fixture and run with --ignored"]
+async fn local_backend_onepiece_wiki_query_stress() {
+    let max_pages = std::env::var("PONEGLYPH_ONEPIECE_MAX_PAGES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(5_000);
+    let batch_size = std::env::var("PONEGLYPH_ONEPIECE_BATCH")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(10_000);
+    let queries = std::env::var("PONEGLYPH_ONEPIECE_QUERIES")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(200);
+
+    let pages = load_onepiece_pages(&onepiece_fixture_path(), Some(max_pages))
+        .expect("load One Piece XML fixture");
+    let facts = onepiece_pages_to_facts(&pages);
+
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = Workspace::at(tempdir.path());
+    let store = poneglyph_local::open_fact_store(&workspace)
+        .await
+        .expect("fact store");
+    state_prebuilt_batches(store.as_ref(), &facts, batch_size)
+        .await
+        .expect("write fixture facts");
+
+    let category_values = facts
+        .iter()
+        .filter(|fact| fact.field == uri!("wiki:page:category"))
+        .filter_map(|fact| match &fact.value {
+            Value::Text(value) => Some(value.clone()),
+            _ => None,
+        })
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>();
+    assert!(
+        !category_values.is_empty(),
+        "fixture should contain categories"
+    );
+
+    let started = Instant::now();
+    for query in 0..queries {
+        match query % 4 {
+            0 => {
+                let page = &pages[query % pages.len()];
+                let entity = uri!(format!(
+                    "wiki:onepiece:page:{}",
+                    slug_uri_component(&page.title)
+                ));
+                let rows = collect_active_facts(
+                    store
+                        .get_active_facts(ActiveFilter::ByEntity(entity))
+                        .await
+                        .expect("entity active facts"),
+                )
+                .await
+                .expect("collect entity active facts");
+                assert!(!rows.is_empty());
+            }
+            1 => {
+                let rows = collect_active_facts(
+                    store
+                        .get_active_facts(ActiveFilter::ByField(uri!("wiki:page:title")))
+                        .await
+                        .expect("title active facts"),
+                )
+                .await
+                .expect("collect title active facts");
+                assert_eq!(rows.len(), pages.len());
+            }
+            2 => {
+                let category = &category_values[query % category_values.len()];
+                let rows = collect_active_facts(
+                    store
+                        .get_active_facts(ActiveFilter::ByFieldValue {
+                            field: uri!("wiki:page:category"),
+                            value: Value::text(category.clone()),
+                        })
+                        .await
+                        .expect("category active facts"),
+                )
+                .await
+                .expect("collect category active facts");
+                assert!(!rows.is_empty());
+            }
+            _ => {
+                let fact = &facts[query % facts.len()];
+                let rows = collect_active_facts(
+                    store
+                        .get_active_facts(ActiveFilter::ByFieldEntity {
+                            field: fact.field.clone(),
+                            entity: fact.entity.clone(),
+                        })
+                        .await
+                        .expect("field/entity active facts"),
+                )
+                .await
+                .expect("collect field/entity active facts");
+                assert!(!rows.is_empty());
+            }
+        }
+    }
+    let elapsed = started.elapsed();
+    eprintln!(
+        "onepiece wiki query stress completed {queries} queries over {} facts from {} pages in {:?}",
+        facts.len(),
+        pages.len(),
+        elapsed
+    );
+}
+
+#[tokio::test]
 #[ignore = "set PONEGLYPH_STRESS_READS and run with --ignored"]
 async fn local_backend_read_heavy_stress() {
     let reads = std::env::var("PONEGLYPH_STRESS_READS")
