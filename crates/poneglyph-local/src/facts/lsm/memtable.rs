@@ -32,6 +32,12 @@ impl Memtable {
         self.entries.get(key)
     }
 
+    pub(crate) fn iter(&self) -> impl Iterator<Item = (&[u8], &MemtableEntry)> {
+        self.entries
+            .iter()
+            .map(|(key, value)| (key.as_slice(), value))
+    }
+
     pub(crate) fn scan_prefix<'a>(
         &'a self,
         prefix: &'a [u8],

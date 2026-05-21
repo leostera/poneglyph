@@ -2,4 +2,5 @@
 
 mod key;
 mod memtable;
+mod sst;
 mod wal;
