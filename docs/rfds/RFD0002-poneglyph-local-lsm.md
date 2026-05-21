@@ -138,11 +138,13 @@ The first benchmarked LSM backend uses two pragmatic query accelerators:
 
 These are acceptable for the experimental backend but need production bounds before LSM can replace SQLite:
 
-- keep the decoded active cache bounded and invalidate on active-index writes;
+- keep the decoded active cache optionally bounded and invalidate on active-index writes;
 - expose cold-query and warm-query metrics separately;
 - add segment compaction before lowering the flush threshold for larger datasets;
 - prefer active-index compaction/rebuild over preserving derived tombstones indefinitely;
 - measure startup/open time after large WAL replay and after SST-heavy compaction.
+
+The experimental implementation currently keeps the fastest path unbounded by default and exposes `PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES` as an opt-in safety bound. Autoresearch showed unconditional hot-path bounds regressed the warm One Piece query benchmark, so production policy should remain configurable until a lower-overhead eviction strategy exists.
 
 ## Open questions
 
