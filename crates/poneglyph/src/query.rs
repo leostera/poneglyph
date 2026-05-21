@@ -1,9 +1,14 @@
 use std::sync::Arc;
 
-use datafox::{DatafoxClient, DatafoxConfig, InMemoryStorage, Query as DatafoxQuery, Substitution};
+use async_trait::async_trait;
+use datafox::{
+    DatafoxClient, DatafoxConfig, Query as DatafoxQuery, Storage as DatafoxStorage, Substitution,
+    TupleStream, matches_pattern,
+};
+use tokio::sync::mpsc;
 use tracing::debug;
 
-use crate::{ActiveFact, ActiveFilter, FactService, PoneResult, Value};
+use crate::{ActiveFact, ActiveFilter, FactService, PoneResult, Uri, Value};
 
 /// Opaque query wrapper compiled by the current query engine implementation.
 ///
@@ -74,12 +79,15 @@ impl QueryEngine {
     }
 
     pub async fn query(&self, query: Query) -> PoneResult<QueryResult> {
-        let storage = self.active_graph_storage().await?;
+        let storage = ActiveGraphDatafoxStorage::new(self.facts.clone());
         let threads = std::thread::available_parallelism()
             .map(usize::from)
             .unwrap_or(1);
         let datafox = DatafoxClient::new(DatafoxConfig::new(&storage).parallel().threads(threads))?;
-        let results = datafox.eval(query.as_inner())?.collect::<Vec<_>>();
+        let results = datafox
+            .eval_streaming(query.as_inner())
+            .await?
+            .collect::<Vec<_>>();
 
         debug!(result_count = results.len(), "query evaluated");
         Ok(QueryResult::new(results))
@@ -88,19 +96,79 @@ impl QueryEngine {
     pub async fn query_str(&self, source: &str) -> PoneResult<QueryResult> {
         self.query(Query::parse(source)?).await
     }
+}
 
-    async fn active_graph_storage(&self) -> PoneResult<InMemoryStorage> {
-        let mut active_facts = self.facts.get_active_facts(ActiveFilter::All).await?;
-        let mut storage = InMemoryStorage::new();
+struct ActiveGraphDatafoxStorage {
+    facts: Arc<FactService>,
+}
 
-        while let Some(active_fact) = active_facts.recv().await {
-            let active_fact = active_fact?;
-            for tuple in active_fact_to_tuples(active_fact.clone())? {
-                storage.insert(active_fact.field.to_string(), tuple);
+impl ActiveGraphDatafoxStorage {
+    fn new(facts: Arc<FactService>) -> Self {
+        Self { facts }
+    }
+}
+
+#[async_trait]
+impl DatafoxStorage for ActiveGraphDatafoxStorage {
+    async fn get_facts_matching(
+        &self,
+        predicate: &str,
+        pattern: Vec<Option<datafox::Value>>,
+    ) -> datafox::Result<TupleStream> {
+        let field = Uri::parse(predicate).map_err(|error| datafox::Error::EvaluatorBuild {
+            message: error.to_string(),
+        })?;
+        let filter = active_filter_for_pattern(field, &pattern);
+        let mut active_facts = self.facts.get_active_facts(filter).await.map_err(|error| {
+            datafox::Error::EvaluatorBuild {
+                message: error.to_string(),
             }
-        }
+        })?;
+        let (tx, rx) = mpsc::channel(64);
 
-        Ok(storage)
+        tokio::spawn(async move {
+            while let Some(active_fact) = active_facts.recv().await {
+                let active_fact = match active_fact {
+                    Ok(active_fact) => active_fact,
+                    Err(error) => {
+                        let _ = tx
+                            .send(Err(datafox::Error::EvaluatorBuild {
+                                message: error.to_string(),
+                            }))
+                            .await;
+                        break;
+                    }
+                };
+                let tuples = match active_fact_to_tuples(active_fact) {
+                    Ok(tuples) => tuples,
+                    Err(error) => {
+                        let _ = tx
+                            .send(Err(datafox::Error::EvaluatorBuild {
+                                message: error.to_string(),
+                            }))
+                            .await;
+                        break;
+                    }
+                };
+                for tuple in tuples {
+                    if matches_pattern(&pattern, &tuple) && tx.send(Ok(tuple)).await.is_err() {
+                        return;
+                    }
+                }
+            }
+        });
+
+        Ok(rx)
+    }
+}
+
+fn active_filter_for_pattern(field: Uri, pattern: &[Option<datafox::Value>]) -> ActiveFilter {
+    match pattern.first() {
+        Some(Some(datafox::Value::String(entity))) => match Uri::parse(entity) {
+            Ok(entity) => ActiveFilter::ByFieldEntity { field, entity },
+            Err(_) => ActiveFilter::ByField(field),
+        },
+        _ => ActiveFilter::ByField(field),
     }
 }
 
