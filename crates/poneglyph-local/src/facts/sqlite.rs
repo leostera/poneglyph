@@ -118,9 +118,9 @@ impl SqliteFactStore {
         .await?;
 
         for table in ["schema_namespaces", "schema_kinds", "schema_fields"] {
-            sqlx::query(&format!(
+            sqlx::query(sqlx::AssertSqlSafe(format!(
                 "CREATE TABLE IF NOT EXISTS {table} (uri TEXT PRIMARY KEY)"
-            ))
+            )))
             .execute(&self.pool)
             .await?;
         }
@@ -246,7 +246,7 @@ impl Store for SqliteFactStore {
                 ),
             };
 
-            let mut query = sqlx::query(&sql);
+            let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
             if let Some(bind_value) = bind_value {
                 query = query.bind(bind_value);
             }
@@ -274,7 +274,7 @@ impl Store for SqliteFactStore {
 
         tokio::spawn(async move {
             let (sql, binds) = active_fact_query(filter);
-            let mut query = sqlx::query(&sql);
+            let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
             for bind in binds {
                 query = query.bind(bind);
             }
@@ -791,10 +791,12 @@ async fn insert_observed_uri(
     table: &str,
     uri: &Uri,
 ) -> PoneResult<()> {
-    sqlx::query(&format!("INSERT OR IGNORE INTO {table} (uri) VALUES (?1)"))
-        .bind(uri.as_str())
-        .execute(&mut **tx)
-        .await?;
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "INSERT OR IGNORE INTO {table} (uri) VALUES (?1)"
+    )))
+    .bind(uri.as_str())
+    .execute(&mut **tx)
+    .await?;
     Ok(())
 }
 
@@ -804,13 +806,13 @@ async fn upsert_schema_entry_column(
     column: &str,
     value: Option<&str>,
 ) -> PoneResult<()> {
-    sqlx::query(&format!(
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         r#"
         INSERT INTO schema_entries (uri, {column})
         VALUES (?1, ?2)
         ON CONFLICT(uri) DO UPDATE SET {column} = excluded.{column}
         "#
-    ))
+    )))
     .bind(uri.as_str())
     .bind(value)
     .execute(&mut **tx)
@@ -824,13 +826,13 @@ async fn upsert_schema_entry_bool(
     column: &str,
     value: bool,
 ) -> PoneResult<()> {
-    sqlx::query(&format!(
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         r#"
         INSERT INTO schema_entries (uri, {column})
         VALUES (?1, ?2)
         ON CONFLICT(uri) DO UPDATE SET {column} = excluded.{column}
         "#
-    ))
+    )))
     .bind(uri.as_str())
     .bind(i64::from(value))
     .execute(&mut **tx)
@@ -843,7 +845,7 @@ where
     F: FnMut(Uri),
 {
     let sql = format!("SELECT uri FROM {table} ORDER BY uri ASC");
-    let mut rows = sqlx::query(&sql).fetch(pool);
+    let mut rows = sqlx::query(sqlx::AssertSqlSafe(sql)).fetch(pool);
     while let Some(row) = rows.next().await {
         let row = row?;
         observe(Uri::parse(row.try_get::<String, _>("uri")?)?);
