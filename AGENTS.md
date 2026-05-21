@@ -10,21 +10,16 @@ These instructions apply to the whole repository unless a deeper `AGENTS.md` ove
 - Use this file as the top-level router.
 - When work is limited to one subsystem, read only the next relevant `AGENTS.md` instead of loading instructions for unrelated areas.
 - Relevant deeper guides currently live in:
-  `app/`,
-  `packages/`,
-  `packages/ui/`,
-  `packages/i18n/`,
-  `www/`,
   `crates/`,
   `docs/`,
   and `docs/rfds/`.
 
 ## Project shape
 
-- Poneglyph is a local-first graph database built around append-only facts.
-- The long-term product shape is a Rust daemon plus a JavaScript desktop app.
-- `crates/old-borg-memory` is prior art and a reference implementation, not the final architecture.
-- Architectural decisions should align with [`docs/rfds/RFD0001-initial-architecture.md`](/Users/leostera/Developer/github.com/leostera/poneglyph/docs/rfds/RFD0001-initial-architecture.md) unless the user explicitly changes direction.
+- Poneglyph is a local-first graph database library built around append-only facts.
+- The long-term product shape is a reusable Rust library/runtime for building specific disk-backed daemons, such as a future `codedb` daemon.
+- The in-repo `poneglyph` CLI/daemon is an operator/reference harness for the library crates, not the sole long-term application surface.
+- Architectural decisions should align with [`docs/rfds/RFD0000-cli-daemon-architecture.md`](/Users/leostera/Developer/github.com/leostera/poneglyph/docs/rfds/RFD0000-cli-daemon-architecture.md) and [`docs/rfds/RFD0001-storage-crate-boundary.md`](/Users/leostera/Developer/github.com/leostera/poneglyph/docs/rfds/RFD0001-storage-crate-boundary.md) unless the user explicitly changes direction.
 
 ## Working rules
 
@@ -32,7 +27,7 @@ These instructions apply to the whole repository unless a deeper `AGENTS.md` ove
 - Prefer small, explicit architectural steps over broad speculative refactors.
 - Preserve append-only semantics in new designs. Do not introduce mutable source-of-truth entity tables as the primary model.
 - Treat facts as the durable truth, entities as derived views, and projections as replayable workers.
-- Keep Rust responsibilities in the daemon/runtime layer and JavaScript responsibilities in the desktop/web UI layer.
+- Keep reusable graph semantics in `poneglyph-core`, durable disk-backed assembly in `poneglyph-db`, local service boundaries in `poneglyph-api`, and operator/reference CLI concerns in `poneglyph-cli`.
 
 ## Documentation
 
