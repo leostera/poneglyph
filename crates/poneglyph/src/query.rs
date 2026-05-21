@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use datafox::{
-    DatafoxClient, DatafoxConfig, Query as DatafoxQuery, Storage as DatafoxStorage, Substitution,
-    TupleStream, matches_pattern,
+    DatafoxClient, DatafoxConfig, FactRequest, FactRequestMode, Query as DatafoxQuery,
+    Storage as DatafoxStorage, Substitution, TupleStream, matches_pattern,
 };
 use tokio::sync::mpsc;
 use tracing::debug;
@@ -110,14 +110,16 @@ impl ActiveGraphDatafoxStorage {
 
 #[async_trait]
 impl DatafoxStorage for ActiveGraphDatafoxStorage {
-    async fn get_facts_matching(
-        &self,
-        predicate: &str,
-        pattern: Vec<Option<datafox::Value>>,
-    ) -> datafox::Result<TupleStream> {
-        let field = Uri::parse(predicate).map_err(|error| datafox::Error::EvaluatorBuild {
-            message: error.to_string(),
-        })?;
+    async fn get_facts(&self, request: FactRequest) -> datafox::Result<TupleStream> {
+        let field =
+            Uri::parse(&request.predicate).map_err(|error| datafox::Error::EvaluatorBuild {
+                message: error.to_string(),
+            })?;
+        let pattern = request.pattern_options();
+        let limit = match request.mode {
+            FactRequestMode::Exists => Some(1),
+            FactRequestMode::Tuples => request.hints.limit,
+        };
         let filter = active_filter_for_pattern(field, &pattern);
         let mut active_facts = self.facts.get_active_facts(filter).await.map_err(|error| {
             datafox::Error::EvaluatorBuild {
@@ -151,8 +153,13 @@ impl DatafoxStorage for ActiveGraphDatafoxStorage {
                     }
                 };
                 for tuple in tuples {
-                    if matches_pattern(&pattern, &tuple) && tx.send(Ok(tuple)).await.is_err() {
-                        return;
+                    if matches_pattern(&pattern, &tuple) {
+                        if tx.send(Ok(tuple)).await.is_err() {
+                            return;
+                        }
+                        if limit == Some(1) {
+                            return;
+                        }
                     }
                 }
             }
@@ -163,13 +170,39 @@ impl DatafoxStorage for ActiveGraphDatafoxStorage {
 }
 
 fn active_filter_for_pattern(field: Uri, pattern: &[Option<datafox::Value>]) -> ActiveFilter {
-    match pattern.first() {
-        Some(Some(datafox::Value::String(entity))) => match Uri::parse(entity) {
-            Ok(entity) => ActiveFilter::ByFieldEntity { field, entity },
-            Err(_) => ActiveFilter::ByField(field),
+    let entity = pattern.first().and_then(|value| match value {
+        Some(datafox::Value::String(entity)) => Uri::parse(entity).ok(),
+        _ => None,
+    });
+    let value = pattern
+        .get(1)
+        .and_then(|value| value.as_ref())
+        .and_then(|value| query_value_to_fact_value(&field, value));
+
+    match (entity, value) {
+        (Some(entity), Some(value)) => ActiveFilter::ByFieldEntityValue {
+            field,
+            entity,
+            value,
         },
-        _ => ActiveFilter::ByField(field),
+        (Some(entity), None) => ActiveFilter::ByFieldEntity { field, entity },
+        (None, Some(value)) => ActiveFilter::ByFieldValue { field, value },
+        (None, None) => ActiveFilter::ByField(field),
     }
+}
+
+fn query_value_to_fact_value(field: &Uri, value: &datafox::Value) -> Option<Value> {
+    match value {
+        datafox::Value::Integer(value) => Some(Value::integer(*value)),
+        datafox::Value::String(value) if should_treat_query_value_as_reference(field, value) => {
+            Uri::parse(value).ok().map(Value::reference)
+        }
+        datafox::Value::String(value) => Some(Value::text(value.clone())),
+    }
+}
+
+fn should_treat_query_value_as_reference(field: &Uri, value: &str) -> bool {
+    Uri::parse(value).is_ok() && !matches!(field.as_str(), "wiki:page:title" | "schema:name")
 }
 
 fn active_fact_to_tuples(fact: ActiveFact) -> PoneResult<Vec<Vec<datafox::Value>>> {
