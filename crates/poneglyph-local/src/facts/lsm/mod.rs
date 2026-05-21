@@ -97,6 +97,23 @@ impl LsmFactStore {
             .compact_segments()
     }
 
+    pub fn compact_if_needed(&self) -> PoneResult<bool> {
+        self.inner
+            .lock()
+            .expect("LSM mutex poisoned")
+            .compact_planned_segments()
+    }
+
+    pub fn compact_in_background_if_needed(
+        &self,
+    ) -> Option<std::thread::JoinHandle<PoneResult<bool>>> {
+        if !self.needs_compaction() {
+            return None;
+        }
+        let store = self.clone();
+        Some(std::thread::spawn(move || store.compact_if_needed()))
+    }
+
     pub fn needs_compaction(&self) -> bool {
         let inner = self.inner.lock().expect("LSM mutex poisoned");
         inner
@@ -442,49 +459,59 @@ impl Inner {
 
     fn compact_segments(&mut self) -> PoneResult<()> {
         self.flush_memtable()?;
-        if self.segments_newest_first.len() <= 1 {
+        if self.compact_planned_segments_after_flush()? {
             return Ok(());
         }
-
-        if let Some(plan) = self
-            .manifest
-            .compaction_plan_with_l0_threshold(self.l0_compaction_segments)
-        {
-            let input_set = plan
-                .inputs_newest_first
-                .iter()
-                .cloned()
-                .collect::<HashSet<_>>();
-            let input_readers = self
-                .manifest
-                .segments_newest_first
-                .iter()
-                .zip(self.segments_newest_first.iter())
-                .filter_map(|(filename, reader)| {
-                    input_set.contains(filename).then_some(reader.clone())
-                })
-                .collect::<Vec<_>>();
-            let older_readers = self
-                .manifest
-                .segments_newest_first
-                .iter()
-                .zip(self.segments_newest_first.iter())
-                .filter_map(|(filename, reader)| {
-                    (!input_set.contains(filename)).then_some(reader.clone())
-                })
-                .collect::<Vec<_>>();
-            return self.compact_readers(
-                plan.inputs_newest_first,
-                &input_readers,
-                &older_readers,
-                plan.output_level,
-                true,
-            );
+        if self.segments_newest_first.len() <= 1 {
+            return Ok(());
         }
 
         let previous_segments = self.manifest.segments_newest_first.clone();
         let readers = self.segments_newest_first.clone();
         self.compact_readers(previous_segments, &readers, &[], 0, false)
+    }
+
+    fn compact_planned_segments(&mut self) -> PoneResult<bool> {
+        self.flush_memtable()?;
+        self.compact_planned_segments_after_flush()
+    }
+
+    fn compact_planned_segments_after_flush(&mut self) -> PoneResult<bool> {
+        let Some(plan) = self
+            .manifest
+            .compaction_plan_with_l0_threshold(self.l0_compaction_segments)
+        else {
+            return Ok(false);
+        };
+        let input_set = plan
+            .inputs_newest_first
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
+        let input_readers = self
+            .manifest
+            .segments_newest_first
+            .iter()
+            .zip(self.segments_newest_first.iter())
+            .filter_map(|(filename, reader)| input_set.contains(filename).then_some(reader.clone()))
+            .collect::<Vec<_>>();
+        let older_readers = self
+            .manifest
+            .segments_newest_first
+            .iter()
+            .zip(self.segments_newest_first.iter())
+            .filter_map(|(filename, reader)| {
+                (!input_set.contains(filename)).then_some(reader.clone())
+            })
+            .collect::<Vec<_>>();
+        self.compact_readers(
+            plan.inputs_newest_first,
+            &input_readers,
+            &older_readers,
+            plan.output_level,
+            true,
+        )?;
+        Ok(true)
     }
 
     fn compact_readers(
@@ -1022,6 +1049,62 @@ mod tests {
             .expect("state");
         store.flush().expect("flush fifth");
         assert!(store.needs_compaction());
+    }
+
+    #[tokio::test]
+    async fn lsm_fact_store_compact_if_needed_only_runs_planned_work() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store.inner.lock().expect("lock").l0_compaction_segments = 4;
+        store
+            .state_facts_vec(vec![fact!(
+                uri!("e:one"),
+                uri!("f:name"),
+                Value::text("one")
+            )])
+            .await
+            .expect("state");
+        store.flush().expect("flush");
+        assert!(!store.compact_if_needed().expect("no planned compaction"));
+
+        for index in 0..4 {
+            store
+                .state_facts_vec(vec![fact!(
+                    uri!(format!("e:extra:{index}")),
+                    uri!("f:name"),
+                    Value::text(format!("extra {index}"))
+                )])
+                .await
+                .expect("state extra");
+            store.flush().expect("flush extra");
+        }
+        assert!(store.compact_if_needed().expect("planned compaction"));
+        assert!(!store.needs_compaction());
+    }
+
+    #[tokio::test]
+    async fn lsm_fact_store_background_compaction_is_explicit() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store.inner.lock().expect("lock").l0_compaction_segments = 4;
+        assert!(store.compact_in_background_if_needed().is_none());
+
+        for index in 0..5 {
+            store
+                .state_facts_vec(vec![fact!(
+                    uri!(format!("e:bg:{index}")),
+                    uri!("f:name"),
+                    Value::text(format!("bg {index}"))
+                )])
+                .await
+                .expect("state");
+            store.flush().expect("flush");
+        }
+        let handle = store
+            .compact_in_background_if_needed()
+            .expect("background compaction scheduled");
+        assert!(handle.join().expect("join").expect("compact result"));
+        assert!(!store.needs_compaction());
     }
 
     #[tokio::test]

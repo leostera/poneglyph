@@ -962,13 +962,14 @@ async fn local_lsm_backend_onepiece_planned_compaction_reopen_stress() {
                 .await
                 .expect("write fixture chunk");
             store.flush().expect("flush chunk");
-            if store.needs_compaction() {
-                store.compact().expect("planned compact");
+            if store.compact_if_needed().expect("planned compact check") {
                 planned_compactions += 1;
             }
         }
-        if store.needs_compaction() {
-            store.compact().expect("final planned compact");
+        if store
+            .compact_if_needed()
+            .expect("final planned compact check")
+        {
             planned_compactions += 1;
         }
         compact_elapsed = compact_started.elapsed();
