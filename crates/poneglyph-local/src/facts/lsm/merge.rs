@@ -30,10 +30,23 @@ pub(crate) fn scan_prefix_merged(
     segments_newest_first: &[SstReader],
     prefix: &[u8],
 ) -> io::Result<Vec<(Vec<u8>, Vec<u8>)>> {
+    Ok(
+        scan_prefix_entries_merged(memtable, segments_newest_first, prefix)?
+            .into_iter()
+            .filter_map(|(key, entry)| entry.value().map(|value| (key, value.to_vec())))
+            .collect(),
+    )
+}
+
+pub(crate) fn scan_prefix_entries_merged(
+    memtable: &Memtable,
+    segments_newest_first: &[SstReader],
+    prefix: &[u8],
+) -> io::Result<Vec<(Vec<u8>, MemtableEntry)>> {
     if segments_newest_first.is_empty() {
         return Ok(memtable
             .scan_prefix(prefix)
-            .filter_map(|(key, entry)| entry.value().map(|value| (key.to_vec(), value.to_vec())))
+            .map(|(key, entry)| (key.to_vec(), entry.clone()))
             .collect());
     }
 
@@ -42,9 +55,7 @@ pub(crate) fn scan_prefix_merged(
 
     for (key, entry) in memtable.scan_prefix(prefix) {
         seen.insert(key.to_vec());
-        if let Some(value) = entry.value() {
-            rows.push((key.to_vec(), value.to_vec()));
-        }
+        rows.push((key.to_vec(), entry.clone()));
     }
 
     for segment in segments_newest_first {
@@ -52,10 +63,8 @@ pub(crate) fn scan_prefix_merged(
             continue;
         }
         for (key, entry) in segment.scan_prefix(prefix)? {
-            if seen.insert(key.clone())
-                && let Some(value) = entry.value()
-            {
-                rows.push((key, value.to_vec()));
+            if seen.insert(key.clone()) {
+                rows.push((key, entry));
             }
         }
     }

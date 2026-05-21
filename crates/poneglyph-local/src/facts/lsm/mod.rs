@@ -7,7 +7,7 @@ mod merge;
 mod sst;
 mod wal;
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -58,17 +58,7 @@ impl LsmFactStore {
         let dir = path.as_ref().to_path_buf();
         std::fs::create_dir_all(&dir).map_err(|source| Error::FactStoreIo { source })?;
         let manifest = Manifest::load(&dir).map_err(|source| Error::FactStoreIo { source })?;
-        let segments_newest_first = manifest
-            .segments_with_metadata_newest_first(&dir)
-            .into_iter()
-            .map(|(path, metadata)| {
-                SstReader::open_with_bounds(
-                    path,
-                    metadata.and_then(|metadata| metadata.smallest_key.clone()),
-                    metadata.and_then(|metadata| metadata.largest_key.clone()),
-                )
-            })
-            .collect::<std::io::Result<Vec<_>>>()
+        let segments_newest_first = open_manifest_segments(&manifest, &dir)
             .map_err(|source| Error::FactStoreIo { source })?;
         let wal_path = dir.join(WAL_FILE);
         let memtable = wal::replay(&wal_path).map_err(|source| Error::FactStoreIo { source })?;
@@ -453,31 +443,76 @@ impl Inner {
             return Ok(());
         }
 
-        let previous_segments = self.manifest.segments_newest_first.clone();
-        let rows = merge::scan_prefix_merged(&Memtable::new(), &self.segments_newest_first, &[])
-            .map_err(|source| Error::FactStoreIo { source })?;
+        if let Some(plan) = self.manifest.compaction_plan() {
+            let input_set = plan
+                .inputs_newest_first
+                .iter()
+                .cloned()
+                .collect::<HashSet<_>>();
+            let input_readers = self
+                .manifest
+                .segments_newest_first
+                .iter()
+                .zip(self.segments_newest_first.iter())
+                .filter_map(|(filename, reader)| {
+                    input_set.contains(filename).then_some(reader.clone())
+                })
+                .collect::<Vec<_>>();
+            return self.compact_readers(
+                plan.inputs_newest_first,
+                &input_readers,
+                plan.output_level,
+                true,
+            );
+        }
 
+        let previous_segments = self.manifest.segments_newest_first.clone();
+        let readers = self.segments_newest_first.clone();
+        self.compact_readers(previous_segments, &readers, 0, false)
+    }
+
+    fn compact_readers(
+        &mut self,
+        removed: Vec<String>,
+        readers: &[SstReader],
+        output_level: u32,
+        preserve_tombstones: bool,
+    ) -> PoneResult<()> {
         let filename = self.manifest.allocate_segment();
         let path = self.dir.join(&filename);
         let mut compacted = Memtable::new();
-        for (key, value) in rows {
-            compacted.insert(key, value);
+        if preserve_tombstones {
+            for (key, entry) in merge::scan_prefix_entries_merged(&Memtable::new(), readers, &[])
+                .map_err(|source| Error::FactStoreIo { source })?
+            {
+                match entry {
+                    self::memtable::MemtableEntry::Value(value) => compacted.insert(key, value),
+                    self::memtable::MemtableEntry::Tombstone => compacted.delete(key),
+                }
+            }
+        } else {
+            for (key, value) in merge::scan_prefix_merged(&Memtable::new(), readers, &[])
+                .map_err(|source| Error::FactStoreIo { source })?
+            {
+                compacted.insert(key, value);
+            }
         }
         let reader = sst::write_memtable(&path, &compacted)
             .map_err(|source| Error::FactStoreIo { source })?;
 
-        let metadata = segment_metadata(filename, &reader, 0);
+        let metadata = segment_metadata(filename, &reader, output_level);
         self.manifest
             .persist_edit(
                 &self.dir,
                 ManifestEdit::ReplaceSegments {
-                    removed: previous_segments.clone(),
+                    removed: removed.clone(),
                     added: vec![metadata],
                 },
             )
             .map_err(|source| Error::FactStoreIo { source })?;
-        self.segments_newest_first = vec![reader];
-        for segment in previous_segments {
+        self.segments_newest_first = open_manifest_segments(&self.manifest, &self.dir)
+            .map_err(|source| Error::FactStoreIo { source })?;
+        for segment in removed {
             let path = self.dir.join(segment);
             match std::fs::remove_file(path) {
                 Ok(()) => {}
@@ -510,6 +545,23 @@ impl Inner {
             .map_err(|source| Error::FactStoreIo { source })?;
         Ok(())
     }
+}
+
+fn open_manifest_segments(
+    manifest: &Manifest,
+    dir: &std::path::Path,
+) -> std::io::Result<Vec<SstReader>> {
+    manifest
+        .segments_with_metadata_newest_first(dir)
+        .into_iter()
+        .map(|(path, metadata)| {
+            SstReader::open_with_bounds(
+                path,
+                metadata.and_then(|metadata| metadata.smallest_key.clone()),
+                metadata.and_then(|metadata| metadata.largest_key.clone()),
+            )
+        })
+        .collect()
 }
 
 fn segment_metadata(filename: String, reader: &sst::SstReader, level: u32) -> SegmentMetadata {
@@ -931,6 +983,42 @@ mod tests {
             .expect("state");
         store.flush().expect("flush fifth");
         assert!(store.needs_compaction());
+    }
+
+    #[tokio::test]
+    async fn lsm_fact_store_executes_planned_l0_compaction_to_level_one() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        for index in 0..5 {
+            store
+                .state_facts_vec(vec![fact!(
+                    uri!(format!("e:{index}")),
+                    uri!("f:name"),
+                    Value::text(format!("{index}"))
+                )])
+                .await
+                .expect("state");
+            store.flush().expect("flush");
+        }
+        assert!(store.needs_compaction());
+
+        store.compact().expect("compact planned L0");
+        let inner = store.inner.lock().expect("lock");
+        assert_eq!(inner.manifest.levels[0].len(), 0);
+        assert_eq!(inner.manifest.levels[1].len(), 1);
+        assert!(!inner.manifest.compaction_plan().is_some());
+        drop(inner);
+
+        let mut rows = store
+            .get_active_facts(ActiveFilter::ByField(uri!("f:name")))
+            .await
+            .expect("active");
+        let mut count = 0;
+        while let Some(row) = rows.recv().await {
+            row.expect("row");
+            count += 1;
+        }
+        assert_eq!(count, 5);
     }
 
     #[tokio::test]
