@@ -468,7 +468,7 @@ async fn bulk_insert_facts(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     facts: &[Fact],
 ) -> PoneResult<()> {
-    const CHUNK_SIZE: usize = 500;
+    const CHUNK_SIZE: usize = 4_000;
 
     for chunk in facts.chunks(CHUNK_SIZE) {
         let mut query = QueryBuilder::<Sqlite>::new(
@@ -681,7 +681,7 @@ async fn bulk_upsert_active_facts(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     facts: &[Fact],
 ) -> PoneResult<()> {
-    const CHUNK_SIZE: usize = 500;
+    const CHUNK_SIZE: usize = 4_000;
 
     for chunk in facts.chunks(CHUNK_SIZE) {
         let mut query = QueryBuilder::<Sqlite>::new(
