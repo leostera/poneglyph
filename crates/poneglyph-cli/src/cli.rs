@@ -10,6 +10,7 @@ use crate::config::PoneglyphDaemonConfig;
 
 #[derive(Debug, Parser)]
 #[command(name = "poneglyph")]
+#[command(version)]
 #[command(about = "Poneglyph semantic graph database CLI")]
 pub struct Cli {
     /// Override the workspace root. Defaults to ~/.poneglyph.
@@ -275,6 +276,13 @@ mod tests {
         let cli = Cli::try_parse_from(["poneglyph"]).expect("cli");
 
         assert_eq!(cli.workspace, default_workspace_path());
+    }
+
+    #[test]
+    fn cli_exposes_crate_version() {
+        let command = Cli::command();
+
+        assert_eq!(command.get_version(), Some(env!("CARGO_PKG_VERSION")));
     }
 
     #[test]

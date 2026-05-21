@@ -42,6 +42,8 @@ cargo check --workspace
 ## CLI shape
 
 ```text
+poneglyph --help
+poneglyph --version
 poneglyph server start|stop|restart|status|repair
 poneglyph config list|get|set
 poneglyph schema list|get|apply
