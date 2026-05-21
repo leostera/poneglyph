@@ -8,7 +8,28 @@ const MANIFEST_FILE: &str = "MANIFEST.json";
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Manifest {
     pub(crate) next_file_number: u64,
+    #[serde(default)]
     pub(crate) segments_newest_first: Vec<String>,
+    #[serde(default)]
+    pub(crate) levels: Vec<Vec<SegmentMetadata>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct SegmentMetadata {
+    pub(crate) filename: String,
+    pub(crate) level: u32,
+    pub(crate) smallest_key: Option<Vec<u8>>,
+    pub(crate) largest_key: Option<Vec<u8>>,
+    pub(crate) file_size_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ManifestEdit {
+    AddSegment(SegmentMetadata),
+    ReplaceSegments {
+        removed: Vec<String>,
+        added: Vec<SegmentMetadata>,
+    },
 }
 
 impl Default for Manifest {
@@ -16,6 +37,7 @@ impl Default for Manifest {
         Self {
             next_file_number: 1,
             segments_newest_first: Vec::new(),
+            levels: vec![Vec::new()],
         }
     }
 }
@@ -24,7 +46,11 @@ impl Manifest {
     pub(crate) fn load(dir: impl AsRef<Path>) -> io::Result<Self> {
         let path = dir.as_ref().join(MANIFEST_FILE);
         match std::fs::read(&path) {
-            Ok(bytes) => serde_json::from_slice(&bytes).map_err(invalid_data),
+            Ok(bytes) => {
+                let mut manifest: Self = serde_json::from_slice(&bytes).map_err(invalid_data)?;
+                manifest.normalize();
+                Ok(manifest)
+            }
             Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(Self::default()),
             Err(error) => Err(error),
         }
@@ -48,7 +74,12 @@ impl Manifest {
     }
 
     pub(crate) fn add_newest_segment(&mut self, filename: String) {
-        self.segments_newest_first.insert(0, filename);
+        let metadata = SegmentMetadata::level_zero(filename);
+        self.apply_edit(ManifestEdit::AddSegment(metadata));
+    }
+
+    pub(crate) fn replace_segments(&mut self, removed: Vec<String>, added: Vec<SegmentMetadata>) {
+        self.apply_edit(ManifestEdit::ReplaceSegments { removed, added });
     }
 
     pub(crate) fn segment_paths(&self, dir: impl AsRef<Path>) -> Vec<PathBuf> {
@@ -57,6 +88,70 @@ impl Manifest {
             .iter()
             .map(|filename| dir.join(filename))
             .collect()
+    }
+
+    fn apply_edit(&mut self, edit: ManifestEdit) {
+        match edit {
+            ManifestEdit::AddSegment(metadata) => {
+                self.ensure_level(metadata.level as usize);
+                self.segments_newest_first
+                    .insert(0, metadata.filename.clone());
+                if metadata.level == 0 {
+                    self.levels[0].insert(0, metadata);
+                } else {
+                    self.levels[metadata.level as usize].push(metadata);
+                }
+            }
+            ManifestEdit::ReplaceSegments { removed, added } => {
+                self.segments_newest_first
+                    .retain(|filename| !removed.contains(filename));
+                for level in &mut self.levels {
+                    level.retain(|segment| !removed.contains(&segment.filename));
+                }
+                for metadata in added {
+                    self.ensure_level(metadata.level as usize);
+                    self.segments_newest_first
+                        .insert(0, metadata.filename.clone());
+                    if metadata.level == 0 {
+                        self.levels[0].insert(0, metadata);
+                    } else {
+                        self.levels[metadata.level as usize].push(metadata);
+                    }
+                }
+            }
+        }
+    }
+
+    fn ensure_level(&mut self, level: usize) {
+        while self.levels.len() <= level {
+            self.levels.push(Vec::new());
+        }
+    }
+
+    fn normalize(&mut self) {
+        if self.levels.is_empty() {
+            self.levels.push(Vec::new());
+        }
+        if self.levels.iter().all(Vec::is_empty) && !self.segments_newest_first.is_empty() {
+            self.levels[0] = self
+                .segments_newest_first
+                .iter()
+                .cloned()
+                .map(SegmentMetadata::level_zero)
+                .collect();
+        }
+    }
+}
+
+impl SegmentMetadata {
+    pub(crate) fn level_zero(filename: String) -> Self {
+        Self {
+            filename,
+            level: 0,
+            smallest_key: None,
+            largest_key: None,
+            file_size_bytes: None,
+        }
     }
 }
 
@@ -68,7 +163,7 @@ fn invalid_data(error: impl std::error::Error + Send + Sync + 'static) -> io::Er
 mod tests {
     use tempfile::tempdir;
 
-    use super::Manifest;
+    use super::{Manifest, SegmentMetadata};
 
     #[test]
     fn manifest_allocates_padded_segment_names_and_roundtrips() {
@@ -84,8 +179,28 @@ mod tests {
 
         let loaded = Manifest::load(tempdir.path()).expect("load");
         assert_eq!(loaded.next_file_number, 3);
-        assert_eq!(loaded.segments_newest_first, vec![second, first]);
+        assert_eq!(
+            loaded.segments_newest_first,
+            vec![second.clone(), first.clone()]
+        );
+        assert_eq!(loaded.levels[0][0].filename, second);
+        assert_eq!(loaded.levels[0][1].filename, first);
         assert_eq!(loaded.segment_paths(tempdir.path()).len(), 2);
+    }
+
+    #[test]
+    fn manifest_replace_segments_updates_flat_and_level_views() {
+        let mut manifest = Manifest::default();
+        manifest.add_newest_segment("one.sst".to_string());
+        manifest.add_newest_segment("two.sst".to_string());
+        manifest.replace_segments(
+            vec!["one.sst".to_string(), "two.sst".to_string()],
+            vec![SegmentMetadata::level_zero("merged.sst".to_string())],
+        );
+
+        assert_eq!(manifest.segments_newest_first, vec!["merged.sst"]);
+        assert_eq!(manifest.levels[0].len(), 1);
+        assert_eq!(manifest.levels[0][0].filename, "merged.sst");
     }
 
     #[test]

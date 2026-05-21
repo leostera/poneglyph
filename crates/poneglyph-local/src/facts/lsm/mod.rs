@@ -17,7 +17,7 @@ use poneglyph::schema::{SchemaDefinition, SchemaSnapshot};
 use poneglyph::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Store, Uri, Value};
 use tokio::sync::mpsc;
 
-use self::manifest::Manifest;
+use self::manifest::{Manifest, SegmentMetadata};
 use self::memtable::Memtable;
 use self::sst::SstReader;
 use self::wal::Wal;
@@ -451,7 +451,10 @@ impl Inner {
         let reader = sst::write_memtable(&path, &compacted)
             .map_err(|source| Error::FactStoreIo { source })?;
 
-        self.manifest.segments_newest_first = vec![filename];
+        self.manifest.replace_segments(
+            previous_segments.clone(),
+            vec![SegmentMetadata::level_zero(filename)],
+        );
         self.manifest
             .save(&self.dir)
             .map_err(|source| Error::FactStoreIo { source })?;
