@@ -3,6 +3,7 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::{self, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use super::memtable::{Memtable, MemtableEntry};
 
@@ -27,6 +28,7 @@ pub(crate) struct SstReader {
     path: PathBuf,
     index: Vec<IndexEntry>,
     data_end: u64,
+    data: Arc<[u8]>,
 }
 
 impl SstReader {
@@ -62,19 +64,21 @@ impl SstReader {
 
         file.seek(SeekFrom::Start(index_offset))?;
         let index = read_index(&mut file)?;
+        let data = std::fs::read(&path)?.into();
         Ok(Self {
             path,
             index,
             data_end: index_offset,
+            data,
         })
     }
 
     pub(crate) fn get(&self, key: &[u8]) -> io::Result<Option<MemtableEntry>> {
-        let mut file = File::open(&self.path)?;
         let mut offset = self.seek_offset_for(key);
-        file.seek(SeekFrom::Start(offset))?;
         while offset < self.data_end {
-            let Some((next_offset, record_key, entry)) = read_record_at(&mut file, offset)? else {
+            let Some((next_offset, record_key, entry)) =
+                read_record_from_slice(&self.data, self.data_end, offset)?
+            else {
                 return Ok(None);
             };
             match record_key.as_slice().cmp(key) {
@@ -87,12 +91,12 @@ impl SstReader {
     }
 
     pub(crate) fn scan_prefix(&self, prefix: &[u8]) -> io::Result<Vec<(Vec<u8>, MemtableEntry)>> {
-        let mut file = File::open(&self.path)?;
         let mut offset = self.seek_offset_for(prefix);
-        file.seek(SeekFrom::Start(offset))?;
         let mut rows = Vec::new();
         while offset < self.data_end {
-            let Some((next_offset, key, entry)) = read_record_at(&mut file, offset)? else {
+            let Some((next_offset, key, entry)) =
+                read_record_from_slice(&self.data, self.data_end, offset)?
+            else {
                 break;
             };
             if key.starts_with(prefix) {
@@ -182,26 +186,42 @@ fn write_record(file: &mut File, key: &[u8], entry: &MemtableEntry) -> io::Resul
     Ok(())
 }
 
-fn read_record_at(
-    file: &mut File,
-    _offset: u64,
+fn read_record_from_slice(
+    data: &[u8],
+    data_end: u64,
+    offset: u64,
 ) -> io::Result<Option<(u64, Vec<u8>, MemtableEntry)>> {
-    let mut header = [0; RECORD_HEADER_LEN];
-    match file.read_exact(&mut header) {
-        Ok(()) => {}
-        Err(error) if error.kind() == ErrorKind::UnexpectedEof => return Ok(None),
-        Err(error) => return Err(error),
+    let offset = usize::try_from(offset)
+        .map_err(|_| io::Error::new(ErrorKind::InvalidData, "SST offset too large"))?;
+    let data_end = usize::try_from(data_end)
+        .map_err(|_| io::Error::new(ErrorKind::InvalidData, "SST data end too large"))?;
+    if offset >= data_end {
+        return Ok(None);
     }
+    let header_end = offset + RECORD_HEADER_LEN;
+    if header_end > data_end {
+        return Ok(None);
+    }
+
+    let header = &data[offset..header_end];
     let kind = header[0];
     let key_len = u32::from_be_bytes(header[1..5].try_into().expect("key length")) as usize;
     let value_len = u32::from_be_bytes(header[5..9].try_into().expect("value length")) as usize;
-    let mut key = vec![0; key_len];
-    file.read_exact(&mut key)?;
-    let mut value = vec![0; value_len];
-    file.read_exact(&mut value)?;
-    let mut checksum_bytes = [0; CHECKSUM_LEN];
-    file.read_exact(&mut checksum_bytes)?;
-    let expected = u64::from_be_bytes(checksum_bytes);
+    let key_start = header_end;
+    let value_start = key_start + key_len;
+    let checksum_start = value_start + value_len;
+    let next_offset = checksum_start + CHECKSUM_LEN;
+    if next_offset > data_end {
+        return Ok(None);
+    }
+
+    let key = data[key_start..value_start].to_vec();
+    let value = data[value_start..checksum_start].to_vec();
+    let expected = u64::from_be_bytes(
+        data[checksum_start..next_offset]
+            .try_into()
+            .expect("checksum"),
+    );
     let actual = checksum(kind, &key, &value);
     if expected != actual {
         return Err(io::Error::new(
@@ -225,8 +245,7 @@ fn read_record_at(
             ));
         }
     };
-    let next_offset = file.stream_position()?;
-    Ok(Some((next_offset, key, entry)))
+    Ok(Some((next_offset as u64, key, entry)))
 }
 
 fn write_index(file: &mut File, index: &[IndexEntry]) -> io::Result<()> {
