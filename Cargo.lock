@@ -1742,7 +1742,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "datafox",
- "poneglyph-core",
+ "poneglyph",
  "prost",
  "serde",
  "serde_json",
@@ -1752,7 +1752,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "poneglyph-core"
+name = "poneglyph"
 version = "0.1.0"
 dependencies = [
  "async-trait",
@@ -1777,11 +1777,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "poneglyph-db"
+name = "poneglyph-local"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "poneglyph-core",
+ "poneglyph",
  "tempfile",
  "tokio",
 ]

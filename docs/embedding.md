@@ -6,29 +6,29 @@ daemons embed the library crates directly.
 
 A daemon such as `agent-memory` should generally depend on these crates:
 
-- `poneglyph-core` for facts, URIs, values, schema/entity/query contracts, and
+- `poneglyph` for facts, URIs, values, schema/entity/query contracts, and
   the runtime builder.
-- `poneglyph-db` for the default durable workspace-backed runtime assembly,
+- `poneglyph-local` for the default durable workspace-backed runtime assembly,
   workspace-config loading helper, repair helpers, and preferred SQLite adapter
   import paths.
 - `poneglyph-api` only if the daemon wants to expose the local tonic/prost gRPC
   boundary or reuse the reference daemon service adapter.
 
-Prefer `poneglyph_db::open_workspace` for disk-backed runtime assembly that
-loads the workspace `config.toml`. Use `poneglyph_db::open_runtime` when the
+Prefer `poneglyph_local::open_workspace` for disk-backed runtime assembly that
+loads the workspace `config.toml`. Use `poneglyph_local::open_runtime` when the
 embedding daemon wants to provide configuration directly. Import
-`SqliteFactStore` and `SqliteEntityStore` from `poneglyph-db` if a daemon needs
-adapter-level access; the matching `poneglyph-core` re-exports are deprecated
+`SqliteFactStore` and `SqliteEntityStore` from `poneglyph-local` if a daemon needs
+adapter-level access; the matching `poneglyph` re-exports are deprecated
 compatibility paths while the physical module move is staged.
 
 ## Minimal disk-backed runtime
 
 ```rust,no_run
-use poneglyph_core::{Value, Workspace, fact, uri};
-use poneglyph_db::open_workspace;
+use poneglyph::{Value, Workspace, fact, uri};
+use poneglyph_local::open_workspace;
 
 #[tokio::main]
-async fn main() -> poneglyph_core::PoneResult<()> {
+async fn main() -> poneglyph::PoneResult<()> {
     let workspace = Workspace::at("./agent-memory.poneglyph");
     let runtime = open_workspace(workspace).await?;
 
@@ -48,9 +48,9 @@ async fn main() -> poneglyph_core::PoneResult<()> {
 ```
 
 This path opens the durable fact store, entity projection store, and search index
-through `poneglyph-db`. The same flow is compiled in
-`crates/poneglyph-db/examples/agent_memory_daemon.rs` and covered by
-`crates/poneglyph-db/tests/embedding.rs`. Facts remain the durable source of
+through `poneglyph-local`. The same flow is compiled in
+`crates/poneglyph-local/examples/agent_memory_daemon.rs` and covered by
+`crates/poneglyph-local/tests/embedding.rs`. Facts remain the durable source of
 truth; entities and search results are derived views that can be replayed.
 
 ## Daemon pattern
@@ -59,7 +59,7 @@ An embedding daemon typically owns its domain protocol and lifecycle while using
 Poneglyph for storage and semantic queries:
 
 1. Choose a domain workspace path, for example `~/.agent-memory/poneglyph`.
-2. Open the runtime through `poneglyph_db::open_workspace`.
+2. Open the runtime through `poneglyph_local::open_workspace`.
 3. Start background runtime workers with `Arc<Poneglyph>::run()` if the daemon
    needs live entity/search projection updates.
 4. Translate domain requests into append-only facts and queries.

@@ -9,7 +9,7 @@ moved out, or deleted rather than grown here.
 
 - Primary reusable surface: Rust graph database crates for building specific
   disk-backed daemons, such as a future `agent-memory` daemon.
-- Product crates only: `poneglyph-core`, `poneglyph-db`, and `poneglyph-api`.
+- Product crates only: `poneglyph`, `poneglyph-local`, and `poneglyph-api`.
 - No in-repo product CLI or application crate.
 - Local daemon transport: tonic/prost gRPC over localhost TCP when using the
   reference daemon/API boundary.
@@ -24,8 +24,8 @@ moved out, or deleted rather than grown here.
 - Legacy JSON semantic RPCs remain in `poneglyph-api` for one compatibility
   window. Typed protobuf RPCs are the primary semantic daemon boundary, and API parity
   tests protect the legacy shims until removal.
-- Physical SQLite/search module movement from `poneglyph-core` to
-  `poneglyph-db` is deferred by RFD0001. `poneglyph-db` is already the preferred
+- Physical SQLite/search module movement from `poneglyph` to
+  `poneglyph-local` is deferred by RFD0001. `poneglyph-local` is already the preferred
   disk-backed opener and adapter boundary.
 - Unix-domain sockets are not implemented yet. RFD0000 records the local TCP
   limitation and the future UDS direction.
@@ -71,6 +71,6 @@ These are intentionally not part of the reset review unless the scope changes:
   typed protobuf RPCs as the only semantic daemon API.
 - Revisit RFD0001 and decide whether core keeps, removes, or feature-gates its
   compatibility SQLite/search defaults before physically moving those modules to
-  `poneglyph-db`.
+  `poneglyph-local`.
 - Design the Unix-domain-socket daemon transport and socket cleanup lifecycle;
   keep localhost TCP as the portable fallback.

@@ -13,9 +13,9 @@ or deleted rather than expanded in this repository.
 
 ## Current workspace
 
-- `crates/poneglyph-core` — core append-only fact model, schema/entity services,
+- `crates/poneglyph` — core append-only fact model, schema/entity services,
   projections, query engine, runtime contracts, and workspace layout.
-- `crates/poneglyph-db` — preferred durable storage adapter boundary and
+- `crates/poneglyph-local` — preferred durable storage adapter boundary and
   disk-backed runtime opener; see `docs/rfds/RFD0001-storage-crate-boundary.md`
   for the staged SQLite/search extraction decision.
 - `crates/poneglyph-api` — optional local gRPC API/protobuf definitions and
@@ -25,20 +25,20 @@ or deleted rather than expanded in this repository.
 
 ## Embedding quickstart
 
-Downstream daemons should embed `poneglyph-core` for semantic runtime contracts,
-`poneglyph-db` for disk-backed workspace/storage assembly, and `poneglyph-api`
+Downstream daemons should embed `poneglyph` for semantic runtime contracts,
+`poneglyph-local` for disk-backed workspace/storage assembly, and `poneglyph-api`
 only when they want the local gRPC service boundary.
 
-Prefer `poneglyph_db::open_workspace` for durable runtime assembly that loads
-workspace configuration. Import SQLite adapter types from `poneglyph-db`; direct
-`poneglyph-core` SQLite re-exports are deprecated compatibility paths.
+Prefer `poneglyph_local::open_workspace` for durable runtime assembly that loads
+workspace configuration. Import SQLite adapter types from `poneglyph-local`; direct
+`poneglyph` SQLite re-exports are deprecated compatibility paths.
 
 ```rust,no_run
-use poneglyph_core::{Value, Workspace, fact, uri};
-use poneglyph_db::open_workspace;
+use poneglyph::{Value, Workspace, fact, uri};
+use poneglyph_local::open_workspace;
 
 #[tokio::main]
-async fn main() -> poneglyph_core::PoneResult<()> {
+async fn main() -> poneglyph::PoneResult<()> {
     let runtime = open_workspace(Workspace::at("./agent-memory.poneglyph")).await?;
 
     runtime
@@ -59,8 +59,8 @@ async fn main() -> poneglyph_core::PoneResult<()> {
 ```
 
 A compiled version of this flow lives at
-`crates/poneglyph-db/examples/agent_memory_daemon.rs`, with direct library
-coverage in `crates/poneglyph-db/tests/embedding.rs`.
+`crates/poneglyph-local/examples/agent_memory_daemon.rs`, with direct library
+coverage in `crates/poneglyph-local/tests/embedding.rs`.
 
 ## Typed values
 

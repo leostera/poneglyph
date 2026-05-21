@@ -27,7 +27,7 @@ These instructions apply to the whole repository unless a deeper `AGENTS.md` ove
 - Prefer small, explicit architectural steps over broad speculative refactors.
 - Preserve append-only semantics in new designs. Do not introduce mutable source-of-truth entity tables as the primary model.
 - Treat facts as the durable truth, entities as derived views, and projections as replayable workers.
-- Keep reusable graph semantics in `poneglyph-core`, durable disk-backed assembly in `poneglyph-db`, and optional local service boundaries in `poneglyph-api`.
+- Keep reusable graph semantics in `poneglyph`, durable disk-backed assembly in `poneglyph-local`, and optional local service boundaries in `poneglyph-api`.
 
 ## Documentation
 

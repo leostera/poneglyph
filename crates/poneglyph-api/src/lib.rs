@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use chrono::{DateTime, NaiveDate, Utc};
-use poneglyph_core::{
+use poneglyph::{
     ActiveFact, ActiveFilter, BaseSchema, Entity, Fact, FieldSchema, Filter, KindSchema,
     NamespaceSchema, PoneResult, Poneglyph, Query, QueryResult, SchemaDefinition, SearchHit, Uri,
     Value,
@@ -799,7 +799,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use chrono::{NaiveDate, TimeZone, Utc};
-    use poneglyph_core::{
+    use poneglyph::{
         ActiveFact, BaseSchema, Entity, Fact, FieldSchema, InMemoryEntityStore, InMemoryFactStore,
         NamespaceSchema, Poneglyph, Projection, ProjectionBatch, SchemaDefinition, SearchHit,
         SearchProjection, Value, fact, uri,
@@ -827,7 +827,7 @@ mod tests {
         let runtime = Arc::new(
             Poneglyph::builder()
                 .with_fact_service(
-                    poneglyph_core::FactService::builder()
+                    poneglyph::FactService::builder()
                         .with_store(InMemoryFactStore::new())
                         .build()
                         .expect("fact service"),
@@ -916,7 +916,7 @@ mod tests {
 
     #[test]
     fn typed_search_hit_proto_round_trips_score_and_uri() {
-        let hit = poneglyph_core::SearchHit {
+        let hit = poneglyph::SearchHit {
             entity_uri: uri!("spotify:album:signals"),
             score: 1.5,
         };

@@ -1,7 +1,7 @@
 [workspace]
 members = [
-    "crates/poneglyph-core",
-    "crates/poneglyph-db",
+    "crates/poneglyph",
+    "crates/poneglyph-local",
     "crates/poneglyph-api",
 ]
 resolver = "2"

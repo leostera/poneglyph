@@ -15,4 +15,4 @@ These instructions apply to `crates/poneglyph-api/`.
 - Prefer typed protobuf messages for stable fact, schema, entity, search, and query boundaries.
 - Keep compatibility handlers sharing retrieval and validation helpers with typed handlers until the JSON shims are removed.
 - Preserve append-only fact semantics across RPCs. Retractions append facts; they do not mutate or delete assertions.
-- Avoid putting graph semantics here when they belong in `poneglyph-core`.
+- Avoid putting graph semantics here when they belong in `poneglyph`.

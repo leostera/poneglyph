@@ -18,8 +18,8 @@ unless they directly improve the embeddable library surface.
 
 ## Decision
 
-- `crates/poneglyph-core` is the semantic graph runtime/library crate.
-- `crates/poneglyph-db` is the preferred durable storage adapter and runtime
+- `crates/poneglyph` is the semantic graph runtime/library crate.
+- `crates/poneglyph-local` is the preferred durable storage adapter and runtime
   opening crate.
 - `crates/poneglyph-api` owns optional local gRPC protobuf definitions,
   generated client/server types, and daemon service adapters for embedders that

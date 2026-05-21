@@ -1,0 +1,12 @@
+[package]
+name = "poneglyph-local"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait.workspace = true
+poneglyph = { path = "../poneglyph" }
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio.workspace = true
