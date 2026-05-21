@@ -51,6 +51,9 @@ impl SqliteFactStore {
         sqlx::query("PRAGMA locking_mode = EXCLUSIVE")
             .execute(&pool)
             .await?;
+        sqlx::query("PRAGMA wal_autocheckpoint = 0")
+            .execute(&pool)
+            .await?;
 
         let store = Self { pool };
         store.migrate().await?;
