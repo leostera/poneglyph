@@ -85,6 +85,13 @@ impl LsmFactStore {
             .expect("LSM mutex poisoned")
             .compact_segments()
     }
+
+    pub fn prewarm_active_cache(&self) -> PoneResult<usize> {
+        self.inner
+            .lock()
+            .expect("LSM mutex poisoned")
+            .prewarm_active_cache()
+    }
 }
 
 #[async_trait]
@@ -251,6 +258,18 @@ impl Inner {
                 })
                 .collect()
         })
+    }
+
+    fn prewarm_active_cache(&mut self) -> PoneResult<usize> {
+        let rows = self.scan_entries(key::active_all_prefix())?;
+        let mut uri_cache = HashMap::new();
+        for (key, bytes) in rows {
+            if !self.active_cache.contains_key(&key) {
+                let active = decode_active_fact_with_cache(&bytes, &mut uri_cache)?;
+                self.cache_active_fact(key, active);
+            }
+        }
+        Ok(self.active_cache.len())
     }
 
     fn apply_active_indexes(&mut self, fact: &Fact) -> PoneResult<()> {
@@ -759,6 +778,25 @@ mod tests {
         inner.cache_active_fact(b"two".to_vec(), second);
         assert_eq!(inner.active_cache.len(), 1);
         assert!(inner.active_cache.contains_key(&b"two".to_vec()));
+    }
+
+    #[tokio::test]
+    async fn lsm_fact_store_prewarms_active_cache_after_reopen() {
+        let tempdir = tempdir().expect("tempdir");
+        let fact = fact!(uri!("e:one"), uri!("f:name"), Value::text("one"));
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store.state_facts_vec(vec![fact]).await.expect("state");
+        store.flush().expect("flush");
+        drop(store);
+
+        let store = LsmFactStore::open(tempdir.path()).expect("reopen");
+        let warmed = store.prewarm_active_cache().expect("prewarm");
+        assert_eq!(warmed, 1, "prewarm loads the primary active/field index");
+        let mut rows = store
+            .get_active_facts(ActiveFilter::ByField(uri!("f:name")))
+            .await
+            .expect("active");
+        assert!(rows.recv().await.expect("row").is_ok());
     }
 
     #[tokio::test]

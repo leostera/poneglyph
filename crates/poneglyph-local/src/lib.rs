@@ -57,6 +57,9 @@ pub struct LocalRuntimeStorageFactory;
 /// Entity and search projections remain on the mature SQLite/Tantivy adapters.
 pub struct LsmRuntimeStorageFactory;
 
+/// Experimental runtime storage factory that prewarms the LSM active cache on open.
+pub struct PrewarmedLsmRuntimeStorageFactory;
+
 #[async_trait]
 impl RuntimeStorageFactory for LocalRuntimeStorageFactory {
     async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
@@ -79,6 +82,26 @@ impl RuntimeStorageFactory for LocalRuntimeStorageFactory {
 impl RuntimeStorageFactory for LsmRuntimeStorageFactory {
     async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
         open_lsm_fact_store(workspace)
+    }
+
+    async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>> {
+        open_entity_store(workspace).await
+    }
+
+    fn open_search_projection(
+        &self,
+        workspace: &Workspace,
+    ) -> PoneResult<Arc<dyn SearchProjection>> {
+        open_search_projection(workspace).map(|projection| projection as Arc<dyn SearchProjection>)
+    }
+}
+
+#[async_trait]
+impl RuntimeStorageFactory for PrewarmedLsmRuntimeStorageFactory {
+    async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
+        let store = LsmFactStore::open(workspace.store_dir().join("facts.lsm"))?;
+        store.prewarm_active_cache()?;
+        Ok(Arc::new(store))
     }
 
     async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>> {
@@ -132,6 +155,15 @@ pub async fn open_lsm_workspace(workspace: Workspace) -> PoneResult<Poneglyph> {
         .await
 }
 
+/// Opens an LSM-backed runtime and prewarms its active-fact decode cache.
+pub async fn open_prewarmed_lsm_workspace(workspace: Workspace) -> PoneResult<Poneglyph> {
+    Poneglyph::builder()
+        .with_workspace(workspace)
+        .with_storage_factory(PrewarmedLsmRuntimeStorageFactory)
+        .build()
+        .await
+}
+
 fn runtime_builder(workspace: Workspace) -> poneglyph::PoneglyphBuilder {
     Poneglyph::builder()
         .with_workspace(workspace)
@@ -155,9 +187,11 @@ pub async fn open_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>
 /// SQLite remains the default fact store; this helper is explicit so tests and
 /// benchmarks can opt into the LSM backend during bring-up.
 pub fn open_lsm_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
-    Ok(Arc::new(LsmFactStore::open(
-        workspace.store_dir().join("facts.lsm"),
-    )?))
+    let store = LsmFactStore::open(workspace.store_dir().join("facts.lsm"))?;
+    if std::env::var("PONEGLYPH_LSM_PREWARM_ACTIVE_CACHE").is_ok_and(|value| value == "1") {
+        store.prewarm_active_cache()?;
+    }
+    Ok(Arc::new(store))
 }
 
 /// Opens the default durable entity projection store for a workspace.
