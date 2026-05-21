@@ -59,9 +59,15 @@ impl LsmFactStore {
         std::fs::create_dir_all(&dir).map_err(|source| Error::FactStoreIo { source })?;
         let manifest = Manifest::load(&dir).map_err(|source| Error::FactStoreIo { source })?;
         let segments_newest_first = manifest
-            .segment_paths(&dir)
+            .segments_with_metadata_newest_first(&dir)
             .into_iter()
-            .map(SstReader::open)
+            .map(|(path, metadata)| {
+                SstReader::open_with_bounds(
+                    path,
+                    metadata.and_then(|metadata| metadata.smallest_key.clone()),
+                    metadata.and_then(|metadata| metadata.largest_key.clone()),
+                )
+            })
             .collect::<std::io::Result<Vec<_>>>()
             .map_err(|source| Error::FactStoreIo { source })?;
         let wal_path = dir.join(WAL_FILE);

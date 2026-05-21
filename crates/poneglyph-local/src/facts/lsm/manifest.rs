@@ -108,6 +108,24 @@ impl Manifest {
             .collect()
     }
 
+    pub(crate) fn segments_with_metadata_newest_first(
+        &self,
+        dir: impl AsRef<Path>,
+    ) -> Vec<(PathBuf, Option<&SegmentMetadata>)> {
+        let dir = dir.as_ref();
+        self.segments_newest_first
+            .iter()
+            .map(|filename| {
+                let metadata = self
+                    .levels
+                    .iter()
+                    .flatten()
+                    .find(|segment| segment.filename == *filename);
+                (dir.join(filename), metadata)
+            })
+            .collect()
+    }
+
     fn replay_edit_log(&mut self, dir: &Path) -> io::Result<()> {
         let path = dir.join(MANIFEST_EDIT_LOG_FILE);
         let file = match std::fs::File::open(&path) {

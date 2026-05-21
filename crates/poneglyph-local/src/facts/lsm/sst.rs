@@ -35,6 +35,14 @@ pub(crate) struct SstReader {
 
 impl SstReader {
     pub(crate) fn open(path: impl AsRef<Path>) -> io::Result<Self> {
+        Self::open_with_bounds(path, None, None)
+    }
+
+    pub(crate) fn open_with_bounds(
+        path: impl AsRef<Path>,
+        smallest_key: Option<Vec<u8>>,
+        largest_key: Option<Vec<u8>>,
+    ) -> io::Result<Self> {
         let path = path.as_ref().to_path_buf();
         let mut file = File::open(&path)?;
         let file_len = file.metadata()?.len();
@@ -67,8 +75,12 @@ impl SstReader {
         file.seek(SeekFrom::Start(index_offset))?;
         let index = read_index(&mut file)?;
         let data: Arc<[u8]> = std::fs::read(&path)?.into();
-        let smallest_key = index.first().map(|entry| entry.first_key.clone());
-        let largest_key = largest_record_key_from_index(&data, index_offset, &index)?;
+        let smallest_key =
+            smallest_key.or_else(|| index.first().map(|entry| entry.first_key.clone()));
+        let largest_key = match largest_key {
+            Some(largest_key) => Some(largest_key),
+            None => largest_record_key_from_index(&data, index_offset, &index)?,
+        };
         Ok(Self {
             path,
             index,
