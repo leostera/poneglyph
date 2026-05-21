@@ -43,6 +43,34 @@ fn poneglyph_output(workspace: &Path, args: &[&str]) -> std::process::Output {
         .expect("run poneglyph")
 }
 
+#[test]
+fn cli_help_and_version_exit_without_opening_workspace() {
+    let tempdir = tempdir().expect("tempdir");
+    let workspace = tempdir.path().join("unused-workspace");
+
+    for args in [
+        vec!["--workspace", path_str(&workspace), "--help"],
+        vec!["--workspace", path_str(&workspace), "--version"],
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_poneglyph"))
+            .args(args)
+            .output()
+            .expect("run poneglyph");
+
+        assert!(
+            output.status.success(),
+            "poneglyph metadata command failed\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    assert!(
+        !workspace.exists(),
+        "metadata commands should not initialize or repair a workspace"
+    );
+}
+
 #[tokio::test]
 async fn cli_states_queries_and_retracts_facts_without_daemon() {
     let tempdir = tempdir().expect("tempdir");

@@ -43,5 +43,8 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
+For a quick user-surface smoke check after building, `poneglyph --help` and
+`poneglyph --version` should exit without opening or repairing a workspace.
+
 The GitHub Actions workflow runs the same checks and checks out the sibling
 `datafox` repository.
