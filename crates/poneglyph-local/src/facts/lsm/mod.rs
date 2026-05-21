@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use poneglyph::facts::store::{new_tx_id, sort_facts, validate_pending_fact};
 use poneglyph::schema::{SchemaDefinition, SchemaSnapshot};
-use poneglyph::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Store, Uri};
+use poneglyph::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Store, Uri, Value};
 use tokio::sync::mpsc;
 
 use self::manifest::Manifest;
@@ -222,7 +222,7 @@ impl Inner {
         };
         self.scan_values(prefix).map(|rows| {
             rows.into_iter()
-                .map(|bytes| serde_json::from_slice(&bytes).map_err(Error::from))
+                .map(|bytes| decode_active_fact(&bytes))
                 .collect()
         })
     }
@@ -242,7 +242,7 @@ impl Inner {
                 self.delete(key)?;
             }
         } else {
-            let bytes = serde_json::to_vec(&active)?;
+            let bytes = encode_active_fact(&active)?;
             for key in keys {
                 self.put(key, bytes.clone())?;
             }
@@ -263,7 +263,7 @@ impl Inner {
         Ok(self
             .scan_values(key::active_all_prefix())?
             .into_iter()
-            .map(|bytes| serde_json::from_slice::<ActiveFact>(&bytes).map_err(Error::from))
+            .map(|bytes| decode_active_fact(&bytes))
             .collect::<PoneResult<Vec<_>>>()?
             .into_iter()
             .map(|active| key::active_field_key(&active.field, &active.entity, &active.value))
@@ -274,7 +274,7 @@ impl Inner {
         let existing = self
             .scan_values(key::active_all_prefix())?
             .into_iter()
-            .map(|bytes| serde_json::from_slice::<ActiveFact>(&bytes).map_err(Error::from))
+            .map(|bytes| decode_active_fact(&bytes))
             .collect::<PoneResult<Vec<_>>>()?;
         for active in existing {
             for key in active_index_keys(&active) {
@@ -368,6 +368,75 @@ impl Inner {
             .map_err(|source| Error::FactStoreIo { source })?;
         Ok(())
     }
+}
+
+fn encode_active_fact(active: &ActiveFact) -> PoneResult<Vec<u8>> {
+    let mut out = Vec::with_capacity(128);
+    out.extend_from_slice(b"PLA1");
+    push_component(&mut out, active.source.as_str())?;
+    push_component(&mut out, active.entity.as_str())?;
+    push_component(&mut out, active.field.as_str())?;
+    push_component(&mut out, &serde_json::to_string(&active.value)?)?;
+    push_component(&mut out, active.fact_id.as_str())?;
+    push_component(&mut out, active.tx_id.as_str())?;
+    Ok(out)
+}
+
+fn decode_active_fact(bytes: &[u8]) -> PoneResult<ActiveFact> {
+    if !bytes.starts_with(b"PLA1") {
+        return Ok(serde_json::from_slice(bytes)?);
+    }
+    let mut cursor = 4;
+    let source = Uri::parse(read_component(bytes, &mut cursor)?)?;
+    let entity = Uri::parse(read_component(bytes, &mut cursor)?)?;
+    let field = Uri::parse(read_component(bytes, &mut cursor)?)?;
+    let value = serde_json::from_str::<Value>(read_component(bytes, &mut cursor)?)?;
+    let fact_id = Uri::parse(read_component(bytes, &mut cursor)?)?;
+    let tx_id = Uri::parse(read_component(bytes, &mut cursor)?)?;
+    Ok(ActiveFact {
+        source,
+        entity,
+        field,
+        value,
+        fact_id,
+        tx_id,
+    })
+}
+
+fn push_component(out: &mut Vec<u8>, value: &str) -> PoneResult<()> {
+    let len = u32::try_from(value.len()).map_err(|source| Error::FactStoreIo {
+        source: std::io::Error::new(std::io::ErrorKind::InvalidInput, source),
+    })?;
+    out.extend_from_slice(&len.to_be_bytes());
+    out.extend_from_slice(value.as_bytes());
+    Ok(())
+}
+
+fn read_component<'a>(bytes: &'a [u8], cursor: &mut usize) -> PoneResult<&'a str> {
+    if bytes.len().saturating_sub(*cursor) < 4 {
+        return Err(Error::FactStoreIo {
+            source: std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "truncated active fact component length",
+            ),
+        });
+    }
+    let len = u32::from_be_bytes(bytes[*cursor..*cursor + 4].try_into().expect("length")) as usize;
+    *cursor += 4;
+    let end = (*cursor).saturating_add(len);
+    if end > bytes.len() {
+        return Err(Error::FactStoreIo {
+            source: std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "truncated active fact component",
+            ),
+        });
+    }
+    let value = std::str::from_utf8(&bytes[*cursor..end]).map_err(|source| Error::FactStoreIo {
+        source: std::io::Error::new(std::io::ErrorKind::InvalidData, source),
+    })?;
+    *cursor = end;
+    Ok(value)
 }
 
 fn same_tuple(left: &Fact, right: &Fact) -> bool {
