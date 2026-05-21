@@ -3,9 +3,8 @@ mod common;
 use std::sync::Arc;
 
 use common::{assert_entity_pipeline_deletes_retracted_entity, wait_for_entity_fields};
-use poneglyph::{
-    Consolidator, EntityStore, FactService, SqliteEntityStore, SqliteFactStore, Value, fact, uri,
-};
+use poneglyph::{Consolidator, EntityStore, FactService, Value, fact, uri};
+use poneglyph_local::{SqliteEntityStore, SqliteFactStore};
 use proptest::prelude::*;
 
 async fn make_services() -> (

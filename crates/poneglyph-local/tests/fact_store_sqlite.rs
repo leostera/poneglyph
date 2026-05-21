@@ -1,6 +1,6 @@
 mod common;
 
-use poneglyph::SqliteFactStore;
+use poneglyph_local::SqliteFactStore;
 use tempfile::TempDir;
 
 use common::{

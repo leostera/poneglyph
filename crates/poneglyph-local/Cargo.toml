@@ -5,8 +5,18 @@ edition = "2024"
 
 [dependencies]
 async-trait.workspace = true
+chrono.workspace = true
+futures-util.workspace = true
 poneglyph = { path = "../poneglyph" }
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tantivy.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 tempfile.workspace = true
 tokio.workspace = true

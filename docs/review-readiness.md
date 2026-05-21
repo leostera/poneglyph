@@ -24,9 +24,8 @@ moved out, or deleted rather than grown here.
 - Legacy JSON semantic RPCs remain in `poneglyph-api` for one compatibility
   window. Typed protobuf RPCs are the primary semantic daemon boundary, and API parity
   tests protect the legacy shims until removal.
-- Physical SQLite/search module movement from `poneglyph` to
-  `poneglyph-local` is deferred by RFD0001. `poneglyph-local` is already the preferred
-  disk-backed opener and adapter boundary.
+- SQLite fact/entity stores and Tantivy search live in `poneglyph-local`; `poneglyph`
+  keeps semantic traits, runtime contracts, and in-memory defaults.
 - Unix-domain sockets are not implemented yet. RFD0000 records the local TCP
   limitation and the future UDS direction.
 
@@ -69,8 +68,7 @@ These are intentionally not part of the reset review unless the scope changes:
   polish starts.
 - Remove legacy JSON semantic RPCs after one compatibility window, keeping the
   typed protobuf RPCs as the only semantic daemon API.
-- Revisit RFD0001 and decide whether core keeps, removes, or feature-gates its
-  compatibility SQLite/search defaults before physically moving those modules to
-  `poneglyph-local`.
+- Generalize remaining local-backend coupling, such as storage-specific error
+  variants, out of `poneglyph` before adding non-local backend crates.
 - Design the Unix-domain-socket daemon transport and socket cleanup lifecycle;
   keep localhost TCP as the portable fallback.

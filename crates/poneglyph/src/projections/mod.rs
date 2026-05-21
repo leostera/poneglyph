@@ -9,7 +9,7 @@ use tracing::{debug, info, warn};
 
 use crate::{Entity, Error, PoneResult};
 
-pub use search::{IndexedEntity, SearchHit, SearchProjection};
+pub use search::{InMemorySearchIndex, IndexedEntity, SearchHit, SearchIndex};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProjectionBatch {

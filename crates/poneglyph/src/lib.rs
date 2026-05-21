@@ -20,15 +20,15 @@
 mod active_graph;
 mod config;
 mod consolidation;
-mod entities;
+pub mod entities;
 mod entity;
 pub mod error;
 mod fact;
-mod facts;
-mod projections;
+pub mod facts;
+pub mod projections;
 mod query;
 mod runtime;
-mod schema;
+pub mod schema;
 mod storage;
 #[cfg(test)]
 mod tests;
@@ -39,18 +39,14 @@ mod workspace;
 pub use active_graph::{ActiveFact, ActiveFilter};
 pub use config::{Config, PoneglyphConfig, PoneglyphConfigBuilder, default_workspace_path};
 pub use consolidation::{Consolidation, Consolidator, ConsolidatorBuilder};
-#[deprecated(note = "import durable SQLite adapters from poneglyph-local instead")]
-pub use entities::SqliteEntityStore;
 pub use entities::{EntityStore, InMemoryEntityStore};
 pub use entity::Entity;
 pub use error::{Error, PoneResult};
 pub use fact::{Builder, Fact, Filter};
-#[deprecated(note = "import durable SQLite adapters from poneglyph-local instead")]
-pub use facts::SqliteFactStore;
 pub use facts::{FactService, FactServiceBuilder, InMemoryFactStore, Store};
 pub use projections::{
-    IndexedEntity, Projection, ProjectionBatch, ProjectionRunner, ProjectionRunnerBuilder,
-    SearchHit, SearchProjection,
+    InMemorySearchIndex, IndexedEntity, Projection, ProjectionBatch, ProjectionRunner,
+    ProjectionRunnerBuilder, SearchHit, SearchIndex,
 };
 pub use query::{Query, QueryEngine, QueryResult};
 pub use runtime::{Poneglyph, PoneglyphBuilder};

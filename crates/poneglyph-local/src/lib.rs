@@ -1,14 +1,13 @@
-//! Durable storage adapters for embedding Poneglyph in disk-backed daemons.
+//! Local durable storage adapters for embedding Poneglyph in disk-backed daemons.
 //!
 //! Domain-specific daemons should use this crate when they want Poneglyph's
 //! default workspace-backed runtime assembly. Graph semantics, facts, schemas,
 //! entities, and queries remain in `poneglyph`; this crate supplies the
 //! durable adapter boundary and repair/open helpers.
 //!
-//! This crate is also the staging point for moving concrete database-backed
-//! implementations out of `poneglyph`. For now it exposes adapter-opening
-//! functions over the existing core SQLite implementations so downstream wiring
-//! can depend on a stable storage boundary before the physical module move.
+//! This crate owns the local SQLite fact/entity stores and Tantivy search
+//! projection. Other backend crates can implement the same `poneglyph` storage
+//! traits for different primitives.
 //!
 //! ```no_run
 //! use poneglyph::{Value, Workspace, fact, uri};
@@ -34,23 +33,27 @@
 //! }
 //! ```
 
-#![allow(deprecated)]
+mod entities;
+mod facts;
+mod projections;
 
 use std::sync::Arc;
 
 use async_trait::async_trait;
 use poneglyph::{
-    EntityStore, PoneResult, Poneglyph, PoneglyphConfig, RuntimeStorageFactory, SearchProjection,
-    Store, Workspace,
+    EntityStore, PoneResult, Poneglyph, PoneglyphConfig, RuntimeStorageFactory, SearchIndex, Store,
+    Workspace,
 };
 
-pub use poneglyph::{SqliteEntityStore, SqliteFactStore};
+pub use entities::SqliteEntityStore;
+pub use facts::SqliteFactStore;
+pub use projections::SearchProjection;
 
-/// Durable runtime storage factory backed by this crate's adapters.
-pub struct DbRuntimeStorageFactory;
+/// Durable runtime storage factory backed by this crate's local adapters.
+pub struct LocalRuntimeStorageFactory;
 
 #[async_trait]
-impl RuntimeStorageFactory for DbRuntimeStorageFactory {
+impl RuntimeStorageFactory for LocalRuntimeStorageFactory {
     async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
         open_fact_store(workspace).await
     }
@@ -59,8 +62,8 @@ impl RuntimeStorageFactory for DbRuntimeStorageFactory {
         open_entity_store(workspace).await
     }
 
-    fn open_search_projection(&self, workspace: &Workspace) -> PoneResult<Arc<SearchProjection>> {
-        open_search_projection(workspace)
+    fn open_search_index(&self, workspace: &Workspace) -> PoneResult<Arc<dyn SearchIndex>> {
+        open_search_projection(workspace).map(|projection| projection as Arc<dyn SearchIndex>)
     }
 }
 
@@ -84,7 +87,7 @@ pub async fn open_workspace(workspace: Workspace) -> PoneResult<Poneglyph> {
 fn runtime_builder(workspace: Workspace) -> poneglyph::PoneglyphBuilder {
     Poneglyph::builder()
         .with_workspace(workspace)
-        .with_storage_factory(DbRuntimeStorageFactory)
+        .with_storage_factory(LocalRuntimeStorageFactory)
 }
 
 /// Opens a runtime and runs storage repair for the workspace.
@@ -118,7 +121,7 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        DbRuntimeStorageFactory, open_entity_store, open_fact_store, open_runtime,
+        LocalRuntimeStorageFactory, open_entity_store, open_fact_store, open_runtime,
         open_search_projection, open_workspace, repair_workspace,
     };
     use poneglyph::{Poneglyph, PoneglyphConfig, Workspace};
@@ -146,7 +149,7 @@ mod tests {
         let runtime = Poneglyph::builder()
             .with_workspace(workspace.clone())
             .with_config(PoneglyphConfig::default())
-            .with_storage_factory(DbRuntimeStorageFactory)
+            .with_storage_factory(LocalRuntimeStorageFactory)
             .build()
             .await
             .expect("runtime");

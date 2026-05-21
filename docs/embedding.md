@@ -18,8 +18,7 @@ Prefer `poneglyph_local::open_workspace` for disk-backed runtime assembly that
 loads the workspace `config.toml`. Use `poneglyph_local::open_runtime` when the
 embedding daemon wants to provide configuration directly. Import
 `SqliteFactStore` and `SqliteEntityStore` from `poneglyph-local` if a daemon needs
-adapter-level access; the matching `poneglyph` re-exports are deprecated
-compatibility paths while the physical module move is staged.
+adapter-level access.
 
 ## Minimal disk-backed runtime
 

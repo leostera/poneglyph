@@ -1737,21 +1737,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
-name = "poneglyph-api"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "datafox",
- "poneglyph",
- "prost",
- "serde",
- "serde_json",
- "tokio",
- "tonic",
- "tonic-build",
-]
-
-[[package]]
 name = "poneglyph"
 version = "0.1.0"
 dependencies = [
@@ -1777,13 +1762,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "poneglyph-api"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "datafox",
+ "poneglyph",
+ "prost",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
 name = "poneglyph-local"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
+ "futures-util",
  "poneglyph",
+ "proptest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tantivy",
  "tempfile",
  "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

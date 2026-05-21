@@ -8,7 +8,7 @@ These instructions apply to `crates/poneglyph-local/`.
 
 - `poneglyph-local` is the storage adapter crate for durable database-backed implementations.
 - Keep graph semantics in `poneglyph`; this crate should implement concrete adapters and open/repair helpers.
-- Current initial boundary wraps the existing core SQLite adapters while the physical module move is staged.
+- Keep local-only implementation details here: SQLite fact/entity stores, Tantivy search, local migrations, and repair behavior.
 
 ## Working rules
 

@@ -3,21 +3,22 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::{
-    EntityStore, PoneResult, SearchProjection, SqliteEntityStore, SqliteFactStore, Store, Workspace,
+    EntityStore, InMemoryEntityStore, InMemoryFactStore, InMemorySearchIndex, PoneResult,
+    SearchIndex, Store, Workspace,
 };
 
 /// Factory for opening runtime storage adapters.
 ///
-/// `poneglyph` owns the semantic store traits. Process-level crates can
-/// provide a factory from `poneglyph-local` so disk-backed runtime construction can
-/// move out of core without making core depend on db.
+/// `poneglyph` owns the semantic store traits. Backend crates such as
+/// `poneglyph-local` provide durable implementations without making core depend
+/// on a specific storage primitive.
 #[async_trait]
 pub trait RuntimeStorageFactory: Send + Sync {
     async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>>;
 
     async fn open_entity_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>>;
 
-    fn open_search_projection(&self, workspace: &Workspace) -> PoneResult<Arc<SearchProjection>>;
+    fn open_search_index(&self, workspace: &Workspace) -> PoneResult<Arc<dyn SearchIndex>>;
 }
 
 pub(crate) struct DefaultRuntimeStorageFactory;
@@ -32,45 +33,31 @@ impl RuntimeStorageFactory for DefaultRuntimeStorageFactory {
         open_entity_store(workspace).await
     }
 
-    fn open_search_projection(&self, workspace: &Workspace) -> PoneResult<Arc<SearchProjection>> {
-        open_search_projection(workspace)
+    fn open_search_index(&self, workspace: &Workspace) -> PoneResult<Arc<dyn SearchIndex>> {
+        open_search_index(workspace)
     }
 }
 
-/// Opens the default durable fact store for a workspace.
-///
-/// This is the intended adapter seam for a future `poneglyph-local` crate: core
-/// owns the semantic `Store` trait, while concrete disk-backed adapters should
-/// eventually move behind this boundary.
-pub(crate) async fn open_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
-    Ok(Arc::new(
-        SqliteFactStore::open(workspace.facts_db_path()).await?,
-    ))
+/// Opens the default in-memory fact store for a core-only runtime.
+pub(crate) async fn open_fact_store(_workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
+    Ok(Arc::new(InMemoryFactStore::new()))
 }
 
-/// Opens the default durable entity store for a workspace.
-///
-/// Entity storage is a replayable projection, but it still uses a concrete disk
-/// adapter today. Keep runtime assembly pointed at this seam instead of directly
-/// constructing SQLite stores in `runtime.rs`.
-pub(crate) async fn open_entity_store(workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>> {
-    Ok(Arc::new(
-        SqliteEntityStore::open(workspace.entities_db_path()).await?,
-    ))
+/// Opens the default in-memory entity store for a core-only runtime.
+pub(crate) async fn open_entity_store(_workspace: &Workspace) -> PoneResult<Arc<dyn EntityStore>> {
+    Ok(Arc::new(InMemoryEntityStore::new()))
 }
 
-/// Opens the default search projection index for a workspace.
-pub(crate) fn open_search_projection(workspace: &Workspace) -> PoneResult<Arc<SearchProjection>> {
-    Ok(Arc::new(SearchProjection::open(
-        workspace.search_db_path(),
-    )?))
+/// Opens the default in-memory search index for a core-only runtime.
+pub(crate) fn open_search_index(_workspace: &Workspace) -> PoneResult<Arc<dyn SearchIndex>> {
+    Ok(Arc::new(InMemorySearchIndex::new()))
 }
 
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
 
-    use super::{open_entity_store, open_fact_store, open_search_projection};
+    use super::{open_entity_store, open_fact_store, open_search_index};
     use crate::Workspace;
 
     #[tokio::test]
@@ -81,10 +68,6 @@ mod tests {
 
         let _fact_store = open_fact_store(&workspace).await.expect("fact store");
         let _entity_store = open_entity_store(&workspace).await.expect("entity store");
-        let _search_projection = open_search_projection(&workspace).expect("search projection");
-
-        assert!(workspace.facts_db_path().exists());
-        assert!(workspace.entities_db_path().exists());
-        assert!(workspace.search_db_path().exists());
+        let _search_projection = open_search_index(&workspace).expect("search index");
     }
 }

@@ -8,14 +8,15 @@ use sqlx::{Row, SqlitePool};
 use tokio::sync::mpsc;
 use tracing::debug;
 
-use crate::facts::store::{Store, new_tx_id, validate_pending_fact};
-use crate::schema::{
+use poneglyph::Store;
+use poneglyph::facts::store::{new_tx_id, validate_pending_fact};
+use poneglyph::schema::{
     PartialSchemaEntry, SCHEMA_DOC, SCHEMA_FIELD_CARDINALITY, SCHEMA_FIELD_DEPRECATED,
     SCHEMA_FIELD_DOMAIN, SCHEMA_FIELD_IDENTITY, SCHEMA_FIELD_RANGE, SCHEMA_FIELD_VALUE_TYPE,
     SCHEMA_NAME, SCHEMA_SAME_AS, SCHEMA_TYPE, SchemaDefinition, SchemaSnapshot, namespace_uri_for,
     observed_kind_uri_for,
 };
-use crate::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri, Value};
+use poneglyph::{ActiveFact, ActiveFilter, Error, Fact, Filter, PoneResult, Uri, Value};
 
 const FACTS_DB_FILE: &str = "facts.db";
 
@@ -446,7 +447,7 @@ async fn update_active_graph(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     fact: &Fact,
 ) -> PoneResult<()> {
-    let tuple_key = crate::facts::store::tuple_key(fact)?;
+    let tuple_key = poneglyph::facts::store::tuple_key(fact)?;
     let value_json = serde_json::to_string(&fact.value)?;
 
     if fact.retraction {

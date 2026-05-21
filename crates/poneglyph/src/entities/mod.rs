@@ -1,3 +1,3 @@
-mod store;
+pub mod store;
 
-pub use store::{EntityStore, InMemoryEntityStore, SqliteEntityStore};
+pub use store::{EntityStore, InMemoryEntityStore};

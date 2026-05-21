@@ -65,10 +65,7 @@ fn schema_facts() -> Vec<Fact> {
 async fn build_sqlite_runtime() -> PoneResult<(TempDir, Poneglyph)> {
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let poneglyph = Poneglyph::builder()
-        .with_workspace(workspace)
-        .build()
-        .await?;
+    let poneglyph = poneglyph_local::open_workspace(workspace).await?;
     Ok((tempdir, poneglyph))
 }
 

@@ -69,21 +69,21 @@ pub struct SchemaDefinition {
 }
 
 #[derive(Debug, Default, Clone)]
-pub(crate) struct PartialSchemaEntry {
-    pub(crate) schema_type: Option<Uri>,
-    pub(crate) name: Option<String>,
-    pub(crate) doc: Option<String>,
-    pub(crate) same_as: Option<Uri>,
-    pub(crate) domain: Option<Uri>,
-    pub(crate) range: Option<Uri>,
-    pub(crate) value_type: Option<String>,
-    pub(crate) cardinality: Option<String>,
-    pub(crate) deprecated: Option<bool>,
-    pub(crate) identity: Option<bool>,
+pub struct PartialSchemaEntry {
+    pub schema_type: Option<Uri>,
+    pub name: Option<String>,
+    pub doc: Option<String>,
+    pub same_as: Option<Uri>,
+    pub domain: Option<Uri>,
+    pub range: Option<Uri>,
+    pub value_type: Option<String>,
+    pub cardinality: Option<String>,
+    pub deprecated: Option<bool>,
+    pub identity: Option<bool>,
 }
 
 #[derive(Debug, Default, Clone)]
-pub(crate) struct SchemaSnapshot {
+pub struct SchemaSnapshot {
     entries: BTreeMap<Uri, PartialSchemaEntry>,
     observed_namespaces: BTreeSet<Uri>,
     observed_kinds: BTreeSet<Uri>,
@@ -91,7 +91,7 @@ pub(crate) struct SchemaSnapshot {
 }
 
 impl SchemaSnapshot {
-    pub(crate) fn apply_fact(&mut self, fact: &Fact) {
+    pub fn apply_fact(&mut self, fact: &Fact) {
         if fact.retraction {
             return;
         }
@@ -171,23 +171,23 @@ impl SchemaSnapshot {
         }
     }
 
-    pub(crate) fn observe_namespace(&mut self, uri: Uri) {
+    pub fn observe_namespace(&mut self, uri: Uri) {
         self.observed_namespaces.insert(uri);
     }
 
-    pub(crate) fn observe_kind(&mut self, uri: Uri) {
+    pub fn observe_kind(&mut self, uri: Uri) {
         self.observed_kinds.insert(uri);
     }
 
-    pub(crate) fn observe_field(&mut self, uri: Uri) {
+    pub fn observe_field(&mut self, uri: Uri) {
         self.observed_fields.insert(uri);
     }
 
-    pub(crate) fn insert_entry(&mut self, uri: Uri, entry: PartialSchemaEntry) {
+    pub fn insert_entry(&mut self, uri: Uri, entry: PartialSchemaEntry) {
         self.entries.insert(uri, entry);
     }
 
-    pub(crate) fn into_definition(self) -> SchemaDefinition {
+    pub fn into_definition(self) -> SchemaDefinition {
         let mut namespaces = BTreeMap::<Uri, PartialSchemaEntry>::new();
         let mut kinds = BTreeMap::<Uri, PartialSchemaEntry>::new();
         let mut fields = BTreeMap::<Uri, PartialSchemaEntry>::new();
@@ -312,11 +312,11 @@ impl SchemaDefinition {
     }
 }
 
-pub(crate) fn namespace_uri_for(uri: &Uri) -> Option<Uri> {
+pub fn namespace_uri_for(uri: &Uri) -> Option<Uri> {
     Uri::parse(format!("{}:namespace", uri.namespace())).ok()
 }
 
-pub(crate) fn observed_kind_uri_for(uri: &Uri) -> Option<Uri> {
+pub fn observed_kind_uri_for(uri: &Uri) -> Option<Uri> {
     let mut parts = uri.as_str().splitn(3, ':');
     let _namespace = parts.next()?;
     let _kind = parts.next()?;

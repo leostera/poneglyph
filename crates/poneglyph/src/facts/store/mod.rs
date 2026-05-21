@@ -1,5 +1,4 @@
 mod memory;
-mod sqlite;
 
 use async_trait::async_trait;
 use tokio::sync::mpsc;
@@ -9,7 +8,6 @@ use crate::{
 };
 
 pub use memory::InMemoryFactStore;
-pub use sqlite::SqliteFactStore;
 
 #[async_trait]
 pub trait Store: Send + Sync {
@@ -23,11 +21,11 @@ pub trait Store: Send + Sync {
     async fn repair(&self) -> PoneResult<()>;
 }
 
-pub(crate) fn new_tx_id() -> Uri {
+pub fn new_tx_id() -> Uri {
     uri!("poneglyph", "tx")
 }
 
-pub(crate) fn validate_pending_fact(fact: &Fact) -> PoneResult<()> {
+pub fn validate_pending_fact(fact: &Fact) -> PoneResult<()> {
     if fact.tx_id.is_some() {
         return Err(Error::PendingFactHasTxId);
     }
@@ -35,7 +33,7 @@ pub(crate) fn validate_pending_fact(fact: &Fact) -> PoneResult<()> {
     Ok(())
 }
 
-pub(crate) fn tuple_key(fact: &Fact) -> PoneResult<String> {
+pub fn tuple_key(fact: &Fact) -> PoneResult<String> {
     Ok(format!(
         "{}|{}|{}|{}",
         fact.source.as_str(),
@@ -45,7 +43,7 @@ pub(crate) fn tuple_key(fact: &Fact) -> PoneResult<String> {
     ))
 }
 
-pub(crate) fn sort_facts(facts: &mut [Fact]) {
+pub fn sort_facts(facts: &mut [Fact]) {
     facts.sort_by(|left, right| {
         right
             .stated_at
@@ -54,10 +52,7 @@ pub(crate) fn sort_facts(facts: &mut [Fact]) {
     });
 }
 
-pub(crate) fn current_fact_state<'a>(
-    facts: &'a [Fact],
-    candidate: &Fact,
-) -> PoneResult<Option<&'a Fact>> {
+pub fn current_fact_state<'a>(facts: &'a [Fact], candidate: &Fact) -> PoneResult<Option<&'a Fact>> {
     let key = tuple_key(candidate)?;
     let mut ordered = facts.iter().collect::<Vec<_>>();
     ordered.sort_by(|left, right| {

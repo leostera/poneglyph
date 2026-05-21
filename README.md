@@ -15,9 +15,8 @@ or deleted rather than expanded in this repository.
 
 - `crates/poneglyph` — core append-only fact model, schema/entity services,
   projections, query engine, runtime contracts, and workspace layout.
-- `crates/poneglyph-local` — preferred durable storage adapter boundary and
-  disk-backed runtime opener; see `docs/rfds/RFD0001-storage-crate-boundary.md`
-  for the staged SQLite/search extraction decision.
+- `crates/poneglyph-local` — local durable backend: SQLite fact/entity stores, Tantivy search, and
+  disk-backed runtime opener.
 - `crates/poneglyph-api` — optional local gRPC API/protobuf definitions and
   daemon service adapter. Typed protobuf RPCs are the primary semantic API;
   legacy JSON RPCs remain only as compatibility shims.
@@ -30,8 +29,8 @@ Downstream daemons should embed `poneglyph` for semantic runtime contracts,
 only when they want the local gRPC service boundary.
 
 Prefer `poneglyph_local::open_workspace` for durable runtime assembly that loads
-workspace configuration. Import SQLite adapter types from `poneglyph-local`; direct
-`poneglyph` SQLite re-exports are deprecated compatibility paths.
+workspace configuration. Import SQLite adapter and Tantivy search types from
+`poneglyph-local`.
 
 ```rust,no_run
 use poneglyph::{Value, Workspace, fact, uri};
@@ -66,8 +65,8 @@ coverage in `crates/poneglyph-local/tests/embedding.rs`.
 
 - bare strings are text
 - `Value::number(...)` stores a number
-- `Value::bool(...)` stores a boolean
-- `Value::ref_(...)` stores a reference
+- `Value::boolean(...)` stores a boolean
+- `Value::reference(...)` stores a reference
 - tagged `Value` JSON is supported at serialization boundaries
 
 ## Architecture

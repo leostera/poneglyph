@@ -6,9 +6,9 @@ These instructions apply to `crates/poneglyph/`.
 
 ## Purpose
 
-- `poneglyph` is the main backend library crate.
-- Keep domain types, stores, services, consolidation, projections, schema/entity management, query, and workspace runtime modular.
-- A future `poneglyph-local` crate may extract storage/Datafox-specific implementation when that boundary is clearer.
+- `poneglyph` is the semantic graph database library crate.
+- Keep domain types, traits, in-memory stores, services, consolidation, projection contracts, schema/entity management, query, and workspace runtime modular.
+- Keep local SQLite/Tantivy backend implementation in `poneglyph-local`.
 
 ## Working rules
 

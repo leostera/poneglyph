@@ -14,7 +14,7 @@ These instructions apply to `crates/` unless a deeper `AGENTS.md` overrides them
 
 - `crates/` holds the Rust-only Poneglyph embeddable library/runtime.
 - `poneglyph` owns the append-only fact log, consolidation, projections, schema/entity services, query engine, and workspace runtime contracts.
-- `poneglyph-local` owns the durable storage adapter boundary and is the staging point for moving SQLite/Datafox-specific database implementation out of core.
+- `poneglyph-local` owns local durable backend implementations: SQLite fact/entity stores, Tantivy search, and local runtime opening/repair.
 - `poneglyph-api` owns optional local gRPC API/protobuf definitions and service adapters for embedders that want a daemon boundary.
 
 ## Working rules

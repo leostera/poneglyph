@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     Consolidator, Entity, EntityStore, Fact, FactService, PoneResult, PoneglyphConfig, Projection,
     ProjectionRunner, Query, QueryEngine, QueryResult, RuntimeStorageFactory, SchemaDefinition,
-    SearchHit, SearchProjection, Uri, Workspace,
+    SearchHit, SearchIndex, Uri, Workspace,
 };
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -15,7 +15,7 @@ pub struct Poneglyph {
     config: PoneglyphConfig,
     fact_service: Arc<FactService>,
     entity_store: Arc<dyn EntityStore>,
-    search_projection: Arc<SearchProjection>,
+    search_index: Arc<dyn SearchIndex>,
     query_engine: QueryEngine,
 }
 
@@ -48,8 +48,8 @@ impl Poneglyph {
         self.entity_store.clone()
     }
 
-    pub fn search_projection(&self) -> Arc<SearchProjection> {
-        self.search_projection.clone()
+    pub fn search_index(&self) -> Arc<dyn SearchIndex> {
+        self.search_index.clone()
     }
 
     pub fn query_engine(&self) -> &QueryEngine {
@@ -77,7 +77,7 @@ impl Poneglyph {
     }
 
     pub fn search(&self, query: &str, limit: usize) -> PoneResult<Vec<SearchHit>> {
-        self.search_projection.search(query, limit)
+        self.search_index.search(query, limit)
     }
 
     pub async fn list_entities(&self, limit: usize, offset: usize) -> PoneResult<Vec<Entity>> {
@@ -110,7 +110,7 @@ pub struct PoneglyphBuilder {
     config: Option<PoneglyphConfig>,
     fact_service: Option<Arc<FactService>>,
     entity_store: Option<Arc<dyn EntityStore>>,
-    search_projection: Option<Arc<SearchProjection>>,
+    search_index: Option<Arc<dyn SearchIndex>>,
     storage_factory: Option<Arc<dyn RuntimeStorageFactory>>,
 }
 
@@ -148,13 +148,16 @@ impl PoneglyphBuilder {
         self
     }
 
-    pub fn with_search_projection(mut self, search_projection: SearchProjection) -> Self {
-        self.search_projection = Some(Arc::new(search_projection));
+    pub fn with_search_index<S>(mut self, search_index: S) -> Self
+    where
+        S: SearchIndex + 'static,
+    {
+        self.search_index = Some(Arc::new(search_index));
         self
     }
 
-    pub fn with_search_projection_arc(mut self, search_projection: Arc<SearchProjection>) -> Self {
-        self.search_projection = Some(search_projection);
+    pub fn with_search_index_arc(mut self, search_index: Arc<dyn SearchIndex>) -> Self {
+        self.search_index = Some(search_index);
         self
     }
 
@@ -205,9 +208,9 @@ impl PoneglyphBuilder {
             None => storage_factory.open_entity_store(&workspace).await?,
         };
 
-        let search_projection = match self.search_projection {
-            Some(search_projection) => search_projection,
-            None => storage_factory.open_search_projection(&workspace)?,
+        let search_index = match self.search_index {
+            Some(search_index) => search_index,
+            None => storage_factory.open_search_index(&workspace)?,
         };
 
         let query_engine = QueryEngine::new(fact_service.clone());
@@ -219,7 +222,7 @@ impl PoneglyphBuilder {
             config,
             fact_service,
             entity_store,
-            search_projection,
+            search_index,
             query_engine,
         })
     }
@@ -235,7 +238,7 @@ impl Poneglyph {
             .build()?;
         let projection_runner = ProjectionRunner::builder()
             .with_entity_subscription(consolidator.subscribe())
-            .add_projection_arc(self.search_projection.clone() as Arc<dyn Projection>)
+            .add_projection_arc(self.search_index.clone() as Arc<dyn Projection>)
             .build()?;
 
         Ok((consolidator.spawn(), projection_runner.spawn()))
@@ -262,9 +265,9 @@ mod tests {
     use tokio::time::timeout;
 
     use crate::{
-        Entity, EntityStore, InMemoryEntityStore, InMemoryFactStore, PoneResult, Poneglyph,
-        PoneglyphConfig, Projection, ProjectionBatch, RuntimeStorageFactory, SearchProjection,
-        Store, Value, Workspace, fact, uri,
+        Entity, EntityStore, InMemoryEntityStore, InMemoryFactStore, InMemorySearchIndex,
+        PoneResult, Poneglyph, PoneglyphConfig, ProjectionBatch, RuntimeStorageFactory, Store,
+        Value, Workspace, fact, uri,
     };
 
     #[tokio::test]
@@ -281,16 +284,16 @@ mod tests {
         assert_eq!(poneglyph.workspace(), &workspace);
         assert_eq!(poneglyph.config(), &PoneglyphConfig::default());
         assert!(workspace.store_dir().exists());
-        assert!(workspace.facts_db_path().exists());
-        assert!(workspace.entities_db_path().exists());
-        assert!(workspace.search_db_path().exists());
+        assert!(!workspace.facts_db_path().exists());
+        assert!(!workspace.entities_db_path().exists());
+        assert!(!workspace.search_db_path().exists());
     }
 
     #[derive(Default)]
     struct TrackingStorageFactory {
         fact_store_opens: AtomicUsize,
         entity_store_opens: AtomicUsize,
-        search_projection_opens: AtomicUsize,
+        search_index_opens: AtomicUsize,
     }
 
     #[async_trait]
@@ -308,12 +311,12 @@ mod tests {
             Ok(Arc::new(InMemoryEntityStore::new()))
         }
 
-        fn open_search_projection(
+        fn open_search_index(
             &self,
             _workspace: &Workspace,
-        ) -> PoneResult<Arc<SearchProjection>> {
-            self.search_projection_opens.fetch_add(1, Ordering::SeqCst);
-            Ok(Arc::new(SearchProjection::create_in_memory()?))
+        ) -> PoneResult<Arc<dyn crate::SearchIndex>> {
+            self.search_index_opens.fetch_add(1, Ordering::SeqCst);
+            Ok(Arc::new(InMemorySearchIndex::new()))
         }
     }
 
@@ -333,7 +336,7 @@ mod tests {
         assert_eq!(poneglyph.workspace(), &workspace);
         assert_eq!(factory.fact_store_opens.load(Ordering::SeqCst), 1);
         assert_eq!(factory.entity_store_opens.load(Ordering::SeqCst), 1);
-        assert_eq!(factory.search_projection_opens.load(Ordering::SeqCst), 1);
+        assert_eq!(factory.search_index_opens.load(Ordering::SeqCst), 1);
         assert!(!workspace.facts_db_path().exists());
         assert!(!workspace.entities_db_path().exists());
         assert!(!workspace.search_db_path().exists());
@@ -352,15 +355,14 @@ mod tests {
             .build()
             .expect("fact service");
         let entity_store: Arc<dyn crate::EntityStore> = Arc::new(InMemoryEntityStore::new());
-        let search_projection =
-            Arc::new(SearchProjection::create_in_memory().expect("search projection"));
+        let search_index: Arc<dyn crate::SearchIndex> = Arc::new(InMemorySearchIndex::new());
 
         let poneglyph = Poneglyph::builder()
             .with_workspace(workspace.clone())
             .with_config(config.clone())
             .with_fact_service(fact_service)
             .with_entity_store_arc(entity_store.clone())
-            .with_search_projection_arc(search_projection.clone())
+            .with_search_index_arc(search_index.clone())
             .build()
             .await
             .expect("runtime");
@@ -368,10 +370,7 @@ mod tests {
         assert_eq!(poneglyph.workspace(), &workspace);
         assert_eq!(poneglyph.config(), &config);
         assert!(Arc::ptr_eq(&poneglyph.entity_store(), &entity_store));
-        assert!(Arc::ptr_eq(
-            &poneglyph.search_projection(),
-            &search_projection
-        ));
+        assert!(Arc::ptr_eq(&poneglyph.search_index(), &search_index));
     }
 
     #[tokio::test]
@@ -384,9 +383,7 @@ mod tests {
         let poneglyph = Poneglyph::builder()
             .with_fact_service(fact_service)
             .with_entity_store(InMemoryEntityStore::new())
-            .with_search_projection(
-                SearchProjection::create_in_memory().expect("search projection"),
-            )
+            .with_search_index(InMemorySearchIndex::new())
             .build()
             .await
             .expect("runtime");
@@ -438,9 +435,7 @@ mod tests {
                     .expect("fact service"),
             )
             .with_entity_store_arc(entity_store)
-            .with_search_projection(
-                SearchProjection::create_in_memory().expect("search projection"),
-            )
+            .with_search_index(InMemorySearchIndex::new())
             .build()
             .await
             .expect("runtime");
@@ -455,15 +450,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn runtime_search_delegates_to_search_projection() {
-        let search_projection = Arc::new(SearchProjection::create_in_memory().expect("projection"));
+    async fn runtime_search_delegates_to_search_index() {
+        let search_index: Arc<dyn crate::SearchIndex> = Arc::new(InMemorySearchIndex::new());
         let entity = Entity {
             uri: uri!("spotify:album:counterparts"),
             namespace: "spotify".to_string(),
             kind: "album".to_string(),
             fields: BTreeMap::from([(uri!("spotify:displayName"), Value::text("Counterparts"))]),
         };
-        search_projection
+        search_index
             .handle_events(ProjectionBatch {
                 entities: vec![entity.clone()],
             })
@@ -478,7 +473,7 @@ mod tests {
                     .expect("fact service"),
             )
             .with_entity_store(InMemoryEntityStore::new())
-            .with_search_projection_arc(search_projection)
+            .with_search_index_arc(search_index)
             .build()
             .await
             .expect("runtime");
@@ -500,9 +495,7 @@ mod tests {
                         .expect("fact service"),
                 )
                 .with_entity_store(InMemoryEntityStore::new())
-                .with_search_projection(
-                    SearchProjection::create_in_memory().expect("search projection"),
-                )
+                .with_search_index(InMemorySearchIndex::new())
                 .build()
                 .await
                 .expect("runtime"),

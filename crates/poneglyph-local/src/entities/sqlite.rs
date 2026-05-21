@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 
-use crate::entities::store::EntityStore;
-use crate::{Entity, Error, PoneResult, Uri};
+use poneglyph::EntityStore;
+use poneglyph::{Entity, Error, PoneResult, Uri};
 
 const ENTITIES_DB_FILE: &str = "entities.db";
 
@@ -160,8 +160,9 @@ mod tests {
 
     use tempfile::tempdir;
 
-    use crate::entities::store::{EntityStore, SqliteEntityStore};
-    use crate::{Entity, Value, uri};
+    use super::SqliteEntityStore;
+    use poneglyph::EntityStore;
+    use poneglyph::{Entity, Value, uri};
 
     #[tokio::test]
     async fn sqlite_entity_store_put_get_delete_roundtrip() {

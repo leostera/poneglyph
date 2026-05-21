@@ -1,12 +1,10 @@
 mod memory;
-mod sqlite;
 
 use async_trait::async_trait;
 
 use crate::{Entity, PoneResult, Uri};
 
 pub use memory::InMemoryEntityStore;
-pub use sqlite::SqliteEntityStore;
 
 #[async_trait]
 pub trait EntityStore: Send + Sync {
