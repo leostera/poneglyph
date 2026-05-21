@@ -30,6 +30,9 @@ The Rust reset is intentionally narrow and reviewable:
 - the local daemon transport is localhost TCP for now, with Unix-domain sockets
   documented as a future lifecycle/cleanup improvement in RFD0000.
 
+For a concise reviewer handoff, including the intentional post-review follow-up
+queue, see [`docs/review-readiness.md`](docs/review-readiness.md).
+
 Clone/check out Datafox next to this repository before building:
 
 ```sh

@@ -49,6 +49,14 @@ For a quick user-surface smoke check after building, `poneglyph --help` and
 The GitHub Actions workflow runs the same checks and checks out the sibling
 `datafox` repository.
 
+## Cleanup audit
+
+The review branch should contain only the current Rust workspace crates and docs.
+A final stale-reference audit should find no tracked legacy app/web/MCP/connector
+crates, root reset notes, `opencode`/`.codex` config, or `poneglyphd` product
+crate references outside historical Ralph notes and intentional compatibility
+RFD text.
+
 ## Follow-up queue
 
 These are intentionally not part of the reset review unless the scope changes:
