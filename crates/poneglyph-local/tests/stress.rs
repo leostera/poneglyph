@@ -132,19 +132,6 @@ fn unescape_xml(value: &str) -> String {
         .replace("&amp;", "&")
 }
 
-fn synthetic_onepiece_pages(count: usize) -> Vec<WikiPage> {
-    (0..count)
-        .map(|index| WikiPage {
-            title: format!("Character {index}"),
-            namespace: "0".to_string(),
-            text: format!(
-                "{{{{Infobox character|name=Character {index}|affiliation=Straw Hat Pirates}}}}\n[[Category:Characters]]\n[[Monkey D. Luffy]] appears in chapter {}.",
-                index % 1_100
-            ),
-        })
-        .collect()
-}
-
 fn onepiece_page_entity(title: &str) -> poneglyph::Uri {
     uri!(format!("wiki:onepiece:page:{}", slug_uri_component(title)))
 }

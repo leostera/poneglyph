@@ -103,7 +103,6 @@ impl SstReader {
                 largest_record_key_from_index(&bytes, index_offset, &index)?
             }
         };
-        let file_len = file_len;
         let read_cache = Arc::new(open_read_cache(&path)?);
         Ok(Self {
             path,
@@ -146,8 +145,6 @@ impl SstReader {
             };
             if key.starts_with(prefix) {
                 rows.push((key, entry));
-            } else if key.as_slice() > prefix && !rows.is_empty() {
-                break;
             } else if key.as_slice() > prefix {
                 break;
             }
@@ -378,13 +375,13 @@ fn write_entries<'a>(
     let mut index = Vec::new();
     let mut last_key: Option<Vec<u8>> = None;
     for (record_index, (key, entry)) in entries.into_iter().enumerate() {
-        if let Some(last_key) = &last_key {
-            if last_key.as_slice() >= key {
-                return Err(io::Error::new(
-                    ErrorKind::InvalidInput,
-                    "SST entries must be strictly sorted by key",
-                ));
-            }
+        if let Some(last_key) = &last_key
+            && last_key.as_slice() >= key
+        {
+            return Err(io::Error::new(
+                ErrorKind::InvalidInput,
+                "SST entries must be strictly sorted by key",
+            ));
         }
         let offset = file.stream_position()?;
         if record_index % INDEX_STRIDE == 0 {

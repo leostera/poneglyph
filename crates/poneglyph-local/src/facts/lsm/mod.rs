@@ -1084,7 +1084,7 @@ mod tests {
         assert_eq!(inner.active_cache.len(), 1);
         inner.cache_active_fact(b"two".to_vec(), second);
         assert_eq!(inner.active_cache.len(), 1);
-        assert!(inner.active_cache.contains_key(&b"two".to_vec()));
+        assert!(inner.active_cache.contains_key(b"two".as_slice()));
     }
 
     #[tokio::test]
@@ -1316,20 +1316,21 @@ mod tests {
         assert!(store.needs_compaction());
 
         store.compact().expect("compact planned L0");
-        let inner = store.inner.lock().expect("lock");
-        assert_eq!(inner.manifest.levels[0].len(), 0);
-        assert_eq!(inner.manifest.levels[1].len(), 1);
-        assert!(
-            !inner
-                .manifest
-                .compaction_plan_with_l0_limits(
-                    inner.l0_compaction_segments,
-                    inner.l0_compaction_max_inputs,
-                    inner.l0_compaction_max_bytes,
-                )
-                .is_some()
-        );
-        drop(inner);
+        {
+            let inner = store.inner.lock().expect("lock");
+            assert_eq!(inner.manifest.levels[0].len(), 0);
+            assert_eq!(inner.manifest.levels[1].len(), 1);
+            assert!(
+                inner
+                    .manifest
+                    .compaction_plan_with_l0_limits(
+                        inner.l0_compaction_segments,
+                        inner.l0_compaction_max_inputs,
+                        inner.l0_compaction_max_bytes,
+                    )
+                    .is_none()
+            );
+        }
 
         let mut rows = store
             .get_active_facts(ActiveFilter::ByField(uri!("f:name")))
