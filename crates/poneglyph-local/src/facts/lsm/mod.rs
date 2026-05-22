@@ -308,20 +308,20 @@ impl Inner {
         self.stats.active_requests += 1;
         self.stats.active_rows_scanned += rows.len() as u64;
         let mut uri_cache = HashMap::new();
-        let active = rows
-            .into_iter()
-            .map(|(key, bytes)| {
-                if let Some(active) = self.active_cache.get(&key) {
-                    self.stats.active_cache_hits += 1;
-                    return Ok(active.clone());
-                }
+        let mut active = Vec::with_capacity(rows.len());
+        for (key, bytes) in rows {
+            if let Some(cached) = self.active_cache.get(&key) {
+                self.stats.active_cache_hits += 1;
+                active.push(cached.clone());
+            } else {
                 self.stats.active_cache_misses += 1;
                 self.stats.active_rows_decoded += 1;
-                let active = decode_active_fact_with_cache(&bytes, &mut uri_cache)?;
-                self.cache_active_fact(key, active.clone());
-                Ok(active)
-            })
-            .collect::<PoneResult<Vec<_>>>()?;
+                let decoded = decode_active_fact_with_cache(&bytes, &mut uri_cache)?;
+                self.cache_active_fact(key, decoded.clone());
+                active.push(decoded);
+            }
+        }
+        let active = active;
         Ok(active.into_iter().map(Ok).collect())
     }
 
