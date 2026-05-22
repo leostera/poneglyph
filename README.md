@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/poneglyph.png" alt="Poneglyph" width="32" height="32">
+</p>
+
 # Poneglyph
 
 Poneglyph is an embeddable semantic knowledge graph database for building agent memory,

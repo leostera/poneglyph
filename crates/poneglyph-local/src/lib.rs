@@ -216,7 +216,8 @@ mod tests {
 
     use super::{
         LocalRuntimeStorageFactory, open_entity_store, open_fact_store, open_lsm_fact_store,
-        open_lsm_workspace, open_runtime, open_search_projection, open_workspace, repair_workspace,
+        open_lsm_workspace, open_runtime, open_search_projection, open_sqlite_fact_store,
+        open_workspace, repair_workspace,
     };
     use poneglyph::{Poneglyph, PoneglyphConfig, Workspace};
 
@@ -230,7 +231,7 @@ mod tests {
         let _entity_store = open_entity_store(&workspace).await.expect("entity store");
         let _search_projection = open_search_projection(&workspace).expect("search projection");
 
-        assert!(workspace.facts_db_path().exists());
+        assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
         assert!(workspace.entities_db_path().exists());
         assert!(workspace.search_db_path().exists());
     }
@@ -249,24 +250,27 @@ mod tests {
             .expect("runtime");
 
         assert_eq!(runtime.workspace().root(), workspace.root());
-        assert!(workspace.facts_db_path().exists());
+        assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
         assert!(workspace.entities_db_path().exists());
         assert!(workspace.search_db_path().exists());
     }
 
     #[tokio::test]
-    async fn db_lsm_fact_store_opens_explicitly_without_changing_default() {
+    async fn db_lsm_fact_store_is_default_and_sqlite_opens_explicitly() {
         let tempdir = tempdir().expect("tempdir");
         let workspace = Workspace::at(tempdir.path());
 
         let _default_store = open_fact_store(&workspace).await.expect("default store");
         let _lsm_store = open_lsm_fact_store(&workspace).expect("lsm store");
+        let _sqlite_store = open_sqlite_fact_store(&workspace)
+            .await
+            .expect("sqlite store");
         let _lsm_runtime = open_lsm_workspace(workspace.clone())
             .await
             .expect("lsm runtime");
 
-        assert!(workspace.facts_db_path().exists());
         assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
+        assert!(workspace.facts_db_path().exists());
     }
 
     #[tokio::test]
@@ -279,7 +283,7 @@ mod tests {
             .expect("runtime");
 
         assert_eq!(runtime.workspace().root(), workspace.root());
-        assert!(workspace.facts_db_path().exists());
+        assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
         assert!(workspace.entities_db_path().exists());
         assert!(workspace.search_db_path().exists());
     }
@@ -297,7 +301,7 @@ mod tests {
         let runtime = open_workspace(workspace.clone()).await.expect("runtime");
 
         assert_eq!(runtime.config(), &config);
-        assert!(workspace.facts_db_path().exists());
+        assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
     }
 
     #[tokio::test]
@@ -309,6 +313,6 @@ mod tests {
             .await
             .expect("repair");
 
-        assert!(workspace.facts_db_path().exists());
+        assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
     }
 }

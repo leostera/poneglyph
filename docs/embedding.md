@@ -9,16 +9,15 @@ A daemon such as `agent-memory` should generally depend on these crates:
 - `poneglyph` for facts, URIs, values, schema/entity/query contracts, and
   the runtime builder.
 - `poneglyph-local` for the default durable workspace-backed runtime assembly,
-  workspace-config loading helper, repair helpers, and preferred SQLite adapter
-  import paths.
+  workspace-config loading helper, repair helpers, and local storage adapters.
 - `poneglyph-api` only if the daemon wants to expose the local tonic/prost gRPC
   boundary or reuse the reference daemon service adapter.
 
 Prefer `poneglyph_local::open_workspace` for disk-backed runtime assembly that
 loads the workspace `config.toml`. Use `poneglyph_local::open_runtime` when the
 embedding daemon wants to provide configuration directly. Import
-`SqliteFactStore` and `SqliteEntityStore` from `poneglyph-local` if a daemon needs
-adapter-level access.
+`LsmFactStore`, `SqliteFactStore`, and `SqliteEntityStore` from `poneglyph-local`
+if a daemon needs adapter-level access.
 
 ## Minimal disk-backed runtime
 

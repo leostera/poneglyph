@@ -25,5 +25,5 @@ async fn disk_backed_runtime_states_and_queries_facts_through_library_api() {
         .expect("query");
 
     assert_eq!(rows.len(), 1);
-    assert!(workspace.facts_db_path().exists());
+    assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
 }
