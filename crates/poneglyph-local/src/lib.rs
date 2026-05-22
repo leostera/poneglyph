@@ -5,9 +5,9 @@
 //! entities, and queries remain in `poneglyph`; this crate supplies the
 //! durable adapter boundary and repair/open helpers.
 //!
-//! This crate owns the local SQLite fact/entity stores and Tantivy search
-//! projection. Other backend crates can implement the same `poneglyph` storage
-//! traits for different primitives.
+//! This crate owns the local LSM fact store, SQLite entity store, and Tantivy
+//! search projection. Other backend crates can implement the same `poneglyph`
+//! storage traits for different primitives.
 //!
 //! ```no_run
 //! use poneglyph::{Value, Workspace, fact, uri};
@@ -52,12 +52,12 @@ pub use projections::TantivySearchProjection;
 /// Durable runtime storage factory backed by this crate's default local adapters.
 pub struct LocalRuntimeStorageFactory;
 
-/// Experimental runtime storage factory that swaps only the fact store to LSM.
+/// Runtime storage factory backed by the local LSM fact store.
 ///
-/// Entity and search projections remain on the mature SQLite/Tantivy adapters.
+/// Entity and search projections remain on the SQLite/Tantivy adapters.
 pub struct LsmRuntimeStorageFactory;
 
-/// Experimental runtime storage factory that prewarms the LSM active cache on open.
+/// Runtime storage factory that prewarms the LSM active cache on open.
 pub struct PrewarmedLsmRuntimeStorageFactory;
 
 #[async_trait]
@@ -125,7 +125,7 @@ pub async fn open_runtime(workspace: Workspace, config: PoneglyphConfig) -> Pone
     runtime_builder(workspace).with_config(config).build().await
 }
 
-/// Opens a full Poneglyph runtime using the experimental LSM fact store.
+/// Opens a full Poneglyph runtime using the LSM fact store.
 pub async fn open_lsm_runtime(
     workspace: Workspace,
     config: PoneglyphConfig,
@@ -177,15 +177,17 @@ pub async fn repair_workspace(workspace: Workspace, config: PoneglyphConfig) -> 
 
 /// Opens the default durable fact store for a workspace.
 pub async fn open_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
+    open_lsm_fact_store(workspace)
+}
+
+/// Opens the SQLite fact store explicitly.
+pub async fn open_sqlite_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
     Ok(Arc::new(
         SqliteFactStore::open(workspace.facts_db_path()).await?,
     ))
 }
 
-/// Opens the experimental custom LSM fact store for a workspace.
-///
-/// SQLite remains the default fact store; this helper is explicit so tests and
-/// benchmarks can opt into the LSM backend during bring-up.
+/// Opens the custom LSM fact store for a workspace.
 pub fn open_lsm_fact_store(workspace: &Workspace) -> PoneResult<Arc<dyn Store>> {
     let store = LsmFactStore::open(workspace.store_dir().join("facts.lsm"))?;
     if std::env::var("PONEGLYPH_LSM_PREWARM_ACTIVE_CACHE").is_ok_and(|value| value == "1") {

@@ -1,37 +1,66 @@
 # Poneglyph
 
-Poneglyph is a local-first semantic knowledge graph database library for agents.
+Poneglyph is an embeddable semantic knowledge graph database for building agent memory,
+knowledge-workflow, and domain graph applications.
 
-It is a reusable Rust database layer for building specific semantic graph
-daemons. For example, an `agent-memory` daemon can embed Poneglyph as its append-only
-fact store, schema/entity projection runtime, and Datafox-backed Datalog query
-engine.
+It stores durable knowledge as append-only facts, derives current graph state from those facts,
+and answers semantic queries with a Datafox-backed Datalog engine. The default local runtime uses a
+custom LSM fact store tuned for graph predicate scans, plus local projection stores for entities and
+search.
 
-Scope guard: if a feature, crate, or workflow does not make Poneglyph better as
-a library for building agent knowledge graphs, it should be deferred, moved out,
-or deleted rather than expanded in this repository.
+## How Poneglyph works
 
-## Current workspace
+Poneglyph is built around one rule: facts are the source of truth.
 
-- `crates/poneglyph` — core append-only fact model, schema/entity services,
-  projections, query engine, runtime contracts, and workspace layout.
-- `crates/poneglyph-local` — local durable backend: SQLite fact/entity stores, Tantivy search,
-  disk-backed runtime opener, and an experimental custom LSM fact store optimized for active graph
-  prefix scans.
-- `crates/poneglyph-api` — optional local gRPC API/protobuf definitions and
-  daemon service adapter. Typed protobuf RPCs are the primary semantic API;
-  legacy JSON RPCs remain only as compatibility shims.
-- `../datafox` — external sibling path dependency for Datalog parsing/evaluation.
+A fact states that an entity has a field with a value:
+
+```text
+memory:item:first-note  memory:title  "First note"
+```
+
+Facts are append-only. Updates and deletes are represented by new facts, including retractions,
+rather than mutating old rows in place. This gives Poneglyph a durable audit log and makes derived
+views replayable.
+
+At runtime, Poneglyph maintains:
+
+1. **Fact log** — every asserted or retracted fact, stored durably and append-only.
+2. **Active graph** — the latest visible assertions after applying retractions.
+3. **Entity projection** — convenient entity-shaped views derived from active facts.
+4. **Search projection** — Tantivy-backed text search over projected entities.
+5. **Datalog query engine** — semantic joins over the active graph via Datafox.
+
+The active graph is optimized for Datafox `FactRequest` access patterns. A query predicate like:
+
+```text
+wiki:page:title(Page, Title)
+```
+
+maps directly to a prefix scan over the local active index for `wiki:page:title`. More selective
+patterns, such as an entity-bound or value-bound predicate, map to narrower active-index scans.
+
+## Local storage
+
+The default local fact backend is a Poneglyph-specific LSM store:
+
+- append-only WAL for recent writes;
+- immutable SST segments for flushed data;
+- manifest edit log for crash-safe segment publishing;
+- active indexes for field/entity/value query shapes;
+- compact binary active-fact encoding;
+- decoded active-fact cache for repeated semantic queries;
+- configurable compaction, cache, and SST read policies.
+
+SQLite remains available as a reference implementation for correctness and comparison, but the
+standard local runtime opens the LSM fact store by default.
 
 ## Embedding quickstart
 
-Downstream daemons should embed `poneglyph` for semantic runtime contracts,
-`poneglyph-local` for disk-backed workspace/storage assembly, and `poneglyph-api`
-only when they want the local gRPC service boundary.
+Downstream daemons usually depend on:
 
-Prefer `poneglyph_local::open_workspace` for durable runtime assembly that loads
-workspace configuration. Import SQLite adapter and Tantivy search types from
-`poneglyph-local`.
+- `poneglyph` for the core fact model, runtime traits, and query API;
+- `poneglyph-local` for disk-backed local storage assembly;
+- optionally `poneglyph-api` for the local gRPC service boundary.
 
 ```rust,no_run
 use poneglyph::{Value, Workspace, fact, uri};
@@ -50,36 +79,54 @@ async fn main() -> poneglyph::PoneResult<()> {
         .await?;
 
     let rows = runtime
-        .query_str(r#"memory:title(File, "First note")"#)
+        .query_str(r#"memory:title(Item, "First note")"#)
         .await?;
-    println!("matched {} memory item(s)", rows.len());
 
+    println!("matched {} memory item(s)", rows.len());
     Ok(())
 }
 ```
 
-A compiled version of this flow lives at
-`crates/poneglyph-local/examples/agent_memory_daemon.rs`, with direct library
-coverage in `crates/poneglyph-local/tests/embedding.rs`.
+## Query example
 
-## Experimental LSM backend
+Poneglyph queries are semantic joins over facts. For example, a small One Piece knowledge graph can
+ask for crews, captains, and seconds-in-command:
 
-SQLite remains the default/reference local fact store. `poneglyph-local` also includes an explicit
-LSM backend for experiments with append-only fact logs plus persisted active indexes:
-
-```rust,no_run
-use poneglyph::Workspace;
-use poneglyph_local::open_lsm_workspace;
-
-# async fn example() -> poneglyph::PoneResult<()> {
-let runtime = open_lsm_workspace(Workspace::at("./agent-memory.poneglyph")).await?;
-# Ok(())
-# }
+```text
+wiki:crew:captain(Crew, Captain),
+wiki:crew:second(Crew, Second),
+wiki:page:title(Crew, CrewName),
+wiki:page:title(Captain, CaptainName),
+wiki:page:title(Second, SecondName)
 ```
 
-The current realistic stress target is the One Piece wiki semantic query workload. With 50,000 pages
-(~306k derived facts), the benchmark now asks domain-shaped questions including “characters with
-`D.` in their name” instead of scanning every page title:
+Because every predicate is a graph fact, the same model works for agent memories, documents,
+calendar events, emails, code references, domain entities, and application-specific knowledge.
+
+## Benchmarks
+
+The current large semantic-query benchmark uses a cached One Piece wiki export as realistic graph
+input. The fixture is downloaded locally into `tests/fixtures/cache/` and is not committed to the
+repository.
+
+The benchmark ingests 50,000 wiki pages, derives page/category/link/domain facts, then runs 20
+semantic Datafox queries over the LSM-backed active graph. The query set includes:
+
+- crews with captains and seconds-in-command;
+- islands with leaders;
+- a Joy Boy → Luffy lore connection chain;
+- characters with `D.` in their name, filtered to character pages before applying string matching.
+
+Recent local result:
+
+```text
+50,000 pages
+306,278 derived facts
+20 semantic queries in ~887 ms
+~44 ms/query
+```
+
+Command:
 
 ```sh
 PONEGLYPH_ONEPIECE_MAX_PAGES=50000 \
@@ -90,42 +137,5 @@ cargo test -p poneglyph-local --test stress \
   --locked -- --ignored --nocapture
 ```
 
-Recent local result on the LSM backend: 20 semantic queries over 306,278 facts in ~887ms,
-about 44ms/query. The LSM backend is still experimental; use SQLite unless you are explicitly
-benchmarking or developing the LSM path.
-
-## Typed values
-
-- bare strings are text
-- `Value::number(...)` stores a number
-- `Value::boolean(...)` stores a boolean
-- `Value::reference(...)` stores a reference
-- tagged `Value` JSON is supported at serialization boundaries
-
-## Architecture
-
-See [`docs/embedding.md`](docs/embedding.md),
-[`docs/rfds/RFD0000-cli-daemon-architecture.md`](docs/rfds/RFD0000-cli-daemon-architecture.md),
-[`docs/rfds/RFD0001-storage-crate-boundary.md`](docs/rfds/RFD0001-storage-crate-boundary.md),
-and [`docs/review-readiness.md`](docs/review-readiness.md).
-
-## Development
-
-Clone/check out Datafox next to this repository before building:
-
-```text
-github.com/leostera/poneglyph
-github.com/leostera/datafox
-```
-
-`protoc` is required because `poneglyph-api` generates tonic/prost bindings at
-build time.
-
-```sh
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo test --workspace --locked
-```
-
-CI expects this repository and Datafox to be checked out as siblings, matching
-the local `../datafox` path dependency layout.
+For small warm-query runs over 5,000 pages, the same LSM path is currently in the single-digit
+milliseconds per query range on the development machine.
