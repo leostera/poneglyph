@@ -29,6 +29,7 @@ const ACTIVE_CACHE_LIMIT_ENV: &str = "PONEGLYPH_LSM_ACTIVE_CACHE_MAX_ENTRIES";
 const L0_COMPACTION_SEGMENTS_ENV: &str = "PONEGLYPH_LSM_L0_COMPACTION_SEGMENTS";
 const L0_COMPACTION_MAX_INPUTS_ENV: &str = "PONEGLYPH_LSM_L0_COMPACTION_MAX_INPUTS";
 const L0_COMPACTION_MAX_BYTES_ENV: &str = "PONEGLYPH_LSM_L0_COMPACTION_MAX_BYTES";
+const SPLIT_FLUSH_BY_KEYSPACE_ENV: &str = "PONEGLYPH_LSM_SPLIT_FLUSH_BY_KEYSPACE";
 const DEFAULT_L0_COMPACTION_SEGMENTS: usize = 16;
 const DEFAULT_L0_COMPACTION_MAX_INPUTS: usize = 4;
 const DEFAULT_L0_COMPACTION_MAX_BYTES: u64 = 16 * 1024 * 1024;
@@ -59,6 +60,7 @@ struct Inner {
     l0_compaction_segments: usize,
     l0_compaction_max_inputs: usize,
     l0_compaction_max_bytes: u64,
+    split_flush_by_keyspace: bool,
     stats: LsmStats,
 }
 
@@ -86,6 +88,7 @@ impl LsmFactStore {
                 l0_compaction_segments: l0_compaction_segments_from_env(),
                 l0_compaction_max_inputs: l0_compaction_max_inputs_from_env(),
                 l0_compaction_max_bytes: l0_compaction_max_bytes_from_env(),
+                split_flush_by_keyspace: split_flush_by_keyspace_from_env(),
                 stats: LsmStats::default(),
             })),
         })
@@ -591,15 +594,26 @@ impl Inner {
         self.wal
             .sync()
             .map_err(|source| Error::FactStoreIo { source })?;
-        let filename = self.manifest.allocate_segment();
-        let path = self.dir.join(&filename);
-        let reader = sst::write_memtable(&path, &self.memtable)
-            .map_err(|source| Error::FactStoreIo { source })?;
-        let metadata = segment_metadata(filename, &reader, 0);
-        self.manifest
-            .persist_edit(&self.dir, ManifestEdit::AddSegment(metadata))
-            .map_err(|source| Error::FactStoreIo { source })?;
-        self.segments_newest_first.insert(0, reader);
+        let flush_memtables = if self.split_flush_by_keyspace {
+            split_memtable_by_keyspace(&self.memtable)
+        } else {
+            vec![self.memtable.clone()]
+        };
+        let mut new_readers = Vec::with_capacity(flush_memtables.len());
+        for memtable in flush_memtables {
+            let filename = self.manifest.allocate_segment();
+            let path = self.dir.join(&filename);
+            let reader = sst::write_memtable(&path, &memtable)
+                .map_err(|source| Error::FactStoreIo { source })?;
+            let metadata = segment_metadata(filename, &reader, 0);
+            self.manifest
+                .persist_edit(&self.dir, ManifestEdit::AddSegment(metadata))
+                .map_err(|source| Error::FactStoreIo { source })?;
+            new_readers.push(reader);
+        }
+        for reader in new_readers.into_iter().rev() {
+            self.segments_newest_first.insert(0, reader);
+        }
         self.memtable = Memtable::new();
         self.wal
             .reset()
@@ -615,6 +629,24 @@ fn should_preserve_tombstone(key: &[u8], older_readers: &[SstReader]) -> bool {
     older_readers
         .iter()
         .any(|reader| reader.may_contain_key(key))
+}
+
+fn split_memtable_by_keyspace(memtable: &Memtable) -> Vec<Memtable> {
+    let mut partitions = std::collections::BTreeMap::<u8, Memtable>::new();
+    for (key, entry) in memtable.iter() {
+        let partition = partitions
+            .entry(key.first().copied().unwrap_or(0))
+            .or_default();
+        match entry {
+            self::memtable::MemtableEntry::Value(value) => {
+                partition.insert(key.to_vec(), value.clone());
+            }
+            self::memtable::MemtableEntry::Tombstone => {
+                partition.delete(key.to_vec());
+            }
+        }
+    }
+    partitions.into_values().collect()
 }
 
 fn open_manifest_segments(
@@ -669,6 +701,10 @@ fn l0_compaction_max_bytes_from_env() -> u64 {
     parse_optional_u64_env(L0_COMPACTION_MAX_BYTES_ENV).unwrap_or(DEFAULT_L0_COMPACTION_MAX_BYTES)
 }
 
+fn split_flush_by_keyspace_from_env() -> bool {
+    parse_optional_bool_env(SPLIT_FLUSH_BY_KEYSPACE_ENV).unwrap_or(false)
+}
+
 fn parse_optional_usize_env(name: &str) -> Option<usize> {
     std::env::var(name)
         .ok()
@@ -679,6 +715,14 @@ fn parse_optional_u64_env(name: &str) -> Option<u64> {
     std::env::var(name)
         .ok()
         .and_then(|value| value.parse().ok())
+}
+
+fn parse_optional_bool_env(name: &str) -> Option<bool> {
+    match std::env::var(name).ok()?.as_str() {
+        "1" | "true" | "TRUE" | "yes" | "YES" | "on" | "ON" => Some(true),
+        "0" | "false" | "FALSE" | "no" | "NO" | "off" | "OFF" => Some(false),
+        _ => None,
+    }
 }
 
 fn encode_active_fact(active: &ActiveFact) -> PoneResult<Vec<u8>> {
@@ -877,8 +921,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        LsmFactStore, ManifestEdit, encode_active_fact, key, merge, parse_optional_u64_env,
-        parse_optional_usize_env, segment_metadata, sst,
+        LsmFactStore, ManifestEdit, encode_active_fact, key, merge, parse_optional_bool_env,
+        parse_optional_u64_env, parse_optional_usize_env, segment_metadata, sst,
     };
     use crate::facts::lsm::memtable::Memtable;
     use poneglyph::{ActiveFact, ActiveFilter, Filter, Store, Value, fact, retraction, uri};
@@ -959,6 +1003,37 @@ mod tests {
     #[test]
     fn lsm_parse_optional_u64_env_ignores_missing_or_invalid_values() {
         assert_eq!(parse_optional_u64_env("PONEGLYPH_TEST_MISSING"), None);
+    }
+
+    #[test]
+    fn lsm_parse_optional_bool_env_ignores_missing_or_invalid_values() {
+        assert_eq!(parse_optional_bool_env("PONEGLYPH_TEST_MISSING"), None);
+    }
+
+    #[tokio::test]
+    async fn lsm_split_flush_by_keyspace_writes_disjoint_l0_segments() {
+        let tempdir = tempdir().expect("tempdir");
+        let store = LsmFactStore::open(tempdir.path()).expect("open");
+        store
+            .state_facts_vec(vec![fact!(
+                uri!("e:one"),
+                uri!("f:name"),
+                Value::text("one")
+            )])
+            .await
+            .expect("state");
+        {
+            let mut inner = store.inner.lock().expect("lock");
+            inner.split_flush_by_keyspace = true;
+        }
+        store.flush().expect("split flush");
+        let inner = store.inner.lock().expect("lock");
+        assert!(inner.manifest.levels[0].len() > 1);
+        for segment in &inner.manifest.levels[0] {
+            let smallest = segment.smallest_key.as_ref().expect("smallest");
+            let largest = segment.largest_key.as_ref().expect("largest");
+            assert_eq!(smallest.first(), largest.first());
+        }
     }
 
     #[tokio::test]
