@@ -1,4 +1,4 @@
-use crate::{Fact, Uri, Value, fact, retraction, uri};
+use crate::{Fact, FactBuilder, Uri, Value, fact, retraction, uri};
 
 #[test]
 fn uri_from_parts_uses_namespace_and_kind_and_given_id() {
@@ -54,8 +54,9 @@ fn value_round_trips_through_serde() {
 }
 
 #[test]
-fn builder_creates_assertion_facts_with_pending_tx_id() {
-    let fact = Fact::builder()
+fn fact_builder_creates_assertion_facts_with_pending_tx_id() {
+    let builder: FactBuilder = Fact::builder();
+    let fact = builder
         .source(uri!("agent:codex:local"))
         .entity(uri!("spotify:album:2112"))
         .field(uri!("spotify:displayName"))
@@ -68,7 +69,7 @@ fn builder_creates_assertion_facts_with_pending_tx_id() {
 }
 
 #[test]
-fn builder_can_switch_to_retraction_mode() {
+fn fact_builder_can_switch_to_retraction_mode() {
     let fact = Fact::builder()
         .source(uri!("agent:codex:local"))
         .entity(uri!("spotify:album:2112"))

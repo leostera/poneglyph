@@ -18,8 +18,8 @@ pub struct Fact {
 }
 
 impl Fact {
-    pub fn builder() -> Builder {
-        Builder::default()
+    pub fn builder() -> FactBuilder {
+        FactBuilder::default()
     }
 }
 
@@ -63,7 +63,7 @@ pub enum Filter {
 
 /// Builder for creating pending [`Fact`] values before they are assigned to a transaction.
 #[derive(Debug, Default, Clone)]
-pub struct Builder {
+pub struct FactBuilder {
     source: Option<Uri>,
     entity: Option<Uri>,
     field: Option<Uri>,
@@ -71,7 +71,7 @@ pub struct Builder {
     retraction: bool,
 }
 
-impl Builder {
+impl FactBuilder {
     pub fn source(mut self, source: Uri) -> Self {
         self.source = Some(source);
         self
@@ -115,6 +115,10 @@ impl Builder {
         })
     }
 }
+
+/// Deprecated alias for the fact builder.
+#[deprecated(note = "use FactBuilder instead")]
+pub type Builder = FactBuilder;
 
 impl Arbitrary for Fact {
     type Parameters = ();

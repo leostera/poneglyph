@@ -6,7 +6,7 @@
 //! this crate directly for in-memory tests or custom daemon assembly.
 //!
 //! Public API:
-//! - [`Fact`], [`Builder`], [`fact!`], [`retraction!`] and [`Filter`] for the append-only fact model.
+//! - [`Fact`], [`FactBuilder`], [`fact!`], [`retraction!`] and [`Filter`] for the append-only fact model.
 //! - [`ActiveFact`] and [`ActiveFilter`] for the synchronous active graph view.
 //! - [`Uri`] and [`Value`] for shared identifiers and payloads.
 //! - [`Entity`] for consolidated materialized views.
@@ -42,7 +42,9 @@ pub use consolidation::{Consolidation, Consolidator, ConsolidatorBuilder};
 pub use entities::{EntityStore, InMemoryEntityStore};
 pub use entity::Entity;
 pub use error::{Error, PoneResult};
-pub use fact::{Builder, Fact, Filter};
+#[allow(deprecated)]
+pub use fact::Builder;
+pub use fact::{Fact, FactBuilder, Filter};
 pub use facts::{FactService, FactServiceBuilder, InMemoryFactStore, Store};
 pub use projections::{
     InMemorySearchProjection, IndexedEntity, Projection, ProjectionBatch, ProjectionRunner,
