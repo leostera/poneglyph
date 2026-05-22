@@ -62,16 +62,18 @@ fn schema_facts() -> Vec<Fact> {
     ]
 }
 
-async fn build_sqlite_runtime() -> PoneResult<(TempDir, Poneglyph)> {
+async fn build_runtime() -> PoneResult<(TempDir, Poneglyph)> {
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let poneglyph = poneglyph_local::open_workspace(workspace).await?;
+    let poneglyph = poneglyph_local::LocalWorkspace::from_workspace(workspace)
+        .open()
+        .await?;
     Ok((tempdir, poneglyph))
 }
 
 #[tokio::test]
-async fn sqlite_get_schema_reflects_new_schema_facts_immediately() -> PoneResult<()> {
-    let (_tempdir, poneglyph) = build_sqlite_runtime().await?;
+async fn local_get_schema_reflects_new_schema_facts_immediately() -> PoneResult<()> {
+    let (_tempdir, poneglyph) = build_runtime().await?;
 
     poneglyph.state_facts(schema_facts()).await?;
 
@@ -97,12 +99,12 @@ async fn sqlite_get_schema_reflects_new_schema_facts_immediately() -> PoneResult
 }
 
 #[tokio::test]
-async fn sqlite_get_schema_is_invariant_under_batch_shapes() -> PoneResult<()> {
-    let (_tempdir_one_batch, poneglyph_one_batch) = build_sqlite_runtime().await?;
+async fn local_get_schema_is_invariant_under_batch_shapes() -> PoneResult<()> {
+    let (_tempdir_one_batch, poneglyph_one_batch) = build_runtime().await?;
     poneglyph_one_batch.state_facts(schema_facts()).await?;
     let schema_one_batch = poneglyph_one_batch.get_schema().await?;
 
-    let (_tempdir_many_batches, poneglyph_many_batches) = build_sqlite_runtime().await?;
+    let (_tempdir_many_batches, poneglyph_many_batches) = build_runtime().await?;
     for fact in schema_facts() {
         poneglyph_many_batches.state_facts(vec![fact]).await?;
     }
@@ -113,8 +115,8 @@ async fn sqlite_get_schema_is_invariant_under_batch_shapes() -> PoneResult<()> {
 }
 
 #[tokio::test]
-async fn sqlite_retracting_data_does_not_remove_schema_entries() -> PoneResult<()> {
-    let (_tempdir, poneglyph) = build_sqlite_runtime().await?;
+async fn local_retracting_data_does_not_remove_schema_entries() -> PoneResult<()> {
+    let (_tempdir, poneglyph) = build_runtime().await?;
     poneglyph.state_facts(schema_facts()).await?;
 
     let assertion = fact!(

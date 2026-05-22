@@ -11,7 +11,8 @@ async fn fact_adapter_preserves_append_only_retraction_semantics() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = poneglyph::Workspace::at(tempdir.path());
     workspace.ensure().expect("workspace");
-    let store = poneglyph_local::open_fact_store(&workspace)
+    let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .fact_store()
         .await
         .expect("fact store");
     let service = FactService::builder()
@@ -49,7 +50,8 @@ async fn entity_adapter_round_trips_replayable_projection_rows() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = poneglyph::Workspace::at(tempdir.path());
     workspace.ensure().expect("workspace");
-    let store = poneglyph_local::open_entity_store(&workspace)
+    let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .entity_store()
         .await
         .expect("entity store");
 
@@ -89,8 +91,9 @@ async fn search_adapter_indexes_and_removes_projection_rows() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = poneglyph::Workspace::at(tempdir.path());
     workspace.ensure().expect("workspace");
-    let projection =
-        poneglyph_local::open_search_projection(&workspace).expect("search projection");
+    let projection = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .search_projection()
+        .expect("search projection");
 
     let uri = uri!("person", "alice");
     let entity = Entity {

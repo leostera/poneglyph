@@ -2,14 +2,15 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use poneglyph::{Fact, PoneResult, Value, Workspace, fact, uri};
+use poneglyph::{Fact, PoneResult, Value, fact, uri};
+use poneglyph_local::LocalWorkspace;
 
 #[tokio::main]
 async fn main() -> PoneResult<()> {
     let args = Args::parse();
     let pages = load_pages(&args.fixture, args.max_pages)?;
     let facts = onepiece_pages_to_facts(&pages);
-    let runtime = poneglyph_local::open_workspace(Workspace::at(&args.workspace)).await?;
+    let runtime = LocalWorkspace::at(&args.workspace).open().await?;
 
     if args.ingest {
         for chunk in facts.chunks(args.batch_size) {

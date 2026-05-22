@@ -355,7 +355,8 @@ fn slug_uri_component(value: &str) -> String {
 async fn local_backend_write_heavy_smoke() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let store = poneglyph_local::open_fact_store(&workspace)
+    let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .fact_store()
         .await
         .expect("fact store");
 
@@ -383,7 +384,8 @@ async fn local_backend_write_heavy_smoke() {
 async fn local_runtime_read_heavy_smoke() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let runtime = poneglyph_local::open_workspace(workspace)
+    let runtime = poneglyph_local::LocalWorkspace::from_workspace(workspace)
+        .open()
         .await
         .expect("runtime");
 
@@ -418,7 +420,8 @@ async fn local_backend_write_heavy_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let store = poneglyph_local::open_fact_store(&workspace)
+    let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .fact_store()
         .await
         .expect("fact store");
 
@@ -451,7 +454,9 @@ async fn local_lsm_backend_write_heavy_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let store = poneglyph_local::open_lsm_fact_store(&workspace).expect("fact store");
+    let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .lsm_fact_store()
+        .expect("fact store");
 
     let facts = (0..total).map(generated_fact).collect::<Vec<_>>();
 
@@ -490,7 +495,8 @@ async fn local_backend_onepiece_wiki_ingest_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let store = poneglyph_local::open_fact_store(&workspace)
+    let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .fact_store()
         .await
         .expect("fact store");
 
@@ -540,7 +546,9 @@ async fn local_lsm_backend_onepiece_wiki_ingest_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let store = poneglyph_local::open_lsm_fact_store(&workspace).expect("fact store");
+    let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .lsm_fact_store()
+        .expect("fact store");
 
     let started = Instant::now();
     state_prebuilt_batches(store.as_ref(), &facts, batch_size)
@@ -588,7 +596,8 @@ async fn local_backend_onepiece_wiki_query_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let runtime = poneglyph_local::open_workspace(workspace)
+    let runtime = poneglyph_local::LocalWorkspace::from_workspace(workspace)
+        .open()
         .await
         .expect("runtime");
     for chunk in facts.chunks(batch_size) {
@@ -660,7 +669,8 @@ async fn local_lsm_backend_onepiece_wiki_query_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let runtime = poneglyph_local::open_lsm_workspace(workspace)
+    let runtime = poneglyph_local::LocalWorkspace::from_workspace(workspace)
+        .open()
         .await
         .expect("runtime");
     for chunk in facts.chunks(batch_size) {
@@ -732,7 +742,8 @@ async fn local_lsm_backend_onepiece_wiki_query_cold_warm_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let runtime = poneglyph_local::open_lsm_workspace(workspace)
+    let runtime = poneglyph_local::LocalWorkspace::from_workspace(workspace)
+        .open()
         .await
         .expect("runtime");
     for chunk in facts.chunks(batch_size) {
@@ -787,7 +798,8 @@ async fn local_lsm_backend_onepiece_reopen_query_stress() {
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
     {
-        let runtime = poneglyph_local::open_lsm_workspace(workspace.clone())
+        let runtime = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+            .open()
             .await
             .expect("runtime");
         for chunk in facts.chunks(batch_size) {
@@ -799,7 +811,8 @@ async fn local_lsm_backend_onepiece_reopen_query_stress() {
     }
 
     let open_started = Instant::now();
-    let runtime = poneglyph_local::open_lsm_workspace(workspace)
+    let runtime = poneglyph_local::LocalWorkspace::from_workspace(workspace)
+        .open()
         .await
         .expect("reopen runtime");
     let open_elapsed = open_started.elapsed();
@@ -858,7 +871,8 @@ async fn local_lsm_backend_onepiece_compact_reopen_query_stress() {
     }
 
     let open_started = Instant::now();
-    let runtime = poneglyph_local::open_lsm_workspace(workspace)
+    let runtime = poneglyph_local::LocalWorkspace::from_workspace(workspace)
+        .open()
         .await
         .expect("reopen runtime");
     let open_elapsed = open_started.elapsed();
@@ -1055,7 +1069,8 @@ async fn local_lsm_backend_onepiece_prewarm_reopen_query_stress() {
     }
 
     let open_started = Instant::now();
-    let runtime = poneglyph_local::open_prewarmed_lsm_workspace(workspace)
+    let runtime = poneglyph_local::LocalWorkspace::from_workspace(workspace)
+        .open_prewarmed()
         .await
         .expect("reopen prewarmed runtime");
     let open_elapsed = open_started.elapsed();
@@ -1090,7 +1105,8 @@ async fn local_backend_read_heavy_stress() {
 
     let tempdir = tempdir().expect("tempdir");
     let workspace = Workspace::at(tempdir.path());
-    let store = poneglyph_local::open_fact_store(&workspace)
+    let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+        .fact_store()
         .await
         .expect("fact store");
     state_batches(store.as_ref(), 20_000, 1_000)
@@ -1161,7 +1177,8 @@ proptest! {
         runtime.block_on(async move {
             let tempdir = tempdir().expect("tempdir");
             let workspace = Workspace::at(tempdir.path());
-            let store = poneglyph_local::open_fact_store(&workspace)
+            let store = poneglyph_local::LocalWorkspace::from_workspace(workspace.clone())
+                .fact_store()
                 .await
                 .expect("fact store");
             let mut model = BTreeMap::<(u8, u8, u16), Fact>::new();
