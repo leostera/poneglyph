@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="assets/poneglyph.png" alt="Poneglyph" width="32" height="32">
+  <h1>
+    <img src="assets/poneglyph.svg#svgView(viewBox(240,240,560,560))" alt="Poneglyph" width="64" height="64">
+    Poneglyph
+  </h1>
 </p>
-
-# Poneglyph
 
 Poneglyph is an embeddable semantic knowledge graph database for building agent memory,
 knowledge-workflow, and domain graph applications.
