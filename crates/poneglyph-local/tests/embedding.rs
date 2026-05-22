@@ -1,14 +1,13 @@
-use poneglyph::{Value, Workspace, fact, uri};
+use poneglyph::{Value, fact, uri};
+use poneglyph_local::LocalWorkspace;
 use tempfile::tempdir;
 
 #[tokio::test]
 async fn disk_backed_runtime_states_and_queries_facts_through_library_api() {
     let tempdir = tempdir().expect("tempdir");
-    let workspace = Workspace::at(tempdir.path());
+    let workspace = LocalWorkspace::at(tempdir.path());
 
-    let runtime = poneglyph_local::open_workspace(workspace.clone())
-        .await
-        .expect("runtime");
+    let runtime = workspace.open().await.expect("runtime");
 
     runtime
         .state_facts(vec![fact!(
@@ -25,5 +24,11 @@ async fn disk_backed_runtime_states_and_queries_facts_through_library_api() {
         .expect("query");
 
     assert_eq!(rows.len(), 1);
-    assert!(workspace.store_dir().join("facts.lsm/facts.wal").exists());
+    assert!(
+        workspace
+            .workspace()
+            .store_dir()
+            .join("facts.lsm/facts.wal")
+            .exists()
+    );
 }

@@ -56,8 +56,7 @@ The default local fact backend is a Poneglyph-specific LSM store:
 - decoded active-fact cache for repeated semantic queries;
 - configurable compaction, cache, and SST read policies.
 
-SQLite remains available as a reference implementation for correctness and comparison, but the
-standard local runtime opens the LSM fact store by default.
+The standard local runtime opens this LSM fact store by default.
 
 ## Embedding quickstart
 
@@ -68,12 +67,12 @@ Downstream daemons usually depend on:
 - optionally `poneglyph-api` for the local gRPC service boundary.
 
 ```rust,no_run
-use poneglyph::{Value, Workspace, fact, uri};
-use poneglyph_local::open_workspace;
+use poneglyph::{Value, fact, uri};
+use poneglyph_local::LocalWorkspace;
 
 #[tokio::main]
 async fn main() -> poneglyph::PoneResult<()> {
-    let runtime = open_workspace(Workspace::at("./agent-memory.poneglyph")).await?;
+    let runtime = LocalWorkspace::at("./agent-memory.poneglyph").open().await?;
 
     runtime
         .state_facts(vec![fact!(

@@ -13,22 +13,21 @@ A daemon such as `agent-memory` should generally depend on these crates:
 - `poneglyph-api` only if the daemon wants to expose the local tonic/prost gRPC
   boundary or reuse the reference daemon service adapter.
 
-Prefer `poneglyph_local::open_workspace` for disk-backed runtime assembly that
-loads the workspace `config.toml`. Use `poneglyph_local::open_runtime` when the
-embedding daemon wants to provide configuration directly. Import
+Prefer `poneglyph_local::LocalWorkspace` for disk-backed runtime assembly that
+loads the workspace `config.toml`. Use `LocalWorkspace::open_with_config` when
+the embedding daemon wants to provide configuration directly. Import
 `LsmFactStore`, `SqliteFactStore`, and `SqliteEntityStore` from `poneglyph-local`
 if a daemon needs adapter-level access.
 
 ## Minimal disk-backed runtime
 
 ```rust,no_run
-use poneglyph::{Value, Workspace, fact, uri};
-use poneglyph_local::open_workspace;
+use poneglyph::{Value, fact, uri};
+use poneglyph_local::LocalWorkspace;
 
 #[tokio::main]
 async fn main() -> poneglyph::PoneResult<()> {
-    let workspace = Workspace::at("./agent-memory.poneglyph");
-    let runtime = open_workspace(workspace).await?;
+    let runtime = LocalWorkspace::at("./agent-memory.poneglyph").open().await?;
 
     runtime
         .state_facts(vec![fact!(
@@ -57,7 +56,7 @@ An embedding daemon typically owns its domain protocol and lifecycle while using
 Poneglyph for storage and semantic queries:
 
 1. Choose a domain workspace path, for example `~/.agent-memory/poneglyph`.
-2. Open the runtime through `poneglyph_local::open_workspace`.
+2. Open the runtime through `poneglyph_local::LocalWorkspace::open`.
 3. Start background runtime workers with `Arc<Poneglyph>::run()` if the daemon
    needs live entity/search projection updates.
 4. Translate domain requests into append-only facts and queries.
