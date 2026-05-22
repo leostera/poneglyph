@@ -15,8 +15,9 @@ or deleted rather than expanded in this repository.
 
 - `crates/poneglyph` — core append-only fact model, schema/entity services,
   projections, query engine, runtime contracts, and workspace layout.
-- `crates/poneglyph-local` — local durable backend: SQLite fact/entity stores, Tantivy search, and
-  disk-backed runtime opener.
+- `crates/poneglyph-local` — local durable backend: SQLite fact/entity stores, Tantivy search,
+  disk-backed runtime opener, and an experimental custom LSM fact store optimized for active graph
+  prefix scans.
 - `crates/poneglyph-api` — optional local gRPC API/protobuf definitions and
   daemon service adapter. Typed protobuf RPCs are the primary semantic API;
   legacy JSON RPCs remain only as compatibility shims.
@@ -60,6 +61,38 @@ async fn main() -> poneglyph::PoneResult<()> {
 A compiled version of this flow lives at
 `crates/poneglyph-local/examples/agent_memory_daemon.rs`, with direct library
 coverage in `crates/poneglyph-local/tests/embedding.rs`.
+
+## Experimental LSM backend
+
+SQLite remains the default/reference local fact store. `poneglyph-local` also includes an explicit
+LSM backend for experiments with append-only fact logs plus persisted active indexes:
+
+```rust,no_run
+use poneglyph::Workspace;
+use poneglyph_local::open_lsm_workspace;
+
+# async fn example() -> poneglyph::PoneResult<()> {
+let runtime = open_lsm_workspace(Workspace::at("./agent-memory.poneglyph")).await?;
+# Ok(())
+# }
+```
+
+The current realistic stress target is the One Piece wiki semantic query workload. With 50,000 pages
+(~306k derived facts), the benchmark now asks domain-shaped questions including “characters with
+`D.` in their name” instead of scanning every page title:
+
+```sh
+PONEGLYPH_ONEPIECE_MAX_PAGES=50000 \
+PONEGLYPH_ONEPIECE_QUERIES=20 \
+PONEGLYPH_ONEPIECE_BATCH=10000 \
+cargo test -p poneglyph-local --test stress \
+  local_lsm_backend_onepiece_wiki_query_stress \
+  --locked -- --ignored --nocapture
+```
+
+Recent local result on the LSM backend: 20 semantic queries over 306,278 facts in ~887ms,
+about 44ms/query. The LSM backend is still experimental; use SQLite unless you are explicitly
+benchmarking or developing the LSM path.
 
 ## Typed values
 
