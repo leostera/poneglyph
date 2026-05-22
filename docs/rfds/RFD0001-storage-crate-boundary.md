@@ -19,10 +19,11 @@ storage/search primitives.
   stores, replayable projection traits, query/schema/entity services, and runtime
   assembly contracts.
 - `poneglyph-local` owns local durable implementations:
-  - SQLite append-only fact store.
+  - LSM append-only fact store as the default local fact backend.
+  - SQLite append-only fact store as an explicit/reference compatibility backend.
   - SQLite entity projection store.
   - Tantivy search projection/index.
-  - Local workspace runtime opening and repair helpers.
+  - `LocalWorkspace` runtime opening, adapter access, and repair methods.
 - `poneglyph-api` remains an optional gRPC/daemon boundary over a `poneglyph`
   runtime supplied by an embedder.
 - Runtime storage is injected through `poneglyph::RuntimeStorageFactory`.
@@ -41,8 +42,9 @@ storage/search primitives.
 ## Consequences
 
 - Embedders wanting the standard local backend should use
-  `poneglyph_local::open_workspace`, `poneglyph_local::open_runtime`, and
-  `poneglyph_local::repair_workspace`.
+  `poneglyph_local::LocalWorkspace::at(path).open()` or
+  `LocalWorkspace::from_workspace(workspace).open_with_config(config)`. Legacy
+  loose `open_*` helpers remain temporarily for compatibility but are deprecated.
 - Embedders wanting custom primitives can provide their own `Store`,
   `EntityStore`, `SearchProjection`, and `RuntimeStorageFactory` implementations.
 - A future `poneglyph-cloudflare` crate can map the same contracts onto D1/R2/KV

@@ -84,7 +84,8 @@ impl ActiveGraph {
                         &active_fact.field == field && &active_fact.entity == entity
                     }
                     ActiveFilter::ByFieldValue { field, value } => {
-                        &active_fact.field == field && &active_fact.value == value
+                        &active_fact.field == field
+                            && active_value_matches(&active_fact.value, value)
                     }
                     ActiveFilter::ByFieldEntityValue {
                         field,
@@ -93,7 +94,7 @@ impl ActiveGraph {
                     } => {
                         &active_fact.field == field
                             && &active_fact.entity == entity
-                            && &active_fact.value == value
+                            && active_value_matches(&active_fact.value, value)
                     }
                 };
 
@@ -103,6 +104,11 @@ impl ActiveGraph {
         active.sort();
         active
     }
+}
+
+fn active_value_matches(active: &Value, expected: &Value) -> bool {
+    active == expected
+        || matches!(active, Value::List(values) if values.iter().any(|value| value == expected))
 }
 
 #[cfg(test)]

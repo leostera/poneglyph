@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use poneglyph::{PoneResult, Value, Workspace, fact, uri};
-use poneglyph_local::open_workspace;
+use poneglyph::{PoneResult, Value, fact, uri};
+use poneglyph_local::LocalWorkspace;
 
 #[tokio::main]
 async fn main() -> PoneResult<()> {
@@ -9,7 +9,7 @@ async fn main() -> PoneResult<()> {
         .nth(1)
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("./agent-memory.poneglyph"));
-    let runtime = open_workspace(Workspace::at(workspace_path)).await?;
+    let runtime = LocalWorkspace::at(workspace_path).open().await?;
 
     runtime
         .state_facts(vec![fact!(
