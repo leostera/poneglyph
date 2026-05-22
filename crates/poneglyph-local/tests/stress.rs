@@ -172,12 +172,26 @@ fn onepiece_pages_to_facts(pages: &[WikiPage]) -> Vec<Fact> {
             uri!("wiki:page:text_bytes"),
             Value::integer(page.text.len() as i64)
         ));
-        for category in extract_wiki_links(&page.text, "Category:").take(8) {
+        let categories = extract_wiki_links(&page.text, "Category:")
+            .take(8)
+            .collect::<Vec<_>>();
+        for category in &categories {
             facts.push(fact!(
                 source.clone(),
                 entity.clone(),
                 uri!("wiki:page:category"),
-                Value::text(category)
+                Value::text(category.clone())
+            ));
+        }
+        if categories
+            .iter()
+            .any(|category| is_character_category(category))
+        {
+            facts.push(fact!(
+                source.clone(),
+                entity.clone(),
+                uri!("wiki:page:type"),
+                Value::text("character")
             ));
         }
         for link in extract_wiki_links(&page.text, "").take(16) {
@@ -282,6 +296,12 @@ fn add_onepiece_domain_facts(source: &poneglyph::Uri, facts: &mut Vec<Fact>) {
     }
 }
 
+fn is_character_category(category: &str) -> bool {
+    category.ends_with(" Characters")
+        && !category.contains("Portrait")
+        && !category.contains("Template")
+}
+
 fn extract_wiki_links<'a>(text: &'a str, prefix: &'a str) -> impl Iterator<Item = String> + 'a {
     text.match_indices("[[").filter_map(move |(start, _)| {
         let after = &text[start + 2..];
@@ -310,7 +330,7 @@ fn onepiece_datafox_queries() -> [(&'static str, &'static str); 4] {
         ),
         (
             "people_with_d_name",
-            r#"wiki:page:title(Person, Name), contains(Name, " D. ")"#,
+            r#"wiki:page:type(Person, "character"), wiki:page:title(Person, Name), contains(Name, " D. ")"#,
         ),
     ]
 }
@@ -593,7 +613,7 @@ async fn local_backend_onepiece_wiki_query_stress() {
         ),
         (
             "people_with_d_name",
-            r#"wiki:page:title(Person, Name), contains(Name, " D. ")"#,
+            r#"wiki:page:type(Person, "character"), wiki:page:title(Person, Name), contains(Name, " D. ")"#,
         ),
     ];
 
@@ -665,7 +685,7 @@ async fn local_lsm_backend_onepiece_wiki_query_stress() {
         ),
         (
             "people_with_d_name",
-            r#"wiki:page:title(Person, Name), contains(Name, " D. ")"#,
+            r#"wiki:page:type(Person, "character"), wiki:page:title(Person, Name), contains(Name, " D. ")"#,
         ),
     ];
 
