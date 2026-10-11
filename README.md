@@ -9,7 +9,7 @@
 
 Poneglyph is an experimental, embeddable semantic graph database for Cloudflare Workers. It helps an application keep durable knowledge that is more useful as connected facts than as isolated records or a growing prompt: who owns a task, which service it blocks, where a decision came from, and what has changed since.
 
-Poneglyph is a database library/runtime for product teams building their own Worker applications—not a hosted database service, agent, or end-user app. This branch contains the TypeScript prototype backed by SQLite Durable Objects. The planned scoped npm package, [`@leostera/poneglyph`](poneglyph/README.md), currently exposes the portable fact and Datalog core; the Durable Object storage runtime is not yet a supported npm API.
+Poneglyph is a database library/runtime for product teams building their own Worker applications—not a hosted database service, agent, or end-user app. This branch contains the TypeScript prototype backed by SQLite Durable Objects. The scoped npm package, [`@leostera/poneglyph`](poneglyph/README.md), includes portable fact and Datalog primitives plus a typed HTTP client for the prototype's Worker API; it does not bundle or expose the Durable Object storage runtime for direct embedding.
 
 ## What you can build with it
 
@@ -42,50 +42,16 @@ pnpm check
 pnpm dev
 ```
 
-Use the local URL printed by `pnpm dev` as `PONEGLYPH_URL`. This example records a task, its owner, and the service it blocks in one transaction:
+Use the local URL printed by `pnpm dev` as `PONEGLYPH_URL`, then run the typed client example in a second terminal:
 
 ```sh
-export PONEGLYPH_URL=http://127.0.0.1:5173 # replace with the URL printed by pnpm dev
-
-curl -sS "$PONEGLYPH_URL/v1/graphs/release-assistant/transactions" \
-  -H 'content-type: application/json' \
-  -d '{
-    "txId": "release:seed-001",
-    "facts": [
-      {
-        "source": "agent:release-assistant",
-        "entity": "app:service:auth-api",
-        "field": "app:service:blocked-by",
-        "value": { "type": "reference", "value": "app:task:rotate-key" },
-        "retraction": false
-      },
-      {
-        "source": "agent:release-assistant",
-        "entity": "app:task:rotate-key",
-        "field": "app:task:status",
-        "value": { "type": "text", "value": "open" },
-        "retraction": false
-      },
-      {
-        "source": "agent:release-assistant",
-        "entity": "app:task:rotate-key",
-        "field": "app:task:owner",
-        "value": { "type": "reference", "value": "app:person:ari" },
-        "retraction": false
-      }
-    ]
-  }'
+cd poneglyph
+PONEGLYPH_URL=http://127.0.0.1:5173 pnpm exec tsx ../examples/client-quickstart.ts
 ```
 
-Then query for open tasks that block a service and return their owner:
+The example uses `createDatabase`, defines a graph-scoped handle, writes facts with a caller-provided idempotency key, and runs a Datalog query. The Worker API also supports a point entity read at `/v1/graphs/{graphId}/entities?uri=...`. Graph IDs use lowercase letters, digits, and hyphens. Query results include the committed snapshot sequence.
 
-```sh
-curl -sS "$PONEGLYPH_URL/v1/graphs/release-assistant/query" \
-  -H 'content-type: application/json' \
-  -d '{"query":"app:service:blocked-by(Service, Task), app:task:status(Task, \"open\"), app:task:owner(Task, Owner)"}'
-```
-
-The Worker API also supports a point entity read at `/v1/graphs/{graphId}/entities?uri=...`. Graph IDs use lowercase letters, digits, and hyphens. The transaction and query routes return commit/snapshot information alongside their results; use those sequence numbers to associate a response with the change it observes.
+Every graph currently has one coordinator Durable Object. All clients using the same graph ID contend on that coordinator for writes (and use it to begin reads); sharding distributes stored facts but does not distribute the graph's commit sequencer. Cloudflare documents approximately 1,000 requests/second per DO as a soft, workload-dependent limit, not a guaranteed rate or hard ceiling. Actual Poneglyph write throughput must be measured for the workload. Using multiple graph IDs creates separate graphs and changes cross-graph query/transaction semantics; it is not transparent scale-out.
 
 ## Deploying to Cloudflare
 
@@ -104,12 +70,10 @@ The [Cloudflare operations guide](poneglyph/OPERATIONS.md) covers runtime config
 
 ## Prototype status and limits
 
-This is an experimental `0.1.0` implementation, not a released compatibility promise or a production SLA. Writes serialize per graph; a transaction can involve at most 32 shard leaves; broad queries are capped at 256 leaves. The 8 GB per-Durable-Object figure is an application-level accounted-byte policy, not a measured physical storage cap. The 1 TB exercise is synthetic accounting that writes zero payload rows. The Cloudflare run was a small smoke test, not evidence of production capacity or tail latency.
+This is an experimental `0.1.0` implementation, not a released compatibility promise or a production SLA. Writes serialize through one coordinator per graph; a transaction can involve at most 32 shard leaves; broad queries are capped at 256 leaves. The 8 GB per-Durable-Object figure is an application-level accounted-byte policy, not a measured physical storage cap. The 1 TB exercise is synthetic accounting that writes zero payload rows. The Cloudflare run was a small smoke test, not evidence of production capacity or tail latency.
 
-## Videos and technical details
+## Technical details
 
-- [Why Poneglyph?](examples/poneglyph-why.mp4) — use cases, user-facing guarantees, and trade-offs.
-- [How Poneglyph works](examples/poneglyph-how-it-works.mp4) — writes, reads, distributed queries, sharding, and recovery.
-- [Interactive explainer](examples/interactive-explainer.html) — a browser-based visual guide.
+See the [write-path experiment](docs/rfds/RFD0005-write-path-experiment.md) and [final local benchmark results](bench/write-path/results/README.md) for the corrected implementation's scoped correctness baseline and incomplete concurrent loads.
 
 For the typed fact model, storage and transaction internals, query behavior, limits, benchmarks, and PlusCal/TLA+ model checks, see the latest [RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md). It distinguishes implementation guarantees from synthetic simulations and bounded Cloudflare evidence. RFD0003 documents the earlier fixed-leaf checkpoint; historical Rust architecture records describe prior designs, not this branch's implementation.
