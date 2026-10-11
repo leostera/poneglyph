@@ -28,14 +28,14 @@ pnpm run typecheck
 pnpm test
 pnpm run prepare:corpus
 pnpm run preflight
-BENCH_FACTS=1000000 BENCH_WORKERS=4 pnpm run run:local
+BENCH_FACTS=100000 BENCH_WORKERS=4 pnpm run run:local
 ```
 
 `prepare:corpus` uses the cached `tests/fixtures/cache/onepiece-pages-current.xml`, or accepts an XML path as its first argument. It prepares ordinary facts locally; there is no database import API. Exact percent-encoded titles prevent the old extractor's lossy-slug collisions. The manifest records all pages processed, the 8-category/16-link extraction caps, and omission of full wiki text. No hand-authored domain facts are mixed into the corpus.
 
-The default comparison attempts **the same first 1,000,000 corpus facts in every scenario**, using the user-approved million-fact cap. Set `BENCH_FACTS=1530195` to attempt the entire prepared corpus: **1,530,195 facts from 296,624 pages**. Earlier 20,000-fact results are diagnostic pilots only, not the requested comparison. `preflight` is informational; it does not write data, shrink batches, skip scenarios, or prevent the runner from exercising database defects.
+The iteration comparison attempts **the same first 100,000 corpus facts in every scenario**. Only after a candidate demonstrates repeatably better throughput and correct durable writes/recovery should the comparison scale back to 1,000,000. The complete prepared corpus contains **1,530,195 facts from 296,624 pages**. `preflight` is informational; it does not write data, shrink batches, skip scenarios, or prevent the runner from exercising database defects.
 
-The current matrix is concurrent-only. The user removed both concurrency-1 cases; historical serial evidence is retained but is not part of this comparison:
+The current matrix is concurrent-only. Both concurrency-1 cases are excluded. The user requested a clean restart: all earlier generated reports, archives, journals, SQLite trial state, and logs were deleted; corpus inputs and harness code were kept.
 
 | Scenario | Facts/call | Concurrent logical calls |
 | --- | ---: | ---: |
@@ -47,7 +47,7 @@ The current matrix is concurrent-only. The user removed both concurrency-1 cases
 Optional environment variables:
 
 - `BENCH_SCENARIOS`: comma-separated scenario names; default all four concurrent scenarios.
-- `BENCH_FACTS`: the same fact-stream prefix for every scenario; default 1,000,000, maximum 2,000,000 (must exist in the corpus). Smaller values are labeled diagnostic subsets, never full comparison results.
+- `BENCH_FACTS`: the same fact-stream prefix for every scenario; default 100,000, maximum 2,000,000 (must exist in the corpus). Increasing to 1,000,000 is an explicit later scale-up, not automatic.
 - `BENCH_WORKERS`: application services; default 4, maximum 32.
 - `BENCH_ATTEMPTS`: maximum attempts per logical call; default 8, maximum 30.
 - `BENCH_TIMEOUT_MS`: per-attempt timeout; default 30,000, maximum 120,000.
@@ -58,7 +58,7 @@ Delivery streams the prepared facts with only the outstanding batches in memory.
 
 ## Saved evidence
 
-Each `results/<run-id>/` contains a source/artifact/dataset manifest, one JSON report per scenario, and a summary. Current runner reports also retain compressed outcome journals and Worker bundles. Bulky SQLite persistence and original journals stay in ignored `.data/runs/<run-id>/` on this machine. No auth tokens or corpus request bodies are saved in reports. Incomplete runs remain labeled incomplete rather than being deleted.
+Each `results/<run-id>/` contains a source/artifact/dataset manifest, one JSON report per scenario, and a summary. Current runner reports also retain compressed outcome journals and Worker bundles. Bulky SQLite persistence and original journals stay in ignored `.data/runs/<run-id>/` on this machine. No auth tokens or corpus request bodies are saved in reports. Incomplete runs must be labeled incomplete, never treated as successful loads. The earlier artifacts were explicitly deleted at the user's request; newly generated results are saved normally.
 
 Reports distinguish:
 
@@ -69,18 +69,18 @@ Reports distinguish:
 - fact-log membership, active scalar fact/value index checks, terminal coordinator/participant state, and restart persistence;
 - local measurements versus **unmeasured** Cloudflare performance.
 
-The million-fact audit walks router/leaf topology and checks the scalar assertion corpus. The earlier in-memory pilot auditor supports only an unsplit root. Retraction semantics use dedicated protocol tests rather than pretending the assertion-only corpus audit models them. Public query and retraction/failure/split semantics are also exercised by the package's existing tests; candidate overlapping-writer invariants require additional tests. The focused SQL-bind characterization test intentionally expects the baseline defect; its passing does not mean the advertised write contract passes.
+The disk-backed audit walks router/leaf topology and checks the selected scalar assertion corpus. The separate small-fixture auditor supports only an unsplit root. Retraction semantics use dedicated protocol tests rather than pretending the assertion-only corpus audit models them. Public query and retraction/failure/split semantics are also exercised by the package's existing tests; candidate overlapping-writer invariants require additional tests. The focused SQL-bind characterization test intentionally expects the baseline defect; its passing does not mean the advertised write contract passes.
 
 ## Current findings / deployment gate
 
-See [the saved baseline pilot](results/2026-10-11T13-29-10-168Z-1ed33f8e/summary.json), [full input feasibility](results/full-corpus-preflight.json), and [experiment findings](results/README.md).
+See [the result index](results/README.md) for the clean 100k iteration. Earlier measurements have been removed and are not evidence for this restarted comparison.
 
 - A batch with **101 distinct entities** reproduces `503: too many SQL variables` in capacity preflight. The storage implementation chunks an entity `IN (...)` lookup at 500, above the runtime's observed 100-bind limit. A valid 1,000-fact batch can trigger it. No partial fact/index writes were observed in the reproduction. The storage defect has **not** been patched into the baseline.
-- The pilot's high-concurrency scenarios encounter graph-coordinator busy responses; the 10,000-call case also encounters many transport failures. The pilot cannot isolate a cloud DO request-rate ceiling from local driver/runtime limits.
-- The baseline retains at most 100,000 transaction outcomes for seven days. One million facts require 100,000 ten-fact calls or 500,000 two-fact calls; the entire prepared corpus requires 153,020 or 765,098 respectively. The two-fact million-load scenario will expose that limit if enough calls commit. The benchmark still attempts every planned call and reports the failures; it never raises the limit, switches graphs, shrinks transactions, or routes failed facts through a fallback.
+- Busy responses, retry exhaustion, and transport failures are part of each result. Local generator/runtime limitations must not be mistaken for a cloud DO request-rate ceiling.
+- The baseline retains at most 100,000 transaction outcomes for seven days. At 100k facts the largest transaction count is 50,000, so this iteration does **not** exercise that limit. At 1M the two-fact case needs 500,000 transactions and exposes it. Keep that known limitation for scale-up; never raise it, switch graphs, shrink transactions, or route failed facts through a fallback to make a load pass.
 
 Therefore **no Cloudflare load was deployed**, no cloud performance is claimed, and Version B has not been implemented. Preserve Version A evidence first; any baseline bug fix must be a separately identified revision with new measurements. The architecture amendment required by RFD0005 remains a prerequisite to Version B.
 
 ## Before cloud execution
 
-Finish and save the million-fact matrix and pass the local correctness gate before cloud execution. Complete outcome reporting and correct durable admitted writes are mandatory; error-free admission is not. Rejected/failed loads remain failed loads, not successful-throughput winners. Missing acknowledged writes, partial commits, unresolved decisions, or index inconsistencies keep the gate closed. Never silently fix or adapt around defects. Then add dedicated database/application deployment configuration and generated binding types; deploy the database first, then applications pointing to it. Authenticate the public application endpoint, keep database/audit access private, confirm the personal account and hard request/storage/cost limits, and run the same manifests. Recheck current provider limits/pricing rather than treating local throughput as a cloud forecast. Retain data/resources until cleanup is explicitly approved.
+Finish and save the 100k concurrent matrix and pass the local correctness gate before cloud execution. Complete outcome reporting and correct durable admitted writes are mandatory; error-free admission is not. Rejected/failed loads remain failed loads, not successful-throughput winners. Missing acknowledged writes, partial commits, unresolved decisions, or index inconsistencies keep the gate closed. Never silently fix or adapt around defects. Then add dedicated database/application deployment configuration and generated binding types; deploy the database first, then applications pointing to it. Authenticate the public application endpoint, keep database/audit access private, confirm the personal account and hard request/storage/cost limits, and run the same manifests. Recheck current provider limits/pricing rather than treating local throughput as a cloud forecast. Retain data/resources until cleanup is explicitly approved.

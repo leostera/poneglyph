@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { parseFactBatch, type FactInput } from "@leostera/poneglyph";
 import { ROOT } from "./build.js";
 import { SCENARIOS, integerOption } from "./scenarios.js";
-const limit = integerOption(process.env.BENCH_FACTS, 1_000_000, 2_000_000);
+const limit = integerOption(process.env.BENCH_FACTS, 100_000, 2_000_000);
 
 // Bounded full-stream feasibility check, not a substitute for writes or a performance run.
 const scenarios = SCENARIOS.map(scenario => ({ ...scenario, pending: [] as FactInput[], transactions: 0,

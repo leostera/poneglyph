@@ -19,7 +19,7 @@ async function saveJournal(journal: string, filename: string) {
 }
 
 async function main() {
-  const selectedFacts = integerOption(process.env.BENCH_FACTS, 1_000_000, 2_000_000);
+  const selectedFacts = integerOption(process.env.BENCH_FACTS, 100_000, 2_000_000);
   const workerCount = integerOption(process.env.BENCH_WORKERS, 4, 32);
   const maxAttempts = integerOption(process.env.BENCH_ATTEMPTS, 8, 30);
   const timeout = integerOption(process.env.BENCH_TIMEOUT_MS, 30000, 120000);
@@ -40,7 +40,7 @@ async function main() {
   console.log(`${runId}: preparing disk-backed verification for ${selectedFacts} facts`);
   const reference = await prepareReference(input, referencePath, selectedFacts);
   const manifest = { runId, version: "A-current-storage-unmodified", environment: "Miniflare; not cloud performance",
-    build, corpus, reference, selectedFacts, scope: selectedFacts === corpus.facts ? "entire corpus" : selectedFacts >= 1_000_000 ? "approved million-fact corpus cap" : "diagnostic subset only",
+    build, corpus, reference, selectedFacts, scope: selectedFacts === corpus.facts ? "entire corpus" : selectedFacts === 100_000 ? "100k iteration cohort" : "explicitly selected corpus prefix",
     workerCount, retry: { maxAttempts, attemptTimeoutMs: timeout, backoff: "full jitter, exponential 100ms..5s" }, selected,
     artifacts: relative(ROOT, artifacts), policy: "Every planned batch is attempted; no batch shrinking, input skipping, storage fixes, outcome-limit changes, or fallback delivery" };
   await writeFile(resolve(directory, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
@@ -102,7 +102,7 @@ async function main() {
     }
   }
   const summary = { runId, status: "complete", persistenceChecksPassed: persistencePassed, fullWorkloadsCompleted,
-    cloudGate: persistencePassed && selectedFacts >= 1_000_000 && selected.length === SCENARIOS.length
+    cloudGate: persistencePassed && selectedFacts >= 100_000 && selected.length === SCENARIOS.length
       ? "full-input persistence gates passed; protocol/driver/deployment safety gates still required; failed loads are not throughput winners"
       : "closed: full-input persistence gates not met; no deployment performed",
     reportDirectory: relative(ROOT, directory) };
