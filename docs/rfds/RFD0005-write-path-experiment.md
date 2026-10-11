@@ -43,6 +43,19 @@ The read-only audit probes exact IDs and also enumerates **all sixteen ledger su
 
 C pre-load validation: explicit C composition passed typecheck, **34 tests** across the shared client/fact/Datalog suites and **12 C-controlled tests**, package build, and all **seven harness tests**. Controlled cases cover same-ledger disjoint progress while another commit is held; overlap and changed payload; abort isolation; partial prepare/apply/publication and actual eviction; caller-discarded receipt replay; terminal-maintenance failure without failed acknowledgement; interrupted split progress; leased-cut fencing; schema-marker rejection; 100-row/six-drive recovery bounds; and a 100-row terminal sweep preserving unfinished identities and facts. Metadata-only fixtures for dispatch/sweep bounds are explicitly synthetic and are not delivered-write evidence. After restoring default A, `pnpm check` passed **41 tests / 18 explicit skips** (five B1-only, twelve C-only, one historical benchmark), package build and seven harness tests. A-specific global-sequence/coordinator-schema fixtures remain an A gate, not a claim of C certification. No measured matrix ran concurrently with these tests.
 
+### Matched C comparison: trial order and first control
+
+Planned order is **B1 control 1 → C repeat 1 → B1 control 2 → C repeat 2**, each with fresh persistence. The first control completed at clean selected revision `c08e89c`, with the B1 runtime unchanged from `c6b5680`; [final report](../../bench/write-path/results/2026-10-11T21-03-13-418Z-60d4bcdd/final.json). It attempted every planned call and passed admitted-write fact/index/transaction audits before/after restart, with zero reconciled unacknowledged commits. None of its four cases delivered the full input. This is an incumbent control, not a C result or promotion.
+
+| Facts/call × concurrency | B1 control 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 95,400 | 46 | 1,139.03 | 4.62 |
+| 10 × 100 | 85,500 | 1,450 | 441.63 | 7.72 |
+| 10 × 1,000 | 12,780 | 8,722 | 68.95 | 23.65 |
+| 2 × 10,000 | 3,572 | 48,214 | 9.69 | 83.20 |
+
+Attempts were 2,591 / 40,399 / 76,313 / 394,358; busy responses were 1,637 / 31,849 / 75,003 / 88,410; transport failures were 0 / 0 / 32 / 304,162. The unchanged retry budget was exhausted for the unknown calls. Keep these delivery and local-runtime failures separate from acknowledged throughput. Source/corpus/client/bundle identities are retained in the final JSON. The historical B1 trial is not substituted for the second nearby control.
+
 ## Summary
 
 Build `bench/write-path/` as a repeatable application-level benchmark of Poneglyph's ordinary `stateFacts` API. A local driver converts the already-downloaded One Piece corpus into regular facts and sends bounded HTTP requests to one or more application Workers. Those Workers consume the packaged Poneglyph client and await writes to one deployed database containing one graph. Actual fact, index, transaction, and recovery state must be persisted; acknowledgements of queued work are not successful commits. First measure the implementation currently on disk, then the proposed hash-routed, independently sharded fact/index store trees with distributed transaction coordination. Keep the benchmark, dataset, transport, and common workload parameters fixed between versions. Every version and planned scenario must pass end-to-end correctness tests in Miniflare before deployment. Only Cloudflare runs are evidence of cloud performance.

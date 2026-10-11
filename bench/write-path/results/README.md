@@ -41,3 +41,9 @@ Completed matrices retain only `final.json`, including final audit evidence; tem
 All planned calls were attempted and all four persistence/restart audits passed. Acknowledged facts were **94,300 / 85,930 / 12,840 / 4,446**; acknowledged facts/s were **1,032.86 / 449.55 / 84.28 / 13.21**. Compared with the historical corrected A run, rates changed **−19.69% / +44.79% / +179.60% / +64.50%**. None delivered all 100k facts. One local run with a medium-batch regression is not a throughput winner, repeatable improvement, or cloud performance evidence. Version A remains the default; candidate transaction-object storage cost is not fully accounted by these reports. Raw artifacts and console logs were removed after final retention.
 
 Keep the same 100k cohort for matched iterations. Scale to 1M only after repeated improvement without integrity/recovery regressions. At 100k the two-fact case uses 50,000 transactions, below the unchanged 100,000-outcome quota; the 1M case uses 500,000 and must separately exercise that limitation. No cloud performance or public npm release is claimed.
+
+## C comparison: first nearby B1 control
+
+[Control 1 final](2026-10-11T21-03-13-418Z-60d4bcdd/final.json) identifies clean source composition `c08e89c` and the unchanged B1 runtime. It begins the planned **B1 → C → B1 → C** fresh-persistence comparison, documented in [RFD0005](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-c-comparison-trial-order-and-first-control).
+
+Acknowledged facts: **95,400 / 85,500 / 12,780 / 3,572**. Acknowledged facts/s: **1,139.03 / 441.63 / 68.95 / 9.69**. All planned calls were attempted; admitted-write and restart audits passed, with no additional unacknowledged commits. **None completed full delivery.** This control is neither a C result nor evidence of promotion. Compact final evidence is retained; the historical B1 run does not replace the planned second nearby control.
