@@ -1,6 +1,4 @@
 export const SCENARIOS = [
-  { name: "serial-small", batchSize: 100, concurrency: 1 },
-  { name: "large", batchSize: 1000, concurrency: 1 },
   { name: "parallel-medium", batchSize: 100, concurrency: 10 },
   { name: "parallel-small", batchSize: 10, concurrency: 100 },
   { name: "highly-concurrent", batchSize: 10, concurrency: 1000 },

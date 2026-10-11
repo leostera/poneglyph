@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted experiment design (2026-10-11), with partial Version A implementation and bounded Miniflare pilot evidence. The application/client/database path, six local scenarios, persisted-result audits, and report saving are implemented under `bench/write-path/`. The full local gate is not complete: the pilot reproduced a baseline SQL-bind defect and retention limits; the streamed million-fact matrix is the next measurement. Benchmark workloads do not accommodate those database defects. No Cloudflare benchmark or parallel-store candidate has been deployed/implemented. This RFD does not authorize account changes by itself; cloud execution requires the local and resource/cost gates below.
+Accepted experiment design (2026-10-11), with partial Version A implementation and bounded Miniflare pilot evidence. The application/client/database path, four concurrent load scenarios, persisted-result audits, and report saving are implemented under `bench/write-path/`. The full local gate is not complete: the pilot reproduced a baseline SQL-bind defect and retention limits; the streamed million-fact matrix is the next measurement. Benchmark workloads do not accommodate those database defects. No Cloudflare benchmark or parallel-store candidate has been deployed/implemented. This RFD does not authorize account changes by itself; cloud execution requires the local and resource/cost gates below.
 
 ## Summary
 
@@ -99,10 +99,10 @@ Corpus decoding is local workload preparation, not a database feature. Generate 
 
 Following the user's explicit cap approval, the comparison defaults to the same first **1,000,000 facts in every scenario**; alternatively all 1,530,195 prepared facts can be selected. Sub-million pilots are diagnostics, not the requested comparison. Every planned batch must be attempted at its stated size, including batches that expose database defects. Do not patch storage, raise retention limits, shrink/rebatch, skip input, or add a fallback write path to make a scenario complete.
 
+The user subsequently removed both concurrency-1 cases. All current load cases have multiple outstanding calls; single-request protocol fixtures remain correctness tests, not load scenarios. The interrupted serial run is retained as unaudited historical diagnostics and does not block concurrent execution.
+
 | Scenario | Target facts/call | Maximum concurrent logical calls | Facts in a full initial wave |
 | --- | ---: | ---: | ---: |
-| Serial small | 100 | 1 | 100 |
-| One large transaction | 1,000 | 1 | 1,000 |
 | Parallel medium | 100 | 10 | 1,000 |
 | Parallel small | 10 | 100 | 1,000 |
 | Highly concurrent small | 10 | 1,000 | 10,000 |

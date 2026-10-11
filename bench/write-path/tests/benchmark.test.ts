@@ -20,6 +20,8 @@ test("title encoding is collision-free for old lossy-slug examples", () => {
 });
 test("scenario matrix includes 10,000 calls without calling them 10,000 RPS", () => {
   assert.deepEqual(SCENARIOS.at(-1), { name: "saturation", batchSize: 2, concurrency: 10000 });
+  assert.equal(SCENARIOS.length, 4);
+  assert.ok(SCENARIOS.every(scenario => scenario.concurrency > 1), "the load matrix must contain only concurrent cases");
   assert.equal(summarize([1, 2, 3]).p99Ms, null);
   const oversized = makeBatches(Array.from({ length: 1001 }, () => facts[0]!),
     { name: "invalid", batchSize: 1001, concurrency: 1 }, "oversized");

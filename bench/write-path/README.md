@@ -35,12 +35,10 @@ BENCH_FACTS=1000000 BENCH_WORKERS=4 pnpm run run:local
 
 The default comparison attempts **the same first 1,000,000 corpus facts in every scenario**, using the user-approved million-fact cap. Set `BENCH_FACTS=1530195` to attempt the entire prepared corpus: **1,530,195 facts from 296,624 pages**. Earlier 20,000-fact results are diagnostic pilots only, not the requested comparison. `preflight` is informational; it does not write data, shrink batches, skip scenarios, or prevent the runner from exercising database defects.
 
-The initial matrix is:
+The current matrix is concurrent-only. The user removed both concurrency-1 cases; historical serial evidence is retained but is not part of this comparison:
 
 | Scenario | Facts/call | Concurrent logical calls |
 | --- | ---: | ---: |
-| `serial-small` | 100 | 1 |
-| `large` | 1,000 | 1 |
 | `parallel-medium` | 100 | 10 |
 | `parallel-small` | 10 | 100 |
 | `highly-concurrent` | 10 | 1,000 |
@@ -48,7 +46,7 @@ The initial matrix is:
 
 Optional environment variables:
 
-- `BENCH_SCENARIOS`: comma-separated scenario names; default all six.
+- `BENCH_SCENARIOS`: comma-separated scenario names; default all four concurrent scenarios.
 - `BENCH_FACTS`: the same fact-stream prefix for every scenario; default 1,000,000, maximum 2,000,000 (must exist in the corpus). Smaller values are labeled diagnostic subsets, never full comparison results.
 - `BENCH_WORKERS`: application services; default 4, maximum 32.
 - `BENCH_ATTEMPTS`: maximum attempts per logical call; default 8, maximum 30.

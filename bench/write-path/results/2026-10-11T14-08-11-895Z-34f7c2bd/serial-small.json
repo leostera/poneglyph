@@ -1,0 +1,20 @@
+{
+  "scenario": {
+    "name": "serial-small",
+    "batchSize": 100,
+    "concurrency": 1
+  },
+  "selectedFacts": 1000000,
+  "plannedCalls": 10000,
+  "startedAt": "2026-10-11T14:08:17.735Z",
+  "stage": "interrupted",
+  "reason": "User removed concurrency-1 load cases; stopped without persistence/restart audit",
+  "acknowledgedFactsFromJournal": 905700,
+  "completedCallsFromJournal": 9057,
+  "persistenceChecksPassed": null,
+  "fullWorkloadCompleted": false,
+  "journal": {
+    "file": "serial-small.outcomes.ndjson.gz",
+    "uncompressedSha256": "5f7a78f3b21b7f27f9b4fd7ea8f51ef450cefb9e6df8bef4741aff1e8f723396"
+  }
+}

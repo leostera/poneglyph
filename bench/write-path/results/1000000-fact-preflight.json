@@ -20,28 +20,6 @@
   "baselineOutcomeRetentionLimit": 100000,
   "scenarios": [
     {
-      "name": "serial-small",
-      "batchSize": 100,
-      "concurrency": 1,
-      "transactions": 10000,
-      "maxEntitiesPerBatch": 34,
-      "maxPayloadBytes": 38135,
-      "invalidBatches": 0,
-      "batchesAboveKnownSqlBindLimit": 0,
-      "exceedsRetainedOutcomeLimit": false
-    },
-    {
-      "name": "large",
-      "batchSize": 1000,
-      "concurrency": 1,
-      "transactions": 1000,
-      "maxEntitiesPerBatch": 299,
-      "maxPayloadBytes": 305024,
-      "invalidBatches": 0,
-      "batchesAboveKnownSqlBindLimit": 955,
-      "exceedsRetainedOutcomeLimit": false
-    },
-    {
       "name": "parallel-medium",
       "batchSize": 100,
       "concurrency": 10,

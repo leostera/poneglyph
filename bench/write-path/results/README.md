@@ -35,11 +35,15 @@ Compressed response journals and application/database bundles accompany this com
 - 1,485 of 1,531 large batches contain over 100 distinct entities, potentially triggering the reproduced bind defect when those entities share a leaf. This input check is not a substitute for resolving actual owner sets.
 - Ten-fact calls need 153,020 transactions; two-fact calls need 765,098. Both exceed Version A's 100,000 retained-outcome bound during its seven-day window.
 
-Do not describe this feasibility pass as physically loading the full graph. The subsequent runner now streams batches and uses disk-backed audits. Its default cohort is the user-approved **same 1,000,000 facts per scenario**; [that cohort's preflight](1000000-fact-preflight.json) predicts SQL-bind/retention failures but does not skip or adapt them. Neither database defect has been patched. A complete matrix must report every planned call and distinguish failed loads from completed ones.
+Do not describe this feasibility pass as physically loading the full graph. The subsequent runner now streams batches and uses disk-backed audits. Its default cohort is the user-approved **same 1,000,000 facts per scenario**; [the current concurrent cohort's preflight](1000000-fact-preflight.json) records the retention-limit risk but does not skip or adapt it. Historical 1,000-fact serial batches also exposed the SQL-bind defect. Neither database defect has been patched. A complete matrix must report every planned call and distinguish failed loads from completed ones.
 
 ## Interrupted preliminary pilot
 
 [2026-10-11T13-24-43-467Z-adf5a525](2026-10-11T13-24-43-467Z-adf5a525/summary.json) was interrupted at the shell's 240-second execution limit during read-only verification. A quadratic audit lookup was corrected using an existing tuple index. The database's write implementation was not changed. Keep this as an incomplete run, not an additional successful trial.
+
+## Interrupted million-fact serial diagnostic
+
+[2026-10-11T14-08-11-895Z-34f7c2bd](2026-10-11T14-08-11-895Z-34f7c2bd/summary.json) was stopped when the user removed both concurrency-1 load cases. Its complete response journal records **9,057 acknowledged calls / 905,700 facts**, with no rejected or unknown completed calls. A request in flight at termination may have committed without a journaled acknowledgement. No persistence or restart audit was performed; this is **not** a passed correctness result or a completed million-fact comparison. The input, SQLite state, bundles, and compressed journal are retained. Subsequent comparisons use only 100×10, 10×100, 10×1,000, and 2×10,000.
 
 ## Gates / next measurements
 
