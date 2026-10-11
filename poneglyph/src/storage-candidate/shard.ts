@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import type { CandidateStorageEnv as Env } from "./environment.js";
+import { TREE_DEPTH } from "./forest.js";
 import { parseFactValue, type FactValue } from "../domain/fact-value.js";
 import { compareUnicodeScalars } from "../domain/string-order.js";
 import { parseFactId, parseTransactionId, parseUri } from "../domain/identifiers.js";
@@ -656,6 +657,8 @@ export class GraphShardDO extends DurableObject<Env> {
     const prefix = parseVirtualPrefix(input.value["prefix"]);
     const epoch = readNonNegativeInteger(input.value["directoryEpoch"]);
     if (!graphId.ok || !prefix.ok || !epoch.ok) return jsonResponse({ error: "invalid directory route identity" }, 400);
+    if (prefix.value.length < TREE_DEPTH) return jsonResponse({ kind: "router", prefix: prefix.value,
+      generation: 0, splitEpoch: 0, children: [`${prefix.value}0`, `${prefix.value}1`], retired: false });
     const identity = this.ctx.storage.transactionSync(() => this.assertIdentity(graphId.value, prefix.value));
     if (identity.role === "leaf") return jsonResponse({ kind: "leaf", prefix: identity.prefix, generation: identity.generation });
     if (identity.split_epoch === null || identity.child_zero_prefix === null || identity.child_one_prefix === null) {

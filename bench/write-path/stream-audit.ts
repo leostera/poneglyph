@@ -61,6 +61,15 @@ export async function verifyStream(runtime: LocalRuntime, ledger: AuditLedger) {
   if (totals.activeTuples !== active) throw new Error(`active tuple mismatch ${active} != ${totals.activeTuples}`);
   const coordinator = record(await runtime.audit("coordinator"));
   for (const phase of rows(coordinator.phases)) if (!["complete", "aborted"].includes(String(phase.phase))) throw new Error("unresolved coordinator transaction");
+  if (coordinator.visibilityScope === "subtree-vector") {
+    // Owner registries cover admitted writes. Also inspect every caller-unknown
+    // or rejected ID so an unclaimed transaction intent cannot evade the audit.
+    const ids = ledger.db.prepare("SELECT ordinal FROM outcomes WHERE kind != 'committed'").all();
+    for (let offset = 0; offset < ids.length; offset += 16) await Promise.all(ids.slice(offset, offset + 16).map(async id => {
+      const states = rows(await runtime.audit(`transaction?txId=${encodeURIComponent(`${ledger.prefix}:${id.ordinal}`)}`));
+      for (const state of states) if (!["complete", "aborted"].includes(String(state.phase))) throw new Error("unresolved unacknowledged transaction coordinator");
+    }));
+  }
   const visible = rows(coordinator.state)[0]?.visible_seq;
   if (typeof visible !== "number" || visible < maxCommitSeq) throw new Error("persisted facts beyond the coordinator visibility watermark");
   return { valid: true, ...totals, leaves, directoryNodes: seen.size, databaseBytes, coordinator };

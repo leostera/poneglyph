@@ -1,5 +1,7 @@
 import type { FactLookup, FactSource, FactTuple } from "../datalog/fact-source.js";
 import type { CandidateStorageEnv as Env } from "./environment.js";
+import { treeForKey, type TreeSnapshot } from "./forest.js";
+import { virtualKeyForEntity } from "./keys.js";
 import { parseUri } from "../domain/identifiers.js";
 import type { GraphId } from "../domain/graph-id.js";
 import { isRecord } from "../domain/result.js";
@@ -8,6 +10,8 @@ import {
   MAX_QUERY_SCAN_BYTES,
   MAX_QUERY_SHARD_REQUESTS,
   MAX_QUERY_TUPLES,
+  MAX_QUERY_SHARD_FANOUT,
+  MAX_QUERY_DIRECTORY_NODES,
   MAX_TRANSACTION_BYTES,
 } from "./constants.js";
 import { shardObjectName } from "./keys.js";
@@ -29,6 +33,7 @@ export class DistributedFactSource implements FactSource {
     private readonly directoryEpoch: number,
     private readonly leaseExpiresAtMs: number,
     readonly metrics: QueryMetrics = { scanCalls: 0, shardRequests: 0, tuplesRead: 0, bytesRead: 0, directoryRequests: 0 },
+    private readonly cut: readonly TreeSnapshot[] = [],
   ) {}
 
   private allLeaves: readonly LeafAddress[] | undefined;
@@ -45,14 +50,16 @@ export class DistributedFactSource implements FactSource {
 
     const opened = await Promise.allSettled(shardAddresses.map(async (address) => {
       const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(this.graphId, address.prefix));
+      const snapshot = this.cut.find(s => address.prefix.startsWith(s.prefix));
+      if (!snapshot) throw new Error("leaf has no leased subtree snapshot");
       const body: Record<string, unknown> = {
         graphId: this.graphId,
         shardPrefix: address.prefix,
         shardGeneration: address.generation,
-        directoryEpoch: this.directoryEpoch,
+        directoryEpoch: snapshot.directoryEpoch,
         field: lookup.field,
-        snapshotSeq: this.snapshotSeq,
-        leaseExpiresAtMs: this.leaseExpiresAtMs,
+        snapshotSeq: snapshot.snapshotSeq,
+        leaseExpiresAtMs: snapshot.expiresAtMs,
       };
       if (lookup.entity !== undefined) body["entity"] = lookup.entity;
       if (lookup.value !== undefined) body["value"] = lookup.value;
@@ -122,9 +129,12 @@ export class DistributedFactSource implements FactSource {
   private async targetShards(lookup: FactLookup): Promise<readonly LeafAddress[] | undefined> {
     if (lookup.entity === undefined) {
       if (this.allLeaves === undefined) {
-        const listing = await listShardLeaves(this.env, this.graphId, this.directoryEpoch);
-        this.metrics.directoryRequests += listing.directoryHops;
-        this.allLeaves = listing.leaves;
+        const listings = await Promise.all(this.cut.map(s => listShardLeaves(this.env, this.graphId, s.directoryEpoch, s.prefix)));
+        const hops = listings.reduce((n, x) => n + x.directoryHops, 0);
+        const leaves = listings.flatMap(x => x.leaves);
+        if (hops > MAX_QUERY_DIRECTORY_NODES || leaves.length > MAX_QUERY_SHARD_FANOUT) throw new QueryScanBudgetExceeded("forest query traversal budget exceeded");
+        this.metrics.directoryRequests += hops;
+        this.allLeaves = leaves;
       }
       return this.allLeaves;
     }
@@ -133,7 +143,10 @@ export class DistributedFactSource implements FactSource {
     if (!entity.ok) return undefined;
     const cached = this.entityRoutes.get(entity.value);
     if (cached !== undefined) return [cached];
-    const route = await resolveEntityLeaf(this.env, this.graphId, entity.value, this.directoryEpoch);
+    const tree = treeForKey(await virtualKeyForEntity(this.graphId, entity.value));
+    const snapshot = this.cut.find(s => s.prefix === tree);
+    if (!snapshot) throw new Error("entity has no subtree snapshot");
+    const route = await resolveEntityLeaf(this.env, this.graphId, entity.value, snapshot.directoryEpoch);
     this.metrics.directoryRequests += route.directoryHops;
     this.entityRoutes.set(entity.value, route.address);
     return [route.address];

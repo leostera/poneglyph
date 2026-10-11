@@ -40,7 +40,7 @@ async function main() {
   const referencePath = resolve(artifacts, "reference.sqlite");
   console.log(`${runId}: preparing disk-backed verification for ${selectedFacts} facts`);
   const reference = await prepareReference(input, referencePath, selectedFacts);
-  const manifest = { runId, version: "A-central-coordinator-correctness", environment: "Miniflare; not cloud performance",
+  const manifest = { runId, version: build.databaseImplementation, environment: "Miniflare; not cloud performance",
     build, corpus, reference, selectedFacts, scope: selectedFacts === corpus.facts ? "entire corpus" : selectedFacts === 100_000 ? "100k iteration cohort" : "explicitly selected corpus prefix",
     workerCount, retry: { maxAttempts, attemptTimeoutMs: timeout, backoff: "full jitter, exponential 100ms..5s" }, selected,
     artifacts: relative(ROOT, artifacts), policy: "Every planned batch is attempted; no batch shrinking, input skipping, storage fixes, outcome-limit changes, or fallback delivery" };

@@ -26,16 +26,31 @@ export async function verify(runtime: LocalRuntime, batches: Batch[], outcomes: 
     expected.set(batch.txId, multiset);
   }
   const seenTransactions = new Map<string, number>();
-  let after = 0, facts = 0, active = 0, databaseBytes = 0;
-  while (true) {
-    const page = record(await runtime.audit(`shard?after=${after}`));
+  let facts = 0, active = 0, databaseBytes = 0;
+  const pending = [""], visited = new Set<string>();
+  while (pending.length) {
+    const prefix = pending.pop()!;
+    if (visited.has(prefix) || visited.size >= 4096) throw new Error("cyclic or excessive audit topology");
+    visited.add(prefix);
+    let after = 0;
+    while (true) {
+    const page = record(await runtime.audit(`shard?prefix=${prefix}&after=${after}`));
     const identity = rows(page.identity)[0];
-    if (identity?.role !== "leaf") throw new Error("baseline audit currently requires an unsplit root; refusing incomplete audit");
+    if (identity?.role === "router") {
+      for (const key of ["child_zero_prefix", "child_one_prefix"]) {
+        const child = identity[key];
+        if (typeof child !== "string" || child.length <= prefix.length || !child.startsWith(prefix) || !/^[01]{1,256}$/.test(child)) throw new Error("invalid router child");
+        pending.push(child);
+      }
+      break;
+    }
+    if (identity?.role !== "leaf") throw new Error("invalid audit leaf identity");
     if (after === 0) {
       if (count(page.missingValues) !== 0 || count(page.orphanValues) !== 0 || count(page.mismatchedValues) !== 0) throw new Error("fact/value index inconsistency");
-      active = count(page.active);
-      if (count(page.values) !== active) throw new Error("scalar corpus value index count mismatch");
-      if (typeof page.databaseBytes === "number") databaseBytes = page.databaseBytes;
+      const current = count(page.active);
+      active += current;
+      if (count(page.values) !== current) throw new Error("scalar corpus value index count mismatch");
+      if (typeof page.databaseBytes === "number") databaseBytes += page.databaseBytes;
       for (const status of rows(page.statuses)) if (status.status === "prepared" && status.count !== 0) throw new Error("unresolved participant transaction");
     }
     const entries = rows(page.facts);
@@ -50,6 +65,7 @@ export async function verify(runtime: LocalRuntime, batches: Batch[], outcomes: 
       remaining.set(key, n - 1); facts++; after = row.ordinal;
       seenTransactions.set(row.tx_id, (seenTransactions.get(row.tx_id) ?? 0) + 1);
     }
+    }
   }
   for (const [txId] of seenTransactions) {
     if ([...expected.get(txId)!.values()].some(n => n !== 0)) throw new Error(`partial transaction ${txId}`);
@@ -59,6 +75,12 @@ export async function verify(runtime: LocalRuntime, batches: Batch[], outcomes: 
     if (outcome.kind === "rejected" && seenTransactions.has(outcome.txId)) throw new Error(`rejected write persisted: ${outcome.txId}`);
   }
   const coordinator = record(await runtime.audit("coordinator"));
+  if (coordinator.visibilityScope === "subtree-vector") {
+    for (const outcome of outcomes.filter(o => o.kind !== "committed")) {
+      const states = rows(await runtime.audit(`transaction?txId=${encodeURIComponent(outcome.txId)}`));
+      for (const state of states) if (!["complete", "aborted"].includes(String(state.phase))) throw new Error("unresolved unacknowledged transaction coordinator");
+    }
+  }
   for (const phase of rows(coordinator.phases)) if (!["complete", "aborted"].includes(String(phase.phase))) throw new Error("unresolved coordinator transaction");
   // Scalar corpus facts have one current value-index entry each. Full row membership is
   // checked in the log; current unique tuples are checked against the active projection.

@@ -1,4 +1,10 @@
 const COORDINATOR_SCHEMA = [
+  `CREATE TABLE tree_context (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), prefix TEXT NOT NULL)`,
+  `CREATE TABLE tree_reservations (tx_id TEXT PRIMARY KEY, payload_hash TEXT NOT NULL,
+    phase TEXT NOT NULL, commit_seq INTEGER NOT NULL DEFAULT 0, created_at_ms INTEGER NOT NULL)`,
+  `CREATE TABLE candidate_transactions (tx_id TEXT PRIMARY KEY, graph_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
+    batch_json TEXT NOT NULL, trees_json TEXT NOT NULL, plan_json TEXT, phase TEXT NOT NULL,
+    commit_seq INTEGER NOT NULL, statement_time_ms INTEGER NOT NULL, created_at_ms INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS graph_identity (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
     graph_id TEXT NOT NULL,
@@ -165,7 +171,7 @@ const SHARD_SCHEMA = [
   `INSERT OR IGNORE INTO shard_accounting (singleton, migration_reserved_bytes) VALUES (1, 0)`,
 ];
 
-const PONEGLYPH_SCHEMA_VERSION = 1;
+const PONEGLYPH_SCHEMA_VERSION = 2;
 
 // Distinct markers reject accidental reuse of Version A's persisted databases,
 // even while this fork still has the same initial table layout.

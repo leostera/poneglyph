@@ -25,6 +25,8 @@ export async function buildWorkers() {
     sources.set(file, createHash("sha256").update(await readFile(resolve(ROOT, file))).digest("hex"));
   }
   const manifest = {
+    databaseImplementation: [...sources.keys()].some(path => path.replaceAll("\\", "/").endsWith("/storage-candidate/coordinator.ts"))
+      ? "B1-independent-subtrees" : "A-central-coordinator-correctness",
     gitBase: execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim(),
     gitStatus: execFileSync("git", ["status", "--porcelain"], { cwd: ROOT, encoding: "utf8" }).trim().split("\n"),
     sourceDigests: Object.fromEntries([...sources].sort()),
