@@ -1,6 +1,9 @@
 .ralph
 autoresearch.jsonl
 autoresearch.ideas.md
+# Cloudflare CLI build output
+.cloudflare/
+
 # output
 out
 dist

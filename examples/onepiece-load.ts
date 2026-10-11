@@ -1,13 +1,24 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
 import { createReadStream } from "node:fs";
 import { mkdtemp, rm, stat } from "node:fs/promises";
-import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
-import { SaxesParser } from "saxes";
+
+type WikiXmlParser = {
+  on(event: "error", listener: (error: Error) => void): WikiXmlParser;
+  on(event: "opentag" | "closetag", listener: (tag: Readonly<{ name: string }>) => void): WikiXmlParser;
+  on(event: "text" | "cdata", listener: (text: string) => void): WikiXmlParser;
+  write(chunk: string): WikiXmlParser;
+  close(): WikiXmlParser;
+};
+type SaxesParserConstructor = new (options: { xmlns: boolean }) => WikiXmlParser;
+const { SaxesParser } = createRequire(new URL("../poneglyph/package.json", import.meta.url))("saxes") as {
+  SaxesParser: SaxesParserConstructor;
+};
 
 type TaggedValue =
   | Readonly<{ type: "text"; value: string }>
@@ -29,8 +40,8 @@ type WikiPage = Readonly<{ title: string; namespace: string; text: string }>;
 type QueryDefinition = Readonly<{ name: string; source: string; expectedRows?: number; minimumRows?: number }>;
 type WorkerResponse = Record<string, unknown>;
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const CLOUDFLARE_DIR = resolve(ROOT, "cloudflare");
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const PONEGLYPH_DIR = resolve(ROOT, "poneglyph");
 const DEFAULT_XML_PATH = resolve(ROOT, "tests/fixtures/cache/onepiece-pages-current.xml");
 const DEFAULT_ARCHIVE_PATH = resolve(ROOT, "tests/fixtures/cache/onepiece_pages_current.xml.7z");
 const DUMP_PATH = process.env["PONEGLYPH_ONEPIECE_XML"] ?? DEFAULT_XML_PATH;
@@ -41,6 +52,7 @@ const QUERY_REPETITIONS = readPositiveInteger(process.env["PONEGLYPH_ONEPIECE_QU
 const FACTS_PER_BATCH = 500;
 const BATCH_JSON_BUDGET = 800_000;
 const encoder = new TextEncoder();
+type LocalWorker = Readonly<{ process: ChildProcess; readyUrl: Promise<string> }>;
 
 const CREWS = [
   ["Straw Hat Pirates", "Monkey D. Luffy", "Roronoa Zoro"],
@@ -108,13 +120,11 @@ async function main(): Promise<void> {
   const archiveFile = await stat(ARCHIVE_PATH).catch(() => undefined);
   const archiveHash = archiveFile === undefined ? undefined : await sha256File(ARCHIVE_PATH);
   const graphId = `onepiece-local-${randomUUID().slice(0, 8)}`;
-  const port = await choosePort();
-  const baseUrl = `http://127.0.0.1:${port}`;
   const persistenceDir = await mkdtemp(resolve(tmpdir(), "poneglyph-onepiece-local-"));
-  const worker = startLocalWorker(port, persistenceDir);
+  const worker = startLocalWorker(persistenceDir);
 
   try {
-    await waitForWorker(baseUrl, graphId, worker);
+    const baseUrl = await waitForWorker(graphId, worker);
     let batchNumber = 0;
     let factsQueued = 0;
     const loadStarted = performance.now();
@@ -149,7 +159,7 @@ async function main(): Promise<void> {
     };
     console.log(JSON.stringify(report, null, 2));
   } finally {
-    await stopLocalWorker(worker);
+    await stopLocalWorker(worker.process);
     await rm(persistenceDir, { recursive: true, force: true });
   }
 }
@@ -475,44 +485,71 @@ async function executeQuery(baseUrl: string, graphId: string, query: string): Pr
   return { rows, metrics: body["metrics"], snapshotSeq };
 }
 
-async function waitForWorker(baseUrl: string, graphId: string, worker: ChildProcess): Promise<void> {
+async function waitForWorker(graphId: string, worker: LocalWorker): Promise<string> {
+  let timeout: NodeJS.Timeout | undefined;
+  const expired = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error("local cf dev did not announce its address within 60 seconds")), 60_000);
+    timeout.unref();
+  });
+  let baseUrl: string;
+  try {
+    baseUrl = await Promise.race([worker.readyUrl, expired]);
+  } finally {
+    if (timeout !== undefined) clearTimeout(timeout);
+  }
+
   const deadline = Date.now() + 60_000;
   let lastError = "worker did not accept requests";
   while (Date.now() < deadline) {
-    if (worker.exitCode !== null) throw new Error(`local Wrangler exited before startup (code ${worker.exitCode})`);
+    if (worker.process.exitCode !== null) {
+      throw new Error(`local cf dev exited before startup (code ${worker.process.exitCode})`);
+    }
     try {
       const response = await fetch(
         `${baseUrl}/v1/graphs/${graphId}/entities?uri=${encodeURIComponent("wiki:onepiece:page:smoke")}`,
       );
-      if (response.ok) return;
+      if (response.ok) return baseUrl;
       lastError = `HTTP ${response.status}: ${(await response.text()).slice(0, 200)}`;
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }
     await sleep(250);
   }
-  throw new Error(`local Wrangler did not become ready: ${lastError}`);
+  throw new Error(`local cf dev did not become ready: ${lastError}`);
 }
 
-function startLocalWorker(port: number, persistenceDir: string): ChildProcess {
-  const wrangler = resolve(CLOUDFLARE_DIR, "node_modules/wrangler/bin/wrangler.js");
-  const child = spawn(process.execPath, [
-    wrangler,
-    "dev",
-    "--local",
-    "--ip", "127.0.0.1",
-    "--port", String(port),
-    "--persist-to", persistenceDir,
-    "--log-level", "error",
-    "--show-interactive-dev-session=false",
-  ], {
-    cwd: CLOUDFLARE_DIR,
+function startLocalWorker(persistenceDir: string): LocalWorker {
+  const cf = resolve(PONEGLYPH_DIR, "node_modules/cf/bin/cf");
+  let resolveReady!: (url: string) => void;
+  let rejectReady!: (error: Error) => void;
+  const readyUrl = new Promise<string>((resolveReadyUrl, rejectReadyUrl) => {
+    resolveReady = resolveReadyUrl;
+    rejectReady = rejectReadyUrl;
+  });
+  let announcedReady = false;
+  let outputTail = "";
+  const child = spawn(process.execPath, [cf, "dev", "--persist-to", persistenceDir], {
+    cwd: PONEGLYPH_DIR,
     env: { ...process.env, WRANGLER_SEND_METRICS: "false", CI: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
-  child.stdout?.on("data", (chunk: Buffer) => process.stderr.write(chunk));
-  child.stderr?.on("data", (chunk: Buffer) => process.stderr.write(chunk));
-  return child;
+  const observeOutput = (chunk: Buffer): void => {
+    const text = chunk.toString("utf8").replace(/\u001b\[[0-9;]*m/g, "");
+    outputTail = `${outputTail}${text}`.slice(-4_096);
+    const ready = /(?:Ready on|Local\s*:)\s*(https?:\/\/[^\s]+)/.exec(outputTail)?.[1];
+    if (ready !== undefined && !announcedReady) {
+      announcedReady = true;
+      resolveReady(new URL(ready).origin);
+    }
+    process.stderr.write(chunk);
+  };
+  child.stdout?.on("data", observeOutput);
+  child.stderr?.on("data", observeOutput);
+  child.once("error", rejectReady);
+  child.once("exit", (code, signal) => {
+    if (!announcedReady) rejectReady(new Error(`cf dev exited before startup (code ${code ?? signal})`));
+  });
+  return Object.freeze({ process: child, readyUrl });
 }
 
 async function stopLocalWorker(worker: ChildProcess): Promise<void> {
@@ -521,19 +558,6 @@ async function stopLocalWorker(worker: ChildProcess): Promise<void> {
   worker.kill("SIGTERM");
   await Promise.race([exited, sleep(5_000)]);
   if (worker.exitCode === null && worker.signalCode === null) worker.kill("SIGKILL");
-}
-
-async function choosePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>((resolveListen, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", resolveListen);
-  });
-  const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("could not reserve a local port");
-  const port = (address as AddressInfo).port;
-  await new Promise<void>((resolveClose, reject) => server.close((error) => error ? reject(error) : resolveClose()));
-  return port;
 }
 
 async function sha256File(path: string): Promise<string> {

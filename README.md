@@ -143,3 +143,7 @@ cargo test -p poneglyph-local --test stress \
 
 For small warm-query runs over 5,000 pages, the same LSM path is currently in the single-digit
 milliseconds per query range on the development machine.
+
+## Cloudflare-native checkpoint
+
+The experimental strict TypeScript Workers/Durable Objects package lives in [`poneglyph/`](poneglyph/), with its configuration, local checks, distributed query contract, and cleanup procedure documented in [`poneglyph/README.md`](poneglyph/README.md). The repeatable Cloudflare One Piece load and deployed smoke runners live under [`examples/`](examples/). This prototype does not replace or modify the Rust/local backend; its architecture remains a Draft in [RFD0003](docs/rfds/RFD0003-cloudflare-native-graph-database.md).

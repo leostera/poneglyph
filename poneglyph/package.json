@@ -1,0 +1,34 @@
+{
+  "name": "@leostera/poneglyph",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "cf dev",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "pnpm workers:types && pnpm typecheck && pnpm test",
+    "build": "pnpm workers:types && pnpm typecheck && cf build",
+    "deploy": "pnpm workers:types && pnpm typecheck && cf deploy",
+    "workers:types": "cf workers types",
+    "test:onepiece": "node --experimental-strip-types ../examples/onepiece-load.ts",
+    "test:deployed": "node --experimental-strip-types ../examples/deployed-smoke.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+    "@cloudflare/vitest-plugin": "1.4.0",
+    "@types/node": "25.6.0",
+    "cf": "1.0.0-beta.14",
+    "saxes": "6.0.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.4",
+    "vitest": "4.1.7"
+  }
+}
