@@ -4,7 +4,7 @@ On this branch, Poneglyph's implementation is a strict-TypeScript Cloudflare Wor
 
 ## Use the package
 
-The [`@leostera/poneglyph`](../poneglyph/package.json) package exports typed fact, identifier, graph-ID, and bounded Datalog parsing/evaluation modules. The canonical local setup, Worker routes, transaction contract, and deployment guidance are in [`poneglyph/README.md`](../poneglyph/README.md).
+The [`@leostera/poneglyph`](../poneglyph/package.json) package exports typed fact, identifier, graph-ID, and bounded Datalog parsing/evaluation modules. The canonical local setup, Worker routes, transaction contract, and deployment guidance are in [`poneglyph/OPERATIONS.md`](../poneglyph/OPERATIONS.md).
 
 ```ts
 import { parseFactBatch, parseDatalogQuery } from "@leostera/poneglyph";
@@ -29,4 +29,4 @@ Parsing gives a typed value; durable writes and graph reads still go through the
 
 The package's Cloudflare Worker owns the request boundary. SQLite-backed Durable Objects own graph coordination and private shard storage. Downstream Workers should call a supported Worker/service binding or an HTTP API with authentication supplied by the embedding application rather than opening another object's SQL storage. User-visible data remains append-only facts; active indexes, entities, and notifications are projections or signals that can be reconstructed from committed facts.
 
-The repository currently has no general-purpose SDK or stable service-binding API for arbitrary downstream deployments. The shared TODO example and its authenticated HTTP/WebSocket flow are being developed as an explicit demo surface; consult the package README and the current RFDs rather than assuming undocumented routes are stable.
+The repository currently has no general-purpose SDK or stable service-binding API for arbitrary downstream deployments. The shared TODO example and its authenticated HTTP/WebSocket flow are being developed as an explicit demo surface; consult the operations guide and current RFDs rather than assuming undocumented routes are stable.

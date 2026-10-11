@@ -1,6 +1,6 @@
 # Review Readiness
 
-This branch contains an experimental TypeScript Poneglyph implementation for Cloudflare Workers and SQLite-backed Durable Objects. Expandable prefix routing, split/cutover recovery, capacity admission, the authenticated TODO demo, local benchmark harnesses, and one bounded isolated Cloudflare validation have been implemented. Detailed methodology and results are in [`poneglyph/README.md`](../poneglyph/README.md) and the architecture contract is in [RFD0004](rfds/RFD0004-expandable-cloudflare-sharding.md).
+This branch contains an experimental TypeScript Poneglyph implementation for Cloudflare Workers and SQLite-backed Durable Objects. Expandable prefix routing, split/cutover recovery, capacity admission, the authenticated TODO demo, local benchmark harnesses, and one bounded isolated Cloudflare validation have been implemented. Detailed methodology and results are in [`poneglyph/OPERATIONS.md`](../poneglyph/OPERATIONS.md) and the architecture contract is in [RFD0004](rfds/RFD0004-expandable-cloudflare-sharding.md).
 
 The earlier Rust workspace was removed from this branch only; its commits and other branches remain unchanged. RFD0003/RFD0004 are design records, not a released compatibility promise. The earlier fixed-four-leaf Cloudflare run is historical and is not evidence for expandable routing.
 

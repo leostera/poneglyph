@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft implementation contract with bounded validation evidence (2026-10-11). The TypeScript branch implements prefix routing, durable split/cutover/recovery, conservative byte admission, the authenticated TODO demo, and local/deployed benchmark harnesses. One isolated expandable-topology smoke and bounded benchmark completed; detailed results and limitations are recorded in [`poneglyph/README.md`](../../poneglyph/README.md). This amendment supersedes the fixed-four-leaf *future architecture* choice in [RFD0003](./RFD0003-cloudflare-native-graph-database.md). The four-leaf layout remains an accurate description of the earlier checkpoint, not the current source.
+Draft implementation contract with bounded validation evidence (2026-10-11). The TypeScript branch implements prefix routing, durable split/cutover/recovery, conservative byte admission, the authenticated TODO demo, and local/deployed benchmark harnesses. One isolated expandable-topology smoke and bounded benchmark completed; detailed results and limitations are recorded in [`poneglyph/OPERATIONS.md`](../../poneglyph/OPERATIONS.md). This amendment supersedes the fixed-four-leaf *future architecture* choice in [RFD0003](./RFD0003-cloudflare-native-graph-database.md). The four-leaf layout remains an accurate description of the earlier checkpoint, not the current source.
 
 ## Summary
 
@@ -46,6 +46,14 @@ The next branch phase removes the Rust workspace and makes TypeScript the only P
 5. Directory and data leaves use separate roles and bounds. A prefix split can create child data leaves and router metadata. If the children would remain over the operating target, split the heavier child again. If the prefix has no useful entropy or one entity dominates the range, fail closed with a capacity error rather than claiming that a split succeeded.
 
 The graph coordinator remains a serialized per-graph write/visibility authority in this phase. Hierarchical routing removes the fixed leaf-count and flat-directory-size limit, but does not remove the coordinator's write-throughput ceiling. That limitation is explicit and benchmarked, not hidden behind the phrase “infinite scale.”
+
+### Fact model and derived views
+
+A write batch has a caller-provided `txId` and a non-empty list of typed fact drafts. Each draft contains `source`, `entity`, and `field` URIs, a tagged value, and a `retraction` flag. The value variants are `null`, `text`, signed 64-bit `number`, `boolean`, `bytes`, `reference`, `date`, `date_time`, `list`, and `map`; collection values may nest to a bounded depth. Stored facts add a unique `factId`, statement time, and the committing `txId`.
+
+The append-only `fact_log` is the durable source of truth. A new assertion records evidence; a correction does not rewrite the earlier row. A retraction is itself a new fact and targets an active assertion with the same `(source, entity, field, value)` tuple. Retracting a tuple that is not active rejects the entire transaction. An entity's current field map and the active-fact/value indexes are versioned projections of the log, not competing sources of truth. The entity projection applies an assertion as the current value for its field and removes it on a matching retraction; the fact and index projections can be rebuilt by replay. An entity's facts remain co-located on one leaf, so a pathological hot entity cannot be split across ranges.
+
+The bounded query layer maps positive binary relations to the active-value projection and unifies values across clauses. It does not query the append-only log for ordinary current-state reads, and it does not expose historical/as-of queries. This is an implementation contract, not a user-facing recommendation to treat every application datum as a single-value entity field.
 
 ### Transaction, snapshot, and notification contract
 
@@ -125,7 +133,7 @@ Cloudflare currently documents a 10 GB SQLite database maximum per DO and no har
 
 For the bounded 2026-10-11 validation, the account subscription list showed an existing `Workers Paid` plan at $5/month before and after the run (21 subscription records both times); no new subscription was added. Billing-history and metered-usage API reads returned HTTP 403 under the available CLI authentication. Therefore no incremental usage charge can be confirmed and the result must not be reported as $0. The small test recorded request latency, query scan/fan-out/tuple/byte counters, and transaction/query outcomes, but did not capture individual DO `databaseSize`, aggregate namespace storage, CPU duration, or SQL row read/write billing metrics. This run does not calibrate the 8 GB estimator or establish physical storage usage.
 
-Before any larger or longer deployment, obtain a billing/usage view and DO storage telemetry. The user-authorized smoke was capped at 10 single-shard transactions, 10 cross-shard TODO moves, and 10 query requests per topology; its actual usage was not independently visible through the available billing API, so no zero-charge or included-quota conclusion is asserted. This small bounded run does not justify an unbounded test when detailed billing visibility is unavailable. See the exact sample and cleanup record in [`poneglyph/README.md`](../../poneglyph/README.md).
+Before any larger or longer deployment, obtain a billing/usage view and DO storage telemetry. The user-authorized smoke was capped at 10 single-shard transactions, 10 cross-shard TODO moves, and 10 query requests per topology; its actual usage was not independently visible through the available billing API, so no zero-charge or included-quota conclusion is asserted. This small bounded run does not justify an unbounded test when detailed billing visibility is unavailable. See the exact sample and cleanup record in [`poneglyph/OPERATIONS.md`](../../poneglyph/OPERATIONS.md).
 
 ## Bounded isolated Cloudflare validation (2026-10-11)
 

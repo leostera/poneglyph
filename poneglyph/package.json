@@ -1,18 +1,48 @@
 {
   "name": "@leostera/poneglyph",
   "version": "0.1.0",
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
+  "description": "Typed facts and bounded Datalog primitives for the Poneglyph graph database prototype.",
+  "keywords": [
+    "semantic-graph",
+    "graph-database",
+    "datalog",
+    "cloudflare-workers",
+    "durable-objects",
+    "typescript"
+  ],
+  "homepage": "https://github.com/leostera/poneglyph#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leostera/poneglyph.git",
+    "directory": "poneglyph"
   },
-  "types": "./src/index.ts",
+  "bugs": {
+    "url": "https://github.com/leostera/poneglyph/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "src",
+    "dist",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "cf dev",
     "typecheck": "tsc --noEmit",
+    "build:package": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
+    "prepack": "npm run build:package",
+    "prepublishOnly": "pnpm run check",
     "test": "vitest run",
     "check": "pnpm workers:types && pnpm typecheck && pnpm test",
     "build": "pnpm workers:types && pnpm typecheck && cf build",
