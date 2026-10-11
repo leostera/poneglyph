@@ -1,20 +1,24 @@
-# Write-path results — clean 100k iteration
+# Final write-path results
 
-The user requested stopping the earlier experiments, deleting all generated results, and restarting with **the same 100,000 corpus facts per concurrent scenario**. Earlier report directories, feasibility JSON, Worker archives, raw response journals, SQLite trial states, and logs were removed. Git history was not rewritten. The prepared corpus inputs and harness were retained.
+## Pre-fix Version A: 100k concurrent matrix
 
-The new matrix is:
+[Final report](2026-10-11T17-19-03-682Z-64195105/final.json) retains source/dataset/artifact digests, final metrics, response classifications, and persisted fact/index audits before/after restart. Raw journals, SQLite state, reference ledgers, bundles, progress samples, and console logs were removed at the user's request. This is **local Miniflare evidence, not Cloudflare performance**.
 
-| Facts/call | Concurrent logical calls | Planned calls | Facts per case |
-| ---: | ---: | ---: | ---: |
-| 100 | 10 | 1,000 | 100,000 |
-| 10 | 100 | 10,000 | 100,000 |
-| 10 | 1,000 | 10,000 | 100,000 |
-| 2 | 10,000 | 50,000 | 100,000 |
+Each case attempted the same 100,000 facts through four application Workers into one fresh graph/database, using the packaged client and unchanged pre-fix storage implementation.
 
-Each trial uses fresh SQLite storage and one graph, through the ordinary application Worker → packaged client → database Worker path. The database is unchanged. Failed requests are not resized, skipped, moved to another graph, or retried through a fallback API. Input feasibility checks are not persisted-write evidence.
+| Facts/call × concurrency | Acknowledged facts | Exhausted/unknown calls | Local acknowledged facts/s | Persistence + restart audits |
+| --- | ---: | ---: | ---: | --- |
+| 100 × 10 | 93,900 | 61 | 1,292.44 | Passed |
+| 10 × 100 | 67,940 | 3,206 | 303.61 | Passed |
+| 10 × 1,000 | 5,740 | 9,426 | 29.13 | Passed |
+| 2 × 10,000 | 2,398 | 48,801 | 8.39 | Passed |
 
-New runs save manifests, per-case metrics, compressed outcome journals, Worker bundles, quiescent fact/index audits, and restart audits here. Bulk input snapshots, reference ledgers, and SQLite state stay in ignored `.data/runs/`. Partial/incomplete cases must be labeled as such.
+Every planned call was attempted. **None completed the full load.** Audits found all acknowledged facts, no extra unacknowledged commits, complete transaction membership, consistent scalar fact/value indices, and no unresolved transaction phases. All caller-unknown calls were uncommitted at the quiescent audit. Successful persistence does not make an incomplete load a throughput winner. Local transport/runtime limits may contribute to high-concurrency failures.
 
-Miniflare results establish local correctness/debugging evidence, **not Cloudflare throughput**. No cloud deployment or performance result is claimed by this reset.
+## Corrected implementation / next baseline
 
-Scale to 1M only after repeated matched comparisons show a better design without missing acknowledged writes, duplicates, partial transactions, broken indices, or recovery regressions. A fast failed load is not a successful throughput winner. The 100k iteration does not test the baseline's 100,000-outcome retention limit: its largest case needs 50,000 transactions; the 1M two-fact case needs 500,000.
+The next revision fixes SQL binding-page limits, participant prepare replay ordering, retained coordinator outcome replay under pressure, explicit server retryability handling, and post-commit maintenance error handling. Global coordinator architecture and storage/transaction/retention limits are unchanged. The pre-fix final report remains a historical comparison, not evidence for the corrected revision.
+
+New completed matrices retain only `final.json`, including final audit evidence; temporary state is removed only after runtimes/ledgers close and the final report is saved. Do not call the corrected implementation a validated correctness baseline until its regression tests and new matrix audits pass. Passing admitted-write audits is distinct from successfully loading every requested fact.
+
+Keep the same 100k cohort for matched iterations. Scale to 1M only after repeated improvement without integrity/recovery regressions. At 100k the two-fact case uses 50,000 transactions, below the unchanged 100,000-outcome quota; the 1M case uses 500,000 and must separately exercise that limitation. No cloud performance or public npm release is claimed.

@@ -1,0 +1,912 @@
+{
+  "kind": "final pre-fix Version A local result",
+  "manifest": {
+    "runId": "2026-10-11T17-19-03-682Z-64195105",
+    "version": "A-current-storage-unmodified",
+    "environment": "Miniflare; not cloud performance",
+    "build": {
+      "gitBase": "742df58918698390c9a30b3341deeb2615feca2d",
+      "gitStatus": [
+        "M README.md",
+        " M docs/embedding.md",
+        " D examples/interactive-explainer.html",
+        " D examples/poneglyph-how-it-works.mp4",
+        " D examples/poneglyph-why.mp4",
+        " M poneglyph/OPERATIONS.md",
+        " M poneglyph/README.md",
+        "?? examples/client-quickstart.ts"
+      ],
+      "sourceDigests": {
+        "../../poneglyph/src/datalog/ast.ts": "586cc0a795c7114b6813eaf6d309fedc13b5d32180aebcb10b2da4bbeff7b9f0",
+        "../../poneglyph/src/datalog/evaluator.ts": "36deb0ce2faefa73272a4d06c05c752d2993b028da62ac2a647fae1bf8514907",
+        "../../poneglyph/src/datalog/parser.ts": "558f30101ecd7547efd62df4976fe1fd834651624fae58406411ebb8080ae183",
+        "../../poneglyph/src/datalog/value.ts": "7291d44c1f0856b7d448dce8fef8d1a127f7ad364f4e9782ad7beb223e996a05",
+        "../../poneglyph/src/domain/date-validation.ts": "7f141cf8063ea3519680f0a71bc424212283f1401c9415dbbf3d6af5cb1d75e1",
+        "../../poneglyph/src/domain/fact-value.ts": "8df5f3e2b8a22899325ff75d4d2ed35e53c7adb296a64fc6b28af1db2831c71a",
+        "../../poneglyph/src/domain/fact.ts": "ba92f8a48cfba0ab82bcbc611ddf7e4a8107df7a89ef0a203c7a2dae4b6cf6b4",
+        "../../poneglyph/src/domain/graph-id.ts": "fb23faf3dc333f49752a9e17009bcaf512a01632419b1b574fb9f491d25cf641",
+        "../../poneglyph/src/domain/identifiers.ts": "747dc1fa083705aea2927965c0da9990e417a89bb0a90e4c446ddd1daa49b6ac",
+        "../../poneglyph/src/domain/int64.ts": "4448f6097cdf97b1bdc72e4ecd7819516ade0661f424f9ec18865a3a45460ffd",
+        "../../poneglyph/src/domain/result.ts": "9f1e517b566238e0a4fc771172c6c7c5d7f0954e82584201193d298bd061b8f5",
+        "../../poneglyph/src/domain/string-order.ts": "a38dc679f8479e9f089e0795c3da5d48d72dceb01046567f6184d5457bcf1ea4",
+        "../../poneglyph/src/storage/capacity.ts": "9f4104bb26c43a07270d7c2a185c69379b71a6e24309224094a3fb622e58b4fa",
+        "../../poneglyph/src/storage/constants.ts": "e45b6e825b6ccae6d5c63548f6c069f73928cb92795d32b7bdc30e695419b677",
+        "../../poneglyph/src/storage/coordinator.ts": "8e98d90f5bb482fcec0a047d2a499792a488a30366341e58b69e3e7838156587",
+        "../../poneglyph/src/storage/distributed-fact-source.ts": "e48f23adc169de015918aa44671611c29987c963b224fa4b1915d67f10bae7ed",
+        "../../poneglyph/src/storage/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+        "../../poneglyph/src/storage/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+        "../../poneglyph/src/storage/migration.ts": "46e149dd4ffce655979864fd20ed4906e7a02d3344b76713a8cf3b941151e55a",
+        "../../poneglyph/src/storage/protocol.ts": "06238f68cdc0153eddd4584d2eefa6d2f6f3f5ca5632d6cc8595abc140c38c86",
+        "../../poneglyph/src/storage/routing.ts": "9d1a8bf596e25c13235d515546acd2566ded2ab263822a0faac86ad1c8ff61c1",
+        "../../poneglyph/src/storage/shard.ts": "04f6f0f22f08450ecd0c7cdaeb831ecfac8ddded405731e51cc9a10ab56d8cf4",
+        "../../poneglyph/src/storage/sql.ts": "6f7bcdb133677e145a98ac7ed5be5b262b0fc49b28ee745856a20f50a7c6725b",
+        "../../poneglyph/src/todo_demo/auth.ts": "388c7607879e7ca4c681a801e5904e989008293d2bd5dc2aa0d8874aead8429e",
+        "../../poneglyph/src/todo_demo/hub.ts": "c65b83f1f492c723f6715efb286e4307ea7ee6397debe53a199dd21ddeb680a8",
+        "../../poneglyph/src/todo_demo/page.ts": "52c594afd72cc40de04b260ce5d6230d9d9c9ca392bcab0520e5362934515a89",
+        "../../poneglyph/src/todo_demo/service.ts": "707dcfd8eb55a75afea03e9016e36a61cbe773b939eea4d086a8c85e4bef425e",
+        "../../poneglyph/src/todo_demo/worker.ts": "91bae6a11adc83b6fab7ce9b230a5d2beff4a78fe9be1ae14898e9b0f65e9616",
+        "../../poneglyph/src/worker.ts": "dd405989d7f06e200fda5df3ab745f4af31370159c337b1171c4b81ed80a8750",
+        "build.ts": "18fbca0891773807c43d6a8716eef4bc6ee29a17764429b6d171605aa66e32bc",
+        "corpus.ts": "d800c51667c3e2c63d04b1eaf286cf38fc1cb3cc114b0477e297315022451f41",
+        "driver.ts": "b89c40be8de75c0b0e0b849b8238b194dcf24ffd5cd3db5dc860fc421801140b",
+        "ledger.ts": "d3a6e6aab618f4af43349b39e96eb1060d25da280c97c755fb9c25c09a3e75ba",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/client.js": "6a38d3cb8a0751101c27117f152ced805be05feb18e02d20cc69a2fac6d54b23",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/ast.js": "20d3ed3a2f4bbdf67581c4a1a8cca094f636415a0e05657a812b6c35288e4e16",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/evaluator.js": "7ad7a5447c361af94e39b8653ad69062c30f03007c38617f8251a40bc0b3e43d",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/fact-source.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/parser.js": "bc528dae38e60b2f87137f89a35dd154f5d7a280cb99490c97f2cca911afb36f",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/value.js": "a42784eaf59359e86d6e3ca31a66dbbde9d96d6558e717296fb29a878853ec80",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/date-validation.js": "4b7d7283ed28fdc9a5bf6a5827b6796c54454503e4113b23f69108a9e64ae6f9",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact-value.js": "dbf69ccc15f594656aa28892522b9909a0000d04f926d5e995e8685aa3df8248",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact.js": "549cc66749833c217ea9d9860f9a942b91f130b0345689a0f2bb18e549b64ac2",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/graph-id.js": "b20ec3aaf6d8343b4709beab1d8b1d70f33022720eca700b1689930ec024db99",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/identifiers.js": "d33ab8baf96f99472d71b5c4da99ffc154b56ef044e437b4dac075070e053010",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/int64.js": "2e3e55ccc389336263a1dd51d6089b641da0515fbb3c1307d09df995d47af9a5",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/result.js": "d8d4830e99f43409a946d8b2e1316a1f13e5171b599865ab00643585bcda9609",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/string-order.js": "aa59fe031cfc95f85594e9b0ee8eccf3b1234378c157da25a5628ea12b03460c",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/index.js": "5e0312a2a755a9c79da33339efcc6a4132c5f919fa94ce30ea29929dc38739e4",
+        "package.json": "e0fd97b233e5db487a8647ef48069e1aac28b26b29cd5e478282714ecc961dea",
+        "pnpm-lock.yaml": "448245d86b7446f89d2d53964df4602ef1928006525697982f5b1e3ad4a894d1",
+        "run.ts": "6f247d08ff57fec8f8a12d52287c0773c9f2b3c85f34c8aa420d07bbfb2ec716",
+        "runtime.ts": "cff1d5cd5f7d27a51d848165960c3a2ece483dad2895354c83720bf18fda80d0",
+        "scenarios.ts": "34b37fa0261d22723e07414916e3d7ccf4d483760f43f5748e64f34f2b728022",
+        "stream-audit.ts": "56e044c26e2def83b734855a82cc570c05b7a1c5eac9d03620c9e4bec0001ae5",
+        "worker/application.ts": "fbc969a312a2855ee95bdcde6ec78b115107719f98f9a6374b5de94884cc5b66",
+        "worker/database.ts": "e4dd8dda46f324b5aa8105780af19294c8f5b7d16010afe9ef242c0e73ed9e69"
+      },
+      "bundleDigests": {
+        "application": "db5900f7547ed47471d4866296eb35e0adec5c5fbe9387cc28c78630b7bbe5ef",
+        "database": "6ac2b133bd2f69cb3fd3e06b14b30d57a903e8d8842185acf7182a1060dca9db"
+      },
+      "runtime": {
+        "miniflare": "5.20261006.1-alpha",
+        "compatibilityDate": "2026-10-06",
+        "node": "v26.11.0"
+      },
+      "clientPackage": "@leostera/poneglyph@0.1.0 (local packed file dependency)"
+    },
+    "corpus": {
+      "extractionVersion": 1,
+      "xmlSha256": "1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084",
+      "xmlBytes": 436781838,
+      "pages": 296624,
+      "facts": 1530195,
+      "factsSha256": "e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064",
+      "policies": {
+        "identity": "exact percent-encoded title",
+        "categoriesPerPage": 8,
+        "linksPerPage": 16,
+        "fullTextStored": false,
+        "supplementalFacts": 0,
+        "namespaceFilter": "none"
+      }
+    },
+    "reference": {
+      "facts": 100000,
+      "normalizedPrefixSha256": "2dd6061bfc95c78a90af1a2faa3ee147908981b4b6b480ed30c1726493af5309"
+    },
+    "selectedFacts": 100000,
+    "scope": "100k iteration cohort",
+    "workerCount": 4,
+    "retry": {
+      "maxAttempts": 8,
+      "attemptTimeoutMs": 30000,
+      "backoff": "full jitter, exponential 100ms..5s"
+    },
+    "selected": [
+      "parallel-medium",
+      "parallel-small",
+      "highly-concurrent",
+      "saturation"
+    ],
+    "policy": "Every planned batch is attempted; no batch shrinking, input skipping, storage fixes, outcome-limit changes, or fallback delivery"
+  },
+  "artifactRetention": "Final aggregate only. Raw SQLite state, reference ledgers, journals, bundles, progress samples and logs removed at user request. Source and dataset digests retained; Git history unchanged.",
+  "summary": {
+    "runId": "2026-10-11T17-19-03-682Z-64195105",
+    "status": "complete",
+    "persistenceChecksPassed": true,
+    "fullWorkloadsCompleted": false,
+    "cloudGate": "full-input persistence gates passed; protocol/driver/deployment safety gates still required; failed loads are not throughput winners",
+    "reportDirectory": "results/2026-10-11T17-19-03-682Z-64195105"
+  },
+  "scenarios": [
+    {
+      "scenario": {
+        "name": "parallel-medium",
+        "batchSize": 100,
+        "concurrency": 10
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 1000,
+      "startedAt": "2026-10-11T17:19:04.556Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 72653.141917,
+        "plannedCallsAttempted": 1000,
+        "acknowledgedFacts": 93900,
+        "acknowledgedTransactions": 939,
+        "factsPerSecond": 1292.4423847666865,
+        "transactionsPerSecond": 12.924423847666866,
+        "rejected": 0,
+        "unknown": 61,
+        "attempts": 1700,
+        "statuses": {
+          "200": 939,
+          "423": 761
+        },
+        "logicalLatency": {
+          "count": 1000,
+          "meanMs": 690.838739081,
+          "p50Ms": 152.54662500000268,
+          "p95Ms": 5510.088792000002,
+          "p99Ms": null,
+          "maxMs": 9589.915165999999,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 939,
+          "meanMs": 323.7290473865815,
+          "p50Ms": 147.62629099999685,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maxMs": 9142.061458000004,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 1700,
+          "meanMs": 118.5163258988235,
+          "p50Ms": 112.25658300000032,
+          "p95Ms": 208.39366699999664,
+          "p99Ms": null,
+          "maxMs": 348.4512079999986,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 2302575,
+            "system": 224706
+          },
+          "eventLoopDelayMeanMs": 20.73752065315444,
+          "eventLoopDelayMaxMs": 23.625727,
+          "memoryBytes": {
+            "rss": 245308264,
+            "heapTotal": 36323328,
+            "heapUsed": 29738712,
+            "external": 57125712,
+            "arrayBuffers": 35694198
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 939,
+          "meanMs": 72.41746538871139,
+          "p50Ms": 70,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maxMs": 181,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 10,
+          "mean": 9.508782051782816,
+          "target": 10
+        },
+        "workerDistribution": {
+          "app-0": 236,
+          "app-1": 239,
+          "app-3": 237,
+          "app-2": 227
+        }
+      },
+      "localDrainMs": 522.070000000007,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 93900,
+        "persistedTransactions": 939,
+        "activeTuples": 93900,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 1,
+        "directoryNodes": 1,
+        "databaseBytes": 335212544,
+        "coordinator": {
+          "state": [
+            {
+              "singleton": 1,
+              "visible_seq": 939,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791739239638
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 939
+            }
+          ],
+          "databaseBytes": 593920
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 93900,
+        "persistedTransactions": 939,
+        "activeTuples": 93900,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 1,
+        "directoryNodes": 1,
+        "databaseBytes": 335212544,
+        "coordinator": {
+          "state": [
+            {
+              "singleton": 1,
+              "visible_seq": 939,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791739239638
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 939
+            }
+          ],
+          "databaseBytes": 593920
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T17:20:23.888Z"
+    },
+    {
+      "scenario": {
+        "name": "parallel-small",
+        "batchSize": 10,
+        "concurrency": 100
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 10000,
+      "startedAt": "2026-10-11T17:20:23.892Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 223770.608,
+        "plannedCallsAttempted": 10000,
+        "acknowledgedFacts": 67940,
+        "acknowledgedTransactions": 6794,
+        "factsPerSecond": 303.61449435754315,
+        "transactionsPerSecond": 30.361449435754313,
+        "rejected": 0,
+        "unknown": 3206,
+        "attempts": 37422,
+        "statuses": {
+          "200": 6794,
+          "423": 30628
+        },
+        "logicalLatency": {
+          "count": 10000,
+          "meanMs": 2196.6354501637934,
+          "p50Ms": 98.78254200000083,
+          "p95Ms": 7945.333458000008,
+          "p99Ms": 9295.652875,
+          "maxMs": 10777.107709000004,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 6794,
+          "meanMs": 404.46035160214865,
+          "p50Ms": 70.70816700000432,
+          "p95Ms": 2539.6846249999944,
+          "p99Ms": null,
+          "maxMs": 10623.335458000016,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 37422,
+          "meanMs": 48.500433255117336,
+          "p50Ms": 42.305167000042275,
+          "p95Ms": 98.59558300001663,
+          "p99Ms": 154.11700000002747,
+          "maxMs": 583.1417079999956,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 18669786,
+            "system": 2611755
+          },
+          "eventLoopDelayMeanMs": 20.40626004632923,
+          "eventLoopDelayMaxMs": 26.771455,
+          "memoryBytes": {
+            "rss": 225125648,
+            "heapTotal": 96239616,
+            "heapUsed": 66732936,
+            "external": 63205445,
+            "arrayBuffers": 41769815
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 6794,
+          "meanMs": 30.85075066234913,
+          "p50Ms": 29,
+          "p95Ms": 56,
+          "p99Ms": null,
+          "maxMs": 213,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 100,
+          "mean": 98.16475818848404,
+          "target": 100
+        },
+        "workerDistribution": {
+          "app-0": 1683,
+          "app-1": 1696,
+          "app-2": 1692,
+          "app-3": 1723
+        }
+      },
+      "localDrainMs": 515.7865420000162,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 67940,
+        "persistedTransactions": 6794,
+        "activeTuples": 67940,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 1,
+        "directoryNodes": 1,
+        "databaseBytes": 249327616,
+        "coordinator": {
+          "state": [
+            {
+              "singleton": 1,
+              "visible_seq": 6794,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791739447819
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 6794
+            }
+          ],
+          "databaseBytes": 3145728
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 67940,
+        "persistedTransactions": 6794,
+        "activeTuples": 67940,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 1,
+        "directoryNodes": 1,
+        "databaseBytes": 249327616,
+        "coordinator": {
+          "state": [
+            {
+              "singleton": 1,
+              "visible_seq": 6794,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791739447819
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 6794
+            }
+          ],
+          "databaseBytes": 3145728
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T17:24:13.309Z"
+    },
+    {
+      "scenario": {
+        "name": "highly-concurrent",
+        "batchSize": 10,
+        "concurrency": 1000
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 10000,
+      "startedAt": "2026-10-11T17:24:13.333Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 197042.92845799995,
+        "plannedCallsAttempted": 10000,
+        "acknowledgedFacts": 5740,
+        "acknowledgedTransactions": 574,
+        "factsPerSecond": 29.130707937197002,
+        "transactionsPerSecond": 2.9130707937197,
+        "rejected": 0,
+        "unknown": 9426,
+        "attempts": 79185,
+        "statuses": {
+          "200": 574,
+          "423": 78611
+        },
+        "logicalLatency": {
+          "count": 10000,
+          "meanMs": 18873.138522015033,
+          "p50Ms": 19039.986291999987,
+          "p95Ms": 23239.256166999985,
+          "p99Ms": 25060.774040999997,
+          "maxMs": 27530.909166000027,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 574,
+          "meanMs": 12574.41806161326,
+          "p50Ms": 12895.094500000007,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maxMs": 23461.688500000047,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 79185,
+          "meanMs": 1686.2309869727596,
+          "p50Ms": 1688.2709579999791,
+          "p95Ms": 2395.2898750000168,
+          "p99Ms": 2939.67758399999,
+          "maxMs": 9122.741792000015,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 26708797,
+            "system": 3591311
+          },
+          "eventLoopDelayMeanMs": 20.48207291069758,
+          "eventLoopDelayMaxMs": 81.854463,
+          "memoryBytes": {
+            "rss": 314660472,
+            "heapTotal": 104988672,
+            "heapUsed": 65390240,
+            "external": 59195657,
+            "arrayBuffers": 37760027
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 574,
+          "meanMs": 306.84843205574913,
+          "p50Ms": 21,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maxMs": 1803,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 1000,
+          "mean": 957.8186704327943,
+          "target": 1000
+        },
+        "workerDistribution": {
+          "app-0": 150,
+          "app-1": 142,
+          "app-2": 138,
+          "app-3": 144
+        }
+      },
+      "localDrainMs": 514.681333000015,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 5740,
+        "persistedTransactions": 574,
+        "activeTuples": 5740,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 1,
+        "directoryNodes": 1,
+        "databaseBytes": 22093824,
+        "coordinator": {
+          "state": [
+            {
+              "singleton": 1,
+              "visible_seq": 574,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791739650539
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 574
+            }
+          ],
+          "databaseBytes": 327680
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 5740,
+        "persistedTransactions": 574,
+        "activeTuples": 5740,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 1,
+        "directoryNodes": 1,
+        "databaseBytes": 22093824,
+        "coordinator": {
+          "state": [
+            {
+              "singleton": 1,
+              "visible_seq": 574,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791739650539
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 574
+            }
+          ],
+          "databaseBytes": 327680
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T17:27:32.043Z"
+    },
+    {
+      "scenario": {
+        "name": "saturation",
+        "batchSize": 2,
+        "concurrency": 10000
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 50000,
+      "startedAt": "2026-10-11T17:27:32.070Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 285986.028292,
+        "plannedCallsAttempted": 50000,
+        "acknowledgedFacts": 2398,
+        "acknowledgedTransactions": 1199,
+        "factsPerSecond": 8.385025010912676,
+        "transactionsPerSecond": 4.192512505456338,
+        "rejected": 0,
+        "unknown": 48801,
+        "attempts": 398143,
+        "statuses": {
+          "200": 1199,
+          "423": 241649,
+          "transport": 155295
+        },
+        "logicalLatency": {
+          "count": 50000,
+          "meanMs": 53570.418304036124,
+          "p50Ms": 53972.72491699993,
+          "p95Ms": 66153.64829199994,
+          "p99Ms": 71771.94741699996,
+          "maxMs": 89210.73579099996,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 1199,
+          "meanMs": 37403.10779490238,
+          "p50Ms": 39924.61591599998,
+          "p95Ms": 56885.29141699994,
+          "p99Ms": null,
+          "maxMs": 70082.74154199997,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 398143,
+          "meanMs": 5997.254889978926,
+          "p50Ms": 4998.850958000054,
+          "p95Ms": 10361.268584000063,
+          "p99Ms": 10732.095624999958,
+          "maxMs": 19842.266334000044,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 148880086,
+            "system": 17292491
+          },
+          "eventLoopDelayMeanMs": 25.66196566621731,
+          "eventLoopDelayMaxMs": 1067.450367,
+          "memoryBytes": {
+            "rss": 591931784,
+            "heapTotal": 208011264,
+            "heapUsed": 99177456,
+            "external": 62531334,
+            "arrayBuffers": 41095704
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 1199,
+          "meanMs": 188.42035029190993,
+          "p50Ms": 214,
+          "p95Ms": 463,
+          "p99Ms": null,
+          "maxMs": 754,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 10000,
+          "mean": 9365.915469315416,
+          "target": 10000
+        },
+        "workerDistribution": {
+          "app-0": 305,
+          "app-2": 305,
+          "app-1": 287,
+          "app-3": 302
+        }
+      },
+      "localDrainMs": 520.6370409999508,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 2398,
+        "persistedTransactions": 1199,
+        "activeTuples": 2398,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 1,
+        "directoryNodes": 1,
+        "databaseBytes": 9154560,
+        "coordinator": {
+          "state": [
+            {
+              "singleton": 1,
+              "visible_seq": 1199,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791739938492
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1199
+            }
+          ],
+          "databaseBytes": 401408
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 2398,
+        "persistedTransactions": 1199,
+        "activeTuples": 2398,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 1,
+        "directoryNodes": 1,
+        "databaseBytes": 9154560,
+        "coordinator": {
+          "state": [
+            {
+              "singleton": 1,
+              "visible_seq": 1199,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791739938492
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1199
+            }
+          ],
+          "databaseBytes": 401408
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T17:32:19.934Z"
+    }
+  ]
+}
