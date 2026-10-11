@@ -4,6 +4,7 @@ const COORDINATOR_SCHEMA = [
     entities_json TEXT NOT NULL, ticket_seq INTEGER NOT NULL UNIQUE CHECK (ticket_seq > 0), directory_epoch INTEGER NOT NULL,
     phase TEXT NOT NULL CHECK (phase IN ('preparing', 'complete', 'aborted')),
     commit_seq INTEGER NOT NULL DEFAULT 0, created_at_ms INTEGER NOT NULL)`,
+  `CREATE INDEX tree_reservations_pending ON tree_reservations (phase) WHERE phase = 'preparing'`,
   `CREATE TABLE entity_write_locks (entity TEXT PRIMARY KEY, tx_id TEXT NOT NULL, payload_hash TEXT NOT NULL)`,
   `CREATE INDEX entity_write_locks_by_transaction ON entity_write_locks (tx_id)`,
   `CREATE TABLE candidate_transactions (tx_id TEXT PRIMARY KEY, graph_id TEXT NOT NULL, payload_hash TEXT NOT NULL,

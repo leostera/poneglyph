@@ -19,7 +19,8 @@ export class OwnerWrites {
   constructor(private readonly storage: DurableObjectStorage) {}
 
   hasWriters(): boolean {
-    return this.storage.sql.exec("SELECT 1 FROM entity_write_locks LIMIT 1").toArray().length > 0;
+    return this.storage.sql.exec(`SELECT 1 FROM tree_reservations WHERE phase = 'preparing'
+      UNION ALL SELECT 1 FROM entity_write_locks LIMIT 1`).toArray().length > 0;
   }
 
   reserve(txId: string, hash: string, entities: readonly Uri[]): OwnerWriteTicket {
