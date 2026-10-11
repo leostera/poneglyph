@@ -1,10 +1,9 @@
 import { parseGraphId } from "./domain/graph-id.js";
 import { jsonResponse } from "./storage/http.js";
-import { coordinatorObjectName } from "./storage/keys.js";
+import { coordinatorObjectName } from "./database-implementation.js";
 import { handleTodoRequest } from "./todo_demo/worker.js";
 
-export { GraphCoordinatorDO } from "./storage/coordinator.js";
-export { GraphShardDO } from "./storage/shard.js";
+export { GraphCoordinatorDO, GraphShardDO } from "./database-implementation.js";
 export { TodoHubDO } from "./todo_demo/hub.js";
 
 export default {
