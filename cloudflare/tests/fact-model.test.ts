@@ -28,6 +28,18 @@ describe("strict fact and identifier parsing", () => {
     expect(Object.isFrozen(factValue.value)).toBe(true);
   });
 
+  it("sorts Unicode map keys by code point for stable serialized hashes", () => {
+    const unicodeMap = value(parseFactValue({
+      type: "map",
+      value: {
+        "𐀀": { type: "text", value: "supplementary" },
+        "\uE000": { type: "text", value: "private-use" },
+      },
+    }));
+    if (unicodeMap.type !== "map") throw new Error("expected a map");
+    expect(Object.keys(unicodeMap.value)).toEqual(["\uE000", "𐀀"]);
+  });
+
   it("rejects malformed values at the boundary with a useful path", () => {
     const invalid = parseFactValue({
       type: "list",
@@ -37,6 +49,13 @@ describe("strict fact and identifier parsing", () => {
     expect(invalid.ok).toBe(false);
     if (invalid.ok) throw new Error("invalid value was accepted");
     expect(invalid.error.path).toBe("value.value[0].value[1]");
+  });
+
+  it("keeps number values inside the Rust signed 64-bit domain", () => {
+    expect(parseFactValue({ type: "number", value: "9223372036854775807" }).ok).toBe(true);
+    expect(parseFactValue({ type: "number", value: "-9223372036854775808" }).ok).toBe(true);
+    expect(parseFactValue({ type: "number", value: "9223372036854775808" }).ok).toBe(false);
+    expect(parseFactValue({ type: "number", value: "01" }).ok).toBe(false);
   });
 
   it("validates actual calendar dates and RFC 3339 timestamps", () => {
@@ -52,6 +71,8 @@ describe("strict fact and identifier parsing", () => {
     expect(value(parseFactId("poneglyph:fact:1"))).toBe("poneglyph:fact:1");
     expect(value(parseTransactionId("poneglyph:tx:7"))).toBe("poneglyph:tx:7");
     expect(parseUri("not-a-uri").ok).toBe(false);
+    expect(parseUri(`wiki:${"x".repeat(2_045)}`).ok).toBe(false);
+    expect(parseTransactionId(`poneglyph:tx:${"x".repeat(256)}`).ok).toBe(false);
   });
 
   it("parses non-empty batches as an all-or-nothing input value", () => {

@@ -1,11 +1,25 @@
 import type { FactValue } from "../domain/fact-value.js";
+import { parseInt64String } from "../domain/int64.js";
+import { compareUnicodeScalars } from "../domain/string-order.js";
+import { isRecord, parsed, rejected, type ParseResult } from "../domain/result.js";
 
 export type DatalogValue =
   | Readonly<{ type: "string"; value: string }>
   | Readonly<{ type: "integer"; value: string }>;
 
-const I64_MIN = -(1n << 63n);
-const I64_MAX = (1n << 63n) - 1n;
+export function parseDatalogValue(input: unknown, path = "value"): ParseResult<DatalogValue> {
+  if (!isRecord(input) || typeof input["type"] !== "string") {
+    return rejected(path, "expected a tagged Datalog value");
+  }
+  if (input["type"] === "string" && typeof input["value"] === "string") {
+    return parsed(stringValue(input["value"]));
+  }
+  if (input["type"] === "integer") {
+    const raw = parseInt64String(input["value"], `${path}.value`);
+    return raw.ok ? parsed(integerValue(BigInt(raw.value))) : raw;
+  }
+  return rejected(path, "expected a string or signed 64-bit integer Datalog value");
+}
 
 export function stringValue(value: string): DatalogValue {
   return Object.freeze({ type: "string", value });
@@ -59,21 +73,14 @@ export function compareDatalogValues(left: DatalogValue, right: DatalogValue): n
     return leftInteger < rightInteger ? -1 : leftInteger > rightInteger ? 1 : 0;
   }
   if (left.type === "string" && right.type === "string") {
-    return left.value < right.value ? -1 : left.value > right.value ? 1 : 0;
+    return compareUnicodeScalars(left.value, right.value);
   }
   return undefined;
 }
 
 function numberOrString(value: string): DatalogValue {
-  if (!/^[+-]?\d+$/.test(value)) return stringValue(value);
-
-  try {
-    const integer = BigInt(value);
-    if (integer >= I64_MIN && integer <= I64_MAX) return integerValue(integer);
-  } catch {
-    // BigInt can reject only malformed decimal text, which is still a legal Poneglyph Number string.
-  }
-  return stringValue(value);
+  const integer = parseInt64String(value, "number");
+  return integer.ok ? integerValue(BigInt(integer.value)) : stringValue(value);
 }
 
 function toSerdeValue(value: FactValue): unknown {

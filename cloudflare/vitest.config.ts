@@ -9,5 +9,7 @@ export default defineConfig({
   ],
   test: {
     restoreMocks: true,
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 });

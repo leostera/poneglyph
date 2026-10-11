@@ -1,4 +1,7 @@
 import { isCalendarDate, isRfc3339Timestamp } from "./date-validation.js";
+import { parseInt64String } from "./int64.js";
+import { compareUnicodeScalars } from "./string-order.js";
+import { parseUri } from "./identifiers.js";
 import { isRecord, parsed, rejected, type ParseResult } from "./result.js";
 
 export type FactValue =
@@ -34,11 +37,14 @@ function parseAtDepth(input: unknown, path: string, depth: number): ParseResult<
       }
       return parsed(Object.freeze({ type: "null" }));
     case "text":
+      return typeof input["value"] === "string"
+        ? parsed(Object.freeze({ type: "text", value: input["value"] }))
+        : rejected(`${path}.value`, "expected a string for text");
     case "number": {
-      if (typeof input["value"] !== "string") {
-        return rejected(`${path}.value`, `expected a string for ${input["type"]}`);
-      }
-      return parsed(Object.freeze({ type: input["type"], value: input["value"] }));
+      const number = parseInt64String(input["value"], `${path}.value`);
+      return number.ok
+        ? parsed(Object.freeze({ type: "number", value: number.value }))
+        : number;
     }
     case "boolean":
       return typeof input["value"] === "boolean"
@@ -47,15 +53,10 @@ function parseAtDepth(input: unknown, path: string, depth: number): ParseResult<
     case "bytes":
       return parseBytes(input["value"], `${path}.value`);
     case "reference": {
-      if (typeof input["value"] !== "string") {
-        return rejected(`${path}.value`, "expected a URI string for reference");
-      }
-      try {
-        const uri = new URL(input["value"]).href;
-        return parsed(Object.freeze({ type: "reference", value: uri }));
-      } catch {
-        return rejected(`${path}.value`, "expected an absolute reference URI");
-      }
+      const uri = parseUri(input["value"], `${path}.value`);
+      return uri.ok
+        ? parsed(Object.freeze({ type: "reference", value: uri.value }))
+        : uri;
     }
     case "date":
       return parseDate(input["value"], `${path}.value`);
@@ -122,7 +123,7 @@ function parseMap(input: unknown, path: string, depth: number): ParseResult<Fact
     return rejected(path, "expected an object of fact values");
   }
 
-  const entries = Object.entries(input).sort(([left], [right]) => left.localeCompare(right));
+  const entries = Object.entries(input).sort(([left], [right]) => compareUnicodeScalars(left, right));
   const values: Record<string, FactValue> = Object.create(null) as Record<string, FactValue>;
   for (const [key, item] of entries) {
     const value = parseAtDepth(item, `${path}.${key}`, depth + 1);

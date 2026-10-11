@@ -11,9 +11,15 @@ export type FactId = Uri & { readonly [factIdBrand]: "FactId" };
 export type TransactionId = Uri & { readonly [transactionIdBrand]: "TransactionId" };
 export type StatedAt = string & { readonly [statedAtBrand]: "StatedAt" };
 
+export const MAX_URI_LENGTH = 2_048;
+export const MAX_TRANSACTION_ID_BYTES = 256;
+
 export function parseUri(input: unknown, path = "uri"): ParseResult<Uri> {
   if (typeof input !== "string" || input.length === 0) {
     return rejected(path, "expected a non-empty URI string");
+  }
+  if (input.length > MAX_URI_LENGTH) {
+    return rejected(path, `URI cannot exceed ${MAX_URI_LENGTH} characters`);
   }
 
   try {
@@ -32,6 +38,9 @@ export function parseTransactionId(
   input: unknown,
   path = "txId",
 ): ParseResult<TransactionId> {
+  if (typeof input === "string" && new TextEncoder().encode(input).byteLength > MAX_TRANSACTION_ID_BYTES) {
+    return rejected(path, `transaction ID cannot exceed ${MAX_TRANSACTION_ID_BYTES} UTF-8 bytes`);
+  }
   const uri = parseUri(input, path);
   return uri.ok ? parsed(uri.value as TransactionId) : uri;
 }
