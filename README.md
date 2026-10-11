@@ -66,7 +66,7 @@ pnpm exec cf deploy --dry-run
 pnpm run deploy
 ```
 
-The [Cloudflare operations and validation sections in RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md#local-operating-and-review-gates) covers runtime configuration, isolated deployment validation, cost/evidence limits, and cleanup. Do not run large capacity or throughput experiments against a shared or production deployment.
+The [Cloudflare operations and validation material in RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md#local-operating-and-review-gates) covers runtime configuration, isolated deployment validation, cost/evidence limits, and cleanup. Do not run large capacity or throughput experiments against a shared or production deployment.
 
 ## Prototype status and limits
 
