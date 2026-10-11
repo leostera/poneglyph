@@ -1,6 +1,6 @@
 # Write-path experiment
 
-Implements the **Version A / current-code local baseline** from [RFD0005](../../docs/rfds/RFD0005-write-path-experiment.md). Cloud execution and Version B are not implemented or measured yet. The baseline has a reproduced SQL-bind defect. The cloud gate is **closed pending the full-input local matrix and correctness/resource gates**; database errors are recorded, not repaired by the benchmark.
+Implements the **Version A / current-code local baseline** from [RFD0005](../../docs/rfds/RFD0005-write-path-experiment.md). Cloud execution and Version B are not implemented or measured yet. The final pre-fix measurement is retained separately from the corrected implementation. The cloud gate is **closed pending the full-input local matrix and correctness/resource gates**; database errors are recorded, not repaired by the benchmark.
 
 ## What runs
 
@@ -54,11 +54,11 @@ Optional environment variables:
 
 IDs are unique per run/scenario/batch. Retries retain the exact ID/payload. A concurrency slot includes request and retry/backoff time. Successful responses await the real database commit. Unknown outcomes are retained as unknown to the caller and separately reconciled against quiescent storage; an absent transaction at audit time is not silently reported as a successful load.
 
-Delivery streams the prepared facts with only the outstanding batches in memory. Verification uses a disk-backed SQLite reference/response ledger, then walks the actual fact-store leaves and checks every persisted fact against its transaction's expected fact range. Both pre-/post-restart audits are bounded by page size, not an in-memory copy of the corpus. Latency samples are retained for exact percentiles. The benchmark's local ledger is verification bookkeeping, not part of Poneglyph or an import API. The baseline storage implementation, SQL-bind defect, and retention limits are **not** modified to improve results.
+Delivery streams the prepared facts with only the outstanding batches in memory. Verification uses a disk-backed SQLite reference/response ledger, then walks the actual fact-store leaves and checks every persisted fact against its transaction's expected fact range. Both pre-/post-restart audits are bounded by page size, not an in-memory copy of the corpus. Latency samples are retained for exact percentiles. The benchmark's local ledger is verification bookkeeping, not part of Poneglyph or an import API. The pre-fix report identifies the unchanged implementation it measured. Subsequent authorized bug fixes are a separately identified revision; transaction/retention/capacity limits and the centralized coordinator architecture remain unchanged.
 
 ## Saved evidence
 
-Each `results/<run-id>/` contains a source/artifact/dataset manifest, one JSON report per scenario, and a summary. Current runner reports also retain compressed outcome journals and Worker bundles. Bulky SQLite persistence and original journals stay in ignored `.data/runs/<run-id>/` on this machine. No auth tokens or corpus request bodies are saved in reports. Incomplete runs must be labeled incomplete, never treated as successful loads. The earlier artifacts were explicitly deleted at the user's request; newly generated results are saved normally.
+After a completed matrix, `results/<run-id>/final.json` retains the source/artifact/dataset identity, final metrics, outcome classifications, and pre-/post-restart audits. During execution, per-case reports and temporary SQLite state are available. After all runtimes and ledgers close, the final aggregate is saved before removing raw trial storage, snapshots, reference ledgers, journals, bundles, and progress samples. Console logs are managed separately. No auth tokens or corpus request bodies are saved in the final report. Incomplete runs must never be treated as successful loads.
 
 Reports distinguish:
 
@@ -69,13 +69,17 @@ Reports distinguish:
 - fact-log membership, active scalar fact/value index checks, terminal coordinator/participant state, and restart persistence;
 - local measurements versus **unmeasured** Cloudflare performance.
 
-The disk-backed audit walks router/leaf topology and checks the selected scalar assertion corpus. The separate small-fixture auditor supports only an unsplit root. Retraction semantics use dedicated protocol tests rather than pretending the assertion-only corpus audit models them. Public query and retraction/failure/split semantics are also exercised by the package's existing tests; candidate overlapping-writer invariants require additional tests. The focused SQL-bind characterization test intentionally expects the baseline defect; its passing does not mean the advertised write contract passes.
+The disk-backed audit walks router/leaf topology and checks the selected scalar assertion corpus. The separate small-fixture auditor supports only an unsplit root. Retraction semantics use dedicated protocol tests rather than pretending the assertion-only corpus audit models them. Public query and retraction/failure/split semantics are also exercised by the package's existing tests; candidate overlapping-writer invariants require additional tests. The SQL-bind regression now requires successful writes, public query results, and restart persistence for batches of 100, 101, and 1,000 distinct entities.
 
 ## Current findings / deployment gate
 
 See [the result index](results/README.md) for the clean 100k iteration. Earlier measurements have been removed and are not evidence for this restarted comparison.
 
-- A batch with **101 distinct entities** reproduces `503: too many SQL variables` in capacity preflight. The storage implementation chunks an entity `IN (...)` lookup at 500, above the runtime's observed 100-bind limit. A valid 1,000-fact batch can trigger it. No partial fact/index writes were observed in the reproduction. The storage defect has **not** been patched into the baseline.
+- Corrected capacity lookup pages use the runtime's 100-binding limit while preserving the 1,000-fact transaction limit.
+- Participant prepare replays use durable outcomes before fact-state/capacity checks, including already-committed retractions.
+- Retained transaction receipts and payload conflicts are returned even while another writer is active. Required cancellation/recovery still completes before a final outcome.
+- SDK retry classification honors explicit boolean server hints; the permanent retained-outcome quota is non-retryable, while temporary busy/read-lease pressure remains retryable.
+- Post-commit pruning failures no longer turn a durable published commit into a failed write response; cleanup is deferred without changing fact/index commit requirements.
 - Busy responses, retry exhaustion, and transport failures are part of each result. Local generator/runtime limitations must not be mistaken for a cloud DO request-rate ceiling.
 - The baseline retains at most 100,000 transaction outcomes for seven days. At 100k facts the largest transaction count is 50,000, so this iteration does **not** exercise that limit. At 1M the two-fact case needs 500,000 transactions and exposes it. Keep that known limitation for scale-up; never raise it, switch graphs, shrink transactions, or route failed facts through a fallback to make a load pass.
 

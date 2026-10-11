@@ -281,7 +281,9 @@ class HttpTransport {
       throw new PoneglyphRequestError({
         status: response.status,
         message,
-        retryable: isRetryableStatus(response.status) || (isRecord(bodyValue) && bodyValue["retryable"] === true),
+        retryable: isRecord(bodyValue) && typeof bodyValue["retryable"] === "boolean"
+          ? bodyValue["retryable"]
+          : isRetryableStatus(response.status),
         ...(retryAfter === undefined ? {} : { retryAfter }),
         ...(txId === undefined ? {} : { txId }),
       });

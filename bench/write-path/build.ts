@@ -21,7 +21,7 @@ export async function buildWorkers() {
       sources.set(path, createHash("sha256").update(bytes).digest("hex"));
     }
   }
-  for (const file of ["build.ts", "run.ts", "driver.ts", "ledger.ts", "stream-audit.ts", "runtime.ts", "corpus.ts", "scenarios.ts", "package.json", "pnpm-lock.yaml"]) {
+  for (const file of ["build.ts", "run.ts", "driver.ts", "ledger.ts", "stream-audit.ts", "final-result.ts", "runtime.ts", "corpus.ts", "scenarios.ts", "package.json", "pnpm-lock.yaml"]) {
     sources.set(file, createHash("sha256").update(await readFile(resolve(ROOT, file))).digest("hex"));
   }
   const manifest = {

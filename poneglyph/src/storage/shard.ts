@@ -10,6 +10,7 @@ import {
   MAX_ACTIVE_FACTS_PER_ENTITY,
   MAX_ENTITY_FIELDS,
   MAX_TRANSACTION_BYTES,
+  MAX_SQL_BINDINGS,
   TRANSACTION_IDEMPOTENCY_RETENTION_MS,
   SHARD_SCAN_PAGE_SIZE,
   SPLIT_COPY_PAGE_SIZE,
@@ -108,8 +109,6 @@ export class GraphShardDO extends DurableObject<Env> {
         `DELETE FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND created_at_ms < ?`,
         Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS,
       );
-      this.validatePreparedBatch(batch.value);
-      this.assertCapacity(batch.value.facts.map((indexed) => indexed.fact));
       const existing = this.ctx.storage.sql.exec<{
         payload_hash: string;
         status: string;
@@ -125,6 +124,10 @@ export class GraphShardDO extends DurableObject<Env> {
         return existing.status;
       }
 
+      // Replay is decided from the durable outcome, not the now-changed fact state
+      // or another capacity reservation for the same transaction.
+      this.validatePreparedBatch(batch.value);
+      this.assertCapacity(batch.value.facts.map((indexed) => indexed.fact));
       this.ctx.storage.sql.exec(
         `INSERT INTO shard_transactions (tx_id, payload_hash, payload_json, status, created_at_ms)
          VALUES (?, ?, ?, 'prepared', ?)`,
@@ -1093,8 +1096,8 @@ export class GraphShardDO extends DurableObject<Env> {
     const syntheticSize = accounting?.synthetic_size_bytes ?? 0;
     const entities = [...new Set(facts.map((fact) => fact.entity))];
     const existingProjectionBytes = new Map<string, number>(entities.map((entity) => [entity, 0] as const));
-    for (let offset = 0; offset < entities.length; offset += 500) {
-      const page = entities.slice(offset, offset + 500);
+    for (let offset = 0; offset < entities.length; offset += MAX_SQL_BINDINGS) {
+      const page = entities.slice(offset, offset + MAX_SQL_BINDINGS);
       const placeholders = page.map(() => "?").join(", ");
       const rows = this.ctx.storage.sql.exec<{ entity: string; bytes: number }>(
         `SELECT entity, LENGTH(CAST(fields_json AS BLOB)) AS bytes FROM entity_versions

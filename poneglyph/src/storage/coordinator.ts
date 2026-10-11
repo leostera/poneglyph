@@ -96,7 +96,7 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
         return await this.requestSplit(request);
       } catch (error) {
         const status = error instanceof CoordinatorError ? error.status : 503;
-        return jsonResponse({ error: errorMessage(error), retryable: status >= 500 }, status, { "retry-after": "1" });
+        return jsonResponse({ error: errorMessage(error), retryable: error instanceof CoordinatorError ? error.retryable : true }, status, { "retry-after": "1" });
       }
     }
     const route = parseGraphRoute(request);
@@ -116,7 +116,7 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       return jsonResponse({ error: "method not allowed" }, 405);
     } catch (error) {
       const status = error instanceof CoordinatorError ? error.status : 503;
-      return jsonResponse({ error: errorMessage(error), retryable: status >= 500 }, status);
+      return jsonResponse({ error: errorMessage(error), retryable: error instanceof CoordinatorError ? error.retryable : true }, status);
     }
   }
 
@@ -368,6 +368,8 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     }
 
     const payloadHash = await sha256Hex(json);
+    const knownOutcome = this.transactionOutcome(batch.txId, payloadHash);
+    if (knownOutcome !== undefined) return knownOutcome;
     if (this.activeWriterTxId !== undefined) {
       return this.writerBusy(this.activeWriterTxId);
     }
@@ -383,26 +385,9 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       if (outcome instanceof Response) return outcome;
     }
 
-    let prior = this.readTransaction(batch.txId);
-    if (prior !== undefined && (prior.phase === "complete" || prior.phase === "aborted") &&
-        prior.created_at_ms < Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS) {
-      this.ctx.storage.sql.exec("DELETE FROM graph_transactions WHERE tx_id = ?", batch.txId);
-      prior = undefined;
-    }
-    if (prior !== undefined) {
-      if (prior.payload_hash !== payloadHash) {
-        return jsonResponse({ error: "txId has already been used with a different fact batch" }, 409);
-      }
-      if (prior.phase === "complete") {
-        return jsonResponse({ txId: batch.txId, commitSeq: prior.commit_seq, status: "committed" });
-      }
-      if (prior.phase === "aborted" || prior.phase === "cancelling") {
-        return jsonResponse({ txId: batch.txId, status: "aborted" }, 409);
-      }
-      return jsonResponse({ error: "transaction recovery is in progress; retry with the same txId" }, 503, {
-        "retry-after": "1",
-      });
-    }
+    // Recovery may have completed this request's transaction while we awaited it.
+    const recoveredOutcome = this.transactionOutcome(batch.txId, payloadHash);
+    if (recoveredOutcome !== undefined) return recoveredOutcome;
 
     let routeState = this.readGraphState();
     if (routeState.topology_op_id !== null) return this.topologyBusy(routeState.topology_op_id);
@@ -460,6 +445,23 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     } finally {
       this.activeWriterTxId = undefined;
     }
+  }
+
+  private transactionOutcome(txId: string, payloadHash: string): Response | undefined {
+    const prior = this.readTransaction(txId);
+    if (prior === undefined) return undefined;
+    if ((prior.phase === "complete" || prior.phase === "aborted") &&
+        prior.created_at_ms < Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS) {
+      this.ctx.storage.sql.exec("DELETE FROM graph_transactions WHERE tx_id = ?", txId);
+      return undefined;
+    }
+    if (prior.payload_hash !== payloadHash) {
+      return jsonResponse({ error: "txId has already been used with a different fact batch" }, 409);
+    }
+    if (prior.phase === "complete") return jsonResponse({ txId, commitSeq: prior.commit_seq, status: "committed" });
+    if (prior.phase === "aborted") return jsonResponse({ txId, status: "aborted" }, 409);
+    // Preparing/committing/cancelling must still be recovered before an outcome is final.
+    return undefined;
   }
 
   private async resumePersistedWriter(txId: string): Promise<ResumeOutcome | Response> {
@@ -525,7 +527,13 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     }
 
     this.publishCommit(transaction);
-    await this.pruneVersions();
+    try {
+      await this.pruneVersions();
+    } catch (error) {
+      // Facts, indices, and visibility are already durable. Cleanup failure must
+      // not turn a completed commit into a failed write response.
+      console.warn("Poneglyph post-commit pruning deferred", errorMessage(error));
+    }
     return "committed";
   }
 
@@ -624,12 +632,12 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     | { kind: "route-changed" }
     | { kind: "existing"; row: TransactionRow } {
     return this.ctx.storage.transactionSync(() => {
+      const existing = this.readTransaction(batch.txId);
+      if (existing !== undefined) return { kind: "existing", row: existing };
       const state = this.readGraphState();
       if (state.topology_op_id !== null) return { kind: "topology-busy" };
       if (state.writer_tx_id !== null) return { kind: "busy", txId: state.writer_tx_id };
       if (state.directory_epoch !== directoryEpoch) return { kind: "route-changed" };
-      const existing = this.readTransaction(batch.txId);
-      if (existing !== undefined) return { kind: "existing", row: existing };
 
       const now = Date.now();
       this.ctx.storage.sql.exec(
@@ -640,7 +648,7 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
         "SELECT COUNT(*) AS count FROM graph_transactions WHERE phase IN ('complete', 'aborted')",
       ).toArray()[0]?.count ?? 0;
       if (outcomeCount >= MAX_RETAINED_TRANSACTION_OUTCOMES) {
-        throw new CoordinatorError(429, `graph has reached its ${MAX_RETAINED_TRANSACTION_OUTCOMES}-outcome idempotency window`);
+        throw new CoordinatorError(429, `graph has reached its ${MAX_RETAINED_TRANSACTION_OUTCOMES}-outcome idempotency window`, false);
       }
       const metadataBytes = new TextEncoder().encode(batchJson).byteLength + participants.length * 96 + 1_024;
       const coordinatorCapacity = accountStorage(this.ctx.storage.sql.databaseSize, {
@@ -1055,7 +1063,7 @@ class ParticipantResponseError extends Error {
 }
 
 class CoordinatorError extends Error {
-  constructor(readonly status: number, message: string) {
+  constructor(readonly status: number, message: string, readonly retryable = status === 423 || status === 429 || status >= 500) {
     super(message);
     this.name = "CoordinatorError";
   }

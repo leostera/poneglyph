@@ -14,6 +14,9 @@ export const SHARD_SPLIT_TRIGGER_BYTES = 5_000_000_000;
 export const MINIMUM_UNCERTAINTY_HEADROOM_BYTES = 2_000_000_000;
 export const MINIMUM_WAL_RESERVE_BYTES = 64_000_000;
 
+// SQLite DO queries support at most 100 bound parameters per statement.
+// This limits lookup pages, not the number of facts in a transaction.
+export const MAX_SQL_BINDINGS = 100;
 export const MAX_TRANSACTION_FACTS = 1_000;
 export const MAX_TRANSACTION_BYTES = 1_000_000;
 export const MAX_ACTIVE_FACTS_PER_ENTITY = 10_000;

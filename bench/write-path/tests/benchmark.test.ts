@@ -27,17 +27,28 @@ test("scenario matrix includes 10,000 calls without calling them 10,000 RPS", ()
     { name: "invalid", batchSize: 1001, concurrency: 1 }, "oversized");
   assert.equal(oversized[0]!.facts.length, 1001, "the benchmark must not resize transactions to hide database limits");
 });
-test("baseline known defect: 101 entities exceed preflight SQL bind limit without partial writes", { timeout: 30000 }, async () => {
+test("capacity lookup pages respect SQL bindings for 100, 101, and 1,000 distinct entities", { timeout: 120000 }, async () => {
   await buildWorkers();
   const directory = await mkdtemp(resolve(tmpdir(), "poneglyph-write-path-sql-limit-"));
-  const runtime = await startLocal("bench-sql-limit", directory, 1);
+  let runtime = await startLocal("bench-sql-limit", directory, 1);
   try {
-    const batches = makeBatches(facts.slice(0, 101), { name: "sql-limit", batchSize: 1000, concurrency: 1 }, "sql-limit");
-    const response = await fetch(runtime.endpoints[0]!, { method: "POST", headers: { authorization: `Bearer ${runtime.token}` }, body: batches[0]!.body });
-    assert.equal(response.status, 503, "this characterization should change when the baseline bug is fixed");
-    assert.match(String(record(await response.json()).error), /too many SQL variables/);
-    const audit = await verify(runtime, batches, [{ txId: batches[0]!.txId, facts: 101, kind: "unknown", attempts: 1, latencyMs: 0, status: 503 }]);
-    assert.equal(audit.persistedFacts, 0);
+    for (const size of [100, 101, 1000]) {
+      const input = Array.from({ length: size }, (_, i) => ({ ...facts[i % facts.length]!, entity: `wiki:person:sql-${size}-${i}` }));
+      const batches = makeBatches(input, { name: "sql-limit", batchSize: 1000, concurrency: 1 }, `sql-limit-${size}`);
+      const response = await fetch(runtime.endpoints[0]!, { method: "POST", headers: { authorization: `Bearer ${runtime.token}` }, body: batches[0]!.body });
+      assert.equal(response.status, 200, await response.text());
+      const replay = await fetch(runtime.endpoints[0]!, { method: "POST", headers: { authorization: `Bearer ${runtime.token}` }, body: batches[0]!.body });
+      assert.equal(replay.status, 200);
+    }
+    const page = record(await runtime.audit("shard?after=0"));
+    assert.equal((page.active as {count: number}[])[0]!.count, 1201);
+    assert.equal((page.missingValues as {count: number}[])[0]!.count, 0);
+    assert.equal((record(await runtime.query("wiki:person:name(Person, Name)")).rows as unknown[]).length, 1201);
+    const token = runtime.token;
+    await runtime.mf.dispose(); runtime = await startLocal("bench-sql-limit", directory, 1, token);
+    const restored = record(await runtime.audit("shard?after=0"));
+    assert.equal((restored.active as {count: number}[])[0]!.count, 1201);
+    assert.equal((record(await runtime.query("wiki:person:name(Person, Name)")).rows as unknown[]).length, 1201);
   } finally { await runtime.mf.dispose(); await rm(directory, { recursive: true, force: true }); }
 });
 

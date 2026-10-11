@@ -6,6 +6,7 @@ import { randomUUID, createHash } from "node:crypto";
 import { resolve, relative } from "node:path";
 import { buildWorkers, ROOT } from "./build.js";
 import { drive } from "./driver.js";
+import { saveFinalResult } from "./final-result.js";
 import { AuditLedger, corpusBatches, prepareReference } from "./ledger.js";
 import { verifyStream } from "./stream-audit.js";
 import { startLocal } from "./runtime.js";
@@ -39,7 +40,7 @@ async function main() {
   const referencePath = resolve(artifacts, "reference.sqlite");
   console.log(`${runId}: preparing disk-backed verification for ${selectedFacts} facts`);
   const reference = await prepareReference(input, referencePath, selectedFacts);
-  const manifest = { runId, version: "A-current-storage-unmodified", environment: "Miniflare; not cloud performance",
+  const manifest = { runId, version: "A-central-coordinator-correctness", environment: "Miniflare; not cloud performance",
     build, corpus, reference, selectedFacts, scope: selectedFacts === corpus.facts ? "entire corpus" : selectedFacts === 100_000 ? "100k iteration cohort" : "explicitly selected corpus prefix",
     workerCount, retry: { maxAttempts, attemptTimeoutMs: timeout, backoff: "full jitter, exponential 100ms..5s" }, selected,
     artifacts: relative(ROOT, artifacts), policy: "Every planned batch is attempted; no batch shrinking, input skipping, storage fixes, outcome-limit changes, or fallback delivery" };
@@ -107,6 +108,7 @@ async function main() {
       : "closed: full-input persistence gates not met; no deployment performed",
     reportDirectory: relative(ROOT, directory) };
   await writeFile(resolve(directory, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
+  await saveFinalResult(directory, artifacts);
   console.log(JSON.stringify(summary, null, 2));
   if (!persistencePassed) process.exitCode = 1;
 }

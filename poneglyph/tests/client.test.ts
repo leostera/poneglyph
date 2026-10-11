@@ -152,6 +152,23 @@ describe("Poneglyph TypeScript HTTP client", () => {
     });
   });
 
+  it("honors explicit server retryability and falls back to status only when no boolean hint exists", async () => {
+    for (const sample of [
+      { status: 429, hint: false, expected: false },
+      { status: 503, hint: false, expected: false },
+      { status: 423, hint: true, expected: true },
+      { status: 503, hint: undefined, expected: true },
+      { status: 429, hint: "false", expected: true },
+    ]) {
+      const network = createFetch(() => jsonResponse({ error: "test failure", retryable: sample.hint }, sample.status));
+      const graph = createDatabase({ url: "https://poneglyph.example", graphId: "team-memory", fetch: network.fetch });
+      await expect(graph.stateFacts(facts, { txId: "retry:hint:1" })).rejects.toMatchObject({
+        name: "PoneglyphRequestError", status: sample.status, retryable: sample.expected, txId: "retry:hint:1",
+      });
+      expect(network.requests).toHaveLength(1);
+    }
+  });
+
   it("rejects malformed successful server responses instead of asserting a commit", async () => {
     const network = createFetch(() => jsonResponse({ txId: "wrong:tx:1", commitSeq: 1, status: "committed" }));
     const graph = createDatabase({ url: "https://poneglyph.example", graphId: "team-memory", fetch: network.fetch });
