@@ -60,7 +60,7 @@ Attempts were 2,591 / 40,399 / 76,313 / 394,358; busy responses were 1,637 / 31,
 
 [Final report](../../bench/write-path/results/2026-10-11T21-25-46-207Z-39cf9027/final.json) identifies `C-pooled-coordinator-ledgers` and selected revision `2772a54` (C runtime `948a183`). The tracked SUT was unchanged during the run. The recorded worktree status includes unrelated untracked documents/lockfile; these were not bundled, modified, or removed by this experiment. The packaged client digest is identical to the preceding B1 control.
 
-All planned calls were attempted. Both admitted-write and restart audits passed in every case, with persisted facts matching acknowledgements, zero reconciled unacknowledged commits, and no unresolved owner or pooled-ledger decisions. **No scenario delivered all 100,000 facts; C fails the mandatory promotion gate already in this repeat.** Still complete the second nearby control and second C repeat; one mixed local pair is not a repeatable performance conclusion.
+All planned calls were attempted. Both admitted-write and restart audits passed in every case, with persisted facts matching acknowledgements, zero reconciled unacknowledged commits, and no unresolved owner or pooled-ledger decisions. **No scenario delivered all 100,000 facts; C fails the mandatory promotion gate already in this repeat.** The second nearby control/repeat pair is recorded below; the first mixed local pair alone is not a repeatable performance conclusion.
 
 | Facts/call × concurrency | C repeat 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs B1 control 1 | Logical p95 (s) |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -85,6 +85,21 @@ All sixteen ledgers were audited. Their combined physical SQLite bytes were **45
 | 2 × 10,000 | 3,630 | 48,185 | 10.00 | 85.58 |
 
 Every planned call was attempted; all admitted-write and restart audits passed, with zero reconciled unacknowledged commits. All loads were incomplete. Attempts: 2,491 / 39,827 / 76,616 / 394,283. Busy responses: 1,529 / 31,213 / 74,285 / 95,364. Transport failures: 0 / 0 / 1,306 / 297,104. Identical bundles still produced materially different highly-concurrent delivery/latency between controls: report local variation rather than treating a single nearby rate as universal. The second C repeat must use unchanged C and fresh persistence.
+
+### C repeat 2 and promotion decision
+
+[Repeat 2 final](../../bench/write-path/results/2026-10-11T22-04-33-078Z-9cf5a858/final.json) identifies `4010c8f`. **Both Worker bundle digests exactly match C repeat 1**; no C correction or workload/limit change was introduced between repeats. The order was B1 control 1 → C repeat 1 → B1 control 2 → C repeat 2, with fresh storage in all four matrices. Unrelated worktree files are recorded in manifests but are not bundled SUT inputs.
+
+| Facts/call × concurrency | C repeat 2 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs B1 control 2 | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | 92,700 | 73 | 1,090.08 | −16.00% | 6.13 |
+| 10 × 100 | 87,160 | 1,284 | 470.69 | −0.80% | 7.95 |
+| 10 × 1,000 | 20,460 | 7,954 | 117.43 | +132.76% | 28.39 |
+| 2 × 10,000 | 14,088 | 42,956 | 47.42 | +374.45% | 70.10 |
+
+All planned calls were attempted; persisted facts matched acknowledgements; all admitted-write/index/transaction/restart checks passed, with no reconciled unacknowledged commits or unresolved decisions. Attempts: 1,924 / 37,732 / 73,399 / 376,486. Busy responses: 997 / 29,016 / 71,301 / 181,575. Transport failures: 0 / 0 / 52 / 187,867. Combined ledger SQLite bytes: 46,198,784 / 41,828,352 / 9,986,048 / 8,949,760. This repeat likewise observed no extra caller-unknown commits completed by recovery; fault-test recovery evidence is separate.
+
+**Decision: do not promote C.** Neither repeat achieved 100% delivery in any scenario. Both nearby pairs show a medium-batch acknowledged-rate regression, a small-batch rate decrease, and substantially greater high-concurrency/saturation partial delivery and acknowledged rates. Small-batch delivery improved only in repeat 2; high-concurrency p95 differed in direction between pairs. These are mixed measurements on incomplete local loads, not successful-load throughput winners, universal correctness, or cloud capacity evidence. Preserve C and all four finals; **D starts from unchanged B1**, not from pooled ledgers. A is restored as the default outside explicitly selected tests/trials. The C experiment is complete under the evaluation contract, not successful under the promotion contract.
 
 ## Summary
 
