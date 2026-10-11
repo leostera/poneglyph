@@ -59,6 +59,34 @@ A bound value uses the current Poneglyph/Datafox conversion rule: integer litera
 
 Fixed prototype budgets: 2,000 results, 50,000 streamed tuples, 20,000 shard requests, 20,000,000 scanned response bytes, 2,000,000 serialized result bytes, 20 seconds per query, and 128 concurrent read leases. A result/scan budget failure returns an error rather than silently truncating output.
 
+## One Piece local load/query workload
+
+The repeatable offline harness imports MediaWiki XML from the One Piece Fandom current dump into a temporary local Wrangler/workerd instance, then runs the same four representative queries as the Rust stress workload. It streams XML parsing and bounds writes at 500 facts / 800,000 estimated fact bytes per transaction; the Worker still enforces the canonical 1 MB transaction cap. Domain relationship facts for crews/islands/lore are the existing deterministic test fixture layered on top of real page-derived title/category/link facts; this is a workload, not a wiki connector. A unique graph ID and temporary SQLite persistence directory are used each run; the Wrangler process is stopped and its temporary state is removed afterward. The downloaded dump cache is kept for reuse. No Cloudflare account resources are created.
+
+```sh
+# from the repository root; the dump/cache is ignored by git
+PONEGLYPH_ONEPIECE_DUMP_SHA256=c4e33cc6793425d9baa5f76a9f12f047d75dec135006093ed9357629a7d1f7bb \
+  ./tests/fixtures/download_onepiece_fandom.sh
+cd cloudflare
+PONEGLYPH_ONEPIECE_MAX_PAGES=20000 PONEGLYPH_ONEPIECE_QUERIES=10 pnpm test:onepiece
+```
+
+`PONEGLYPH_ONEPIECE_XML` overrides the XML path. `PONEGLYPH_ONEPIECE_ARCHIVE` can name its corresponding archive for hash reporting. Page limit defaults to 5,000; set it to `0` to attempt the full dump. The script prints XML/archive SHA-256 values, page/fact/transaction counts, load rate, query access metrics, and warm median/p95 latency. The dump's `current` URL can change; the optional checksum makes that drift explicit. The source `.7z` and extracted XML are not checked in.
+
+Recorded local run (2026-10-11, Apple M4 Pro, 12 CPU cores, Node 26.11.0, pnpm 12.10.1, Wrangler 4.140.0; timings are local workerd, not production Cloudflare):
+
+- Input: 20,000-page prefix of a 436,781,838-byte XML dump (`1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084`); archive SHA-256 `c4e33cc6793425d9baa5f76a9f12f047d75dec135006093ed9357629a7d1f7bb`.
+- Load: 159,332 facts in 320 atomic transactions, 147.08 s elapsed (about 1,083 facts/s). The harness checked each returned `commitSeq` and verified every query/replay used snapshot sequence 320.
+
+| Query | Rows | Scan calls | Shard requests | Tuples | Stream bytes | Warm median / p95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| captains and seconds (5 clauses) | 12 | 34 | 37 | 45 | 4,533 | 78.53 / 85.64 ms |
+| islands and leaders (3 clauses) | 7 | 15 | 18 | 21 | 2,071 | 60.87 / 120.99 ms |
+| Joy Boy-to-Luffy chain (6 clauses) | 1 | 12 | 15 | 12 | 1,245 | 59.06 / 66.49 ms |
+| character names containing ` D. ` (2 clauses + builtin) | 9 | 669 | 672 | 1,346 | 116,018 | 655.95 / 1,660.16 ms |
+
+The multi-hop queries are coordinator nested-loop joins over streamed DO-local scans. The first unbound atom fans out to all four leaves; later entity-bound atoms route to one leaf, visible in request counts. The high scan count for the D-name query shows the prototype's cost: it does not reorder predicates or perform a global text index. The captain query can return more than the six synthetic crews because the inherited ASCII slugger is not injective over all real wiki titles; that fixture behavior is not a production identity strategy. Query order and wall-clock values are not stability promises.
+
 ## Local checks
 
 Requires Node.js and pnpm. The Cloudflare Vitest plugin executes Worker and SQLite DO tests in local workerd; tests use unique graph IDs and create no account resources.
