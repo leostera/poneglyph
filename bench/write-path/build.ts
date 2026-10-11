@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
+import { identifyDatabaseImplementation } from "./database-identity.js";
 
 export const ROOT = fileURLToPath(new URL(".", import.meta.url));
 export async function buildWorkers() {
@@ -21,12 +22,11 @@ export async function buildWorkers() {
       sources.set(path, createHash("sha256").update(bytes).digest("hex"));
     }
   }
-  for (const file of ["build.ts", "run.ts", "driver.ts", "ledger.ts", "stream-audit.ts", "final-result.ts", "runtime.ts", "corpus.ts", "scenarios.ts", "package.json", "pnpm-lock.yaml"]) {
+  for (const file of ["build.ts", "database-identity.ts", "run.ts", "driver.ts", "ledger.ts", "stream-audit.ts", "final-result.ts", "runtime.ts", "corpus.ts", "scenarios.ts", "package.json", "pnpm-lock.yaml"]) {
     sources.set(file, createHash("sha256").update(await readFile(resolve(ROOT, file))).digest("hex"));
   }
   const manifest = {
-    databaseImplementation: [...sources.keys()].some(path => path.replaceAll("\\", "/").endsWith("/storage-candidate/coordinator.ts"))
-      ? "B1-independent-subtrees" : "A-central-coordinator-correctness",
+    databaseImplementation: identifyDatabaseImplementation([...sources.keys()]),
     gitBase: execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" }).trim(),
     gitStatus: execFileSync("git", ["status", "--porcelain"], { cwd: ROOT, encoding: "utf8" }).trim().split("\n"),
     sourceDigests: Object.fromEntries([...sources].sort()),
