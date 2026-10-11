@@ -5,145 +5,43 @@
   </h1>
 </p>
 
-Poneglyph is an embeddable semantic knowledge graph database for building agent memory,
-knowledge-workflow, and domain graph applications.
+Poneglyph is an experimental semantic knowledge graph database for Cloudflare Workers. This branch contains a strict-TypeScript implementation backed by SQLite Durable Objects; it no longer contains the earlier Rust workspace. Rust source and commits remain in Git history and on other branches.
 
-It stores durable knowledge as append-only facts, derives current graph state from those facts,
-and answers semantic queries with a Datafox-backed Datalog engine. The default local runtime uses a
-custom LSM fact store tuned for graph predicate scans, plus local projection stores for entities and
-search.
+## Data model
 
-## How Poneglyph works
+Poneglyph's durable truth is an append-only fact log. A fact states that an entity has a field with a value. Updates and deletions append new facts (including retractions); they do not mutate historical facts. Active facts, entity views, and indexes are derived projections that can be rebuilt from the log.
 
-Poneglyph is built around one rule: facts are the source of truth.
+The TypeScript package implements typed fact parsing, a bounded positive Datalog subset, SQLite-backed Durable Object storage, cross-shard transaction coordination, versioned read snapshots, and query budgets. Its completed checkpoint uses one graph coordinator and four fixed entity-hash leaves. That topology is a prototype, not an aggregate capacity claim. Expandable directory routing, split/cutover, storage accounting, and migration recovery are specified—but not yet implemented—in [RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md).
 
-A fact states that an entity has a field with a value:
+## Package and examples
 
-```text
-memory:item:first-note  memory:title  "First note"
-```
+- [`poneglyph/`](poneglyph/) — strict TypeScript Cloudflare Workers/Durable Objects package and its complete local/deployment guide.
+- [`examples/onepiece-load.ts`](examples/onepiece-load.ts) — repeatable local real-data ingest/query harness.
+- [`examples/deployed-smoke.ts`](examples/deployed-smoke.ts) — bounded isolated deployment smoke test.
+- [`specs/`](specs/) — small PlusCal/TLA+ models for transaction visibility and shard split/cutover, checked with TLC.
 
-Facts are append-only. Updates and deletes are represented by new facts, including retractions,
-rather than mutating old rows in place. This gives Poneglyph a durable audit log and makes derived
-views replayable.
+See [RFD0003](docs/rfds/RFD0003-cloudflare-native-graph-database.md) for the fixed-leaf checkpoint and [RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md) for the scale-out proposal. Historical Rust architecture RFDs are retained as prior design records, not as the current branch implementation contract.
 
-At runtime, Poneglyph maintains:
+## Local development
 
-1. **Fact log** — every asserted or retracted fact, stored durably and append-only.
-2. **Active graph** — the latest visible assertions after applying retractions.
-3. **Entity projection** — convenient entity-shaped views derived from active facts.
-4. **Search projection** — Tantivy-backed text search over projected entities.
-5. **Datalog query engine** — semantic joins over the active graph via Datafox.
-
-The active graph is optimized for Datafox `FactRequest` access patterns. A query predicate like:
-
-```text
-wiki:page:title(Page, Title)
-```
-
-maps directly to a prefix scan over the local active index for `wiki:page:title`. More selective
-patterns, such as an entity-bound or value-bound predicate, map to narrower active-index scans.
-
-## Local storage
-
-The default local fact backend is a Poneglyph-specific LSM store:
-
-- append-only WAL for recent writes;
-- immutable SST segments for flushed data;
-- manifest edit log for crash-safe segment publishing;
-- active indexes for field/entity/value query shapes;
-- compact binary active-fact encoding;
-- decoded active-fact cache for repeated semantic queries;
-- configurable compaction, cache, and SST read policies.
-
-The standard local runtime opens this LSM fact store by default.
-
-## Embedding quickstart
-
-Downstream daemons usually depend on:
-
-- `poneglyph` for the core fact model, runtime traits, and query API;
-- `poneglyph-local` for disk-backed local storage assembly;
-- optionally `poneglyph-api` for the local gRPC service boundary.
-
-```rust,no_run
-use poneglyph::{Value, fact, uri};
-use poneglyph_local::LocalWorkspace;
-
-#[tokio::main]
-async fn main() -> poneglyph::PoneResult<()> {
-    let runtime = LocalWorkspace::at("./agent-memory.poneglyph").open().await?;
-
-    runtime
-        .state_facts(vec![fact!(
-            uri!("memory:item:first-note"),
-            uri!("memory:title"),
-            Value::text("First note")
-        )])
-        .await?;
-
-    let rows = runtime
-        .query_str(r#"memory:title(Item, "First note")"#)
-        .await?;
-
-    println!("matched {} memory item(s)", rows.len());
-    Ok(())
-}
-```
-
-## Query example
-
-Poneglyph queries are semantic joins over facts. For example, a small One Piece knowledge graph can
-ask for crews, captains, and seconds-in-command:
-
-```text
-wiki:crew:captain(Crew, Captain),
-wiki:crew:second(Crew, Second),
-wiki:page:title(Crew, CrewName),
-wiki:page:title(Captain, CaptainName),
-wiki:page:title(Second, SecondName)
-```
-
-Because every predicate is a graph fact, the same model works for agent memories, documents,
-calendar events, emails, code references, domain entities, and application-specific knowledge.
-
-## Benchmarks
-
-The current large semantic-query benchmark uses a cached One Piece wiki export as realistic graph
-input. The fixture is downloaded locally into `tests/fixtures/cache/` and is not committed to the
-repository.
-
-The benchmark ingests 50,000 wiki pages, derives page/category/link/domain facts, then runs 20
-semantic Datafox queries over the LSM-backed active graph. The query set includes:
-
-- crews with captains and seconds-in-command;
-- islands with leaders;
-- a Joy Boy → Luffy lore connection chain;
-- characters with `D.` in their name, filtered to character pages before applying string matching.
-
-Recent local result:
-
-```text
-50,000 pages
-306,278 derived facts
-20 semantic queries in ~887 ms
-~44 ms/query
-```
-
-Command:
+Requires Node.js 26 and pnpm 12. From the package directory:
 
 ```sh
-PONEGLYPH_ONEPIECE_MAX_PAGES=50000 \
-PONEGLYPH_ONEPIECE_QUERIES=20 \
-PONEGLYPH_ONEPIECE_BATCH=10000 \
-cargo test -p poneglyph-local --test stress \
-  local_lsm_backend_onepiece_wiki_query_stress \
-  --locked -- --ignored --nocapture
+cd poneglyph
+pnpm install
+pnpm check      # generated Cloudflare types, strict TypeScript, local integration/unit tests
+pnpm build
+pnpm dev        # local Vite/workerd server
 ```
 
-For small warm-query runs over 5,000 pages, the same LSM path is currently in the single-digit
-milliseconds per query range on the development machine.
+The tests use local workerd/Miniflare and create no Cloudflare account resources. The One Piece workload setup, pinned input checksums, commands, and latest checkpoint measurements are in [`poneglyph/README.md`](poneglyph/README.md).
 
-## Cloudflare-native checkpoint
+## Formal model checks
 
-The experimental strict TypeScript Workers/Durable Objects package lives in [`poneglyph/`](poneglyph/), with its configuration, local checks, distributed query contract, and cleanup procedure documented in [`poneglyph/README.md`](poneglyph/README.md). The repeatable Cloudflare One Piece load and deployed smoke runners live under [`examples/`](examples/). This experimental package does not yet replace the Rust/local backend. The four-leaf checkpoint is documented in [RFD0003](docs/rfds/RFD0003-cloudflare-native-graph-database.md); the proposed expandable sharding and capacity contract is in [RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md).
+The transaction and migration PlusCal algorithms are in `specs/`; their checked invariants and model limitations are documented in [`specs/README.md`](specs/README.md). To run TLC, install a JDK and provide a local TLA+ tools JAR:
+
+```sh
+TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check.sh
+```
+
+GitHub Actions runs the strict TypeScript package checks/build and the pinned formal models. No Rust toolchain, Cargo workspace, or Datafox sibling checkout is required on this branch.

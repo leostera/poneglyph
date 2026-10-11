@@ -1,74 +1,44 @@
 # Review Readiness
 
-This reset is ready to review as a narrow Rust-only Poneglyph library slice.
-Poneglyph's scope is a reusable semantic knowledge graph database for agents;
-things that do not advance that library/embedding story should be put aside,
-moved out, or deleted rather than grown here.
+This branch is an experimental TypeScript/Cloudflare Poneglyph package. The fixed-four-leaf checkpoint is implemented and locally testable; expandable sharding, capacity accounting, and the authenticated TODO demo are follow-on work tracked by the active goal and [RFD0004](rfds/RFD0004-expandable-cloudflare-sharding.md). Do not describe planned mechanisms as shipped until their tests and measurements exist.
 
 ## Review scope
 
-- Primary reusable surface: Rust graph database crates for building specific
-  disk-backed daemons, such as a future `agent-memory` daemon.
-- Product crates only: `poneglyph`, `poneglyph-local`, and `poneglyph-api`.
-- No in-repo product CLI or application crate.
-- Local daemon transport: tonic/prost gRPC over localhost TCP when using the
-  reference daemon/API boundary.
-- Durable truth: append-only facts. Retractions append facts and do not mutate or
-  delete assertions.
-- Derived views: entities and search indexes are replayable projections.
+- Strict-TypeScript graph and Datalog semantics in `poneglyph/`.
+- SQLite-backed Durable Object coordinator/shard storage and transaction visibility.
+- Local workerd/Miniflare integration tests and repeatable One Piece load/query harnesses.
+- Small PlusCal/TLA+ models in `specs/` for visibility and split/recovery invariants.
+- Any demo HTTP/WebSocket boundary, including authentication and post-commit invalidations.
 
-## Intentional temporary seams
+The previous Rust implementation and Cargo workspace have been removed from this branch only. Git history and other branches are unchanged. Historical Rust-oriented RFDs remain in `docs/rfds/` as records of earlier decisions, not current implementation instructions.
 
-- Downstream daemons should embed the library crates directly; this repository
-  should not grow unrelated product/application surfaces.
-- Legacy JSON semantic RPCs remain in `poneglyph-api` for one compatibility
-  window. Typed protobuf RPCs are the primary semantic daemon boundary, and API parity
-  tests protect the legacy shims until removal.
-- SQLite fact/entity stores and Tantivy search live in `poneglyph-local`; `poneglyph`
-  keeps semantic traits, runtime contracts, and in-memory defaults.
-- Unix-domain sockets are not implemented yet. RFD0000 records the local TCP
-  limitation and the future UDS direction.
-
-## Expected local layout
-
-`datafox` is an external sibling checkout:
-
-```text
-github.com/leostera/poneglyph
-github.com/leostera/datafox
-```
-
-`protoc` is required because `poneglyph-api` generates tonic/prost bindings at
-build time.
-
-## Review commands
+## Local review gates
 
 ```sh
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo test --workspace --locked
+cd poneglyph
+pnpm install --frozen-lockfile
+pnpm check
+pnpm build
 ```
 
-The GitHub Actions workflow runs the same checks and checks out the sibling
-`datafox` repository.
+For the formal models, install a JDK and a pinned TLA+ tools JAR, then run:
 
-## Cleanup audit
+```sh
+TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check.sh
+```
 
-The review branch should contain only the current Rust workspace crates and docs.
-A final stale-reference audit should find no tracked legacy app/web/MCP/connector
-crates, root reset notes, `opencode`/`.codex` config, or removed CLI/product crate references outside historical Ralph notes and
-intentional compatibility RFD text. Future additions should pass the same scope test: they must directly
-help embedders build semantic knowledge graph daemons for agents.
+The root CI workflow runs the package checks/build and the model checker. Real-data load/query and synthetic capacity runs are separate from quick unit tests; see [`poneglyph/README.md`](../poneglyph/README.md) for commands and recorded results. Cloudflare account tests are allowed only after local gates pass and must use an isolated hostname under `*.poneglyph.leostera.dev`.
 
-## Follow-up queue
+## Review invariants
 
-These are intentionally not part of the reset review unless the scope changes:
+- Facts and retractions are append-only; entity/index projections are derived and replayable.
+- A transaction becomes visible only when the graph coordinator publishes its sequence after every participant applies.
+- A read pins one sequence and (after dynamic routing is implemented) one directory epoch; it cannot mix owners or commit visibility.
+- Split/cutover keeps the source authoritative until an atomic, durable directory update; recovery never reverses a committed cutover.
+- Storage admission includes fact/index/projection growth, WAL and transaction staging, migration workspace, and reserved headroom before accepting writes.
+- HTTP and WebSocket access to the shared TODO demo use the same passphrase authentication boundary; notifications are emitted only after transaction visibility.
+- Synthetic capacity arithmetic is not physical storage evidence. Report its assumptions separately from real workerd or Cloudflare runs.
 
-- Expand `docs/embedding.md` into a compiled example once crate publishing/API
-  polish starts.
-- Remove legacy JSON semantic RPCs after one compatibility window, keeping the
-  typed protobuf RPCs as the only semantic daemon API.
-- Generalize remaining local-backend coupling, such as storage-specific error
-  variants, out of `poneglyph` before adding non-local backend crates.
-- Design the Unix-domain-socket daemon transport and socket cleanup lifecycle;
-  keep localhost TCP as the portable fallback.
+## Scope boundaries
+
+Do not add general-purpose Datalog optimization, historical/as-of queries, schema evolution, global replication, source connectors, or modifications to FokosDB without a separate proposal. Do not physically load 50 GB or 1 TB. Keep Cloudflare resource cleanup limited to resources created for validation.

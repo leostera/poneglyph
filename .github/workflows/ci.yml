@@ -6,42 +6,59 @@ on:
   pull_request:
 
 jobs:
-  rust:
-    name: Rust workspace
+  typescript:
+    name: TypeScript Workers package
     runs-on: ubuntu-latest
     steps:
       - name: Checkout poneglyph
         uses: actions/checkout@v4
-        with:
-          path: poneglyph
 
-      - name: Checkout datafox sibling
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: poneglyph/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: poneglyph
+        run: pnpm install --frozen-lockfile
+
+      - name: Check types and tests
+        working-directory: poneglyph
+        run: pnpm check
+
+      - name: Build Worker
+        working-directory: poneglyph
+        run: pnpm build
+
+  formal-models:
+    name: PlusCal/TLA+ model checking
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout poneglyph
         uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
         with:
-          repository: leostera/datafox
-          path: datafox
+          distribution: temurin
+          java-version: 21
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
+      - name: Download pinned TLA+ tools
+        run: |
+          curl --fail --location --silent --show-error \
+            https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar \
+            --output "$RUNNER_TEMP/tla2tools.jar"
+          echo "7beec0f04818732a62fa193731711a99aa4f11279499b2360a7d156c519ea78d  $RUNNER_TEMP/tla2tools.jar" \
+            | sha256sum --check
 
-      - name: Install protobuf compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: poneglyph -> target
-
-      - name: Check formatting
-        working-directory: poneglyph
-        run: cargo fmt --all -- --check
-
-      - name: Run clippy
-        working-directory: poneglyph
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
-
-      - name: Run tests
-        working-directory: poneglyph
-        run: cargo test --workspace --locked
+      - name: Translate PlusCal and check invariants
+        env:
+          TLA2TOOLS_JAR: ${{ runner.temp }}/tla2tools.jar
+        run: ./specs/check.sh

@@ -1,71 +1,32 @@
 # Embedding Poneglyph
 
-Poneglyph is intended to be embedded by domain-specific, disk-backed daemon
-applications. This repository intentionally contains no product CLI; downstream
-daemons embed the library crates directly.
+On this branch, Poneglyph's implementation is a strict-TypeScript Cloudflare Workers package. The earlier Rust crates have been removed from the branch; their source remains available through Git history. The current package is an experimental prototype rather than a released, stable embedding API.
 
-A daemon such as `agent-memory` should generally depend on these crates:
+## Use the package
 
-- `poneglyph` for facts, URIs, values, schema/entity/query contracts, and
-  the runtime builder.
-- `poneglyph-local` for the default durable workspace-backed runtime assembly,
-  workspace-config loading helper, repair helpers, and local storage adapters.
-- `poneglyph-api` only if the daemon wants to expose the local tonic/prost gRPC
-  boundary or reuse the reference daemon service adapter.
+The [`@leostera/poneglyph`](../poneglyph/package.json) package exports typed fact, identifier, graph-ID, and bounded Datalog parsing/evaluation modules. The canonical local setup, Worker routes, transaction contract, and deployment guidance are in [`poneglyph/README.md`](../poneglyph/README.md).
 
-Prefer `poneglyph_local::LocalWorkspace` for disk-backed runtime assembly that
-loads the workspace `config.toml`. Use `LocalWorkspace::open_with_config` when
-the embedding daemon wants to provide configuration directly. Import
-`LsmFactStore`, `SqliteFactStore`, and `SqliteEntityStore` from `poneglyph-local`
-if a daemon needs adapter-level access.
+```ts
+import { parseFactBatch, parseDatalogQuery } from "@leostera/poneglyph";
 
-## Minimal disk-backed runtime
+const batch = parseFactBatch({
+  txId: "demo:tx:1",
+  facts: [{
+    source: "demo:client",
+    entity: "demo:item:one",
+    field: "demo:title",
+    value: { type: "text", value: "First item" },
+    retraction: false,
+  }],
+});
 
-```rust,no_run
-use poneglyph::{Value, fact, uri};
-use poneglyph_local::LocalWorkspace;
-
-#[tokio::main]
-async fn main() -> poneglyph::PoneResult<()> {
-    let runtime = LocalWorkspace::at("./agent-memory.poneglyph").open().await?;
-
-    runtime
-        .state_facts(vec![fact!(
-            uri!("memory:item:first-note"),
-            uri!("memory:title"),
-            Value::text("First note")
-        )])
-        .await?;
-
-    let rows = runtime.query_str(r#"memory:title(File, "First note")"#).await?;
-    println!("{rows:#?}");
-
-    Ok(())
-}
+const query = parseDatalogQuery("demo:title(Item, \"First item\")");
 ```
 
-This path opens the durable fact store, entity projection store, and search index
-through `poneglyph-local`. The same flow is compiled in
-`crates/poneglyph-local/examples/agent_memory_daemon.rs` and covered by
-`crates/poneglyph-local/tests/embedding.rs`. Facts remain the durable source of
-truth; entities and search results are derived views that can be replayed.
+Parsing gives a typed value; durable writes and graph reads still go through the Worker/Coordinator API. Do not treat direct SQL access or importing internal Durable Object classes as a stable public contract.
 
-## Daemon pattern
+## Durable/runtime boundary
 
-An embedding daemon typically owns its domain protocol and lifecycle while using
-Poneglyph for storage and semantic queries:
+The package's Cloudflare Worker owns the request boundary. SQLite-backed Durable Objects own graph coordination and private shard storage. Downstream Workers should call a supported Worker/service binding or an HTTP API with authentication supplied by the embedding application rather than opening another object's SQL storage. User-visible data remains append-only facts; active indexes, entities, and notifications are projections or signals that can be reconstructed from committed facts.
 
-1. Choose a domain workspace path, for example `~/.agent-memory/poneglyph`.
-2. Open the runtime through `poneglyph_local::LocalWorkspace::open`.
-3. Start background runtime workers with `Arc<Poneglyph>::run()` if the daemon
-   needs live entity/search projection updates.
-4. Translate domain requests into append-only facts and queries.
-5. Expose domain-specific APIs from the embedding daemon. Use `poneglyph-api`
-   only when the generic local gRPC boundary is useful.
-
-## Invariants embedders must preserve
-
-- Append new facts instead of mutating source-of-truth rows.
-- Represent retractions as retraction facts.
-- Treat entities and search indexes as replayable projections.
-- Keep domain-specific entity tables as derived/read models, not durable truth.
+The repository currently has no general-purpose SDK or stable service-binding API for arbitrary downstream deployments. The shared TODO example and its authenticated HTTP/WebSocket flow are being developed as an explicit demo surface; consult the package README and the current RFDs rather than assuming undocumented routes are stable.

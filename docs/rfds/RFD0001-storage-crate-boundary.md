@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted and implemented for the current local backend split.
+Accepted and implemented for the earlier Rust local backend split; that implementation is removed from this branch, and this RFD is retained as historical context.
 
 ## Context
 

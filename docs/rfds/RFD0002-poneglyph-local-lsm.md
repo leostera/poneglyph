@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft.
+Draft. This proposed Rust local LSM backend is not part of the TypeScript-only implementation on this branch; retained as historical design context.
 
 ## Context
 

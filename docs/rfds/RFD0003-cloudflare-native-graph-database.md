@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft. This RFD records the fixed-four-leaf Cloudflare checkpoint. The scale-out architecture that supersedes that endpoint is in [RFD0004](./RFD0004-expandable-cloudflare-sharding.md).
+Draft. This RFD records the fixed-four-leaf Cloudflare checkpoint as it existed before the TypeScript-only cutover. The Rust workspace mentioned in its original context/goals was removed from this branch; those implementation paths describe the historical tree and remain in Git history. The scale-out architecture that supersedes the checkpoint endpoint is in [RFD0004](./RFD0004-expandable-cloudflare-sharding.md).
 
 ## Summary
 
@@ -110,5 +110,5 @@ Only after local gates pass may account testing begin. Deploy an isolated, clear
 - [F1] [FokosDB package README at reviewed commit](https://github.com/lambrospetrou/fokosdb/blob/4c9d1a107bf45818685a121c881b3074d884443f/packages/fokosdb/README.md)
 - [F2] [FokosShardingRuntime design/implementation record](https://github.com/lambrospetrou/fokosdb/blob/4c9d1a107bf45818685a121c881b3074d884443f/docs/agent-plans/2026-09-19-fokos-sharding-runtime.md)
 - [F3] [FokosDB transaction coordinator](https://github.com/lambrospetrou/fokosdb/blob/4c9d1a107bf45818685a121c881b3074d884443f/packages/fokosdb/src/server/do-transaction-coordinator.ts)
-- [P1] [`Fact`](../../crates/poneglyph/src/fact.rs), [active graph indexes](../../crates/poneglyph/src/active_graph.rs), [query adapter](../../crates/poneglyph/src/query.rs), and [local SQLite fact store](../../crates/poneglyph-local/src/facts/sqlite.rs)
-- [P2] [One Piece workload description](../../README.md#benchmarks) and [`stress.rs`](../../crates/poneglyph-local/tests/stress.rs)
+- [P1] Historical [`Fact`](https://github.com/leostera/poneglyph/blob/75df2082e6ba8c14f7d026450eda4b5ef6b27e83/crates/poneglyph/src/fact.rs), [active graph indexes](https://github.com/leostera/poneglyph/blob/75df2082e6ba8c14f7d026450eda4b5ef6b27e83/crates/poneglyph/src/active_graph.rs), [query adapter](https://github.com/leostera/poneglyph/blob/75df2082e6ba8c14f7d026450eda4b5ef6b27e83/crates/poneglyph/src/query.rs), and [local SQLite fact store](https://github.com/leostera/poneglyph/blob/75df2082e6ba8c14f7d026450eda4b5ef6b27e83/crates/poneglyph-local/src/facts/sqlite.rs)
+- [P2] Historical [One Piece workload description](https://github.com/leostera/poneglyph/blob/75df2082e6ba8c14f7d026450eda4b5ef6b27e83/README.md#benchmarks) and [`stress.rs`](https://github.com/leostera/poneglyph/blob/75df2082e6ba8c14f7d026450eda4b5ef6b27e83/crates/poneglyph-local/tests/stress.rs)

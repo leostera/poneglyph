@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for the library-first repository reset.
+Accepted for the earlier library-first repository reset; superseded on this TypeScript-only branch by RFD0003/RFD0004 and retained as historical context.
 
 ## Context
 

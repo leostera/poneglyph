@@ -1,6 +1,6 @@
 # `@leostera/poneglyph`
 
-Strict TypeScript package and Cloudflare Workers/Durable Objects prototype for Poneglyph. The existing Rust workspace and local backends remain unchanged. This is an experimental `0.1.0` package; the RFD remains Draft, and the Cloudflare implementation is not a released compatibility promise.
+Strict TypeScript package and Cloudflare Workers/Durable Objects prototype for Poneglyph. The earlier Rust workspace and local backends were removed from this branch only; their commits remain in Git history and other branches are unchanged. This is an experimental `0.1.0` package; RFD0003/RFD0004 remain Draft, and the Cloudflare implementation is not a released compatibility promise.
 
 ## Runtime layout and transaction visibility
 
@@ -29,7 +29,7 @@ POST /v1/graphs/{graphId}/query        { "query": "..." }
 GET  /v1/graphs/{graphId}/entities?uri=wiki%3Acrew%3Astraw-hats
 ```
 
-Transaction JSON follows the Rust fact model:
+Transaction JSON uses the typed Poneglyph fact shape:
 
 ```json
 {
@@ -63,7 +63,7 @@ Fixed prototype budgets: 2,000 results, 50,000 streamed tuples, 20,000 shard req
 
 ## One Piece local load/query workload
 
-The repeatable offline harness imports MediaWiki XML from the One Piece Fandom current dump into a temporary local `cf dev`/workerd instance, then runs the same four representative queries as the Rust stress workload. The runnable harnesses live at repository-level `examples/onepiece-load.ts` and `examples/deployed-smoke.ts`; the package scripts below are their convenience entrypoints. `cf dev` uses the Cloudflare Vite plugin and the project’s `cloudflare.config.ts`; the harness discovers the local Vite URL announced at startup. It streams XML parsing and bounds writes at 500 facts / 800,000 estimated fact bytes per transaction; the Worker still enforces the canonical 1 MB transaction cap. Domain relationship facts for crews/islands/lore are the deterministic test fixture layered on top of real page-derived title/category/link facts; this is a workload, not a wiki connector. A unique graph ID and temporary SQLite persistence directory are used each run; the `cf dev` process is stopped and its temporary state removed afterward. The downloaded dump cache is kept for reuse. No Cloudflare account resources are created.
+The repeatable offline harness imports MediaWiki XML from the One Piece Fandom current dump into a temporary local `cf dev`/workerd instance, then runs four representative graph queries defined for the Cloudflare checkpoint. The runnable harnesses live at repository-level `examples/onepiece-load.ts` and `examples/deployed-smoke.ts`; the package scripts below are their convenience entrypoints. `cf dev` uses the Cloudflare Vite plugin and the project’s `cloudflare.config.ts`; the harness discovers the local Vite URL announced at startup. It streams XML parsing and bounds writes at 500 facts / 800,000 estimated fact bytes per transaction; the Worker still enforces the canonical 1 MB transaction cap. Domain relationship facts for crews/islands/lore are the deterministic test fixture layered on top of real page-derived title/category/link facts; this is a workload, not a wiki connector. A unique graph ID and temporary SQLite persistence directory are used each run; the `cf dev` process is stopped and its temporary state removed afterward. The downloaded dump cache is kept for reuse. No Cloudflare account resources are created.
 
 ```sh
 # from the repository root; the dump/cache is ignored by git
@@ -138,13 +138,13 @@ cf ssl certificate-packs list --zone leostera.dev --status all --per-page 100 | 
 
 Confirm the DNS, Worker, and matching certificate-pack listings all return `[]`/no match. The cleanup mode and delete command must target only this dedicated Worker and its namespaces. Do not manually edit unrelated DNS records or certificate packs. If cleanup fails, stop and inspect the isolated Worker before retrying.
 
-## Checkpoint readiness criteria
+## Historical checkpoint readiness record
 
-This branch is a reliable experimental checkpoint—not a production-ready service—because the following gates were completed together:
+At the fixed-leaf checkpoint, the following gates passed together. This is recorded evidence for that checkpoint, not a substitute for rerunning the gates after the current TypeScript-only and scale-out changes:
 
-- The existing Rust/local workspace stayed intact; formatting, workspace tests, and strict Clippy passed during the checkpoint.
+- Before the TypeScript-only cutover, the Rust/local workspace's formatting, workspace tests, and strict Clippy passed as regression checks. That implementation and workspace have since been removed from this branch; the historical commits are unchanged.
 - `pnpm check` passes strict TypeScript generation/typecheck plus all 18 Cloudflare Vitest tests, including cross-leaf commit visibility, partial-apply recovery, idempotent retry/conflict handling, and abort on invalid retraction. `pnpm build` and normal/cleanup `cf deploy --dry-run` both pass.
 - The checksum-pinned 20,000-page One Piece workload commits 159,332 facts in 320 transactions and passes all four multi-DO queries/replays at sequence 320.
 - The isolated Cloudflare custom-domain smoke run proves a four-leaf transaction, `txId` replay, and query snapshot visibility; every validation Worker/DO namespace/domain/DNS/certificate resource was then removed.
 
-The checkpoint stays Draft until a later RFD revises the scope. Historical/as-of queries, schema evolution, global replication, ingestion connectors, dynamic shard splitting, hot-entity splitting, and a general-purpose distributed optimizer remain explicitly out of scope.
+The fixed-leaf checkpoint remains Draft. RFD0004 proposes expandable routing and shard splits, but those mechanisms are not implemented in this checkpoint. Historical/as-of queries, schema evolution, global replication, ingestion connectors, hot-entity splitting, and a general-purpose distributed optimizer remain explicitly out of scope.
