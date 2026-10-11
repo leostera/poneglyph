@@ -73,6 +73,19 @@ C delivered fewer facts and lower rates in the first two cases, more in the last
 
 All sixteen ledgers were audited. Their combined physical SQLite bytes were **45,838,336 / 40,050,688 / 10,215,424 / 8,622,080** across the four cases. This closes C's ledger-byte accounting omission, but does **not** quantify a storage reduction against B1: B1's per-transaction-object bytes were not aggregated. Recovery fault tests demonstrate the exercised protocol; this measured repeat did not observe extra caller-unknown commits completed by background recovery. B1 remains the experimental incumbent; no default/production cutover, cloud performance claim, or scale-up is authorized.
 
+### Matched C comparison: second B1 control
+
+[Control 2 final](../../bench/write-path/results/2026-10-11T21-44-24-640Z-05e4566c/final.json) identifies selected revision `3a8c849`. **Both Worker bundle digests exactly match control 1**, including the packaged application/client path; the B1 runtime was not patched. Unrelated untracked video documents are recorded in worktree status, not bundled into the SUT.
+
+| Facts/call × concurrency | B1 control 2 acknowledged facts | Unknown calls | Acknowledged facts/s | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 96,200 | 38 | 1,297.79 | 4.55 |
+| 10 × 100 | 86,140 | 1,386 | 474.49 | 7.43 |
+| 10 × 1,000 | 10,250 | 8,975 | 50.45 | 38.95 |
+| 2 × 10,000 | 3,630 | 48,185 | 10.00 | 85.58 |
+
+Every planned call was attempted; all admitted-write and restart audits passed, with zero reconciled unacknowledged commits. All loads were incomplete. Attempts: 2,491 / 39,827 / 76,616 / 394,283. Busy responses: 1,529 / 31,213 / 74,285 / 95,364. Transport failures: 0 / 0 / 1,306 / 297,104. Identical bundles still produced materially different highly-concurrent delivery/latency between controls: report local variation rather than treating a single nearby rate as universal. The second C repeat must use unchanged C and fresh persistence.
+
 ## Summary
 
 Build `bench/write-path/` as a repeatable application-level benchmark of Poneglyph's ordinary `stateFacts` API. A local driver converts the already-downloaded One Piece corpus into regular facts and sends bounded HTTP requests to one or more application Workers. Those Workers consume the packaged Poneglyph client and await writes to one deployed database containing one graph. Actual fact, index, transaction, and recovery state must be persisted; acknowledgements of queued work are not successful commits. First measure the implementation currently on disk, then the proposed hash-routed, independently sharded fact/index store trees with distributed transaction coordination. Keep the benchmark, dataset, transport, and common workload parameters fixed between versions. Every version and planned scenario must pass end-to-end correctness tests in Miniflare before deployment. Only Cloudflare runs are evidence of cloud performance.

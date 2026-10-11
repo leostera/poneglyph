@@ -1,0 +1,4274 @@
+{
+  "kind": "final local write-path result",
+  "manifest": {
+    "runId": "2026-10-11T21-44-24-640Z-05e4566c",
+    "version": "B1-independent-subtrees",
+    "environment": "Miniflare; not cloud performance",
+    "build": {
+      "databaseImplementation": "B1-independent-subtrees",
+      "gitBase": "3a8c8492b9f1c0da102a5246d9b2a615c7a3b42d",
+      "gitStatus": [
+        "?? docs/poneglyph-explainer-preview.mp4",
+        "?? docs/video/"
+      ],
+      "sourceDigests": {
+        "../../poneglyph/src/database-implementation.ts": "7ade4f61945997192963d2e54bf710ba17d10249df720caa98861f6ce64248f7",
+        "../../poneglyph/src/datalog/ast.ts": "586cc0a795c7114b6813eaf6d309fedc13b5d32180aebcb10b2da4bbeff7b9f0",
+        "../../poneglyph/src/datalog/evaluator.ts": "36deb0ce2faefa73272a4d06c05c752d2993b028da62ac2a647fae1bf8514907",
+        "../../poneglyph/src/datalog/parser.ts": "558f30101ecd7547efd62df4976fe1fd834651624fae58406411ebb8080ae183",
+        "../../poneglyph/src/datalog/value.ts": "7291d44c1f0856b7d448dce8fef8d1a127f7ad364f4e9782ad7beb223e996a05",
+        "../../poneglyph/src/domain/date-validation.ts": "7f141cf8063ea3519680f0a71bc424212283f1401c9415dbbf3d6af5cb1d75e1",
+        "../../poneglyph/src/domain/fact-value.ts": "8df5f3e2b8a22899325ff75d4d2ed35e53c7adb296a64fc6b28af1db2831c71a",
+        "../../poneglyph/src/domain/fact.ts": "ba92f8a48cfba0ab82bcbc611ddf7e4a8107df7a89ef0a203c7a2dae4b6cf6b4",
+        "../../poneglyph/src/domain/graph-id.ts": "fb23faf3dc333f49752a9e17009bcaf512a01632419b1b574fb9f491d25cf641",
+        "../../poneglyph/src/domain/identifiers.ts": "747dc1fa083705aea2927965c0da9990e417a89bb0a90e4c446ddd1daa49b6ac",
+        "../../poneglyph/src/domain/int64.ts": "4448f6097cdf97b1bdc72e4ecd7819516ade0661f424f9ec18865a3a45460ffd",
+        "../../poneglyph/src/domain/result.ts": "9f1e517b566238e0a4fc771172c6c7c5d7f0954e82584201193d298bd061b8f5",
+        "../../poneglyph/src/domain/string-order.ts": "a38dc679f8479e9f089e0795c3da5d48d72dceb01046567f6184d5457bcf1ea4",
+        "../../poneglyph/src/storage-candidate/benchmark.ts": "b08c5a39f23bf91bddc41ef78eec81c10859b9c12c9c3adb88f265fd17be9c2c",
+        "../../poneglyph/src/storage-candidate/capacity.ts": "9f4104bb26c43a07270d7c2a185c69379b71a6e24309224094a3fb622e58b4fa",
+        "../../poneglyph/src/storage-candidate/constants.ts": "9ec1d17c6bf8b0db1184e23bad354a34d7e21347b931846f8b450c85eb680fed",
+        "../../poneglyph/src/storage-candidate/coordinator.ts": "9eed4ed1b83552ec3ebd25ae54d3c21aad9df2dd263e5545e87d83c72fc94a45",
+        "../../poneglyph/src/storage-candidate/distributed-fact-source.ts": "59819f44ef7ca5dc25ff48c45c8bbdf10afca95a8a3b2dbb616ba68ed646e71a",
+        "../../poneglyph/src/storage-candidate/forest.ts": "44fed1b6aa1dbc4a094940496a8a34182bf92ce770aa8a3bc59a2e9a0b92ea28",
+        "../../poneglyph/src/storage-candidate/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+        "../../poneglyph/src/storage-candidate/implementation.ts": "57aaebbda2db7c2d117f57b68df63280177dd8697a502aaa7fa82a54f60b67d1",
+        "../../poneglyph/src/storage-candidate/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+        "../../poneglyph/src/storage-candidate/migration.ts": "46e149dd4ffce655979864fd20ed4906e7a02d3344b76713a8cf3b941151e55a",
+        "../../poneglyph/src/storage-candidate/protocol.ts": "06238f68cdc0153eddd4584d2eefa6d2f6f3f5ca5632d6cc8595abc140c38c86",
+        "../../poneglyph/src/storage-candidate/routing.ts": "482f1aed8edf73597ba0a108dfa3e16853e1053e3a0c3ca530326975294c9b98",
+        "../../poneglyph/src/storage-candidate/shard.ts": "eb583b5c7406f70c9b9cf59dabbc9b1361196d7f3073c25e084ab38288dacd06",
+        "../../poneglyph/src/storage-candidate/sql.ts": "6df91f256d90a0cea1f5440ca15455c8308745097c62c2932014b677accfdf06",
+        "../../poneglyph/src/storage-candidate/transaction.ts": "d12bd0b32ac2df57edde2119e815008259378d477c795ea1126c7a152b00c1bc",
+        "../../poneglyph/src/storage/constants.ts": "bef7eeb48dae158f10e9b018ad29a86230752bf0848817b81dcd9f5b083a1e5b",
+        "../../poneglyph/src/storage/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+        "../../poneglyph/src/storage/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+        "../../poneglyph/src/storage/protocol.ts": "06238f68cdc0153eddd4584d2eefa6d2f6f3f5ca5632d6cc8595abc140c38c86",
+        "../../poneglyph/src/testing/storage-audit.ts": "32babba0e76eb9c19edb04d7ea019bc9a0589d4a9bf2f5a1582ffdebd61e2077",
+        "../../poneglyph/src/todo_demo/auth.ts": "388c7607879e7ca4c681a801e5904e989008293d2bd5dc2aa0d8874aead8429e",
+        "../../poneglyph/src/todo_demo/hub.ts": "c65b83f1f492c723f6715efb286e4307ea7ee6397debe53a199dd21ddeb680a8",
+        "../../poneglyph/src/todo_demo/page.ts": "52c594afd72cc40de04b260ce5d6230d9d9c9ca392bcab0520e5362934515a89",
+        "../../poneglyph/src/todo_demo/service.ts": "707dcfd8eb55a75afea03e9016e36a61cbe773b939eea4d086a8c85e4bef425e",
+        "../../poneglyph/src/todo_demo/worker.ts": "91bae6a11adc83b6fab7ce9b230a5d2beff4a78fe9be1ae14898e9b0f65e9616",
+        "../../poneglyph/src/worker.ts": "7235743b034628f043fa17fbfc329166101cc7e0f01b9c8643dee7003cb10f69",
+        "build.ts": "872b869c6e7d125fe7872700fcccea2429d2f2ff1702924d6ba35b3c2b6348a8",
+        "corpus.ts": "d800c51667c3e2c63d04b1eaf286cf38fc1cb3cc114b0477e297315022451f41",
+        "database-identity.ts": "07cb264b7eee4685859315092b9dd502d14c5f3852caeff93fc2c1136f4d49ef",
+        "driver.ts": "b89c40be8de75c0b0e0b849b8238b194dcf24ffd5cd3db5dc860fc421801140b",
+        "final-result.ts": "529aa7bc4448b03ca89edf90dd7876a59fb00327dbf5946501a7b12bf6aa0238",
+        "ledger.ts": "d3a6e6aab618f4af43349b39e96eb1060d25da280c97c755fb9c25c09a3e75ba",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/client.js": "3788367ce7fb30ecb936d3cc18a56a4cea7c9c9c634fffd14c95609109edc073",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/ast.js": "20d3ed3a2f4bbdf67581c4a1a8cca094f636415a0e05657a812b6c35288e4e16",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/evaluator.js": "7ad7a5447c361af94e39b8653ad69062c30f03007c38617f8251a40bc0b3e43d",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/fact-source.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/parser.js": "bc528dae38e60b2f87137f89a35dd154f5d7a280cb99490c97f2cca911afb36f",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/value.js": "a42784eaf59359e86d6e3ca31a66dbbde9d96d6558e717296fb29a878853ec80",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/date-validation.js": "4b7d7283ed28fdc9a5bf6a5827b6796c54454503e4113b23f69108a9e64ae6f9",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact-value.js": "dbf69ccc15f594656aa28892522b9909a0000d04f926d5e995e8685aa3df8248",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact.js": "549cc66749833c217ea9d9860f9a942b91f130b0345689a0f2bb18e549b64ac2",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/graph-id.js": "b20ec3aaf6d8343b4709beab1d8b1d70f33022720eca700b1689930ec024db99",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/identifiers.js": "d33ab8baf96f99472d71b5c4da99ffc154b56ef044e437b4dac075070e053010",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/int64.js": "2e3e55ccc389336263a1dd51d6089b641da0515fbb3c1307d09df995d47af9a5",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/result.js": "d8d4830e99f43409a946d8b2e1316a1f13e5171b599865ab00643585bcda9609",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/string-order.js": "aa59fe031cfc95f85594e9b0ee8eccf3b1234378c157da25a5628ea12b03460c",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/index.js": "5e0312a2a755a9c79da33339efcc6a4132c5f919fa94ce30ea29929dc38739e4",
+        "package.json": "e0fd97b233e5db487a8647ef48069e1aac28b26b29cd5e478282714ecc961dea",
+        "pnpm-lock.yaml": "448245d86b7446f89d2d53964df4602ef1928006525697982f5b1e3ad4a894d1",
+        "run.ts": "1972c2e5fe6a13d3792dbead9f811c2a6e2476d3e04c9e0202af0150b5f78acb",
+        "runtime.ts": "cff1d5cd5f7d27a51d848165960c3a2ece483dad2895354c83720bf18fda80d0",
+        "scenarios.ts": "34b37fa0261d22723e07414916e3d7ccf4d483760f43f5748e64f34f2b728022",
+        "stream-audit.ts": "fd8b7d04a96db46c222c80c872de03baac62eb2ce0e9d89a83614781e14d2e5d",
+        "worker/application.ts": "fbc969a312a2855ee95bdcde6ec78b115107719f98f9a6374b5de94884cc5b66",
+        "worker/database.ts": "02773fc8c2b7e71a2d8839c71d43edbbb8345a6fdcef37f8f4eb112cc42b1eae"
+      },
+      "bundleDigests": {
+        "application": "7a0020d0c9fc5115b694867706b4e06520a8817d9fb755f583a5e1555418d043",
+        "database": "0213b0fdf6a301d63d59c115e13537729abde9dcacbea8e1d83e153067643c93"
+      },
+      "runtime": {
+        "miniflare": "5.20261006.1-alpha",
+        "compatibilityDate": "2026-10-06",
+        "node": "v26.11.0"
+      },
+      "clientPackage": "@leostera/poneglyph@0.1.0 (local packed file dependency)"
+    },
+    "corpus": {
+      "extractionVersion": 1,
+      "xmlSha256": "1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084",
+      "xmlBytes": 436781838,
+      "pages": 296624,
+      "facts": 1530195,
+      "factsSha256": "e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064",
+      "policies": {
+        "identity": "exact percent-encoded title",
+        "categoriesPerPage": 8,
+        "linksPerPage": 16,
+        "fullTextStored": false,
+        "supplementalFacts": 0,
+        "namespaceFilter": "none"
+      }
+    },
+    "reference": {
+      "facts": 100000,
+      "normalizedPrefixSha256": "2dd6061bfc95c78a90af1a2faa3ee147908981b4b6b480ed30c1726493af5309"
+    },
+    "selectedFacts": 100000,
+    "scope": "100k iteration cohort",
+    "workerCount": 4,
+    "retry": {
+      "maxAttempts": 8,
+      "attemptTimeoutMs": 30000,
+      "backoff": "full jitter, exponential 100ms..5s"
+    },
+    "selected": [
+      "parallel-medium",
+      "parallel-small",
+      "highly-concurrent",
+      "saturation"
+    ],
+    "policy": "Every planned batch is attempted; no batch shrinking, input skipping, storage fixes, outcome-limit changes, or fallback delivery"
+  },
+  "summary": {
+    "runId": "2026-10-11T21-44-24-640Z-05e4566c",
+    "status": "complete",
+    "persistenceChecksPassed": true,
+    "fullWorkloadsCompleted": false,
+    "cloudGate": "admitted-write persistence checks passed; full delivery is reported separately; cloud execution remains unauthorized; incomplete loads are not throughput winners",
+    "reportDirectory": "results/2026-10-11T21-44-24-640Z-05e4566c"
+  },
+  "scenarios": [
+    {
+      "scenario": {
+        "name": "parallel-medium",
+        "batchSize": 100,
+        "concurrency": 10
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 1000,
+      "startedAt": "2026-10-11T21:44:25.561Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 74125.893459,
+        "plannedCallsAttempted": 1000,
+        "acknowledgedFacts": 96200,
+        "acknowledgedTransactions": 962,
+        "factsPerSecond": 1297.7921143467834,
+        "transactionsPerSecond": 12.977921143467833,
+        "rejected": 0,
+        "unknown": 38,
+        "attempts": 2491,
+        "statuses": {
+          "200": 962,
+          "423": 1529
+        },
+        "logicalLatency": {
+          "count": 1000,
+          "meanMs": 727.8692509289995,
+          "p50Ms": 228.2494579999984,
+          "p95Ms": 4553.761666999999,
+          "p99Ms": null,
+          "maxMs": 10836.824042,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 962,
+          "meanMs": 509.77509512785844,
+          "p50Ms": 216.32479199999943,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maxMs": 7913.7091670000045,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 2491,
+          "meanMs": 109.02752508912073,
+          "p50Ms": 86.64820800000598,
+          "p95Ms": 185.2060000000056,
+          "p99Ms": null,
+          "maxMs": 2922.9504579999957,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 2938238,
+            "system": 311262
+          },
+          "eventLoopDelayMeanMs": 20.682728564889757,
+          "eventLoopDelayMaxMs": 23.166975,
+          "memoryBytes": {
+            "rss": 229954680,
+            "heapTotal": 101105664,
+            "heapUsed": 32658136,
+            "external": 58099998,
+            "arrayBuffers": 36668484
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 962,
+          "meanMs": 74.41891891891892,
+          "p50Ms": 64,
+          "p95Ms": null,
+          "p99Ms": null,
+          "maxMs": 1071,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 10,
+          "mean": 9.819422022138555,
+          "target": 10
+        },
+        "workerDistribution": {
+          "app-0": 242,
+          "app-2": 239,
+          "app-1": 238,
+          "app-3": 243
+        }
+      },
+      "localDrainMs": 518.8972499999945,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 96200,
+        "persistedTransactions": 962,
+        "activeTuples": 96200,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 349904896,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 932,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 478
+            },
+            {
+              "phase": "complete",
+              "count": 477
+            },
+            {
+              "phase": "complete",
+              "count": 472
+            },
+            {
+              "phase": "complete",
+              "count": 509
+            },
+            {
+              "phase": "complete",
+              "count": 495
+            },
+            {
+              "phase": "complete",
+              "count": 469
+            },
+            {
+              "phase": "complete",
+              "count": 489
+            },
+            {
+              "phase": "complete",
+              "count": 499
+            },
+            {
+              "phase": "complete",
+              "count": 483
+            },
+            {
+              "phase": "complete",
+              "count": 490
+            },
+            {
+              "phase": "complete",
+              "count": 484
+            },
+            {
+              "phase": "complete",
+              "count": 464
+            },
+            {
+              "phase": "complete",
+              "count": 475
+            },
+            {
+              "phase": "complete",
+              "count": 505
+            },
+            {
+              "phase": "complete",
+              "count": 495
+            },
+            {
+              "phase": "complete",
+              "count": 462
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 478
+                }
+              ],
+              "databaseBytes": 200704
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 477
+                }
+              ],
+              "databaseBytes": 196608
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 931,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 472
+                }
+              ],
+              "databaseBytes": 200704
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 509
+                }
+              ],
+              "databaseBytes": 200704
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 931,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 495
+                }
+              ],
+              "databaseBytes": 196608
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 469
+                }
+              ],
+              "databaseBytes": 188416
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 931,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 489
+                }
+              ],
+              "databaseBytes": 192512
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 930,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 499
+                }
+              ],
+              "databaseBytes": 192512
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 930,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 483
+                }
+              ],
+              "databaseBytes": 184320
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 490
+                }
+              ],
+              "databaseBytes": 192512
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 484
+                }
+              ],
+              "databaseBytes": 184320
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 464
+                }
+              ],
+              "databaseBytes": 184320
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 931,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 475
+                }
+              ],
+              "databaseBytes": 184320
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 505
+                }
+              ],
+              "databaseBytes": 188416
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 495
+                }
+              ],
+              "databaseBytes": 188416
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 462
+                }
+              ],
+              "databaseBytes": 180224
+            }
+          ],
+          "checkedTransactionCoordinators": 962,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 3125248
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 96200,
+        "persistedTransactions": 962,
+        "activeTuples": 96200,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 349904896,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 932,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 478
+            },
+            {
+              "phase": "complete",
+              "count": 477
+            },
+            {
+              "phase": "complete",
+              "count": 472
+            },
+            {
+              "phase": "complete",
+              "count": 509
+            },
+            {
+              "phase": "complete",
+              "count": 495
+            },
+            {
+              "phase": "complete",
+              "count": 469
+            },
+            {
+              "phase": "complete",
+              "count": 489
+            },
+            {
+              "phase": "complete",
+              "count": 499
+            },
+            {
+              "phase": "complete",
+              "count": 483
+            },
+            {
+              "phase": "complete",
+              "count": 490
+            },
+            {
+              "phase": "complete",
+              "count": 484
+            },
+            {
+              "phase": "complete",
+              "count": 464
+            },
+            {
+              "phase": "complete",
+              "count": 475
+            },
+            {
+              "phase": "complete",
+              "count": 505
+            },
+            {
+              "phase": "complete",
+              "count": 495
+            },
+            {
+              "phase": "complete",
+              "count": 462
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 478
+                }
+              ],
+              "databaseBytes": 200704
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 477
+                }
+              ],
+              "databaseBytes": 196608
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 931,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 472
+                }
+              ],
+              "databaseBytes": 200704
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 509
+                }
+              ],
+              "databaseBytes": 200704
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 931,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 495
+                }
+              ],
+              "databaseBytes": 196608
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 469
+                }
+              ],
+              "databaseBytes": 188416
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 931,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 489
+                }
+              ],
+              "databaseBytes": 192512
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 930,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 499
+                }
+              ],
+              "databaseBytes": 192512
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 930,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 483
+                }
+              ],
+              "databaseBytes": 184320
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 490
+                }
+              ],
+              "databaseBytes": 192512
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 484
+                }
+              ],
+              "databaseBytes": 184320
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 464
+                }
+              ],
+              "databaseBytes": 184320
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 931,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 475
+                }
+              ],
+              "databaseBytes": 184320
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 505
+                }
+              ],
+              "databaseBytes": 188416
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 495
+                }
+              ],
+              "databaseBytes": 188416
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 932,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 462
+                }
+              ],
+              "databaseBytes": 180224
+            }
+          ],
+          "checkedTransactionCoordinators": 962,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 3125248
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T21:45:50.262Z"
+    },
+    {
+      "scenario": {
+        "name": "parallel-small",
+        "batchSize": 10,
+        "concurrency": 100
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 10000,
+      "startedAt": "2026-10-11T21:45:50.266Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 181543.60629100003,
+        "plannedCallsAttempted": 10000,
+        "acknowledgedFacts": 86140,
+        "acknowledgedTransactions": 8614,
+        "factsPerSecond": 474.486553175133,
+        "transactionsPerSecond": 47.4486553175133,
+        "rejected": 0,
+        "unknown": 1386,
+        "attempts": 39827,
+        "statuses": {
+          "200": 8614,
+          "423": 31213
+        },
+        "logicalLatency": {
+          "count": 10000,
+          "meanMs": 1774.9397516087033,
+          "p50Ms": 562.5715419999906,
+          "p95Ms": 7434.119292000018,
+          "p99Ms": 9339.631874999992,
+          "maxMs": 10993.211584000004,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 8614,
+          "meanMs": 1028.250318275484,
+          "p50Ms": 453.480292000022,
+          "p95Ms": 4569.54512499999,
+          "p99Ms": null,
+          "maxMs": 10957.705333999998,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 39827,
+          "meanMs": 108.5300660203379,
+          "p50Ms": 97.1090419999964,
+          "p95Ms": 200.45770799998718,
+          "p99Ms": 343.475792000012,
+          "maxMs": 1148.9167080000043,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 16273652,
+            "system": 2589739
+          },
+          "eventLoopDelayMeanMs": 20.40394221582734,
+          "eventLoopDelayMaxMs": 32.473087,
+          "memoryBytes": {
+            "rss": 231725208,
+            "heapTotal": 88965120,
+            "heapUsed": 53666640,
+            "external": 58701288,
+            "arrayBuffers": 37265658
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 8614,
+          "meanMs": 78.3291153935454,
+          "p50Ms": 74,
+          "p95Ms": 124,
+          "p99Ms": null,
+          "maxMs": 921,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 100,
+          "mean": 97.76945117210047,
+          "target": 100
+        },
+        "workerDistribution": {
+          "app-0": 2178,
+          "app-3": 2153,
+          "app-1": 2145,
+          "app-2": 2138
+        }
+      },
+      "localDrainMs": 515.5346659999923,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 86140,
+        "persistedTransactions": 8614,
+        "activeTuples": 86140,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 317026304,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1990,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 108
+            },
+            {
+              "phase": "complete",
+              "count": 566
+            },
+            {
+              "phase": "complete",
+              "count": 118
+            },
+            {
+              "phase": "complete",
+              "count": 678
+            },
+            {
+              "phase": "complete",
+              "count": 115
+            },
+            {
+              "phase": "complete",
+              "count": 740
+            },
+            {
+              "phase": "complete",
+              "count": 168
+            },
+            {
+              "phase": "complete",
+              "count": 695
+            },
+            {
+              "phase": "complete",
+              "count": 171
+            },
+            {
+              "phase": "complete",
+              "count": 778
+            },
+            {
+              "phase": "complete",
+              "count": 188
+            },
+            {
+              "phase": "complete",
+              "count": 797
+            },
+            {
+              "phase": "complete",
+              "count": 185
+            },
+            {
+              "phase": "complete",
+              "count": 786
+            },
+            {
+              "phase": "complete",
+              "count": 176
+            },
+            {
+              "phase": "complete",
+              "count": 788
+            },
+            {
+              "phase": "complete",
+              "count": 189
+            },
+            {
+              "phase": "complete",
+              "count": 858
+            },
+            {
+              "phase": "complete",
+              "count": 222
+            },
+            {
+              "phase": "complete",
+              "count": 886
+            },
+            {
+              "phase": "complete",
+              "count": 202
+            },
+            {
+              "phase": "complete",
+              "count": 931
+            },
+            {
+              "phase": "complete",
+              "count": 199
+            },
+            {
+              "phase": "complete",
+              "count": 912
+            },
+            {
+              "phase": "complete",
+              "count": 246
+            },
+            {
+              "phase": "complete",
+              "count": 875
+            },
+            {
+              "phase": "complete",
+              "count": 216
+            },
+            {
+              "phase": "complete",
+              "count": 943
+            },
+            {
+              "phase": "complete",
+              "count": 187
+            },
+            {
+              "phase": "complete",
+              "count": 850
+            },
+            {
+              "phase": "complete",
+              "count": 220
+            },
+            {
+              "phase": "complete",
+              "count": 1013
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1990,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755329272,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 108
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 566
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1988,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755325586,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 118
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 678
+                }
+              ],
+              "databaseBytes": 311296
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1986,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755325724,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 115
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 740
+                }
+              ],
+              "databaseBytes": 331776
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1986,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755327134,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 168
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 695
+                }
+              ],
+              "databaseBytes": 339968
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1984,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755330327,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 171
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 778
+                }
+              ],
+              "databaseBytes": 360448
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1990,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755328610,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 188
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 797
+                }
+              ],
+              "databaseBytes": 380928
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1988,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755322229,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 185
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 786
+                }
+              ],
+              "databaseBytes": 380928
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1989,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755325724,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 176
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 788
+                }
+              ],
+              "databaseBytes": 368640
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1981,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755326382,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 189
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 858
+                }
+              ],
+              "databaseBytes": 393216
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1987,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755318202,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 222
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 886
+                }
+              ],
+              "databaseBytes": 409600
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1982,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755325174,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 202
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 931
+                }
+              ],
+              "databaseBytes": 413696
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1987,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755327757,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 199
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 912
+                }
+              ],
+              "databaseBytes": 405504
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1989,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755312661,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 246
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 875
+                }
+              ],
+              "databaseBytes": 417792
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1987,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755319040,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 216
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 943
+                }
+              ],
+              "databaseBytes": 405504
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1986,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755316197,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 187
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 850
+                }
+              ],
+              "databaseBytes": 372736
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1986,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755326382,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 220
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1013
+                }
+              ],
+              "databaseBytes": 409600
+            }
+          ],
+          "checkedTransactionCoordinators": 8614,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 6053888
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 86140,
+        "persistedTransactions": 8614,
+        "activeTuples": 86140,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 317026304,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1990,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 108
+            },
+            {
+              "phase": "complete",
+              "count": 566
+            },
+            {
+              "phase": "complete",
+              "count": 118
+            },
+            {
+              "phase": "complete",
+              "count": 678
+            },
+            {
+              "phase": "complete",
+              "count": 115
+            },
+            {
+              "phase": "complete",
+              "count": 740
+            },
+            {
+              "phase": "complete",
+              "count": 168
+            },
+            {
+              "phase": "complete",
+              "count": 695
+            },
+            {
+              "phase": "complete",
+              "count": 171
+            },
+            {
+              "phase": "complete",
+              "count": 778
+            },
+            {
+              "phase": "complete",
+              "count": 188
+            },
+            {
+              "phase": "complete",
+              "count": 797
+            },
+            {
+              "phase": "complete",
+              "count": 185
+            },
+            {
+              "phase": "complete",
+              "count": 786
+            },
+            {
+              "phase": "complete",
+              "count": 176
+            },
+            {
+              "phase": "complete",
+              "count": 788
+            },
+            {
+              "phase": "complete",
+              "count": 189
+            },
+            {
+              "phase": "complete",
+              "count": 858
+            },
+            {
+              "phase": "complete",
+              "count": 222
+            },
+            {
+              "phase": "complete",
+              "count": 886
+            },
+            {
+              "phase": "complete",
+              "count": 202
+            },
+            {
+              "phase": "complete",
+              "count": 931
+            },
+            {
+              "phase": "complete",
+              "count": 199
+            },
+            {
+              "phase": "complete",
+              "count": 912
+            },
+            {
+              "phase": "complete",
+              "count": 246
+            },
+            {
+              "phase": "complete",
+              "count": 875
+            },
+            {
+              "phase": "complete",
+              "count": 216
+            },
+            {
+              "phase": "complete",
+              "count": 943
+            },
+            {
+              "phase": "complete",
+              "count": 187
+            },
+            {
+              "phase": "complete",
+              "count": 850
+            },
+            {
+              "phase": "complete",
+              "count": 220
+            },
+            {
+              "phase": "complete",
+              "count": 1013
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1990,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755329272,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 108
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 566
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1988,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755325586,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 118
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 678
+                }
+              ],
+              "databaseBytes": 311296
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1986,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755325724,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 115
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 740
+                }
+              ],
+              "databaseBytes": 331776
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1986,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755327134,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 168
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 695
+                }
+              ],
+              "databaseBytes": 339968
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1984,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755330327,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 171
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 778
+                }
+              ],
+              "databaseBytes": 360448
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1990,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755328610,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 188
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 797
+                }
+              ],
+              "databaseBytes": 380928
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1988,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755322229,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 185
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 786
+                }
+              ],
+              "databaseBytes": 380928
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1989,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755325724,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 176
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 788
+                }
+              ],
+              "databaseBytes": 368640
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1981,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755326382,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 189
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 858
+                }
+              ],
+              "databaseBytes": 393216
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1987,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755318202,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 222
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 886
+                }
+              ],
+              "databaseBytes": 409600
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1982,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755325174,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 202
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 931
+                }
+              ],
+              "databaseBytes": 413696
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1987,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755327757,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 199
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 912
+                }
+              ],
+              "databaseBytes": 405504
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1989,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755312661,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 246
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 875
+                }
+              ],
+              "databaseBytes": 417792
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1987,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755319040,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 216
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 943
+                }
+              ],
+              "databaseBytes": 405504
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1986,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755316197,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 187
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 850
+                }
+              ],
+              "databaseBytes": 372736
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1986,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755326382,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 220
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1013
+                }
+              ],
+              "databaseBytes": 409600
+            }
+          ],
+          "checkedTransactionCoordinators": 8614,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 6053888
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T21:49:28.279Z"
+    },
+    {
+      "scenario": {
+        "name": "highly-concurrent",
+        "batchSize": 10,
+        "concurrency": 1000
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 10000,
+      "startedAt": "2026-10-11T21:49:28.302Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 203175.097167,
+        "plannedCallsAttempted": 10000,
+        "acknowledgedFacts": 10250,
+        "acknowledgedTransactions": 1025,
+        "factsPerSecond": 50.44909608964036,
+        "transactionsPerSecond": 5.044909608964036,
+        "rejected": 0,
+        "unknown": 8975,
+        "attempts": 76616,
+        "statuses": {
+          "200": 1025,
+          "423": 74285,
+          "transport": 1306
+        },
+        "logicalLatency": {
+          "count": 10000,
+          "meanMs": 19153.362619537183,
+          "p50Ms": 17149.206999999995,
+          "p95Ms": 38949.83541599999,
+          "p99Ms": 44273.493791000044,
+          "maxMs": 52207.198040999996,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 1025,
+          "meanMs": 10681.939646300489,
+          "p50Ms": 8423.393875000009,
+          "p95Ms": 27733.754124999978,
+          "p99Ms": null,
+          "maxMs": 43571.59149999998,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 76616,
+          "meanMs": 1811.7692405766868,
+          "p50Ms": 1394.8609580000048,
+          "p95Ms": 4664.950208000024,
+          "p99Ms": 7290.502334000019,
+          "maxMs": 12703.18979199999,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 30482476,
+            "system": 4168093
+          },
+          "eventLoopDelayMeanMs": 20.68732934256619,
+          "eventLoopDelayMaxMs": 87.883775,
+          "memoryBytes": {
+            "rss": 286313944,
+            "heapTotal": 112541696,
+            "heapUsed": 72656928,
+            "external": 60500540,
+            "arrayBuffers": 39064910
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 1025,
+          "meanMs": 580.3726829268293,
+          "p50Ms": 537,
+          "p95Ms": 1413,
+          "p99Ms": null,
+          "maxMs": 2820,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 1000,
+          "mean": 942.70234247124,
+          "target": 1000
+        },
+        "workerDistribution": {
+          "app-1": 273,
+          "app-0": 281,
+          "app-2": 209,
+          "app-3": 262
+        }
+      },
+      "localDrainMs": 562.2356659999932,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 10250,
+        "persistedTransactions": 1025,
+        "activeTuples": 10250,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 40480768,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 341,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1
+            },
+            {
+              "phase": "complete",
+              "count": 71
+            },
+            {
+              "phase": "complete",
+              "count": 60
+            },
+            {
+              "phase": "complete",
+              "count": 1
+            },
+            {
+              "phase": "complete",
+              "count": 51
+            },
+            {
+              "phase": "complete",
+              "count": 2
+            },
+            {
+              "phase": "complete",
+              "count": 69
+            },
+            {
+              "phase": "complete",
+              "count": 2
+            },
+            {
+              "phase": "complete",
+              "count": 70
+            },
+            {
+              "phase": "complete",
+              "count": 82
+            },
+            {
+              "phase": "complete",
+              "count": 52
+            },
+            {
+              "phase": "complete",
+              "count": 3
+            },
+            {
+              "phase": "complete",
+              "count": 75
+            },
+            {
+              "phase": "complete",
+              "count": 1
+            },
+            {
+              "phase": "complete",
+              "count": 88
+            },
+            {
+              "phase": "complete",
+              "count": 1
+            },
+            {
+              "phase": "complete",
+              "count": 94
+            },
+            {
+              "phase": "complete",
+              "count": 3
+            },
+            {
+              "phase": "complete",
+              "count": 110
+            },
+            {
+              "phase": "complete",
+              "count": 4
+            },
+            {
+              "phase": "complete",
+              "count": 148
+            },
+            {
+              "phase": "complete",
+              "count": 21
+            },
+            {
+              "phase": "complete",
+              "count": 163
+            },
+            {
+              "phase": "complete",
+              "count": 40
+            },
+            {
+              "phase": "complete",
+              "count": 174
+            },
+            {
+              "phase": "complete",
+              "count": 61
+            },
+            {
+              "phase": "complete",
+              "count": 214
+            },
+            {
+              "phase": "complete",
+              "count": 70
+            },
+            {
+              "phase": "complete",
+              "count": 219
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755380449,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 71
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 60
+                }
+              ],
+              "databaseBytes": 90112
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 335,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755378350,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 51
+                }
+              ],
+              "databaseBytes": 77824
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 339,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755567503,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 69
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 332,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755568048,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 70
+                }
+              ],
+              "databaseBytes": 90112
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 337,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 82
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 52
+                }
+              ],
+              "databaseBytes": 81920
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 337,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755569180,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 3
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 75
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 339,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755564106,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 88
+                }
+              ],
+              "databaseBytes": 98304
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 339,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755368881,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 94
+                }
+              ],
+              "databaseBytes": 98304
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755414104,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 3
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 110
+                }
+              ],
+              "databaseBytes": 102400
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755562996,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 4
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 148
+                }
+              ],
+              "databaseBytes": 110592
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 341,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755415257,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 21
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 163
+                }
+              ],
+              "databaseBytes": 122880
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 339,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755563541,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 40
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 174
+                }
+              ],
+              "databaseBytes": 131072
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 341,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755563543,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 214
+                }
+              ],
+              "databaseBytes": 159744
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 335,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755567338,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 70
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 219
+                }
+              ],
+              "databaseBytes": 159744
+            }
+          ],
+          "checkedTransactionCoordinators": 1025,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 1769472
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 10250,
+        "persistedTransactions": 1025,
+        "activeTuples": 10250,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 40480768,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 341,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1
+            },
+            {
+              "phase": "complete",
+              "count": 71
+            },
+            {
+              "phase": "complete",
+              "count": 60
+            },
+            {
+              "phase": "complete",
+              "count": 1
+            },
+            {
+              "phase": "complete",
+              "count": 51
+            },
+            {
+              "phase": "complete",
+              "count": 2
+            },
+            {
+              "phase": "complete",
+              "count": 69
+            },
+            {
+              "phase": "complete",
+              "count": 2
+            },
+            {
+              "phase": "complete",
+              "count": 70
+            },
+            {
+              "phase": "complete",
+              "count": 82
+            },
+            {
+              "phase": "complete",
+              "count": 52
+            },
+            {
+              "phase": "complete",
+              "count": 3
+            },
+            {
+              "phase": "complete",
+              "count": 75
+            },
+            {
+              "phase": "complete",
+              "count": 1
+            },
+            {
+              "phase": "complete",
+              "count": 88
+            },
+            {
+              "phase": "complete",
+              "count": 1
+            },
+            {
+              "phase": "complete",
+              "count": 94
+            },
+            {
+              "phase": "complete",
+              "count": 3
+            },
+            {
+              "phase": "complete",
+              "count": 110
+            },
+            {
+              "phase": "complete",
+              "count": 4
+            },
+            {
+              "phase": "complete",
+              "count": 148
+            },
+            {
+              "phase": "complete",
+              "count": 21
+            },
+            {
+              "phase": "complete",
+              "count": 163
+            },
+            {
+              "phase": "complete",
+              "count": 40
+            },
+            {
+              "phase": "complete",
+              "count": 174
+            },
+            {
+              "phase": "complete",
+              "count": 61
+            },
+            {
+              "phase": "complete",
+              "count": 214
+            },
+            {
+              "phase": "complete",
+              "count": 70
+            },
+            {
+              "phase": "complete",
+              "count": 219
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755380449,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 71
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 60
+                }
+              ],
+              "databaseBytes": 90112
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 335,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755378350,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 51
+                }
+              ],
+              "databaseBytes": 77824
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 339,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755567503,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 69
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 332,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755568048,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 70
+                }
+              ],
+              "databaseBytes": 90112
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 337,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 82
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 52
+                }
+              ],
+              "databaseBytes": 81920
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 337,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755569180,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 3
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 75
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 339,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755564106,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 88
+                }
+              ],
+              "databaseBytes": 98304
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 339,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755368881,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 94
+                }
+              ],
+              "databaseBytes": 98304
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755414104,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 3
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 110
+                }
+              ],
+              "databaseBytes": 102400
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755562996,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 4
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 148
+                }
+              ],
+              "databaseBytes": 110592
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 341,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755415257,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 21
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 163
+                }
+              ],
+              "databaseBytes": 122880
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 339,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755563541,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 40
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 174
+                }
+              ],
+              "databaseBytes": 131072
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 341,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755563543,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 214
+                }
+              ],
+              "databaseBytes": 159744
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 335,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755567338,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 70
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 219
+                }
+              ],
+              "databaseBytes": 159744
+            }
+          ],
+          "checkedTransactionCoordinators": 1025,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 1769472
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T21:53:32.468Z"
+    },
+    {
+      "scenario": {
+        "name": "saturation",
+        "batchSize": 2,
+        "concurrency": 10000
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 50000,
+      "startedAt": "2026-10-11T21:53:32.495Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 363168.514708,
+        "plannedCallsAttempted": 50000,
+        "acknowledgedFacts": 3630,
+        "acknowledgedTransactions": 1815,
+        "factsPerSecond": 9.995359875617645,
+        "transactionsPerSecond": 4.997679937808822,
+        "rejected": 0,
+        "unknown": 48185,
+        "attempts": 394283,
+        "statuses": {
+          "200": 1815,
+          "423": 95364,
+          "transport": 297104
+        },
+        "logicalLatency": {
+          "count": 50000,
+          "meanMs": 66884.61216061303,
+          "p50Ms": 66782.68070799997,
+          "p95Ms": 85583.76570800005,
+          "p99Ms": 90353.18849999993,
+          "maxMs": 99707.28241700004,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 1815,
+          "meanMs": 36710.00250865677,
+          "p50Ms": 35469.47645800002,
+          "p95Ms": 70732.37858299993,
+          "p99Ms": null,
+          "maxMs": 94058.87250000006,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 394283,
+          "meanMs": 7525.48644047154,
+          "p50Ms": 7789.861583000049,
+          "p95Ms": 10616.902499999967,
+          "p99Ms": 14048.138541999971,
+          "maxMs": 26510.22991600004,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 193238689,
+            "system": 24563352
+          },
+          "eventLoopDelayMeanMs": 35.361490800039,
+          "eventLoopDelayMaxMs": 5981.077503,
+          "memoryBytes": {
+            "rss": 603436440,
+            "heapTotal": 178028544,
+            "heapUsed": 75327376,
+            "external": 61909336,
+            "arrayBuffers": 40473706
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: subtree is busy"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51997"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51997"
+          },
+          {
+            "status": 423,
+            "detail": "retry budget exhausted: another graph transaction is being recovered or committed"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 1815,
+          "meanMs": 676.4716253443527,
+          "p50Ms": 629,
+          "p95Ms": 1457,
+          "p99Ms": null,
+          "maxMs": 3647,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 10000,
+          "mean": 9208.481854624504,
+          "target": 10000
+        },
+        "workerDistribution": {
+          "app-0": 435,
+          "app-1": 437,
+          "app-2": 475,
+          "app-3": 468
+        }
+      },
+      "localDrainMs": 519.1840839999495,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 3630,
+        "persistedTransactions": 1815,
+        "activeTuples": 3630,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 16175104,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 315,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 27
+            },
+            {
+              "phase": "complete",
+              "count": 78
+            },
+            {
+              "phase": "complete",
+              "count": 32
+            },
+            {
+              "phase": "complete",
+              "count": 63
+            },
+            {
+              "phase": "complete",
+              "count": 42
+            },
+            {
+              "phase": "complete",
+              "count": 62
+            },
+            {
+              "phase": "complete",
+              "count": 46
+            },
+            {
+              "phase": "complete",
+              "count": 77
+            },
+            {
+              "phase": "complete",
+              "count": 44
+            },
+            {
+              "phase": "complete",
+              "count": 79
+            },
+            {
+              "phase": "complete",
+              "count": 48
+            },
+            {
+              "phase": "complete",
+              "count": 86
+            },
+            {
+              "phase": "complete",
+              "count": 32
+            },
+            {
+              "phase": "complete",
+              "count": 110
+            },
+            {
+              "phase": "complete",
+              "count": 43
+            },
+            {
+              "phase": "complete",
+              "count": 120
+            },
+            {
+              "phase": "complete",
+              "count": 48
+            },
+            {
+              "phase": "complete",
+              "count": 121
+            },
+            {
+              "phase": "complete",
+              "count": 55
+            },
+            {
+              "phase": "complete",
+              "count": 127
+            },
+            {
+              "phase": "complete",
+              "count": 53
+            },
+            {
+              "phase": "complete",
+              "count": 125
+            },
+            {
+              "phase": "complete",
+              "count": 73
+            },
+            {
+              "phase": "complete",
+              "count": 137
+            },
+            {
+              "phase": "complete",
+              "count": 61
+            },
+            {
+              "phase": "complete",
+              "count": 163
+            },
+            {
+              "phase": "complete",
+              "count": 76
+            },
+            {
+              "phase": "complete",
+              "count": 175
+            },
+            {
+              "phase": "complete",
+              "count": 82
+            },
+            {
+              "phase": "complete",
+              "count": 206
+            },
+            {
+              "phase": "complete",
+              "count": 74
+            },
+            {
+              "phase": "complete",
+              "count": 229
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 313,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755973573,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 27
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 78
+                }
+              ],
+              "databaseBytes": 102400
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 310,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755972613,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 32
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 63
+                }
+              ],
+              "databaseBytes": 90112
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 313,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975860,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 42
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 62
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 306,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974386,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 46
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 77
+                }
+              ],
+              "databaseBytes": 106496
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 315,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974073,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 44
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 79
+                }
+              ],
+              "databaseBytes": 106496
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 315,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975702,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 48
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 86
+                }
+              ],
+              "databaseBytes": 106496
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 312,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974274,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 32
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 110
+                }
+              ],
+              "databaseBytes": 106496
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 312,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975325,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 43
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 120
+                }
+              ],
+              "databaseBytes": 114688
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 308,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974922,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 48
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 121
+                }
+              ],
+              "databaseBytes": 114688
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 315,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975325,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 55
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 127
+                }
+              ],
+              "databaseBytes": 114688
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 308,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755972511,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 53
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 125
+                }
+              ],
+              "databaseBytes": 114688
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 310,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755972889,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 73
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 137
+                }
+              ],
+              "databaseBytes": 135168
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 308,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974861,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 163
+                }
+              ],
+              "databaseBytes": 131072
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 310,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975842,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 76
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 175
+                }
+              ],
+              "databaseBytes": 143360
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 311,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755973372,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 82
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 206
+                }
+              ],
+              "databaseBytes": 155648
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 307,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974756,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 74
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 229
+                }
+              ],
+              "databaseBytes": 147456
+            }
+          ],
+          "checkedTransactionCoordinators": 1815,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 1953792
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 3630,
+        "persistedTransactions": 1815,
+        "activeTuples": 3630,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 16175104,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 315,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 27
+            },
+            {
+              "phase": "complete",
+              "count": 78
+            },
+            {
+              "phase": "complete",
+              "count": 32
+            },
+            {
+              "phase": "complete",
+              "count": 63
+            },
+            {
+              "phase": "complete",
+              "count": 42
+            },
+            {
+              "phase": "complete",
+              "count": 62
+            },
+            {
+              "phase": "complete",
+              "count": 46
+            },
+            {
+              "phase": "complete",
+              "count": 77
+            },
+            {
+              "phase": "complete",
+              "count": 44
+            },
+            {
+              "phase": "complete",
+              "count": 79
+            },
+            {
+              "phase": "complete",
+              "count": 48
+            },
+            {
+              "phase": "complete",
+              "count": 86
+            },
+            {
+              "phase": "complete",
+              "count": 32
+            },
+            {
+              "phase": "complete",
+              "count": 110
+            },
+            {
+              "phase": "complete",
+              "count": 43
+            },
+            {
+              "phase": "complete",
+              "count": 120
+            },
+            {
+              "phase": "complete",
+              "count": 48
+            },
+            {
+              "phase": "complete",
+              "count": 121
+            },
+            {
+              "phase": "complete",
+              "count": 55
+            },
+            {
+              "phase": "complete",
+              "count": 127
+            },
+            {
+              "phase": "complete",
+              "count": 53
+            },
+            {
+              "phase": "complete",
+              "count": 125
+            },
+            {
+              "phase": "complete",
+              "count": 73
+            },
+            {
+              "phase": "complete",
+              "count": 137
+            },
+            {
+              "phase": "complete",
+              "count": 61
+            },
+            {
+              "phase": "complete",
+              "count": 163
+            },
+            {
+              "phase": "complete",
+              "count": 76
+            },
+            {
+              "phase": "complete",
+              "count": 175
+            },
+            {
+              "phase": "complete",
+              "count": 82
+            },
+            {
+              "phase": "complete",
+              "count": 206
+            },
+            {
+              "phase": "complete",
+              "count": 74
+            },
+            {
+              "phase": "complete",
+              "count": 229
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 313,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755973573,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 27
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 78
+                }
+              ],
+              "databaseBytes": 102400
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 310,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755972613,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 32
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 63
+                }
+              ],
+              "databaseBytes": 90112
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 313,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975860,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 42
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 62
+                }
+              ],
+              "databaseBytes": 94208
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 306,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974386,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 46
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 77
+                }
+              ],
+              "databaseBytes": 106496
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 315,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974073,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 44
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 79
+                }
+              ],
+              "databaseBytes": 106496
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 315,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975702,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 48
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 86
+                }
+              ],
+              "databaseBytes": 106496
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 312,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974274,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 32
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 110
+                }
+              ],
+              "databaseBytes": 106496
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 312,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975325,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 43
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 120
+                }
+              ],
+              "databaseBytes": 114688
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 308,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974922,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 48
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 121
+                }
+              ],
+              "databaseBytes": 114688
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 315,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975325,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 55
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 127
+                }
+              ],
+              "databaseBytes": 114688
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 308,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755972511,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 53
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 125
+                }
+              ],
+              "databaseBytes": 114688
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 310,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755972889,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 73
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 137
+                }
+              ],
+              "databaseBytes": 135168
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 308,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974861,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 163
+                }
+              ],
+              "databaseBytes": 131072
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 310,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755975842,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 76
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 175
+                }
+              ],
+              "databaseBytes": 143360
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 311,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755973372,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 82
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 206
+                }
+              ],
+              "databaseBytes": 155648
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 307,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 1791755974756,
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 74
+                }
+              ],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 229
+                }
+              ],
+              "databaseBytes": 147456
+            }
+          ],
+          "checkedTransactionCoordinators": 1815,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 1953792
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T22:03:03.989Z"
+    }
+  ],
+  "artifactRetention": "Final aggregate only; raw SQLite state, input snapshots, reference ledgers, journals, bundles and progress samples are not retained. Runtime console logs are managed separately. Corpus cache and source/dataset digests are retained."
+}
