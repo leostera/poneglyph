@@ -21,7 +21,7 @@ The corpus is already downloaded locally. It is input to an application workload
 ## Goals
 
 - Measure the real write path through the packaged client, including actual persistent facts and required index updates.
-- Compare transaction batching against concurrent smaller transactions, including 10 facts per call and 1,000 in-flight calls.
+- Compare transaction batching against concurrent smaller transactions, including 10 facts per call and 1,000 in-flight calls, and 2 facts per call and 10,000 in-flight calls.
 - Support multiple application Workers feeding the same database and same graph.
 - Establish a reproducible current-code baseline before changing storage architecture.
 - Compare that baseline with independently routed fact/index store subtrees and distributed transaction coordination.
@@ -104,6 +104,9 @@ Corpus decoding is local workload preparation, not a database feature. Generate 
 | Parallel medium | 100 | 10 | 1,000 |
 | Parallel small | 10 | 100 | 1,000 |
 | Highly concurrent small | 10 | 1,000 | 10,000 |
+| Single-authority saturation probe | 2 | 10,000 | 20,000 |
+
+The 10,000-call scenario is intended to expose the single-DO coordination bottleneck using very small transactions. Cloudflare documents approximately 1,000 requests/second per object as a soft limit, with achievable throughput depending on work per request [DO limits](https://developers.cloudflare.com/durable-objects/platform/limits/); neither 2,000 RPS nor any other fixed rate is a Poneglyph benchmark or guaranteed hard ceiling. In-flight calls are not requests/second. Measure the actual arrival/attempt rate, completion rate, busy/overload responses, and retry amplification. Ramp to 10,000 outstanding logical calls within explicit local/cloud resource and request caps; do not assume the driver or application Workers can sustain that target. Additional application Workers/drivers may supply load but cannot remove a shared database coordinator bottleneck.
 
 A logical call occupies one slot from its initial attempt through bounded retry or final outcome. Refill a slot when it finishes until the corpus is exhausted; this is sustained closed-loop load, not only one burst. Record ramp-up, achieved concurrency, tail/drain time, and backoff occupancy. Use identical fact order and batching policy; the final batch may be smaller and is reported. Assertion/retraction ordering tests are separate from the assertion-oriented corpus workload.
 
@@ -113,7 +116,7 @@ Application Worker count is an independent parameter: start with 1 and compare 4
 
 ### Local correctness gate: Miniflare first
 
-For each version, run the actual application/package/database path under Miniflare with SQLite DO persistence and local service bindings or the selected equivalent HTTP transport. Run every planned scenario, including the 1,000-concurrent-call case and multiple application Workers, over the corpus. Separately use small controlled fixtures for deterministic failures. A complete outcome report is required; error-free admission at every concurrency is not required, but every admitted outcome must be correct and unmet workload targets must be recorded.
+For each version, run the actual application/package/database path under Miniflare with SQLite DO persistence and local service bindings or the selected equivalent HTTP transport. Run every planned scenario, including the 1,000- and 10,000-concurrent-call cases and multiple application Workers, over the corpus. Separately use small controlled fixtures for deterministic failures. A complete outcome report is required; error-free admission at every concurrency is not required, but every admitted outcome must be correct and unmet workload targets must be recorded.
 
 Required checks:
 
