@@ -1,0 +1,187 @@
+{
+  "scenario": {
+    "name": "parallel-medium",
+    "batchSize": 100,
+    "concurrency": 10
+  },
+  "startedAt": "2026-10-11T13:29:36.276Z",
+  "metrics": {
+    "elapsedMs": 11499.042707999997,
+    "acknowledgedFacts": 19400,
+    "acknowledgedTransactions": 194,
+    "factsPerSecond": 1687.096960384644,
+    "transactionsPerSecond": 16.87096960384644,
+    "rejected": 0,
+    "unknown": 6,
+    "attempts": 333,
+    "statuses": {
+      "200": 194,
+      "423": 139
+    },
+    "logicalLatency": {
+      "count": 200,
+      "meanMs": 487.72045771500007,
+      "p50Ms": 97.15475000000151,
+      "p95Ms": null,
+      "p99Ms": null,
+      "maxMs": 7352.803125000002,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "attemptLatency": {
+      "count": 333,
+      "meanMs": 87.16196235435443,
+      "p50Ms": 82.10233299999891,
+      "p95Ms": null,
+      "p99Ms": null,
+      "maxMs": 182.03187499999694,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "databaseAwaitLatency": {
+      "count": 194,
+      "meanMs": 47.79896907216495,
+      "p50Ms": 44,
+      "p95Ms": null,
+      "p99Ms": null,
+      "maxMs": 141,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "achievedConcurrency": {
+      "peak": 10,
+      "mean": 8.482859687540536,
+      "target": 10
+    },
+    "interval": [
+      {
+        "elapsedMs": 1001.4156660000008,
+        "acknowledgedFacts": 1500,
+        "completedCalls": 15,
+        "outstanding": 10
+      },
+      {
+        "elapsedMs": 2002.550374999999,
+        "acknowledgedFacts": 3900,
+        "completedCalls": 39,
+        "outstanding": 10
+      },
+      {
+        "elapsedMs": 3003.285082999999,
+        "acknowledgedFacts": 6100,
+        "completedCalls": 61,
+        "outstanding": 10
+      },
+      {
+        "elapsedMs": 4004.626625000001,
+        "acknowledgedFacts": 8400,
+        "completedCalls": 84,
+        "outstanding": 10
+      },
+      {
+        "elapsedMs": 5004.943583,
+        "acknowledgedFacts": 10300,
+        "completedCalls": 104,
+        "outstanding": 10
+      },
+      {
+        "elapsedMs": 6005.813124999997,
+        "acknowledgedFacts": 12700,
+        "completedCalls": 129,
+        "outstanding": 10
+      },
+      {
+        "elapsedMs": 7007.457040999998,
+        "acknowledgedFacts": 14800,
+        "completedCalls": 150,
+        "outstanding": 10
+      },
+      {
+        "elapsedMs": 8007.750624999997,
+        "acknowledgedFacts": 16700,
+        "completedCalls": 171,
+        "outstanding": 10
+      },
+      {
+        "elapsedMs": 9008.711915999997,
+        "acknowledgedFacts": 18600,
+        "completedCalls": 191,
+        "outstanding": 9
+      },
+      {
+        "elapsedMs": 10008.918332999998,
+        "acknowledgedFacts": 19100,
+        "completedCalls": 197,
+        "outstanding": 3
+      },
+      {
+        "elapsedMs": 11010.151249999999,
+        "acknowledgedFacts": 19300,
+        "completedCalls": 199,
+        "outstanding": 1
+      }
+    ],
+    "workerDistribution": {
+      "app-0": 50,
+      "app-1": 47,
+      "app-2": 48,
+      "app-3": 49
+    }
+  },
+  "audit": {
+    "valid": true,
+    "persistedFacts": 19400,
+    "persistedTransactions": 194,
+    "activeTuples": 19400,
+    "reconciledUnacknowledgedTransactions": 0,
+    "uncommittedAtQuiescentAudit": 6,
+    "databaseBytes": 72155136,
+    "coordinator": {
+      "state": [
+        {
+          "singleton": 1,
+          "visible_seq": 194,
+          "directory_epoch": 0,
+          "writer_tx_id": null,
+          "topology_op_id": null,
+          "next_statement_time_ms": 1791725396133
+        }
+      ],
+      "phases": [
+        {
+          "phase": "complete",
+          "count": 194
+        }
+      ],
+      "databaseBytes": 155648
+    }
+  },
+  "restartAudit": {
+    "valid": true,
+    "persistedFacts": 19400,
+    "persistedTransactions": 194,
+    "activeTuples": 19400,
+    "reconciledUnacknowledgedTransactions": 0,
+    "uncommittedAtQuiescentAudit": 6,
+    "databaseBytes": 72155136,
+    "coordinator": {
+      "state": [
+        {
+          "singleton": 1,
+          "visible_seq": 194,
+          "directory_epoch": 0,
+          "writer_tx_id": null,
+          "topology_op_id": null,
+          "next_statement_time_ms": 1791725396133
+        }
+      ],
+      "phases": [
+        {
+          "phase": "complete",
+          "count": 194
+        }
+      ],
+      "databaseBytes": 155648
+    }
+  },
+  "valid": true,
+  "allAcknowledged": false,
+  "finishedAt": "2026-10-11T13:29:48.625Z"
+}

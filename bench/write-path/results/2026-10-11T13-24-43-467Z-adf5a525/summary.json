@@ -1,0 +1,10 @@
+{
+  "runId": "2026-10-11T13-24-43-467Z-adf5a525",
+  "status": "interrupted",
+  "cloudGate": "closed",
+  "scope": "20,000-fact Miniflare pilot subset, four application Workers",
+  "reason": "The shell execution window expired after 240 seconds while processing the large scenario's read-only audit. The audit had a quadratic orphan-value lookup; its predicate was subsequently changed to use the existing tuple index without changing database writes.",
+  "completedScenarios": ["serial-small"],
+  "incompleteScenarios": ["large", "parallel-medium", "parallel-small", "highly-concurrent", "saturation"],
+  "note": "Do not use this incomplete run as a full matrix or cloud performance result. Original local journals and persistence were retained. The complete follow-up pilot is 2026-10-11T13-29-10-168Z-1ed33f8e."
+}

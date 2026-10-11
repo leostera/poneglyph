@@ -1,0 +1,89 @@
+{
+  "kind": "full-corpus input feasibility only; no database writes or throughput measurements",
+  "facts": 1530195,
+  "corpus": {
+    "extractionVersion": 1,
+    "xmlSha256": "1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084",
+    "xmlBytes": 436781838,
+    "pages": 296624,
+    "facts": 1530195,
+    "factsSha256": "e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064",
+    "policies": {
+      "identity": "exact percent-encoded title",
+      "categoriesPerPage": 8,
+      "linksPerPage": 16,
+      "fullTextStored": false,
+      "supplementalFacts": 0,
+      "namespaceFilter": "none"
+    }
+  },
+  "baselineOutcomeRetentionLimit": 100000,
+  "scenarios": [
+    {
+      "name": "serial-small",
+      "batchSize": 100,
+      "concurrency": 1,
+      "transactions": 15302,
+      "maxEntitiesPerBatch": 34,
+      "maxPayloadBytes": 38135,
+      "invalidBatches": 0,
+      "batchesAboveKnownSqlBindLimit": 0,
+      "exceedsRetainedOutcomeLimit": false
+    },
+    {
+      "name": "large",
+      "batchSize": 1000,
+      "concurrency": 1,
+      "transactions": 1531,
+      "maxEntitiesPerBatch": 299,
+      "maxPayloadBytes": 305024,
+      "invalidBatches": 0,
+      "batchesAboveKnownSqlBindLimit": 1485,
+      "exceedsRetainedOutcomeLimit": false
+    },
+    {
+      "name": "parallel-medium",
+      "batchSize": 100,
+      "concurrency": 10,
+      "transactions": 15302,
+      "maxEntitiesPerBatch": 34,
+      "maxPayloadBytes": 38138,
+      "invalidBatches": 0,
+      "batchesAboveKnownSqlBindLimit": 0,
+      "exceedsRetainedOutcomeLimit": false
+    },
+    {
+      "name": "parallel-small",
+      "batchSize": 10,
+      "concurrency": 100,
+      "transactions": 153020,
+      "maxEntitiesPerBatch": 4,
+      "maxPayloadBytes": 5090,
+      "invalidBatches": 0,
+      "batchesAboveKnownSqlBindLimit": 0,
+      "exceedsRetainedOutcomeLimit": true
+    },
+    {
+      "name": "highly-concurrent",
+      "batchSize": 10,
+      "concurrency": 1000,
+      "transactions": 153020,
+      "maxEntitiesPerBatch": 4,
+      "maxPayloadBytes": 5093,
+      "invalidBatches": 0,
+      "batchesAboveKnownSqlBindLimit": 0,
+      "exceedsRetainedOutcomeLimit": true
+    },
+    {
+      "name": "saturation",
+      "batchSize": 2,
+      "concurrency": 10000,
+      "transactions": 765098,
+      "maxEntitiesPerBatch": 2,
+      "maxPayloadBytes": 2400,
+      "invalidBatches": 0,
+      "batchesAboveKnownSqlBindLimit": 0,
+      "exceedsRetainedOutcomeLimit": true
+    }
+  ]
+}

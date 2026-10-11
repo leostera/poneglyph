@@ -1,0 +1,23 @@
+{
+  "name": "poneglyph-write-path-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsx build.ts",
+    "prepare:corpus": "tsx corpus.ts",
+    "preflight": "tsx preflight.ts",
+    "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "run:local": "tsx run.ts"
+  },
+  "dependencies": {
+    "@leostera/poneglyph": "file:../../poneglyph",
+    "@cloudflare/workers-types": "5.20261011.1",
+    "@types/node": "25.6.0",
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261006.1-alpha",
+    "saxes": "6.0.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

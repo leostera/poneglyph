@@ -1,0 +1,367 @@
+{
+  "scenario": {
+    "name": "highly-concurrent",
+    "batchSize": 10,
+    "concurrency": 1000
+  },
+  "startedAt": "2026-10-11T13:30:19.595Z",
+  "metrics": {
+    "elapsedMs": 41074.45562499999,
+    "acknowledgedFacts": 4750,
+    "acknowledgedTransactions": 475,
+    "factsPerSecond": 115.64365072458587,
+    "transactionsPerSecond": 11.564365072458587,
+    "rejected": 0,
+    "unknown": 1525,
+    "attempts": 15734,
+    "statuses": {
+      "200": 475,
+      "423": 15259
+    },
+    "logicalLatency": {
+      "count": 2000,
+      "meanMs": 17279.37582069102,
+      "p50Ms": 17145.409,
+      "p95Ms": 22847.869124999997,
+      "p99Ms": null,
+      "maxMs": 26289.543459000008,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "attemptLatency": {
+      "count": 15734,
+      "meanMs": 1503.3544292655506,
+      "p50Ms": 1572.640333999996,
+      "p95Ms": 2301.4148339999956,
+      "p99Ms": 2518.662334000008,
+      "maxMs": 6174.621375000002,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "databaseAwaitLatency": {
+      "count": 475,
+      "meanMs": 73.51789473684211,
+      "p50Ms": 8,
+      "p95Ms": null,
+      "p99Ms": null,
+      "maxMs": 1482,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "achievedConcurrency": {
+      "peak": 1000,
+      "mean": 841.3685283716044,
+      "target": 1000
+    },
+    "interval": [
+      {
+        "elapsedMs": 1001.1315829999949,
+        "acknowledgedFacts": 10,
+        "completedCalls": 1,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 2001.264249999993,
+        "acknowledgedFacts": 30,
+        "completedCalls": 3,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 3001.4638749999867,
+        "acknowledgedFacts": 40,
+        "completedCalls": 4,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 4000.8205829999933,
+        "acknowledgedFacts": 50,
+        "completedCalls": 5,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 5002.17079199999,
+        "acknowledgedFacts": 70,
+        "completedCalls": 7,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 6003.48933299999,
+        "acknowledgedFacts": 70,
+        "completedCalls": 7,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 7003.378666999997,
+        "acknowledgedFacts": 90,
+        "completedCalls": 9,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 8003.544832999993,
+        "acknowledgedFacts": 90,
+        "completedCalls": 9,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 9004.108166999999,
+        "acknowledgedFacts": 100,
+        "completedCalls": 10,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 10004.627541999987,
+        "acknowledgedFacts": 110,
+        "completedCalls": 11,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 11005.020874999987,
+        "acknowledgedFacts": 120,
+        "completedCalls": 12,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 12005.327832999988,
+        "acknowledgedFacts": 140,
+        "completedCalls": 14,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 13004.953207999992,
+        "acknowledgedFacts": 150,
+        "completedCalls": 15,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 14004.732207999987,
+        "acknowledgedFacts": 170,
+        "completedCalls": 19,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 15004.639958,
+        "acknowledgedFacts": 190,
+        "completedCalls": 45,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 16005.902582999988,
+        "acknowledgedFacts": 220,
+        "completedCalls": 162,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 17007.281292,
+        "acknowledgedFacts": 240,
+        "completedCalls": 264,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 18007.63549999999,
+        "acknowledgedFacts": 260,
+        "completedCalls": 424,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 19008.895249999987,
+        "acknowledgedFacts": 270,
+        "completedCalls": 475,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 20009.783791999987,
+        "acknowledgedFacts": 290,
+        "completedCalls": 658,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 21009.989749999993,
+        "acknowledgedFacts": 300,
+        "completedCalls": 795,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 22011.041624999998,
+        "acknowledgedFacts": 320,
+        "completedCalls": 910,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 23011.176541999987,
+        "acknowledgedFacts": 330,
+        "completedCalls": 981,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 24016.378207999995,
+        "acknowledgedFacts": 330,
+        "completedCalls": 995,
+        "outstanding": 1000
+      },
+      {
+        "elapsedMs": 25016.752041999993,
+        "acknowledgedFacts": 350,
+        "completedCalls": 1010,
+        "outstanding": 990
+      },
+      {
+        "elapsedMs": 26017.570541999987,
+        "acknowledgedFacts": 360,
+        "completedCalls": 1019,
+        "outstanding": 981
+      },
+      {
+        "elapsedMs": 27018.466916999998,
+        "acknowledgedFacts": 380,
+        "completedCalls": 1024,
+        "outstanding": 976
+      },
+      {
+        "elapsedMs": 28017.511,
+        "acknowledgedFacts": 390,
+        "completedCalls": 1028,
+        "outstanding": 972
+      },
+      {
+        "elapsedMs": 29019.177375,
+        "acknowledgedFacts": 400,
+        "completedCalls": 1030,
+        "outstanding": 970
+      },
+      {
+        "elapsedMs": 30019.10270799999,
+        "acknowledgedFacts": 420,
+        "completedCalls": 1061,
+        "outstanding": 939
+      },
+      {
+        "elapsedMs": 31019.547542,
+        "acknowledgedFacts": 430,
+        "completedCalls": 1078,
+        "outstanding": 922
+      },
+      {
+        "elapsedMs": 32019.80987499999,
+        "acknowledgedFacts": 450,
+        "completedCalls": 1152,
+        "outstanding": 848
+      },
+      {
+        "elapsedMs": 33020.59,
+        "acknowledgedFacts": 470,
+        "completedCalls": 1218,
+        "outstanding": 782
+      },
+      {
+        "elapsedMs": 34022.01941699999,
+        "acknowledgedFacts": 750,
+        "completedCalls": 1372,
+        "outstanding": 628
+      },
+      {
+        "elapsedMs": 35022.588707999996,
+        "acknowledgedFacts": 1550,
+        "completedCalls": 1536,
+        "outstanding": 464
+      },
+      {
+        "elapsedMs": 36022.921542,
+        "acknowledgedFacts": 2360,
+        "completedCalls": 1700,
+        "outstanding": 300
+      },
+      {
+        "elapsedMs": 37022.92825,
+        "acknowledgedFacts": 3200,
+        "completedCalls": 1821,
+        "outstanding": 179
+      },
+      {
+        "elapsedMs": 38023.251791999995,
+        "acknowledgedFacts": 3930,
+        "completedCalls": 1912,
+        "outstanding": 88
+      },
+      {
+        "elapsedMs": 39023.061917,
+        "acknowledgedFacts": 4400,
+        "completedCalls": 1965,
+        "outstanding": 35
+      },
+      {
+        "elapsedMs": 40023.800707999995,
+        "acknowledgedFacts": 4680,
+        "completedCalls": 1993,
+        "outstanding": 7
+      },
+      {
+        "elapsedMs": 41025.07174999999,
+        "acknowledgedFacts": 4740,
+        "completedCalls": 1999,
+        "outstanding": 1
+      }
+    ],
+    "workerDistribution": {
+      "app-0": 114,
+      "app-1": 117,
+      "app-2": 128,
+      "app-3": 116
+    }
+  },
+  "audit": {
+    "valid": true,
+    "persistedFacts": 4750,
+    "persistedTransactions": 475,
+    "activeTuples": 4750,
+    "reconciledUnacknowledgedTransactions": 0,
+    "uncommittedAtQuiescentAudit": 1525,
+    "databaseBytes": 18472960,
+    "coordinator": {
+      "state": [
+        {
+          "singleton": 1,
+          "visible_seq": 475,
+          "directory_epoch": 0,
+          "writer_tx_id": null,
+          "topology_op_id": null,
+          "next_statement_time_ms": 1791725460850
+        }
+      ],
+      "phases": [
+        {
+          "phase": "complete",
+          "count": 475
+        }
+      ],
+      "databaseBytes": 270336
+    }
+  },
+  "restartAudit": {
+    "valid": true,
+    "persistedFacts": 4750,
+    "persistedTransactions": 475,
+    "activeTuples": 4750,
+    "reconciledUnacknowledgedTransactions": 0,
+    "uncommittedAtQuiescentAudit": 1525,
+    "databaseBytes": 18472960,
+    "coordinator": {
+      "state": [
+        {
+          "singleton": 1,
+          "visible_seq": 475,
+          "directory_epoch": 0,
+          "writer_tx_id": null,
+          "topology_op_id": null,
+          "next_statement_time_ms": 1791725460850
+        }
+      ],
+      "phases": [
+        {
+          "phase": "complete",
+          "count": 475
+        }
+      ],
+      "databaseBytes": 270336
+    }
+  },
+  "valid": true,
+  "allAcknowledged": false,
+  "finishedAt": "2026-10-11T13:31:01.265Z"
+}

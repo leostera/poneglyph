@@ -1,0 +1,205 @@
+{
+  "scenario": {
+    "name": "large",
+    "batchSize": 1000,
+    "concurrency": 1
+  },
+  "startedAt": "2026-10-11T13:29:20.460Z",
+  "metrics": {
+    "elapsedMs": 14925.785874999998,
+    "acknowledgedFacts": 18000,
+    "acknowledgedTransactions": 18,
+    "factsPerSecond": 1205.9666506504807,
+    "transactionsPerSecond": 1.2059666506504805,
+    "rejected": 0,
+    "unknown": 2,
+    "attempts": 34,
+    "statuses": {
+      "200": 18,
+      "503": 16
+    },
+    "logicalLatency": {
+      "count": 20,
+      "meanMs": 746.1582833000003,
+      "p50Ms": 269.46408299999894,
+      "p95Ms": null,
+      "p99Ms": null,
+      "maxMs": 5438.106417000003,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "attemptLatency": {
+      "count": 34,
+      "meanMs": 204.34859814705882,
+      "p50Ms": 231.36779200000092,
+      "p95Ms": null,
+      "p99Ms": null,
+      "maxMs": 311.1974999999984,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "databaseAwaitLatency": {
+      "count": 18,
+      "meanMs": 265.1111111111111,
+      "p50Ms": 264,
+      "p95Ms": null,
+      "p99Ms": null,
+      "maxMs": 308,
+      "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+    },
+    "achievedConcurrency": {
+      "peak": 1,
+      "mean": 0.9998293443962462,
+      "target": 1
+    },
+    "interval": [
+      {
+        "elapsedMs": 1001.0304999999989,
+        "acknowledgedFacts": 3000,
+        "completedCalls": 3,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 2001.6524999999983,
+        "acknowledgedFacts": 7000,
+        "completedCalls": 7,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 3002.893958999999,
+        "acknowledgedFacts": 8000,
+        "completedCalls": 8,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 4003.6063749999994,
+        "acknowledgedFacts": 8000,
+        "completedCalls": 8,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 5004.640834,
+        "acknowledgedFacts": 8000,
+        "completedCalls": 8,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 6005.612958999998,
+        "acknowledgedFacts": 8000,
+        "completedCalls": 8,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 7007.471084000001,
+        "acknowledgedFacts": 8000,
+        "completedCalls": 9,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 8009.365916999999,
+        "acknowledgedFacts": 12000,
+        "completedCalls": 13,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 9010.195416999999,
+        "acknowledgedFacts": 16000,
+        "completedCalls": 17,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 10010.329542,
+        "acknowledgedFacts": 18000,
+        "completedCalls": 19,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 11011.072583999998,
+        "acknowledgedFacts": 18000,
+        "completedCalls": 19,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 12012.447334,
+        "acknowledgedFacts": 18000,
+        "completedCalls": 19,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 13012.913375,
+        "acknowledgedFacts": 18000,
+        "completedCalls": 19,
+        "outstanding": 1
+      },
+      {
+        "elapsedMs": 14014.277041999998,
+        "acknowledgedFacts": 18000,
+        "completedCalls": 19,
+        "outstanding": 1
+      }
+    ],
+    "workerDistribution": {
+      "app-0": 4,
+      "app-1": 5,
+      "app-2": 5,
+      "app-3": 4
+    }
+  },
+  "audit": {
+    "valid": true,
+    "persistedFacts": 18000,
+    "persistedTransactions": 18,
+    "activeTuples": 18000,
+    "reconciledUnacknowledgedTransactions": 0,
+    "uncommittedAtQuiescentAudit": 2,
+    "databaseBytes": 63320064,
+    "coordinator": {
+      "state": [
+        {
+          "singleton": 1,
+          "visible_seq": 18,
+          "directory_epoch": 0,
+          "writer_tx_id": null,
+          "topology_op_id": null,
+          "next_statement_time_ms": 1791725378858
+        }
+      ],
+      "phases": [
+        {
+          "phase": "complete",
+          "count": 18
+        }
+      ],
+      "databaseBytes": 65536
+    }
+  },
+  "restartAudit": {
+    "valid": true,
+    "persistedFacts": 18000,
+    "persistedTransactions": 18,
+    "activeTuples": 18000,
+    "reconciledUnacknowledgedTransactions": 0,
+    "uncommittedAtQuiescentAudit": 2,
+    "databaseBytes": 63320064,
+    "coordinator": {
+      "state": [
+        {
+          "singleton": 1,
+          "visible_seq": 18,
+          "directory_epoch": 0,
+          "writer_tx_id": null,
+          "topology_op_id": null,
+          "next_statement_time_ms": 1791725378858
+        }
+      ],
+      "phases": [
+        {
+          "phase": "complete",
+          "count": 18
+        }
+      ],
+      "databaseBytes": 65536
+    }
+  },
+  "valid": true,
+  "allAcknowledged": false,
+  "finishedAt": "2026-10-11T13:29:36.276Z"
+}

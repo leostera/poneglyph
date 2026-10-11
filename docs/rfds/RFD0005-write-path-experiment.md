@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft proposal (2026-10-11). Defines an experiment, not benchmark results or an implemented storage redesign. The benchmark application, local harness, and parallel-store candidate described below do not yet exist. This RFD does not authorize deployment or account changes by itself.
+Accepted experiment design (2026-10-11), with partial Version A implementation and bounded Miniflare pilot evidence. The application/client/database path, six local scenarios, persisted-result audits, and report saving are implemented under `bench/write-path/`. The full local gate is not complete: the pilot reproduced a baseline SQL-bind defect and retention limits; the streamed million-fact matrix is the next measurement. Benchmark workloads do not accommodate those database defects. No Cloudflare benchmark or parallel-store candidate has been deployed/implemented. This RFD does not authorize account changes by itself; cloud execution requires the local and resource/cost gates below.
 
 ## Summary
 
@@ -14,7 +14,7 @@ The current TypeScript implementation has expandable 256-bit entity-prefix routi
 
 The existing [One Piece harness](../../examples/onepiece-load.ts) starts a local Worker and writes serialized batches of up to 500 facts directly to its HTTP endpoint. The existing [local benchmark](../../poneglyph/tests/throughput-bench.test.ts) also bypasses the public client and caps concurrency at 16. Neither is the desired application-client-database experiment at 1,000 concurrent calls.
 
-The working-tree [client](../../poneglyph/src/client.ts) currently offers `state`, `transact`, and `query`, not `stateFacts`. It accepts injected `fetch`, caller-provided transaction IDs, and does not retry automatically. Its receipt includes `commitSeq`. The baseline must include the reviewed working-tree code, not silently substitute the last committed revision; capture the source actually built.
+At the start of the experiment, the working-tree [client](../../poneglyph/src/client.ts) offered `state`, `transact`, and `query`, not `stateFacts`. The benchmark implementation adds `stateFacts` as a client entrypoint to the unchanged baseline transaction path. It accepts injected `fetch`, caller-provided transaction IDs, and does not retry automatically. Its receipt includes `commitSeq`. The baseline must include the reviewed working-tree code, not silently substitute the last committed revision; capture the source actually built.
 
 The corpus is already downloaded locally. It is input to an application workload, not a reason to add an import subsystem to the database. Changing batch size and concurrency can change write amplification and contention. More application Workers may remove an application bottleneck, but cannot by themselves remove the baseline's single graph coordinator.
 
@@ -96,6 +96,8 @@ Version B is deployed in new versioned namespaces. No in-place reinterpretation 
 Extract one deterministic ordered fact stream from the entire locally downloaded One Piece XML. Record archive/XML checksum and bytes, extraction version, page/entity/fact counts, canonical fact-stream digest, value/field distribution, and duplicates. Reuse extraction logic where suitable, but audit it first: the existing extractor caps categories/links, uses potentially colliding title slugs, and adds hand-authored domain facts. State these policies explicitly, prevent unintended entity collisions, and distinguish corpus-derived facts from any supplemental correctness fixtures. Processing every page does not imply preserving all wiki text or every link.
 
 Corpus decoding is local workload preparation, not a database feature. Generate a bounded on-disk stream/manifest before timing so parser/CPU stalls do not masquerade as database limits. The canonical payloads include real values; no synthetic payload-size substitutions. Keep extraction fixed between versions and scenarios. Do not commit the downloaded corpus.
+
+Following the user's explicit cap approval, the comparison defaults to the same first **1,000,000 facts in every scenario**; alternatively all 1,530,195 prepared facts can be selected. Sub-million pilots are diagnostics, not the requested comparison. Every planned batch must be attempted at its stated size, including batches that expose database defects. Do not patch storage, raise retention limits, shrink/rebatch, skip input, or add a fallback write path to make a scenario complete.
 
 | Scenario | Target facts/call | Maximum concurrent logical calls | Facts in a full initial wave |
 | --- | ---: | ---: | ---: |
@@ -188,6 +190,12 @@ This comparison intentionally includes the cost of separately stored indices in 
 - Implementation-time: verify the pinned tooling's multi-Worker Miniflare support and service-binding client adapter; establish collision-free fact extraction and bounded full-data audits.
 - Before cloud execution: agree the target account/resources and hard cost/work limits, including a stop policy for retries, storage growth, and invalid data.
 - Out of scope: choosing a latest read token, total transaction order, or public stable-graph-snapshot API.
+
+## Implementation evidence (2026-10-11)
+
+The [benchmark README](../../bench/write-path/README.md) records commands, implemented scope, and limitations. [Saved results](../../bench/write-path/results/README.md) include manifests, per-scenario measurements, compressed response journals/Worker bundles, and an interrupted preliminary run. The complete pilot actually wrote a 20,000-fact subset through four application Workers for each of the six scenarios and audited persisted transactions and scalar indices before/after runtime restart. It is not a full-corpus write result or Cloudflare performance evidence.
+
+Streaming corpus preparation produced 1,530,195 ordinary facts from 296,624 pages. [Full input preflight](../../bench/write-path/results/full-corpus-preflight.json) is feasibility evidence only. The pilot found `too many SQL variables` for some 1,000-fact batches; a 101-distinct-entity characterization reproduces the baseline capacity lookup's bind limit without partial writes. Ten-/two-fact full-corpus scenarios also exceed the baseline's 100,000 retained-outcome window. The subsequent local driver streams outstanding batches and uses a disk-backed expected-fact/outcome ledger with paginated leaf/router audits, so million-fact delivery no longer materializes the corpus or all response objects in memory. No blocker has been hidden by truncating a run and declaring it a completed load. The cloud gate remains closed pending the million-fact matrix and protocol/driver/deployment gates. Database rejections/errors are benchmark results, not reasons to adapt input or silently fix the system under test. Failed loads are not successful-throughput winners; the local correctness gate checks complete delivery reporting and durable correctness of admitted writes, rather than requiring error-free admission. Any future product fixes belong to a separately identified version, not a benchmark accommodation.
 
 ## References
 
