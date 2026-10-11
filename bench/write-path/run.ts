@@ -104,7 +104,7 @@ async function main() {
   }
   const summary = { runId, status: "complete", persistenceChecksPassed: persistencePassed, fullWorkloadsCompleted,
     cloudGate: persistencePassed && selectedFacts >= 100_000 && selected.length === SCENARIOS.length
-      ? "full-input persistence gates passed; protocol/driver/deployment safety gates still required; failed loads are not throughput winners"
+      ? "admitted-write persistence checks passed; full delivery is reported separately; cloud execution remains unauthorized; incomplete loads are not throughput winners"
       : "closed: full-input persistence gates not met; no deployment performed",
     reportDirectory: relative(ROOT, directory) };
   await writeFile(resolve(directory, "summary.json"), JSON.stringify(summary, null, 2) + "\n");
