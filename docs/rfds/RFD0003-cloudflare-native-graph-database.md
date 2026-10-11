@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft.
+Draft. This RFD records the fixed-four-leaf Cloudflare checkpoint. The scale-out architecture that supersedes that endpoint is in [RFD0004](./RFD0004-expandable-cloudflare-sharding.md).
 
 ## Summary
 
@@ -47,7 +47,7 @@ This sharding key co-locates an entity's outgoing assertions and its entity view
 
 A single entity with unbounded facts can become a hot/oversized key that hash splitting cannot divide without breaking entity locality. The initial implementation rejects entities over 10,000 active assertion tuples or 5,000 projected fields; these are prototype safety limits, not scale claims. Field/value subpartitioning is deferred because it turns one entity read/write into a distributed operation.
 
-**Initial implementation choice (still a Draft RFD):** use a fixed, version-1 set of four entity-hash leaves per graph, behind one graph coordinator DO. This is the smallest topology that exercises cross-DO writes and query fan-out while keeping object identity stable. Do not split leaves or change the leaf count after data exists; dynamic Fokos-style splitting/cutover is deferred. A future topology migration must be designed as an explicit data migration, not as an in-place config change. Four leaves are a prototype setting, not a capacity claim.
+**Completed checkpoint implementation:** the first tested TypeScript checkpoint uses a fixed, version-1 set of four entity-hash leaves per graph behind one graph coordinator DO. It exercises cross-DO writes and query fan-out while keeping object identity stable. Four leaves are a prototype setting, not a capacity claim, and their count must not be changed in place after data exists. The expandable prefix-directory, split/cutover, headroom, and recovery contract for the next phase is defined in [RFD0004](./RFD0004-expandable-cloudflare-sharding.md); do not infer that the checkpoint already implements those mechanisms.
 
 ### Fact and transaction contract
 
