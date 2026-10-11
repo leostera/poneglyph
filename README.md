@@ -20,6 +20,8 @@ The TypeScript package implements typed fact parsing, a bounded positive Datalog
 - [`examples/deployed-todo-smoke.ts`](examples/deployed-todo-smoke.ts) — authenticated deployed TODO/WebSocket smoke test.
 - [`examples/deployed-benchmark.ts`](examples/deployed-benchmark.ts) — bounded Cloudflare write/query measurement (hard-capped sample sizes).
 - [`examples/capacity-simulation.ts`](examples/capacity-simulation.ts) — synthetic 1 TB logical-capacity exercise (writes zero synthetic rows).
+- [`examples/interactive-explainer.html`](examples/interactive-explainer.html) — interactive visual field guide.
+- [`examples/poneglyph-explainer.mp4`](examples/poneglyph-explainer.mp4) — rendered 75.5-second explainer with embedded narration, made with [ffframes](https://fframes.studio).
 - [`specs/`](specs/) — small PlusCal/TLA+ models for transaction visibility and shard split/cutover, checked with TLC.
 
 See [RFD0003](docs/rfds/RFD0003-cloudflare-native-graph-database.md) for the historical fixed-leaf checkpoint and [RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md) for the implemented prototype's scale-out contract and limitations. Historical Rust architecture RFDs are retained as prior design records, not as the current branch implementation contract.
