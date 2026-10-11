@@ -39,7 +39,7 @@ An alarm is durably scheduled **after persisting an intent and before participan
 
 Terminal identity sweeping deletes at most 100 expired complete/aborted ledger rows per alarm, excludes active identities, and reschedules remaining recovery/expiry deadlines using the single per-object alarm. Seven days is the existing transaction identity window, not fact lifetime. The sweep never touches fact or projection rows. Recovery alarms are at-least-once; durable phases and idempotent participant messages remain authoritative.
 
-The read-only audit probes exact IDs and also enumerates **all sixteen ledger summaries**, rejecting unresolved intents even if not referenced by an owner. It aggregates their physical SQLite bytes instead of repeating B1's unmeasured per-transaction-object byte omission. The timed application/client transport and logical workload are unchanged. Report identity derives from the sole coordinator implementation actually bundled; unknown or mixed composition fails rather than falling back to label A. No C load result or promotion is recorded yet.
+The read-only audit probes exact IDs and also enumerates **all sixteen ledger summaries**, rejecting unresolved intents even if not referenced by an owner. It aggregates their physical SQLite bytes instead of repeating B1's unmeasured per-transaction-object byte omission. The timed application/client transport and logical workload are unchanged. Report identity derives from the sole coordinator implementation actually bundled; unknown or mixed composition fails rather than falling back to label A. The first C load result is recorded below; it is not a promotion.
 
 C pre-load validation: explicit C composition passed typecheck, **34 tests** across the shared client/fact/Datalog suites and **12 C-controlled tests**, package build, and all **seven harness tests**. Controlled cases cover same-ledger disjoint progress while another commit is held; overlap and changed payload; abort isolation; partial prepare/apply/publication and actual eviction; caller-discarded receipt replay; terminal-maintenance failure without failed acknowledgement; interrupted split progress; leased-cut fencing; schema-marker rejection; 100-row/six-drive recovery bounds; and a 100-row terminal sweep preserving unfinished identities and facts. Metadata-only fixtures for dispatch/sweep bounds are explicitly synthetic and are not delivered-write evidence. After restoring default A, `pnpm check` passed **41 tests / 18 explicit skips** (five B1-only, twelve C-only, one historical benchmark), package build and seven harness tests. A-specific global-sequence/coordinator-schema fixtures remain an A gate, not a claim of C certification. No measured matrix ran concurrently with these tests.
 
@@ -55,6 +55,23 @@ Planned order is **B1 control 1 → C repeat 1 → B1 control 2 → C repeat 2**
 | 2 × 10,000 | 3,572 | 48,214 | 9.69 | 83.20 |
 
 Attempts were 2,591 / 40,399 / 76,313 / 394,358; busy responses were 1,637 / 31,849 / 75,003 / 88,410; transport failures were 0 / 0 / 32 / 304,162. The unchanged retry budget was exhausted for the unknown calls. Keep these delivery and local-runtime failures separate from acknowledged throughput. Source/corpus/client/bundle identities are retained in the final JSON. The historical B1 trial is not substituted for the second nearby control.
+
+### C repeat 1: mixed partial-delivery result, no promotion
+
+[Final report](../../bench/write-path/results/2026-10-11T21-25-46-207Z-39cf9027/final.json) identifies `C-pooled-coordinator-ledgers` and selected revision `2772a54` (C runtime `948a183`). The tracked SUT was unchanged during the run. The recorded worktree status includes unrelated untracked documents/lockfile; these were not bundled, modified, or removed by this experiment. The packaged client digest is identical to the preceding B1 control.
+
+All planned calls were attempted. Both admitted-write and restart audits passed in every case, with persisted facts matching acknowledgements, zero reconciled unacknowledged commits, and no unresolved owner or pooled-ledger decisions. **No scenario delivered all 100,000 facts; C fails the mandatory promotion gate already in this repeat.** Still complete the second nearby control and second C repeat; one mixed local pair is not a repeatable performance conclusion.
+
+| Facts/call × concurrency | C repeat 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs B1 control 1 | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | 92,100 | 79 | 983.55 | −13.65% | 6.46 |
+| 10 × 100 | 84,200 | 1,580 | 432.01 | −2.18% | 8.02 |
+| 10 × 1,000 | 21,070 | 7,893 | 139.67 | +102.56% | 24.28 |
+| 2 × 10,000 | 13,410 | 43,295 | 44.43 | +358.35% | 74.04 |
+
+C delivered fewer facts and lower rates in the first two cases, more in the last two. These are acknowledged rates on **incomplete loads**, not successful-load throughput wins. Attempts: 1,974 / 39,464 / 73,260 / 377,013. Busy responses: 1,053 / 31,044 / 71,138 / 176,927. Transport failures: 0 / 0 / 15 / 193,381. All terminal caller failures were unknown after the unchanged retry budget; no quota increase or alternate delivery path was used.
+
+All sixteen ledgers were audited. Their combined physical SQLite bytes were **45,838,336 / 40,050,688 / 10,215,424 / 8,622,080** across the four cases. This closes C's ledger-byte accounting omission, but does **not** quantify a storage reduction against B1: B1's per-transaction-object bytes were not aggregated. Recovery fault tests demonstrate the exercised protocol; this measured repeat did not observe extra caller-unknown commits completed by background recovery. B1 remains the experimental incumbent; no default/production cutover, cloud performance claim, or scale-up is authorized.
 
 ## Summary
 

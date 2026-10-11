@@ -47,3 +47,9 @@ Keep the same 100k cohort for matched iterations. Scale to 1M only after repeate
 [Control 1 final](2026-10-11T21-03-13-418Z-60d4bcdd/final.json) identifies clean source composition `c08e89c` and the unchanged B1 runtime. It begins the planned **B1 → C → B1 → C** fresh-persistence comparison, documented in [RFD0005](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-c-comparison-trial-order-and-first-control).
 
 Acknowledged facts: **95,400 / 85,500 / 12,780 / 3,572**. Acknowledged facts/s: **1,139.03 / 441.63 / 68.95 / 9.69**. All planned calls were attempted; admitted-write and restart audits passed, with no additional unacknowledged commits. **None completed full delivery.** This control is neither a C result nor evidence of promotion. Compact final evidence is retained; the historical B1 run does not replace the planned second nearby control.
+
+## C pooled ledgers: first repeat
+
+[C repeat 1 final](2026-10-11T21-25-46-207Z-39cf9027/final.json) identifies `2772a54` / `C-pooled-coordinator-ledgers`; [interpretation](../../../docs/rfds/RFD0005-write-path-experiment.md#c-repeat-1-mixed-partial-delivery-result-no-promotion).
+
+Acknowledged facts: **92,100 / 84,200 / 21,070 / 13,410**. Acknowledged facts/s: **983.55 / 432.01 / 139.67 / 44.43**. Relative to nearby B1 control 1: **−13.65% / −2.18% / +102.56% / +358.35%**. All planned calls and admitted-write/restart audits passed; no additional unacknowledged commits or unresolved ledger decisions were found. **All four loads remained incomplete, so C cannot be promoted.** The second control/repeat pair is still required. Mixed acknowledged rates on incomplete local loads are not successful-load throughput or cloud performance wins; B1 remains the experimental incumbent.
