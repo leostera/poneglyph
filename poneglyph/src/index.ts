@@ -7,3 +7,4 @@ export * from "./datalog/evaluator.js";
 export * from "./datalog/fact-source.js";
 export * from "./datalog/parser.js";
 export * from "./datalog/value.js";
+export * from "./client.js";

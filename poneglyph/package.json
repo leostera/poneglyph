@@ -1,7 +1,7 @@
 {
   "name": "@leostera/poneglyph",
   "version": "0.1.0",
-  "description": "Typed facts and bounded Datalog primitives for the Poneglyph graph database prototype.",
+  "description": "Typed facts, bounded Datalog, and an HTTP client for the Poneglyph graph database prototype.",
   "keywords": [
     "semantic-graph",
     "graph-database",
