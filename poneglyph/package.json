@@ -18,8 +18,12 @@
     "build": "pnpm workers:types && pnpm typecheck && cf build",
     "deploy": "pnpm workers:types && pnpm typecheck && cf deploy",
     "workers:types": "cf workers types",
-    "test:onepiece": "node --experimental-strip-types ../examples/onepiece-load.ts",
-    "test:deployed": "node --experimental-strip-types ../examples/deployed-smoke.ts"
+    "test:capacity": "tsx ../examples/capacity-simulation.ts",
+    "test:onepiece": "tsx ../examples/onepiece-load.ts",
+    "bench:local": "PONEGLYPH_RUN_BENCH=1 vitest run tests/throughput-bench.test.ts --reporter=verbose",
+    "bench:cloudflare": "tsx ../examples/deployed-benchmark.ts",
+    "test:deployed": "tsx ../examples/deployed-smoke.ts",
+    "test:deployed:todo": "tsx ../examples/deployed-todo-smoke.ts"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
@@ -27,8 +31,10 @@
     "@types/node": "25.6.0",
     "cf": "1.0.0-beta.14",
     "saxes": "6.0.0",
+    "tsx": "^4.23.15",
     "typescript": "5.9.3",
     "vite": "8.3.4",
-    "vitest": "4.1.7"
+    "vitest": "4.1.7",
+    "ws": "8.21.0"
   }
 }

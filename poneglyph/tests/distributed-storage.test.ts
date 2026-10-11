@@ -2,9 +2,10 @@ import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { isRecord } from "../src/domain/result.js";
-import { coordinatorObjectName, shardIndexForEntity, shardObjectName } from "../src/storage/keys.js";
+import { coordinatorObjectName, prefixOfKey, shardObjectName, virtualKeyForEntity, type VirtualKey, type VirtualPrefix } from "../src/storage/keys.js";
 import { parseFactBatch } from "../src/domain/fact.js";
 import { canonicalBatchJson, sha256Hex } from "../src/storage/http.js";
+import { TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "../src/storage/constants.js";
 
 type InputFact = Readonly<{
   source: string;
@@ -17,6 +18,8 @@ type InputFact = Readonly<{
 type TestBatch = Readonly<{ txId: string; facts: readonly InputFact[] }>;
 type TransactionMetadata = Readonly<{
   payload_hash: string;
+  participants_json: string;
+  directory_epoch: number;
   statement_time_ms: number;
   commit_seq: number;
 }>;
@@ -39,14 +42,25 @@ function fact(entity: string, value: string, retraction = false): InputFact {
   });
 }
 
-function differentShardEntities(): readonly [string, string] {
+async function splitRoot(graph: string, stopAfterPages?: number): Promise<Response> {
+  const coordinator = env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(graph));
+  return coordinator.fetch("https://coordinator.internal/_split", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ graphId: graph, prefix: "", force: true, ...(stopAfterPages === undefined ? {} : { stopAfterPages }) }),
+  });
+}
+
+async function differentShardEntities(graph: string): Promise<readonly [string, string]> {
   const first = "wiki:person:shard-test-0";
-  const firstShard = shardIndexForEntity(first);
+  const firstKey = await virtualKeyForEntity(graph, first);
+  const firstPrefix = prefixOfKey(firstKey, 1);
   for (let index = 1; index < 100; index += 1) {
     const next = `wiki:person:shard-test-${index}`;
-    if (shardIndexForEntity(next) !== firstShard) return [first, next];
+    const nextKey = await virtualKeyForEntity(graph, next);
+    if (prefixOfKey(nextKey, 1) !== firstPrefix) return [first, next];
   }
-  throw new Error("could not find two entities on distinct fixed leaves");
+  throw new Error("could not find entities in both root split children");
 }
 
 async function invokeWorker(graph: string, action: string, method: string, body?: unknown): Promise<Response> {
@@ -91,12 +105,13 @@ function stringBindings(response: Record<string, unknown>, variable: string): st
 describe("sharded Durable Object storage protocol", () => {
   it("commits one txId across leaves, streams a fan-out query, and returns idempotent outcomes", async () => {
     const graph = graphId();
-    const [entityA, entityB] = differentShardEntities();
+    expect((await splitRoot(graph)).status).toBe(200);
+    const [entityA, entityB] = await differentShardEntities(graph);
     const batch: TestBatch = {
       txId: transactionId(),
       facts: [fact(entityA, "old-a"), fact(entityB, "old-b")],
     };
-    expect(shardIndexForEntity(entityA)).not.toBe(shardIndexForEntity(entityB));
+    expect(prefixOfKey(await virtualKeyForEntity(graph, entityA), 1)).not.toBe(prefixOfKey(await virtualKeyForEntity(graph, entityB), 1));
 
     const committed = await postBatch(graph, batch);
     expect(committed.status).toBe(200);
@@ -105,7 +120,7 @@ describe("sharded Durable Object storage protocol", () => {
     const result = await query(graph, "wiki:person:status(Person, Status)");
     expect(rows(result)).toHaveLength(2);
     expect(result["snapshotSeq"]).toBe(1);
-    expect(result["metrics"]).toMatchObject({ scanCalls: 1, shardRequests: 4, tuplesRead: 2 });
+    expect(result["metrics"]).toMatchObject({ scanCalls: 1, shardRequests: 2, tuplesRead: 2 });
 
     const retry = await postBatch(graph, batch);
     expect(retry.status).toBe(200);
@@ -126,9 +141,34 @@ describe("sharded Durable Object storage protocol", () => {
     expect(entityResult["entity"]["fields"]).toMatchObject({ "wiki:person:status": { type: "text", value: "old-a" } });
   });
 
+  it("allows txId reuse after the documented retention window and prunes stale participant outcomes", async () => {
+    const graph = graphId();
+    const entity = "wiki:person:retention-window";
+    const txId = transactionId();
+    const first: TestBatch = { txId, facts: [fact(entity, "before-expiry")] };
+    expect((await postBatch(graph, first)).status).toBe(200);
+
+    const oldTimestamp = Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS - 1;
+    const coordinator = env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(graph));
+    const shard = env.GRAPH_SHARDS.getByName(shardObjectName(graph, "" as VirtualPrefix));
+    await runInDurableObject(coordinator, (_instance, state) => {
+      state.storage.sql.exec("UPDATE graph_transactions SET created_at_ms = ? WHERE tx_id = ?", oldTimestamp, txId);
+    });
+    await runInDurableObject(shard, (_instance, state) => {
+      state.storage.sql.exec("UPDATE shard_transactions SET created_at_ms = ? WHERE tx_id = ?", oldTimestamp, txId);
+    });
+
+    const replayAfterExpiry: TestBatch = { txId, facts: [fact(entity, "after-expiry")] };
+    const committed = await postBatch(graph, replayAfterExpiry);
+    const committedBody: unknown = await committed.json();
+    expect(committed.status, JSON.stringify(committedBody)).toBe(200);
+    expect(committedBody).toMatchObject({ txId, commitSeq: 2, status: "committed" });
+  });
+
   it("cancels prepared participants when a retraction is invalid on one shard", async () => {
     const graph = graphId();
-    const [entityA, entityB] = differentShardEntities();
+    expect((await splitRoot(graph)).status).toBe(200);
+    const [entityA, entityB] = await differentShardEntities(graph);
     const baseline: TestBatch = { txId: transactionId(), facts: [fact(entityA, "old-a")] };
     expect((await postBatch(graph, baseline)).status).toBe(200);
 
@@ -136,7 +176,7 @@ describe("sharded Durable Object storage protocol", () => {
       txId: transactionId(),
       facts: [fact(entityA, "old-a", true), fact(entityB, "missing", true)],
     };
-    expect(shardIndexForEntity(entityA)).not.toBe(shardIndexForEntity(entityB));
+    expect(prefixOfKey(await virtualKeyForEntity(graph, entityA), 1)).not.toBe(prefixOfKey(await virtualKeyForEntity(graph, entityB), 1));
     const rejected = await postBatch(graph, rejectedBatch);
     expect(rejected.status).toBe(422);
     expect(await rejected.json()).toMatchObject({ txId: rejectedBatch.txId, status: "aborted" });
@@ -146,9 +186,73 @@ describe("sharded Durable Object storage protocol", () => {
     expect(retry.status).toBe(409);
   });
 
+  it("rejects a transaction before intent/commit when an unsplittable shard is over its accounted limit", async () => {
+    const graph = graphId();
+    const rootStub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, "" as VirtualPrefix));
+    await runInDurableObject(rootStub, (_instance, state) => {
+      state.storage.sql.exec("UPDATE shard_accounting SET synthetic_size_bytes = 5_500_000_000 WHERE singleton = 1");
+    });
+
+    const batch: TestBatch = { txId: transactionId(), facts: [fact("wiki:person:capacity", "too-large")] };
+    const rejected = await postBatch(graph, batch);
+    expect(rejected.status).toBe(413);
+    const coordinator = env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(graph));
+    const state = await runInDurableObject(coordinator, (_instance, storage) => ({
+      visibleSeq: storage.storage.sql.exec<{ visible_seq: number }>("SELECT visible_seq FROM graph_state WHERE singleton = 1").one().visible_seq,
+      transactionCount: storage.storage.sql.exec<{ count: number }>("SELECT COUNT(*) AS count FROM graph_transactions").one().count,
+    }));
+    expect(state).toEqual({ visibleSeq: 0, transactionCount: 0 });
+  });
+
+  it("resumes an interrupted copy idempotently and retains the old owner until epoch-pinned readers drain", async () => {
+    const graph = graphId();
+    const [entityA, entityB] = await differentShardEntities(graph);
+    const batch: TestBatch = { txId: transactionId(), facts: [fact(entityA, "a"), fact(entityB, "b")] };
+    expect((await postBatch(graph, batch)).status).toBe(200);
+
+    const coordinator = env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(graph));
+    const retainedLeaseId = `test-directory-lease-${crypto.randomUUID()}`;
+    await runInDurableObject(coordinator, (_instance, state) => {
+      state.storage.sql.exec(
+        "INSERT INTO graph_read_leases (read_id, snapshot_seq, directory_epoch, expires_at_ms) VALUES (?, 1, 0, ?)",
+        retainedLeaseId,
+        Date.now() + 60_000,
+      );
+    });
+
+    const interrupted = await splitRoot(graph, 1);
+    expect(interrupted.status).toBe(503);
+    expect(await interrupted.json()).toMatchObject({ status: "copy-interrupted-for-recovery-test" });
+    expect(rows(await query(graph, "wiki:person:status(Person, Status)"))).toHaveLength(2);
+
+    const resumed = await splitRoot(graph);
+    expect(resumed.status).toBe(200);
+    expect(await resumed.json()).toMatchObject({ status: "split", directoryEpoch: 1, visibleSeq: 1 });
+    const afterCutover = await query(graph, "wiki:person:status(Person, Status)");
+    expect(stringBindings(afterCutover, "Status")).toEqual(["a", "b"]);
+    expect(afterCutover["snapshotSeq"]).toBe(1);
+    expect(afterCutover["metrics"]).toMatchObject({ shardRequests: 2 });
+
+    const rootStub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, "" as VirtualPrefix));
+    const retainedRows = await runInDurableObject(rootStub, (_instance, state) =>
+      state.storage.sql.exec<{ count: number }>("SELECT COUNT(*) AS count FROM fact_log").one().count,
+    );
+    expect(retainedRows).toBe(2);
+
+    await runInDurableObject(coordinator, (_instance, state) => {
+      state.storage.sql.exec("DELETE FROM graph_read_leases WHERE read_id = ?", retainedLeaseId);
+    });
+    await query(graph, "wiki:person:status(Person, Status)");
+    const retiredRows = await runInDurableObject(rootStub, (_instance, state) =>
+      state.storage.sql.exec<{ count: number }>("SELECT COUNT(*) AS count FROM fact_log").one().count,
+    );
+    expect(retiredRows).toBe(0);
+  });
+
   it("keeps snapshot readers on the old graph while one shard has applied a multi-shard tx, then recovers it", async () => {
     const graph = graphId();
-    const [entityA, entityB] = differentShardEntities();
+    expect((await splitRoot(graph)).status).toBe(200);
+    const [entityA, entityB] = await differentShardEntities(graph);
     const baseline: TestBatch = {
       txId: transactionId(),
       facts: [fact(entityA, "old-a"), fact(entityB, "old-b")],
@@ -159,7 +263,7 @@ describe("sharded Durable Object storage protocol", () => {
     const retentionLeaseId = `test-retain-${crypto.randomUUID()}`;
     await runInDurableObject(coordinator, (_instance, state) => {
       state.storage.sql.exec(
-        "INSERT INTO graph_read_leases (read_id, snapshot_seq, expires_at_ms) VALUES (?, 1, ?)",
+        "INSERT INTO graph_read_leases (read_id, snapshot_seq, directory_epoch, expires_at_ms) VALUES (?, 1, 1, ?)",
         retentionLeaseId,
         Date.now() + 60_000,
       );
@@ -176,7 +280,8 @@ describe("sharded Durable Object storage protocol", () => {
 
     const metadata = await runInDurableObject(coordinator, (_instance, state) => {
       const transaction = state.storage.sql.exec<TransactionMetadata>(
-        `SELECT payload_hash, statement_time_ms, commit_seq FROM graph_transactions WHERE tx_id = ?`,
+        `SELECT payload_hash, participants_json, directory_epoch, statement_time_ms, commit_seq
+         FROM graph_transactions WHERE tx_id = ?`,
         update.txId,
       ).one();
       return transaction;
@@ -187,22 +292,26 @@ describe("sharded Durable Object storage protocol", () => {
     if (!canonical.ok) throw new Error(canonical.error.message);
     expect(await sha256Hex(canonicalBatchJson(canonical.value))).toBe(metadata.payload_hash);
 
-    const indexedByShard = new Map<number, { index: number; fact: InputFact }[]>();
+    const participantAddresses = JSON.parse(metadata.participants_json) as { prefix: VirtualPrefix; generation: number }[];
+    const indexedByPrefix = new Map<string, { index: number; fact: InputFact; virtualKey: VirtualKey }[]>();
     for (const [index, item] of update.facts.entries()) {
-      const shard = shardIndexForEntity(item.entity);
-      const indexed = indexedByShard.get(shard) ?? [];
-      indexed.push({ index, fact: item });
-      indexedByShard.set(shard, indexed);
+      const virtualKey = await virtualKeyForEntity(graph, item.entity);
+      const address = participantAddresses.find((candidate) => prefixOfKey(virtualKey, candidate.prefix.length) === candidate.prefix);
+      if (address === undefined) throw new Error("could not match a transaction fact to its persisted participant route");
+      const indexed = indexedByPrefix.get(address.prefix) ?? [];
+      indexed.push({ index, fact: item, virtualKey });
+      indexedByPrefix.set(address.prefix, indexed);
     }
-    expect(indexedByShard.size).toBe(2);
-    const participantIndices = [...indexedByShard.keys()].sort((left, right) => left - right);
-    const unappliedShard = participantIndices[1];
-    if (unappliedShard === undefined) throw new Error("expected two participants");
-    const participantFacts = indexedByShard.get(unappliedShard);
+    expect(indexedByPrefix.size).toBe(2);
+    const unappliedAddress = participantAddresses[1];
+    if (unappliedAddress === undefined) throw new Error("expected two participants");
+    const participantFacts = indexedByPrefix.get(unappliedAddress.prefix);
     if (participantFacts === undefined) throw new Error("participant batch is missing");
     const stagedPayload = JSON.stringify({
       graphId: graph,
-      shardIndex: unappliedShard,
+      shardPrefix: unappliedAddress.prefix,
+      shardGeneration: unappliedAddress.generation,
+      directoryEpoch: metadata.directory_epoch,
       txId: update.txId,
       payloadHash: metadata.payload_hash,
       statementTimeMs: metadata.statement_time_ms,
@@ -210,7 +319,7 @@ describe("sharded Durable Object storage protocol", () => {
       facts: participantFacts,
     });
 
-    const unappliedShardStub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, unappliedShard));
+    const unappliedShardStub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, unappliedAddress.prefix));
     await runInDurableObject(unappliedShardStub, (_instance, state) => {
       state.storage.transactionSync(() => {
         state.storage.sql.exec("DELETE FROM fact_log WHERE tx_id = ?", update.txId);

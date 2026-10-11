@@ -10,12 +10,15 @@ import {
   MAX_QUERY_RESPONSE_BYTES,
   MAX_QUERY_RESULTS,
   MAX_READ_LEASES,
+  MAX_RETAINED_TRANSACTION_OUTCOMES,
   MAX_TRANSACTION_BYTES,
   MAX_TRANSACTION_FACTS,
+  MAX_TRANSACTION_PARTICIPANTS,
+  MAX_SPLITS_PER_WRITE,
   QUERY_TIMEOUT_MS,
   READ_LEASE_TTL_MS,
   ROUTING_VERSION,
-  SHARD_COUNT,
+  TRANSACTION_IDEMPOTENCY_RETENTION_MS,
 } from "./constants.js";
 import {
   canonicalBatchJson,
@@ -26,17 +29,19 @@ import {
   requestObject,
   sha256Hex,
 } from "./http.js";
-import { shardIndexForEntity, shardObjectName } from "./keys.js";
+import { accountStorage } from "./capacity.js";
+import { matchesPrefix, parseVirtualPrefix, shardObjectName, virtualKeyForEntity, type VirtualKey, type VirtualPrefix } from "./keys.js";
+import { listShardLeaves, resolveEntityLeaf, type LeafAddress } from "./routing.js";
 import { factAsJson } from "./protocol.js";
 import { ensureCoordinatorSchema } from "./sql.js";
-
-const COORDINATOR_NAME_VERSION = 1;
 
 type TransactionPhase = "preparing" | "committing" | "cancelling" | "complete" | "aborted";
 
 type GraphStateRow = Readonly<{
   visible_seq: number;
+  directory_epoch: number;
   writer_tx_id: string | null;
+  topology_op_id: string | null;
   next_statement_time_ms: number;
 }>;
 
@@ -45,6 +50,7 @@ type TransactionRow = Readonly<{
   payload_hash: string;
   batch_json: string | null;
   participants_json: string;
+  directory_epoch: number;
   statement_time_ms: number;
   commit_seq: number;
   phase: TransactionPhase;
@@ -52,16 +58,32 @@ type TransactionRow = Readonly<{
 }>;
 
 type PreparedParticipant = Readonly<{
-  shardIndex: number;
-  facts: readonly Readonly<{ index: number; fact: FactDraft }>[];
+  address: LeafAddress;
+  facts: readonly Readonly<{ index: number; fact: FactDraft; virtualKey: VirtualKey }>[];
 }>;
 
-type ReadLease = Readonly<{ readId: string; snapshotSeq: number; expiresAtMs: number }>;
+type ParticipantReference = LeafAddress;
+type ReadLease = Readonly<{ readId: string; snapshotSeq: number; directoryEpoch: number; expiresAtMs: number }>;
+
+type SplitRow = Readonly<{
+  migration_id: string;
+  source_prefix: string;
+  source_generation: number;
+  left_prefix: string;
+  right_prefix: string;
+  base_visible_seq: number;
+  old_directory_epoch: number;
+  split_epoch: number;
+  phase: "copying" | "ready" | "cutover" | "retired";
+  force: number;
+  created_at_ms: number;
+}>;
 
 type ResumeOutcome = "committed" | "aborted";
 
 export class GraphCoordinatorDO extends DurableObject<Env> {
   private activeWriterTxId: string | undefined;
+  private activeTopologyOpId: string | undefined;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -69,6 +91,14 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
   }
 
   override async fetch(request: Request): Promise<Response> {
+    if (request.method === "POST" && new URL(request.url).pathname === "/_split") {
+      try {
+        return await this.requestSplit(request);
+      } catch (error) {
+        const status = error instanceof CoordinatorError ? error.status : 503;
+        return jsonResponse({ error: errorMessage(error), retryable: status >= 500 }, status, { "retry-after": "1" });
+      }
+    }
     const route = parseGraphRoute(request);
     if (route === undefined) return jsonResponse({ error: "not found" }, 404);
 
@@ -88,6 +118,240 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       const status = error instanceof CoordinatorError ? error.status : 503;
       return jsonResponse({ error: errorMessage(error), retryable: status >= 500 }, status);
     }
+  }
+
+  private async requestSplit(request: Request): Promise<Response> {
+    const input = await readJsonBody(request, 8_192);
+    if (!input.ok || !isRecord(input.value)) return jsonResponse({ error: "expected a split request object" }, 400);
+    const graphId = parseGraphId(input.value["graphId"]);
+    const prefix = parseVirtualPrefix(input.value["prefix"]);
+    const force = input.value["force"] === true;
+    const stopAfterPages = input.value["stopAfterPages"];
+    if (!graphId.ok || !prefix.ok || (stopAfterPages !== undefined &&
+        (typeof stopAfterPages !== "number" || !Number.isSafeInteger(stopAfterPages) || stopAfterPages < 1))) {
+      return jsonResponse({ error: "invalid split request identity" }, 400);
+    }
+    this.assertGraphIdentity(graphId.value);
+    const current = this.readGraphState();
+    const route = await this.postShard(prefix.value, "_route", {
+      graphId: graphId.value,
+      prefix: prefix.value,
+      directoryEpoch: current.directory_epoch,
+    });
+    if (route["kind"] === "router") {
+      return jsonResponse({ status: "already-split", prefix: prefix.value, directoryEpoch: current.directory_epoch, visibleSeq: current.visible_seq });
+    }
+    const migrationId = this.reserveSplit(prefix.value, force);
+    const interrupted = await this.performSplit(migrationId, stopAfterPages as number | undefined);
+    if (interrupted instanceof Response) return interrupted;
+    const state = this.readGraphState();
+    return jsonResponse({ status: "split", prefix: prefix.value, directoryEpoch: state.directory_epoch, visibleSeq: state.visible_seq });
+  }
+
+  private reserveSplit(prefix: VirtualPrefix, force: boolean): string {
+    return this.ctx.storage.transactionSync(() => {
+      const state = this.readGraphState();
+      if (state.writer_tx_id !== null) throw new CoordinatorError(423, "cannot split while a transaction decision is pending");
+      if (state.topology_op_id !== null) {
+        const existing = this.readSplit(state.topology_op_id);
+        if (existing?.source_prefix === prefix) return state.topology_op_id;
+        throw new CoordinatorError(423, "another topology operation is already active");
+      }
+      const capacity = accountStorage(this.ctx.storage.sql.databaseSize, {
+        factLogBytes: 0,
+        activeIndexBytes: 0,
+        projectionBytes: 0,
+        transactionStagingBytes: 2_048,
+      });
+      if (!capacity.canAdmit) throw new CoordinatorError(413, "coordinator cannot reserve metadata for another topology operation");
+      const migrationId = crypto.randomUUID();
+      const leftPrefix = `${prefix}0`;
+      const rightPrefix = `${prefix}1`;
+      const splitEpoch = state.directory_epoch + 1;
+      this.ctx.storage.sql.exec(
+        `INSERT INTO graph_splits
+         (migration_id, source_prefix, source_generation, left_prefix, right_prefix, base_visible_seq,
+          old_directory_epoch, split_epoch, phase, force, created_at_ms)
+         VALUES (?, ?, 0, ?, ?, ?, ?, ?, 'copying', ?, ?)`,
+        migrationId,
+        prefix,
+        leftPrefix,
+        rightPrefix,
+        state.visible_seq,
+        state.directory_epoch,
+        splitEpoch,
+        force ? 1 : 0,
+        Date.now(),
+      );
+      this.ctx.storage.sql.exec("UPDATE graph_state SET topology_op_id = ? WHERE singleton = 1", migrationId);
+      return migrationId;
+    });
+  }
+
+  private async performSplit(migrationId: string, stopAfterPages?: number): Promise<Response | undefined> {
+    if (this.activeTopologyOpId !== undefined) return this.topologyBusy(this.activeTopologyOpId);
+    this.activeTopologyOpId = migrationId;
+    try {
+      return await this.performSplitStep(migrationId, stopAfterPages);
+    } finally {
+      this.activeTopologyOpId = undefined;
+    }
+  }
+
+  private async performSplitStep(migrationId: string, stopAfterPages?: number): Promise<Response | undefined> {
+    const split = this.readSplit(migrationId);
+    if (split === undefined) throw new CoordinatorError(500, "topology operation record is missing");
+    if (split.phase === "retired" || split.phase === "cutover") return undefined;
+    const graphId = this.readGraphIdentity();
+    const sourcePrefix = split.source_prefix as VirtualPrefix;
+    const splitIdentity = {
+      graphId,
+      prefix: sourcePrefix,
+      generation: split.source_generation,
+      migrationId,
+      splitEpoch: split.split_epoch,
+      leftPrefix: split.left_prefix,
+      rightPrefix: split.right_prefix,
+      force: split.force === 1,
+    };
+    const started = await this.postShard(sourcePrefix, "_begin-split", splitIdentity);
+    const beginStatus = started["status"];
+    if (beginStatus === "capacity-limit" || beginStatus === "no-progress") {
+      await this.postShard(sourcePrefix, "_abort-split", { graphId, prefix: sourcePrefix, migrationId });
+      this.clearSplit(migrationId);
+      throw new CoordinatorError(413, beginStatus === "capacity-limit"
+        ? "split children cannot fit under the per-DO accounted capacity limit"
+        : "virtual-prefix split would make no progress");
+    }
+    if (beginStatus !== "copying" && beginStatus !== "already-cut-over") {
+      throw new CoordinatorError(503, "source did not enter the expected split state");
+    }
+
+    let copiedPages = 0;
+    if (beginStatus !== "already-cut-over") {
+      const children = [split.left_prefix, split.right_prefix] as const;
+      const reserves = [started["leftReservedBytes"], started["rightReservedBytes"]];
+      for (const [index, childPrefix] of children.entries()) {
+        const reservedBytes = reserves[index];
+        if (typeof reservedBytes !== "number" || !Number.isSafeInteger(reservedBytes) || reservedBytes < 0) {
+          throw new CoordinatorError(500, "source returned an invalid child capacity estimate");
+        }
+        await this.postShard(childPrefix as VirtualPrefix, "_init-child", { graphId, prefix: childPrefix, migrationId, reservedBytes });
+      }
+
+      for (const table of ["fact_log", "active_facts", "active_values", "entity_versions"] as const) {
+        for (const childPrefix of children) {
+          let pageNumber = 0;
+          let afterRowId = 0;
+          while (true) {
+            const exported = await this.postShard(sourcePrefix, "_export", {
+              graphId,
+              sourcePrefix,
+              targetPrefix: childPrefix,
+              migrationId,
+              table,
+              pageNumber,
+              afterRowId,
+            });
+            const rows = exported["rows"];
+            const nextRowId = exported["nextRowId"];
+            const hasMore = exported["hasMore"];
+            const pageHash = exported["pageHash"];
+            if (!Array.isArray(rows) || typeof nextRowId !== "number" || typeof hasMore !== "boolean" || typeof pageHash !== "string") {
+              throw new CoordinatorError(502, "source returned an invalid split page");
+            }
+            if (rows.length > 0) {
+              await this.postShard(childPrefix as VirtualPrefix, "_import", {
+                graphId,
+                targetPrefix: childPrefix,
+                migrationId,
+                table,
+                pageNumber,
+                pageHash,
+                rows,
+              });
+              copiedPages += 1;
+              if (stopAfterPages !== undefined && copiedPages >= stopAfterPages) {
+                return jsonResponse({ status: "copy-interrupted-for-recovery-test", migrationId, copiedPages }, 503, { "retry-after": "1" });
+              }
+            }
+            if (!hasMore) break;
+            if (nextRowId <= afterRowId || pageNumber > 1_000_000) throw new CoordinatorError(500, "split export cursor failed to advance");
+            afterRowId = nextRowId;
+            pageNumber += 1;
+          }
+        }
+      }
+
+      for (const table of ["fact_log", "active_facts", "active_values", "entity_versions"] as const) {
+        for (const childPrefix of children) {
+          const sourceCount = await this.postShard(sourcePrefix, "_count", {
+            graphId, nodePrefix: sourcePrefix, rangePrefix: childPrefix, table,
+          });
+          const childCount = await this.postShard(childPrefix as VirtualPrefix, "_count", {
+            graphId, nodePrefix: childPrefix, rangePrefix: childPrefix, table,
+          });
+          if (sourceCount["count"] !== childCount["count"]) {
+            throw new CoordinatorError(503, `split verification count mismatch for ${table} at prefix ${childPrefix}`);
+          }
+        }
+      }
+      for (const childPrefix of children) {
+        await this.postShard(childPrefix as VirtualPrefix, "_finish-child", { graphId, prefix: childPrefix, migrationId });
+      }
+      this.ctx.storage.transactionSync(() => {
+        this.ctx.storage.sql.exec("UPDATE graph_splits SET phase = 'ready' WHERE migration_id = ? AND phase = 'copying'", migrationId);
+      });
+    }
+
+    await this.postShard(sourcePrefix, "_cutover", splitIdentity);
+    this.ctx.storage.transactionSync(() => {
+      const state = this.readGraphState();
+      if (state.directory_epoch === split.old_directory_epoch) {
+        if (state.topology_op_id !== migrationId || state.visible_seq !== split.base_visible_seq) {
+          throw new CoordinatorError(500, "graph state changed during a fenced topology operation");
+        }
+        this.ctx.storage.sql.exec(
+          "UPDATE graph_state SET directory_epoch = ?, topology_op_id = NULL WHERE singleton = 1",
+          split.split_epoch,
+        );
+      } else if (state.directory_epoch !== split.split_epoch) {
+        throw new CoordinatorError(500, "directory epoch changed unexpectedly during split recovery");
+      }
+      this.ctx.storage.sql.exec("UPDATE graph_splits SET phase = 'cutover' WHERE migration_id = ?", migrationId);
+    });
+    await this.pruneVersions();
+    return undefined;
+  }
+
+  private async postShard(prefix: VirtualPrefix, path: string, body: unknown): Promise<Record<string, unknown>> {
+    const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(this.readGraphIdentity(), prefix));
+    const response = await stub.fetch(`https://shard.internal/${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const text = await response.text();
+    let result: unknown;
+    try { result = JSON.parse(text) as unknown; } catch { result = undefined; }
+    if (!response.ok) throw new ParticipantResponseError(response.status, text.slice(0, 512));
+    if (!isRecord(result)) throw new CoordinatorError(502, `shard ${prefix} returned invalid JSON`);
+    return result;
+  }
+
+  private readSplit(migrationId: string): SplitRow | undefined {
+    return this.ctx.storage.sql.exec<SplitRow>(
+      `SELECT migration_id, source_prefix, source_generation, left_prefix, right_prefix, base_visible_seq,
+        old_directory_epoch, split_epoch, phase, force, created_at_ms FROM graph_splits WHERE migration_id = ?`,
+      migrationId,
+    ).toArray()[0];
+  }
+
+  private clearSplit(migrationId: string): void {
+    this.ctx.storage.transactionSync(() => {
+      this.ctx.storage.sql.exec("DELETE FROM graph_splits WHERE migration_id = ? AND phase = 'copying'", migrationId);
+      this.ctx.storage.sql.exec("UPDATE graph_state SET topology_op_id = NULL WHERE singleton = 1 AND topology_op_id = ?", migrationId);
+    });
   }
 
   private async writeTransaction(request: Request, graphId: GraphId): Promise<Response> {
@@ -113,8 +377,18 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       const outcome = await this.resumePersistedWriter(existingWriter);
       if (outcome instanceof Response) return outcome;
     }
+    const pendingTopology = this.readGraphState().topology_op_id;
+    if (pendingTopology !== null) {
+      const outcome = await this.performSplit(pendingTopology);
+      if (outcome instanceof Response) return outcome;
+    }
 
-    const prior = this.readTransaction(batch.txId);
+    let prior = this.readTransaction(batch.txId);
+    if (prior !== undefined && (prior.phase === "complete" || prior.phase === "aborted") &&
+        prior.created_at_ms < Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS) {
+      this.ctx.storage.sql.exec("DELETE FROM graph_transactions WHERE tx_id = ?", batch.txId);
+      prior = undefined;
+    }
     if (prior !== undefined) {
       if (prior.payload_hash !== payloadHash) {
         return jsonResponse({ error: "txId has already been used with a different fact batch" }, 409);
@@ -130,8 +404,33 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       });
     }
 
-    const reservation = this.reserveTransaction(batch, payloadHash, json);
+    let routeState = this.readGraphState();
+    if (routeState.topology_op_id !== null) return this.topologyBusy(routeState.topology_op_id);
+    let directoryEpoch = routeState.directory_epoch;
+    let participants = await this.groupBatch(batch, directoryEpoch);
+    for (let splitCount = 0; splitCount <= MAX_SPLITS_PER_WRITE; splitCount += 1) {
+      if (participants.length > MAX_TRANSACTION_PARTICIPANTS) {
+        return jsonResponse({ error: `transaction cannot exceed ${MAX_TRANSACTION_PARTICIPANTS} participant leaves` }, 413);
+      }
+      const preflight = await this.preflightParticipants(batch, payloadHash, participants, directoryEpoch);
+      const overloaded = preflight.find((result) => result.shouldSplit || !result.canAdmit);
+      if (overloaded === undefined) break;
+      if (!overloaded.shouldSplit || splitCount === MAX_SPLITS_PER_WRITE) {
+        return jsonResponse({ error: "transaction cannot be admitted within the per-DO capacity budget", prefix: overloaded.address.prefix }, 413);
+      }
+      const splitResult = await this.splitPrefix(overloaded.address.prefix, false);
+      if (splitResult instanceof Response) return splitResult;
+      routeState = this.readGraphState();
+      directoryEpoch = routeState.directory_epoch;
+      participants = await this.groupBatch(batch, directoryEpoch);
+    }
+
+    const reservation = this.reserveTransaction(batch, payloadHash, json, participants, directoryEpoch);
     if (reservation.kind === "busy") return this.writerBusy(reservation.txId);
+    if (reservation.kind === "topology-busy") return this.topologyBusy(this.readGraphState().topology_op_id ?? "split");
+    if (reservation.kind === "route-changed") {
+      return jsonResponse({ error: "directory changed while routing transaction; retry with the same txId", retryable: true }, 423, { "retry-after": "1" });
+    }
     if (reservation.kind === "existing") {
       if (reservation.row.payload_hash !== payloadHash) {
         return jsonResponse({ error: "txId has already been used with a different fact batch" }, 409);
@@ -187,11 +486,8 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       if (!batch.ok) throw new CoordinatorError(500, `stored fact batch is corrupt: ${batch.error.message}`);
       const actualHash = await sha256Hex(canonicalBatchJson(batch.value));
       if (actualHash !== transaction.payload_hash) throw new CoordinatorError(500, "stored fact batch digest mismatch");
-      const participants = groupBatch(batch.value);
-      if (!sameNumberList(JSON.parse(transaction.participants_json) as unknown, participants.map(({ shardIndex }) => shardIndex))) {
-        throw new CoordinatorError(500, "stored participant routes do not match the fixed shard topology");
-      }
-
+      const references = this.readParticipantReferences(transaction);
+      const participants = await this.groupBatch(batch.value, transaction.directory_epoch, references);
       const prepareResults = await Promise.allSettled(participants.map((participant) =>
         this.prepareParticipant(this.readGraphIdentity(), transaction!, participant),
       ));
@@ -218,9 +514,9 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     if (transaction.phase === "cancelling") return await this.finishCancellation(transaction);
     if (transaction.phase !== "committing") throw new CoordinatorError(500, `unexpected transaction phase ${transaction.phase}`);
 
-    const participants = this.readParticipantIndices(transaction);
-    const commitResults = await Promise.allSettled(participants.map((shardIndex) =>
-      this.commitParticipant(transaction!, shardIndex),
+    const participants = this.readParticipantReferences(transaction);
+    const commitResults = await Promise.allSettled(participants.map((address) =>
+      this.commitParticipant(transaction!, address),
     ));
     const failedCommit = commitResults.find((result) => result.status === "rejected");
     if (failedCommit !== undefined) {
@@ -234,9 +530,9 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
   }
 
   private async finishCancellation(transaction: TransactionRow): Promise<"aborted"> {
-    const participants = this.readParticipantIndices(transaction);
-    const results = await Promise.allSettled(participants.map((shardIndex) =>
-      this.cancelParticipant(transaction, shardIndex),
+    const participants = this.readParticipantReferences(transaction);
+    const results = await Promise.allSettled(participants.map((address) =>
+      this.cancelParticipant(transaction, address),
     ));
     const failure = results.find((result) => result.status === "rejected");
     if (failure !== undefined) {
@@ -257,28 +553,119 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     return "aborted";
   }
 
-  private reserveTransaction(batch: FactBatch, payloadHash: string, batchJson: string):
+  private async preflightParticipants(
+    batch: FactBatch,
+    payloadHash: string,
+    participants: readonly PreparedParticipant[],
+    directoryEpoch: number,
+  ): Promise<readonly Readonly<{ address: LeafAddress; shouldSplit: boolean; canAdmit: boolean }>[]> {
+    const state = this.readGraphState();
+    const statementTimeMs = Math.max(Date.now(), state.next_statement_time_ms + 1);
+    const results = await Promise.all(participants.map(async (participant) => {
+      const result = await this.postShard(participant.address.prefix, "_preflight", {
+        graphId: this.readGraphIdentity(),
+        shardPrefix: participant.address.prefix,
+        shardGeneration: participant.address.generation,
+        directoryEpoch,
+        txId: batch.txId,
+        payloadHash,
+        statementTimeMs,
+        commitSeq: state.visible_seq + 1,
+        facts: participant.facts,
+      });
+      if (typeof result["shouldSplit"] !== "boolean" || typeof result["canAdmit"] !== "boolean") {
+        throw new CoordinatorError(502, "shard returned an invalid capacity preflight result");
+      }
+      return { address: participant.address, shouldSplit: result["shouldSplit"], canAdmit: result["canAdmit"] };
+    }));
+    return results;
+  }
+
+  private async splitPrefix(prefix: VirtualPrefix, force: boolean): Promise<Response | undefined> {
+    const migrationId = this.reserveSplit(prefix, force);
+    return this.performSplit(migrationId);
+  }
+
+  private async groupBatch(
+    batch: FactBatch,
+    directoryEpoch: number,
+    expectedAddresses?: readonly ParticipantReference[],
+  ): Promise<PreparedParticipant[]> {
+    const graphId = this.readGraphIdentity();
+    const groups = new Map<string, { address: LeafAddress; facts: { index: number; fact: FactDraft; virtualKey: VirtualKey }[] }>();
+    for (const [index, fact] of batch.facts.entries()) {
+      const virtualKey = await virtualKeyForEntity(graphId, fact.entity);
+      const address = expectedAddresses === undefined
+        ? (await resolveEntityLeaf(this.env, graphId, fact.entity, directoryEpoch)).address
+        : expectedAddresses.find((candidate) => matchesPrefix(virtualKey, candidate.prefix));
+      if (address === undefined || !matchesPrefix(virtualKey, address.prefix)) {
+        throw new CoordinatorError(500, "transaction facts do not match their persisted shard routes");
+      }
+      const group = groups.get(address.prefix) ?? { address, facts: [] };
+      if (group.address.generation !== address.generation) {
+        throw new CoordinatorError(500, "one leaf was assigned inconsistent routing generations");
+      }
+      group.facts.push({ index, fact: factAsJson(fact), virtualKey });
+      groups.set(address.prefix, group);
+    }
+    return [...groups.values()].sort((left, right) => left.address.prefix < right.address.prefix ? -1 : 1);
+  }
+
+  private reserveTransaction(
+    batch: FactBatch,
+    payloadHash: string,
+    batchJson: string,
+    participants: readonly PreparedParticipant[],
+    directoryEpoch: number,
+  ):
     | { kind: "created" }
     | { kind: "busy"; txId: string }
+    | { kind: "topology-busy" }
+    | { kind: "route-changed" }
     | { kind: "existing"; row: TransactionRow } {
     return this.ctx.storage.transactionSync(() => {
       const state = this.readGraphState();
+      if (state.topology_op_id !== null) return { kind: "topology-busy" };
       if (state.writer_tx_id !== null) return { kind: "busy", txId: state.writer_tx_id };
+      if (state.directory_epoch !== directoryEpoch) return { kind: "route-changed" };
       const existing = this.readTransaction(batch.txId);
       if (existing !== undefined) return { kind: "existing", row: existing };
 
-      const participants = groupBatch(batch);
+      const now = Date.now();
+      this.ctx.storage.sql.exec(
+        `DELETE FROM graph_transactions WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?`,
+        now - TRANSACTION_IDEMPOTENCY_RETENTION_MS,
+      );
+      const outcomeCount = this.ctx.storage.sql.exec<{ count: number }>(
+        "SELECT COUNT(*) AS count FROM graph_transactions WHERE phase IN ('complete', 'aborted')",
+      ).toArray()[0]?.count ?? 0;
+      if (outcomeCount >= MAX_RETAINED_TRANSACTION_OUTCOMES) {
+        throw new CoordinatorError(429, `graph has reached its ${MAX_RETAINED_TRANSACTION_OUTCOMES}-outcome idempotency window`);
+      }
+      const metadataBytes = new TextEncoder().encode(batchJson).byteLength + participants.length * 96 + 1_024;
+      const coordinatorCapacity = accountStorage(this.ctx.storage.sql.databaseSize, {
+        factLogBytes: 0,
+        activeIndexBytes: 0,
+        projectionBytes: 0,
+        transactionStagingBytes: metadataBytes,
+      });
+      if (!coordinatorCapacity.canAdmit) throw new CoordinatorError(413, "coordinator metadata would exceed the per-DO accounted capacity limit");
+
+      if (participants.length === 0 || participants.length > MAX_TRANSACTION_PARTICIPANTS) {
+        throw new CoordinatorError(413, `transaction cannot exceed ${MAX_TRANSACTION_PARTICIPANTS} participant leaves`);
+      }
       const commitSeq = state.visible_seq + 1;
       const statementTimeMs = Math.max(Date.now(), state.next_statement_time_ms + 1);
       const nextStatementTimeMs = statementTimeMs + batch.facts.length;
       this.ctx.storage.sql.exec(
         `INSERT INTO graph_transactions
-         (tx_id, payload_hash, batch_json, participants_json, statement_time_ms, commit_seq, phase, created_at_ms)
-         VALUES (?, ?, ?, ?, ?, ?, 'preparing', ?)`,
+         (tx_id, payload_hash, batch_json, participants_json, directory_epoch, statement_time_ms, commit_seq, phase, created_at_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'preparing', ?)`,
         batch.txId,
         payloadHash,
         batchJson,
-        JSON.stringify(participants.map(({ shardIndex }) => shardIndex)),
+        JSON.stringify(participants.map(({ address }) => address)),
+        directoryEpoch,
         statementTimeMs,
         commitSeq,
         Date.now(),
@@ -328,37 +715,43 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
   ): Promise<void> {
     const body = {
       graphId,
-      shardIndex: participant.shardIndex,
+      shardPrefix: participant.address.prefix,
+      shardGeneration: participant.address.generation,
+      directoryEpoch: transaction.directory_epoch,
       txId: transaction.tx_id,
       payloadHash: transaction.payload_hash,
       statementTimeMs: transaction.statement_time_ms,
       commitSeq: transaction.commit_seq,
       facts: participant.facts,
     };
-    await this.callParticipant(participant.shardIndex, "_prepare", body);
+    await this.callParticipant(participant.address, "_prepare", body);
   }
 
-  private async commitParticipant(transaction: TransactionRow, shardIndex: number): Promise<void> {
-    await this.callParticipant(shardIndex, "_commit", {
+  private async commitParticipant(transaction: TransactionRow, address: ParticipantReference): Promise<void> {
+    await this.callParticipant(address, "_commit", {
       graphId: this.readGraphIdentity(),
-      shardIndex,
+      shardPrefix: address.prefix,
+      shardGeneration: address.generation,
+      directoryEpoch: transaction.directory_epoch,
       txId: transaction.tx_id,
       payloadHash: transaction.payload_hash,
       commitSeq: transaction.commit_seq,
     });
   }
 
-  private async cancelParticipant(transaction: TransactionRow, shardIndex: number): Promise<void> {
-    await this.callParticipant(shardIndex, "_cancel", {
+  private async cancelParticipant(transaction: TransactionRow, address: ParticipantReference): Promise<void> {
+    await this.callParticipant(address, "_cancel", {
       graphId: this.readGraphIdentity(),
-      shardIndex,
+      shardPrefix: address.prefix,
+      shardGeneration: address.generation,
+      directoryEpoch: transaction.directory_epoch,
       txId: transaction.tx_id,
       payloadHash: transaction.payload_hash,
     });
   }
 
-  private async callParticipant(shardIndex: number, path: string, body: unknown): Promise<void> {
-    const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(this.readGraphIdentity(), shardIndex));
+  private async callParticipant(address: ParticipantReference, path: string, body: unknown): Promise<void> {
+    const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(this.readGraphIdentity(), address.prefix));
     const response = await stub.fetch(`https://shard.internal/${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -384,7 +777,7 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new DOMException("query time budget exceeded", "TimeoutError")), QUERY_TIMEOUT_MS);
     try {
-      const source = new DistributedFactSource(this.env, graphId, lease.snapshotSeq, lease.expiresAtMs);
+      const source = new DistributedFactSource(this.env, graphId, lease.snapshotSeq, lease.directoryEpoch, lease.expiresAtMs);
       const rows: Record<string, unknown>[] = [];
       let responseBytes = 0;
       for await (const binding of evaluateDatalog(query.value, source, {
@@ -416,8 +809,8 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       return jsonResponse({ error: errorMessage(error), snapshotSeq: lease.snapshotSeq }, status);
     } finally {
       clearTimeout(timer);
-      const minSnapshotSeq = this.releaseReadLease(lease.readId);
-      await this.pruneVersions(minSnapshotSeq);
+      const minimum = this.releaseReadLease(lease.readId);
+      await this.pruneVersions(minimum.minSnapshotSeq, minimum.minDirectoryEpoch);
     }
   }
 
@@ -426,14 +819,16 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     if (!entity.ok) return jsonResponse({ error: entity.error.message }, 400);
     const lease = this.beginReadLease();
     try {
-      const shardIndex = shardIndexForEntity(entity.value);
-      const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(graphId, shardIndex));
+      const route = await resolveEntityLeaf(this.env, graphId, entity.value, lease.directoryEpoch);
+      const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(graphId, route.address.prefix));
       const response = await stub.fetch("https://shard.internal/_entity", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           graphId,
-          shardIndex,
+          shardPrefix: route.address.prefix,
+          shardGeneration: route.address.generation,
+          directoryEpoch: lease.directoryEpoch,
           entity: entity.value,
           snapshotSeq: lease.snapshotSeq,
           leaseExpiresAtMs: lease.expiresAtMs,
@@ -444,8 +839,8 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       const projection: unknown = await response.json();
       return jsonResponse({ entity: projection, snapshotSeq: lease.snapshotSeq });
     } finally {
-      const minSnapshotSeq = this.releaseReadLease(lease.readId);
-      await this.pruneVersions(minSnapshotSeq);
+      const minimum = this.releaseReadLease(lease.readId);
+      await this.pruneVersions(minimum.minSnapshotSeq, minimum.minDirectoryEpoch);
     }
   }
 
@@ -462,39 +857,76 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       const readId = crypto.randomUUID();
       const expiresAtMs = now + READ_LEASE_TTL_MS;
       this.ctx.storage.sql.exec(
-        "INSERT INTO graph_read_leases (read_id, snapshot_seq, expires_at_ms) VALUES (?, ?, ?)",
+        "INSERT INTO graph_read_leases (read_id, snapshot_seq, directory_epoch, expires_at_ms) VALUES (?, ?, ?, ?)",
         readId,
         graph.visible_seq,
+        graph.directory_epoch,
         expiresAtMs,
       );
-      return { readId, snapshotSeq: graph.visible_seq, expiresAtMs };
+      return { readId, snapshotSeq: graph.visible_seq, directoryEpoch: graph.directory_epoch, expiresAtMs };
     });
   }
 
-  private releaseReadLease(readId: string): number {
+  private releaseReadLease(readId: string): Readonly<{ minSnapshotSeq: number; minDirectoryEpoch: number }> {
     return this.ctx.storage.transactionSync(() => {
       const now = Date.now();
       this.ctx.storage.sql.exec("DELETE FROM graph_read_leases WHERE read_id = ? OR expires_at_ms <= ?", readId, now);
-      const lease = this.ctx.storage.sql.exec<{ min_seq: number | null }>(
-        "SELECT MIN(snapshot_seq) AS min_seq FROM graph_read_leases WHERE expires_at_ms > ?",
+      const lease = this.ctx.storage.sql.exec<{ min_seq: number | null; min_epoch: number | null }>(
+        "SELECT MIN(snapshot_seq) AS min_seq, MIN(directory_epoch) AS min_epoch FROM graph_read_leases WHERE expires_at_ms > ?",
         now,
       ).toArray()[0];
-      return lease?.min_seq ?? this.readGraphState().visible_seq;
+      const state = this.readGraphState();
+      return {
+        minSnapshotSeq: lease?.min_seq ?? state.visible_seq,
+        minDirectoryEpoch: lease?.min_epoch ?? state.directory_epoch,
+      };
     });
   }
 
-  private async pruneVersions(minSnapshotSeq?: number): Promise<void> {
-    const minSnapshot = minSnapshotSeq ?? this.minimumSnapshotSeq();
+  private async pruneVersions(minSnapshotSeq?: number, minDirectoryEpoch?: number): Promise<void> {
+    const minimum = minSnapshotSeq ?? this.minimumSnapshotSeq();
     const graphId = this.readGraphIdentity();
-    await Promise.allSettled(Array.from({ length: SHARD_COUNT }, async (_, shardIndex) => {
-      const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(graphId, shardIndex));
+    const state = this.readGraphState();
+    if (state.topology_op_id !== null) return;
+    const minimumEpoch = minDirectoryEpoch ?? this.minimumDirectoryEpoch();
+    const routes = await listShardLeaves(this.env, graphId, state.directory_epoch);
+    await Promise.allSettled(routes.leaves.map(async (address) => {
+      const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(graphId, address.prefix));
       const response = await stub.fetch("https://shard.internal/_prune", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ graphId, shardIndex, minSnapshotSeq: minSnapshot }),
+        body: JSON.stringify({
+          graphId,
+          shardPrefix: address.prefix,
+          shardGeneration: address.generation,
+          directoryEpoch: state.directory_epoch,
+          minSnapshotSeq: minimum,
+        }),
       });
-      if (!response.ok) console.warn("Poneglyph projection pruning deferred", shardIndex, response.status);
+      if (!response.ok) console.warn("Poneglyph projection pruning deferred", address.prefix, response.status);
     }));
+    await this.retireExpiredOwners(graphId, minimumEpoch);
+  }
+
+  private async retireExpiredOwners(graphId: GraphId, minimumEpoch: number): Promise<void> {
+    const eligible = this.ctx.storage.sql.exec<SplitRow>(
+      `SELECT migration_id, source_prefix, source_generation, left_prefix, right_prefix, base_visible_seq,
+        old_directory_epoch, split_epoch, phase, force, created_at_ms
+       FROM graph_splits WHERE phase = 'cutover' AND split_epoch <= ?`,
+      minimumEpoch,
+    ).toArray();
+    for (const split of eligible) {
+      try {
+        await this.postShard(split.source_prefix as VirtualPrefix, "_retire", {
+          graphId,
+          prefix: split.source_prefix,
+          migrationId: split.migration_id,
+        });
+        this.ctx.storage.sql.exec("DELETE FROM graph_splits WHERE migration_id = ? AND phase = 'cutover'", split.migration_id);
+      } catch (error) {
+        console.warn("Poneglyph old split owner retirement deferred", split.source_prefix, errorMessage(error));
+      }
+    }
   }
 
   private minimumSnapshotSeq(): number {
@@ -509,9 +941,21 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     });
   }
 
+  private minimumDirectoryEpoch(): number {
+    return this.ctx.storage.transactionSync(() => {
+      const now = Date.now();
+      this.ctx.storage.sql.exec("DELETE FROM graph_read_leases WHERE expires_at_ms <= ?", now);
+      const lease = this.ctx.storage.sql.exec<{ min_epoch: number | null }>(
+        "SELECT MIN(directory_epoch) AS min_epoch FROM graph_read_leases WHERE expires_at_ms > ?",
+        now,
+      ).toArray()[0];
+      return lease?.min_epoch ?? this.readGraphState().directory_epoch;
+    });
+  }
+
   private readGraphState(): GraphStateRow {
     const row = this.ctx.storage.sql.exec<GraphStateRow>(
-      "SELECT visible_seq, writer_tx_id, next_statement_time_ms FROM graph_state WHERE singleton = 1",
+      "SELECT visible_seq, directory_epoch, writer_tx_id, topology_op_id, next_statement_time_ms FROM graph_state WHERE singleton = 1",
     ).toArray()[0];
     if (row === undefined) throw new CoordinatorError(500, "graph state row is missing");
     return row;
@@ -519,26 +963,37 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
 
   private readTransaction(txId: string): TransactionRow | undefined {
     return this.ctx.storage.sql.exec<TransactionRow>(
-      `SELECT tx_id, payload_hash, batch_json, participants_json, statement_time_ms,
+      `SELECT tx_id, payload_hash, batch_json, participants_json, directory_epoch, statement_time_ms,
               commit_seq, phase, created_at_ms
        FROM graph_transactions WHERE tx_id = ?`,
       txId,
     ).toArray()[0];
   }
 
-  private readParticipantIndices(transaction: TransactionRow): readonly number[] {
+  private readParticipantReferences(transaction: TransactionRow): readonly ParticipantReference[] {
     let input: unknown;
     try {
       input = JSON.parse(transaction.participants_json) as unknown;
     } catch {
       throw new CoordinatorError(500, "stored participant list is corrupt");
     }
-    if (!Array.isArray(input) || input.length === 0 || input.some((value) =>
-      typeof value !== "number" || !Number.isInteger(value) || value < 0 || value >= SHARD_COUNT,
-    )) {
+    if (!Array.isArray(input) || input.length === 0 || input.length > MAX_TRANSACTION_PARTICIPANTS) {
       throw new CoordinatorError(500, "stored participant list is invalid");
     }
-    return input as number[];
+    const references: ParticipantReference[] = [];
+    const prefixes = new Set<string>();
+    for (const item of input) {
+      if (item === null || typeof item !== "object") throw new CoordinatorError(500, "stored participant address is invalid");
+      const record = item as Record<string, unknown>;
+      const prefix = parseVirtualPrefix(record["prefix"]);
+      const generation = record["generation"];
+      if (!prefix.ok || typeof generation !== "number" || !Number.isSafeInteger(generation) || generation < 0 || prefixes.has(prefix.value)) {
+        throw new CoordinatorError(500, "stored participant address is invalid");
+      }
+      prefixes.add(prefix.value);
+      references.push({ prefix: prefix.value, generation });
+    }
+    return references;
   }
 
   private assertGraphIdentity(graphId: GraphId): void {
@@ -574,6 +1029,12 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       "retry-after": "1",
     });
   }
+
+  private topologyBusy(operationId: string): Response {
+    return jsonResponse({ error: "graph topology is being copied or cut over", operationId, retryable: true }, 423, {
+      "retry-after": "1",
+    });
+  }
 }
 
 function parseGraphRoute(request: Request): Readonly<{ graphId: GraphId; action: "transactions" | "query" | "entities" }> | undefined {
@@ -584,24 +1045,6 @@ function parseGraphRoute(request: Request): Readonly<{ graphId: GraphId; action:
   const action = match[2];
   if (action !== "transactions" && action !== "query" && action !== "entities") return undefined;
   return { graphId: graphId.value, action };
-}
-
-function groupBatch(batch: FactBatch): PreparedParticipant[] {
-  const groups = new Map<number, { index: number; fact: FactDraft }[]>();
-  for (const [index, fact] of batch.facts.entries()) {
-    const shardIndex = shardIndexForEntity(fact.entity);
-    const group = groups.get(shardIndex) ?? [];
-    group.push({ index, fact: factAsJson(fact) });
-    groups.set(shardIndex, group);
-  }
-  return [...groups.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([shardIndex, facts]) => ({ shardIndex, facts }));
-}
-
-function sameNumberList(input: unknown, expected: readonly number[]): boolean {
-  return Array.isArray(input) && input.length === expected.length &&
-    input.every((value, index) => value === expected[index]);
 }
 
 class ParticipantResponseError extends Error {

@@ -1,7 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { SHARD_COUNT } from "../poneglyph/src/storage/constants.ts";
-
-const DEFAULT_BASE_URL = "https://poneglyph-checkpoint-20261011.poneglyph.leostera.dev";
+const DEFAULT_BASE_URL = "https://poneglyph-scaleout-20261011.poneglyph.leostera.dev";
 const baseUrl = (process.env["PONEGLYPH_CLOUDFLARE_URL"] ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
 
 async function main(): Promise<void> {
@@ -10,14 +8,14 @@ async function main(): Promise<void> {
     throw new Error("deployed validation must use an HTTPS host under *.poneglyph.leostera.dev");
   }
 
-  const graphId = `cf-checkpoint-${randomUUID()}`;
+  const graphId = `cf-scaleout-${randomUUID()}`;
   const txId = `poneglyph:tx:${randomUUID()}`;
-  const entities = oneEntityPerLeaf();
+  const entities = Array.from({ length: 4 }, (_, index) => `wiki:person:cf-scaleout-${index}`);
   const facts = entities.map((entity, index) => ({
-    source: "agent:cf-checkpoint-validation",
+    source: "agent:cf-scaleout-validation",
     entity,
     field: "schema:name",
-    value: { type: "text", value: `Poneglyph checkpoint test ${index}` },
+    value: { type: "text", value: `Poneglyph scale-out test ${index}` },
     retraction: false,
   }));
   const transaction = { txId, facts };
@@ -33,21 +31,20 @@ async function main(): Promise<void> {
   }
 
   const query = await postJson(`${baseUrl}/v1/graphs/${graphId}/query`, {
-    query: 'schema:name(Entity, Name), startsWith(Name, "Poneglyph checkpoint test")',
+    query: 'schema:name(Entity, Name), startsWith(Name, "Poneglyph scale-out test")',
   });
   const rows = query["rows"];
   const snapshotSeq = query["snapshotSeq"];
-  if (!Array.isArray(rows) || rows.length !== SHARD_COUNT || !rows.every(isRecord)) {
-    throw new Error(`distributed query did not return one row per leaf: ${JSON.stringify(query)}`);
+  if (!Array.isArray(rows) || rows.length !== entities.length || !rows.every(isRecord)) {
+    throw new Error(`distributed query did not return every committed entity: ${JSON.stringify(query)}`);
   }
   if (snapshotSeq !== committed["commitSeq"]) {
     throw new Error(`query snapshot ${String(snapshotSeq)} did not match commit ${String(committed["commitSeq"])}`);
   }
 
   const metrics = isRecord(query["metrics"]) ? query["metrics"] : {};
-  if (metrics["shardRequests"] !== undefined &&
-      (typeof metrics["shardRequests"] !== "number" || metrics["shardRequests"] < SHARD_COUNT)) {
-    throw new Error(`query metrics do not show four-leaf fan-out: ${JSON.stringify(metrics)}`);
+  if (metrics["shardRequests"] !== 1) {
+    throw new Error(`unsplit graph should query exactly one root leaf: ${JSON.stringify(metrics)}`);
   }
 
   console.log(JSON.stringify({
@@ -55,36 +52,13 @@ async function main(): Promise<void> {
     graphId,
     txId,
     factsWritten: facts.length,
-    shardIndices: entities.map((entity) => shardIndexForEntity(entity)),
+    initialDirectoryLeaves: 1,
     commitSeq: committed["commitSeq"],
     replayStatus: replayed["status"],
     snapshotSeq,
     rows: rows.length,
     metrics,
   }, null, 2));
-}
-
-function oneEntityPerLeaf(): string[] {
-  const entities: (string | undefined)[] = Array.from({ length: SHARD_COUNT }, () => undefined);
-  for (let candidate = 0; candidate < 10_000 && entities.some((entity) => entity === undefined); candidate += 1) {
-    const entity = `wiki:person:cf-checkpoint-${candidate}`;
-    const shard = shardIndexForEntity(entity);
-    if (entities[shard] === undefined) entities[shard] = entity;
-  }
-
-  if (entities.some((entity) => entity === undefined)) {
-    throw new Error("could not find an entity for each fixed hash leaf");
-  }
-  return entities as string[];
-}
-
-// Keep this fixed-topology hash aligned with src/storage/keys.ts.
-function shardIndexForEntity(entity: string): number {
-  let hash = 14_695_981_039_346_656_037n;
-  for (const byte of new TextEncoder().encode(entity)) {
-    hash = BigInt.asUintN(64, (hash ^ BigInt(byte)) * 1_099_511_628_211n);
-  }
-  return Number(hash % BigInt(SHARD_COUNT));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

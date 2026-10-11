@@ -17,7 +17,7 @@ These instructions apply to the whole repository unless a deeper `AGENTS.md` ove
 - The reusable graph semantics are append-only facts; entities, indexes, and search-oriented views are derived/replayable projections.
 - The repository contains package examples and validation harnesses, not a separate product service.
 
-Architectural decisions should align with [RFD0003](docs/rfds/RFD0003-cloudflare-native-graph-database.md) for the completed fixed-leaf checkpoint and [RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md) for the proposed expandable routing, capacity, and migration contract, unless the user explicitly changes direction.
+Architectural decisions should align with [RFD0003](docs/rfds/RFD0003-cloudflare-native-graph-database.md) for the historical fixed-leaf checkpoint and [RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md) for the current expandable routing, capacity, and migration implementation contract, unless the user explicitly changes direction.
 
 ## Working rules
 

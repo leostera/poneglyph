@@ -3,14 +3,16 @@ import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseTransactionId, parseUri, type TransactionId } from "../domain/identifiers.js";
 import { isRecord, parsed, rejected, type ParseResult } from "../domain/result.js";
 import { parseDatalogValue, type DatalogValue } from "../datalog/value.js";
-import { SHARD_COUNT } from "./constants.js";
+import { parseVirtualKey, parseVirtualPrefix, type VirtualKey, type VirtualPrefix } from "./keys.js";
 
-export type IndexedFact = Readonly<{ index: number; fact: FactDraft }>;
+export type IndexedFact = Readonly<{ index: number; fact: FactDraft; virtualKey: VirtualKey }>;
 export type NonEmptyArray<T> = readonly [T, ...T[]];
 
 export type ParticipantBatch = Readonly<{
   graphId: GraphId;
-  shardIndex: number;
+  shardPrefix: VirtualPrefix;
+  shardGeneration: number;
+  directoryEpoch: number;
   txId: TransactionId;
   payloadHash: string;
   statementTimeMs: number;
@@ -20,7 +22,9 @@ export type ParticipantBatch = Readonly<{
 
 export type ScanRequest = Readonly<{
   graphId: GraphId;
-  shardIndex: number;
+  shardPrefix: VirtualPrefix;
+  shardGeneration: number;
+  directoryEpoch: number;
   field: string;
   entity?: DatalogValue;
   value?: DatalogValue;
@@ -32,8 +36,11 @@ export function parseParticipantBatch(input: unknown): ParseResult<ParticipantBa
   if (!isRecord(input)) return rejected("participant", "expected a prepare request object");
   const graphId = parseGraphId(input["graphId"], "participant.graphId");
   if (!graphId.ok) return graphId;
-  const shardIndex = parseShardIndex(input["shardIndex"], "participant.shardIndex");
-  if (!shardIndex.ok) return shardIndex;
+  const shardPrefix = parseVirtualPrefix(input["shardPrefix"]);
+  if (!shardPrefix.ok) return shardPrefix;
+  const shardGeneration = readNonNegativeInteger(input["shardGeneration"]);
+  const directoryEpoch = readNonNegativeInteger(input["directoryEpoch"]);
+  if (shardGeneration === undefined || directoryEpoch === undefined) return rejected("participant", "invalid shard generation or directory epoch");
   const txId = parseTransactionId(input["txId"], "participant.txId");
   if (!txId.ok) return txId;
   const payloadHash = input["payloadHash"];
@@ -62,13 +69,17 @@ export function parseParticipantBatch(input: unknown): ParseResult<ParticipantBa
     }
     const fact = parseFactDraft(item["fact"], `participant.facts[${offset}].fact`);
     if (!fact.ok) return fact;
+    const virtualKey = parseVirtualKey(item["virtualKey"]);
+    if (!virtualKey.ok) return virtualKey;
     indices.add(index);
-    facts.push(Object.freeze({ index, fact: fact.value }));
+    facts.push(Object.freeze({ index, fact: fact.value, virtualKey: virtualKey.value }));
   }
 
   return parsed(Object.freeze({
     graphId: graphId.value,
-    shardIndex: shardIndex.value,
+    shardPrefix: shardPrefix.value,
+    shardGeneration,
+    directoryEpoch,
     txId: txId.value,
     payloadHash,
     statementTimeMs,
@@ -81,8 +92,11 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
   if (!isRecord(input)) return rejected("scan", "expected a scan request object");
   const graphId = parseGraphId(input["graphId"], "scan.graphId");
   if (!graphId.ok) return graphId;
-  const shardIndex = parseShardIndex(input["shardIndex"], "scan.shardIndex");
-  if (!shardIndex.ok) return shardIndex;
+  const shardPrefix = parseVirtualPrefix(input["shardPrefix"]);
+  if (!shardPrefix.ok) return shardPrefix;
+  const shardGeneration = readNonNegativeInteger(input["shardGeneration"]);
+  const directoryEpoch = readNonNegativeInteger(input["directoryEpoch"]);
+  if (shardGeneration === undefined || directoryEpoch === undefined) return rejected("scan", "invalid shard generation or directory epoch");
   const field = parseUri(input["field"], "scan.field");
   if (!field.ok) return field;
   const snapshotSeq = input["snapshotSeq"];
@@ -96,7 +110,9 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
 
   const request: {
     graphId: GraphId;
-    shardIndex: number;
+    shardPrefix: VirtualPrefix;
+    shardGeneration: number;
+    directoryEpoch: number;
     field: string;
     snapshotSeq: number;
     leaseExpiresAtMs: number;
@@ -104,7 +120,9 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
     value?: DatalogValue;
   } = {
     graphId: graphId.value,
-    shardIndex: shardIndex.value,
+    shardPrefix: shardPrefix.value,
+    shardGeneration,
+    directoryEpoch,
     field: field.value,
     snapshotSeq,
     leaseExpiresAtMs,
@@ -123,13 +141,6 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
   return parsed(Object.freeze(request));
 }
 
-function parseShardIndex(input: unknown, path: string): ParseResult<number> {
-  if (typeof input !== "number" || !Number.isInteger(input) || input < 0 || input >= SHARD_COUNT) {
-    return rejected(path, `expected a shard index between 0 and ${SHARD_COUNT - 1}`);
-  }
-  return parsed(input);
-}
-
 export function factAsJson(fact: FactDraft): FactDraft {
   return {
     source: fact.source,
@@ -138,4 +149,8 @@ export function factAsJson(fact: FactDraft): FactDraft {
     value: fact.value,
     retraction: fact.retraction,
   };
+}
+
+function readNonNegativeInteger(input: unknown): number | undefined {
+  return typeof input === "number" && Number.isSafeInteger(input) && input >= 0 ? input : undefined;
 }
