@@ -67,3 +67,9 @@ Acknowledged facts: **92,100 / 84,200 / 21,070 / 13,410**. Acknowledged facts/s:
 ## D comparison: first nearby B1 control
 
 [Control 1 final](2026-10-11T22-49-05-774Z-35078d69/final.json) identifies `a5c70a3`; both Worker bundles match the earlier B1 controls. It begins the fresh **B1 → D → B1 → D** comparison. Acknowledged facts: **96,900 / 85,130 / 13,120 / 5,146**. Acknowledged facts/s: **1,347.34 / 435.10 / 89.12 / 15.57**. Every planned call was attempted; admitted-write/restart audits passed without extra unacknowledged commits. All four loads remained incomplete. See [RFD0005](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-d-comparison-first-b1-control); this is not a D result or promotion.
+
+## D entity conflicts: first repeat
+
+[Repeat 1 final](2026-10-11T23-07-35-051Z-bfaf2f2a/final.json) identifies `7efbcbd` / `D-narrower-conflict-locks`. Acknowledged facts: **100,000 / 100,000 / 99,580 / 49,384**. Acknowledged facts/s: **1,532.62 / 541.70 / 473.26 / 167.07**. All planned calls and admitted-write/restart audits passed, with no extra unacknowledged commits, leaked entity locks or unresolved decisions.
+
+The first two scenarios completed their full input; the last two did not. **D is not promoted:** the mandatory all-four delivery gate fails in this repeat. High-concurrency acknowledged-rate changes cannot turn incomplete delivery into a successful-load win; tail latency and transport failures remain material. [Qualified comparison](../../../docs/rfds/RFD0005-write-path-experiment.md#d-repeat-1-full-delivery-in-two-cases-no-promotion). The second nearby B1/D pair remains required.

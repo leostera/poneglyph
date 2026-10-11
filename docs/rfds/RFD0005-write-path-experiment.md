@@ -117,7 +117,7 @@ All D writes, including one-owner writes, use the existing B1 distributed state 
 
 **Capacity/admission.** The existing 8-GB accounted ceiling, 6,250-outcome owner allocations / 100,000 graph allowance, seven-day identity window, SQL-binding pages, fact/byte/participant bounds and query limits stay fixed. Count active owner reservations as well as terminal ones before admission so concurrent preparation cannot overbook its allocation. Account entity-lock metadata growth. At leaves, multiple prepared disjoint writes require durable estimated mutation-growth reservations: include all prepared growth in admission/preflight and release that estimate atomically with commit/cancel. Counting only current staged SQLite bytes would allow accepted decisions to exceed the existing capacity bound. This is conservative accounting, not extra capacity or fact deletion.
 
-**Verification before load.** Exercise held same-leaf disjoint writers (including shared AV prefixes), same-entity/different-field rejection, out-of-order ticket completion with fail-closed reads, partial prepare/apply/publication, aborted reservations, lost responses and eviction, complete projections/index membership, reserved capacity, split fencing/recovery and expired leases. The read-only owner audit must additionally reject leaked entity locks and inconsistent tickets; the leaf audit must reject prepared-growth reservations on terminal outcomes. Preserve the fixed workload and four fresh matrices in B1 → D → B1 → D order; apply the unchanged full-delivery promotion gate. No D implementation or load result is certified yet.
+**Verification before load.** Exercise held same-leaf disjoint writers (including shared AV prefixes), same-entity/different-field rejection, out-of-order ticket completion with fail-closed reads, partial prepare/apply/publication, aborted reservations, lost responses and eviction, complete projections/index membership, reserved capacity, split fencing/recovery and expired leases. The read-only owner audit must additionally reject leaked entity locks and inconsistent tickets; the leaf audit must reject prepared-growth reservations on terminal outcomes. Preserve the fixed workload and four fresh matrices in B1 → D → B1 → D order; apply the unchanged full-delivery promotion gate. Controlled gates and measured results below qualify the exercised protocol; they are not universal correctness certification.
 
 D prototype checkpoint: an independent B1 copy exists under `poneglyph/src/storage-d/`, with entity reservation storage, per-owner tickets in participant plans, conservative vector read/split fences, prepared-growth accounting, and stronger read-only audit checks wired in. Schema version 4 / routing version 5 reject other implementations' persistence. Default A remains selected; its 41-test check (18 explicit skips), package build and seven harness tests passed after this prototype was added. These checks only establish that the isolated prototype does not regress A/composition; D controlled integration/fault tests were outstanding at this prototype checkpoint; their subsequent results are recorded below. All measured D trials were still outstanding. The disabled coarse local entrypoint cannot be used as a delivery fallback.
 
@@ -141,6 +141,23 @@ After restoring default A, its complete check passed **41 tests / 30 explicit sk
 | 2 × 10,000 | 5,146 | 47,427 | 15.57 | 73.59 |
 
 Attempts: 2,457 / 40,434 / 76,302 / 391,535. Busy responses: 1,488 / 31,921 / 74,959 / 128,270. Transport failures: 0 / 0 / 31 / 260,692. Recorded untracked video files are unrelated work, not bundled sources or experiment changes. Continue the planned B1 → D → B1 → D order with unchanged D and fresh persistence; this control is not a D result, cloud claim or promotion.
+
+### D repeat 1: full delivery in two cases, no promotion
+
+[Repeat 1 final](../../bench/write-path/results/2026-10-11T23-07-35-051Z-bfaf2f2a/final.json) identifies `D-narrower-conflict-locks` at selected revision `7efbcbd` (prototype `0a1ec6c`, pre-load fail-closed correction/tests `54dc846`). The tracked SUT was frozen during the run; unrelated video files are recorded but not bundled. No workload, caller retry, storage/query/transaction limit, or client behavior changed.
+
+| Facts/call × concurrency | D repeat 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs nearby B1 control 1 | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | **100,000** | 0 | 1,532.62 | +13.75% | 1.26 |
+| 10 × 100 | **100,000** | 0 | 541.70 | +24.50% | 4.43 |
+| 10 × 1,000 | 99,580 | 42 | 473.26 | +431.05% | 46.38 |
+| 2 × 10,000 | 49,384 | 25,308 | 167.07 | +973.17% | 76.77 |
+
+Every planned call was attempted. Acknowledged facts exactly matched persisted facts; hot and restart fact/index/transaction/owner-ticket audits passed, with no leaked entity locks, unresolved decisions or reconciled unacknowledged commits. **The first two scenarios delivered their full 100k input**, unlike their nearby incumbent controls. The last two were incomplete; do not call their acknowledged rates successful-load throughput. Their logical p95 increased against the nearby B1 control despite greater delivery. Only a first local pair is available, not a repeatability or cloud claim.
+
+Attempts: 1,717 / 20,468 / 27,938 / 310,958. Busy responses: 717 / 10,468 / 8,438 / 21,105. Transport failures: 0 / 0 / 9,542 / 265,161. All final caller failures were unknown after the unchanged retry budget. In particular the 1,000-call case's 42 exhausted calls and the saturation case's transport failures cannot be treated as delivered input. D still uses per-transaction DOs, whose physical metadata bytes are not fully aggregated; no storage-cost win is measured. Fault-test recovery is separate from this repeat, which observed no extra unknown commits recovered in the background.
+
+**No promotion:** repeat 1 fails the required 100% delivery gate in all four scenarios. Complete B1 control 2 and unchanged D repeat 2 with fresh persistence; retain D even if it remains ineligible. B1 is still the experimental incumbent. A is restored outside explicit tests/trials.
 
 ## Summary
 
