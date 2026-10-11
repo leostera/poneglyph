@@ -129,6 +129,19 @@ A missing-lock corruption fixture exposed a fail-closed requirement: consult pen
 
 After restoring default A, its complete check passed **41 tests / 30 explicit skips** (five B1-only, twelve C-only, twelve D-only, one historical benchmark), package build and seven harness tests. A-specific coordinator/global-sequence/schema fixtures remain an A gate, not D evidence. No load ran concurrently with tests; no D promotion or complete-delivery claim is made before the four source-identified comparison matrices.
 
+### Matched D comparison: first B1 control
+
+[Control 1 final](../../bench/write-path/results/2026-10-11T22-49-05-774Z-35078d69/final.json) identifies selected B1 revision `a5c70a3`. Application and database bundles exactly match the earlier B1 controls; the new D source is not bundled into this control. All planned calls were attempted, all admitted-write/index/transaction/restart audits passed, and no extra unacknowledged commits were reconciled. No scenario completed full delivery.
+
+| Facts/call × concurrency | B1 D-control 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 96,900 | 31 | 1,347.34 | 3.65 |
+| 10 × 100 | 85,130 | 1,487 | 435.10 | 7.79 |
+| 10 × 1,000 | 13,120 | 8,688 | 89.12 | 18.25 |
+| 2 × 10,000 | 5,146 | 47,427 | 15.57 | 73.59 |
+
+Attempts: 2,457 / 40,434 / 76,302 / 391,535. Busy responses: 1,488 / 31,921 / 74,959 / 128,270. Transport failures: 0 / 0 / 31 / 260,692. Recorded untracked video files are unrelated work, not bundled sources or experiment changes. Continue the planned B1 → D → B1 → D order with unchanged D and fresh persistence; this control is not a D result, cloud claim or promotion.
+
 ## Summary
 
 Build `bench/write-path/` as a repeatable application-level benchmark of Poneglyph's ordinary `stateFacts` API. A local driver converts the already-downloaded One Piece corpus into regular facts and sends bounded HTTP requests to one or more application Workers. Those Workers consume the packaged Poneglyph client and await writes to one deployed database containing one graph. Actual fact, index, transaction, and recovery state must be persisted; acknowledgements of queued work are not successful commits. First measure the implementation currently on disk, then the proposed hash-routed, independently sharded fact/index store trees with distributed transaction coordination. Keep the benchmark, dataset, transport, and common workload parameters fixed between versions. Every version and planned scenario must pass end-to-end correctness tests in Miniflare before deployment. Only Cloudflare runs are evidence of cloud performance.
