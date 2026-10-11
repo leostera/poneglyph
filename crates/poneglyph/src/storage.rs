@@ -12,6 +12,7 @@ use crate::{
 /// `poneglyph` owns the semantic store traits. Backend crates such as
 /// `poneglyph-local` provide durable implementations without making core depend
 /// on a specific storage primitive.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait RuntimeStorageFactory: Send + Sync {
     async fn open_fact_store(&self, workspace: &Workspace) -> PoneResult<Arc<dyn Store>>;

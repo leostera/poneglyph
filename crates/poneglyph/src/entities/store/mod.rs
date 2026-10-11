@@ -6,6 +6,7 @@ use crate::{Entity, PoneResult, Uri};
 
 pub use memory::InMemoryEntityStore;
 
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait EntityStore: Send + Sync {
     async fn put_entity(&self, entity: Entity, last_processed_tx_id: Option<Uri>)

@@ -9,6 +9,7 @@ use crate::{
 
 pub use memory::InMemoryFactStore;
 
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait Store: Send + Sync {
     async fn state_facts(&self, fact_stream: mpsc::Receiver<Fact>) -> PoneResult<(Uri, Vec<Fact>)>;

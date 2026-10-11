@@ -16,6 +16,7 @@ pub struct ProjectionBatch {
     pub entities: Vec<Entity>,
 }
 
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait Projection: Send + Sync {
     fn name(&self) -> &'static str;
