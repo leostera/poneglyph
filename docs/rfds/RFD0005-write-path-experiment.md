@@ -107,6 +107,25 @@ The workload/application/client/scenarios/driver/retry/latency path remains fixe
 
 Local controlled tests hold a committing A and demonstrate disjoint B completes, verify overlapping writes and graph reads return busy, recover after partial apply without duplicate facts, abort invalid cross-tree retractions, reject changed-ID payloads across roots, expire read leases, and recover an interrupted subtree copy while another tree writes. The same packaged-client harness tests still cover 100/101/1,000-entity batches, replay/query, scalar indices, and restart. A full 100k matrix remains necessary to establish delivery and audit behavior under real load; these fixtures alone do not establish an improvement or authorize cloud deployment.
 
+#### First B1 100k result — 2026-10-11
+
+Final report: [`2026-10-11T19-06-36-247Z-041e975c/final.json`](../../bench/write-path/results/2026-10-11T19-06-36-247Z-041e975c/final.json), bundled revision `c6b5680`, clean source tree, correctly identified as `B1-independent-subtrees`. All four cases attempted every planned call at its configured size through the unchanged feeder/application/client path. Each passed persisted fact/index/transaction and restart audits, including the additional owner/transaction-object checks. No caller-unknown write was secretly committed and no unresolved transaction decision was found. Final-only retention completed before removal of temporary state.
+
+Comparison against the **historical corrected** A run (`a21b9a6`), not a new interleaved or contemporaneous control:
+
+| Facts/call × concurrency | A acknowledged | B1 acknowledged | A local acknowledged facts/s | B1 local acknowledged facts/s | B1 rate change | B1 unknown calls |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | 93,700 | 94,300 | 1,286.11 | 1,032.86 | −19.69% | 57 |
+| 10 × 100 | 68,780 | 85,930 | 310.48 | 449.55 | +44.79% | 1,407 |
+| 10 × 1,000 | 5,820 | 12,840 | 30.14 | 84.28 | +179.60% | 8,716 |
+| 2 × 10,000 | 2,298 | 4,446 | 8.03 | 13.21 | +64.50% | 47,777 |
+
+B1 improved admitted volume in every case but regressed the medium-batch acknowledged rate. It made 2,613 / 39,715 / 76,396 / 392,550 attempts respectively. Status-423 attempts were 1,670 / 31,122 / 75,112 / 116,531; saturation additionally had 273,796 local transport failures. Logical-call p95 was 5.11 / 7.78 / 18.72 / 75.17 seconds. These numbers describe retry-inclusive logical calls, not independent commit concurrency or cloud request ceilings. Saturation still primarily measures local overload, not deployed storage capacity.
+
+**None completed its full 100,000-fact input.** There is no successful-load throughput winner, repeated improvement, production cutover, cloud performance claim, or justification for 1M yet. The default composition was restored to A after this bounded trial; B1 remains independently selectable for fresh-persistence experiments. Before the trial, A passed 41 package tests (one historical skip, plus five candidate-only skips), B1 passed its five controlled protocol tests, and the same six packaged-client harness tests passed against both implementations. Baseline-specific coordinator SQL/global-sequence tests are not automatically a B1 compatibility certification.
+
+B1 also creates a DO per transaction and adds read-cut/query fanout. Its `databaseBytes` reports do not aggregate every transaction-object database; the audit explicitly marks that storage scope and leaves transaction storage bytes unknown. Logical seven-day retention permits terminal identity expiry, but idle transaction objects have no self-driven physical sweep. Lifecycle, deployed invocation/storage cost, full delivery, stronger fault/topology interleavings, and eventual public vector-token exposure remain gates, not silently satisfied by this result.
+
 ### Version B: parallel store trees
 
 The experimental candidate has separate fact and required index store trees, with durable leaf/router ownership over versioned 256-bit hash keys. Fact ownership uses canonical entity identity; an entity's canonical facts remain colocated. EA/AV and other supported index entries are replayable derived state, not a mutable replacement for the fact log. Each index has an explicitly defined canonical routing tuple; routing AV solely by attribute is not assumed. For example, routing by `(attribute, value)` permits different values to reach different leaves, but a hot exact tuple may still contend.

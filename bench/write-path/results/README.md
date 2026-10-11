@@ -1,6 +1,6 @@
 # Final write-path results
 
-Both measurement tables, audit scope, retention rules, and interpretation are reflected in [RFD0005](../../../docs/rfds/RFD0005-write-path-experiment.md#final-evidence-retention-and-interpretation). This README also indexes the final JSON files.
+Measurement tables, audit scope, retention rules, and interpretation are reflected in [RFD0005](../../../docs/rfds/RFD0005-write-path-experiment.md#final-evidence-retention-and-interpretation). This README also indexes the final JSON files.
 
 ## Pre-fix Version A: 100k concurrent matrix
 
@@ -33,5 +33,11 @@ The next revision fixes SQL binding-page limits, participant prepare replay orde
 **This is the correctness baseline for the exercised invariants, not a successful full-load or universal correctness guarantee.** None of the four cases completed its full input. Small throughput differences from the pre-fix run are not evidence of improvement from a single local pair; coordinator contention and local transport limitations remain. Future architectural changes must match or strengthen these durable-write/replay/recovery checks and improve complete-load behavior.
 
 Completed matrices retain only `final.json`, including final audit evidence; temporary state is removed only after runtimes/ledgers close and the final report is saved. Both matrices' intermediates and runtime logs have been removed.
+
+## B1 independent subtrees: first 100k candidate trial
+
+[Final report](2026-10-11T19-06-36-247Z-041e975c/final.json) identifies clean bundled revision `c6b5680` and `B1-independent-subtrees`. Protocol, audit-adapter differences, the complete A/B1 comparison, and limitations are recorded in [RFD0005](../../../docs/rfds/RFD0005-write-path-experiment.md#first-b1-100k-result--2026-10-11).
+
+All planned calls were attempted and all four persistence/restart audits passed. Acknowledged facts were **94,300 / 85,930 / 12,840 / 4,446**; acknowledged facts/s were **1,032.86 / 449.55 / 84.28 / 13.21**. Compared with the historical corrected A run, rates changed **−19.69% / +44.79% / +179.60% / +64.50%**. None delivered all 100k facts. One local run with a medium-batch regression is not a throughput winner, repeatable improvement, or cloud performance evidence. Version A remains the default; candidate transaction-object storage cost is not fully accounted by these reports. Raw artifacts and console logs were removed after final retention.
 
 Keep the same 100k cohort for matched iterations. Scale to 1M only after repeated improvement without integrity/recovery regressions. At 100k the two-fact case uses 50,000 transactions, below the unchanged 100,000-outcome quota; the 1M case uses 500,000 and must separately exercise that limitation. No cloud performance or public npm release is claimed.
