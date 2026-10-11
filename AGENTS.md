@@ -8,7 +8,7 @@ These instructions apply to the whole repository unless a deeper `AGENTS.md` ove
 
 - Use this file as the top-level router.
 - When work is limited to one subsystem, read only the next relevant `AGENTS.md` instead of loading instructions for unrelated areas.
-- Relevant deeper guides live in `poneglyph/`, `docs/`, and `docs/rfds/`.
+- The current deeper guide is `docs/AGENTS.md`; follow additional scoped guides if they are added.
 
 ## Project shape
 
@@ -29,5 +29,6 @@ Architectural decisions should align with [RFD0003](docs/rfds/RFD0003-cloudflare
 
 ## Documentation
 
-- Significant architecture changes should update or add an RFD in `docs/rfds/`.
+- RFDs are the authoritative records for design decisions and contracts. Reflect substantive architecture, API, operations, and validation documentation in the relevant existing RFDs under `docs/rfds/`. Do not create a new RFD just to relocate an existing guide.
+- README.md files and standard Markdown files such as AGENTS.md, CONTRIBUTING.md, and HACKING.md are allowed outside the RFD directory. READMEs may explain and link to the RFDs, but must not become competing authoritative design records. Do not add standalone topic guides there.
 - When implementation diverges from an RFD, update the RFD or clearly call out the divergence.

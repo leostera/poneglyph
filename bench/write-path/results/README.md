@@ -1,5 +1,7 @@
 # Final write-path results
 
+Both measurement tables, audit scope, retention rules, and interpretation are reflected in [RFD0005](../../../docs/rfds/RFD0005-write-path-experiment.md#final-evidence-retention-and-interpretation). This README also indexes the final JSON files.
+
 ## Pre-fix Version A: 100k concurrent matrix
 
 [Final report](2026-10-11T17-19-03-682Z-64195105/final.json) retains source/dataset/artifact digests, final metrics, response classifications, and persisted fact/index audits before/after restart. Raw journals, SQLite state, reference ledgers, bundles, progress samples, and console logs were removed at the user's request. This is **local Miniflare evidence, not Cloudflare performance**.

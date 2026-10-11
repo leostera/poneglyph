@@ -66,13 +66,15 @@ pnpm exec cf deploy --dry-run
 pnpm run deploy
 ```
 
-The [Cloudflare operations guide](poneglyph/OPERATIONS.md) covers runtime configuration, isolated deployment validation, cost/evidence limits, and cleanup. Do not run large capacity or throughput experiments against a shared or production deployment.
+The [Cloudflare operations and validation sections in RFD0004](docs/rfds/RFD0004-expandable-cloudflare-sharding.md#local-operating-and-review-gates) covers runtime configuration, isolated deployment validation, cost/evidence limits, and cleanup. Do not run large capacity or throughput experiments against a shared or production deployment.
 
 ## Prototype status and limits
 
 This is an experimental `0.1.0` implementation, not a released compatibility promise or a production SLA. Writes serialize through one coordinator per graph; a transaction can involve at most 32 shard leaves; broad queries are capped at 256 leaves. The 8 GB per-Durable-Object figure is an application-level accounted-byte policy, not a measured physical storage cap. The 1 TB exercise is synthetic accounting that writes zero payload rows. The Cloudflare run was a small smoke test, not evidence of production capacity or tail latency.
 
 ## Technical details
+
+The existing [RFDs](docs/rfds/) are authoritative for design decisions and contracts. READMEs provide orientation and runnable examples; they do not define a separate design contract.
 
 See the [write-path experiment](docs/rfds/RFD0005-write-path-experiment.md) and [final local benchmark results](bench/write-path/results/README.md) for the corrected implementation's scoped correctness baseline and incomplete concurrent loads.
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft implementation contract with bounded validation evidence (2026-10-11). The TypeScript branch implements prefix routing, durable split/cutover/recovery, conservative byte admission, the authenticated TODO demo, and local/deployed benchmark harnesses. One isolated expandable-topology smoke and bounded benchmark completed; detailed results and limitations are recorded in [`poneglyph/OPERATIONS.md`](../../poneglyph/OPERATIONS.md). This amendment supersedes the fixed-four-leaf *future architecture* choice in [RFD0003](./RFD0003-cloudflare-native-graph-database.md). The four-leaf layout remains an accurate description of the earlier checkpoint, not the current source.
+Draft implementation contract with bounded validation evidence (2026-10-11). The TypeScript branch implements prefix routing, durable split/cutover/recovery, conservative byte admission, the authenticated TODO demo, and local/deployed benchmark harnesses. One isolated expandable-topology smoke and bounded benchmark completed; operating procedures, detailed results, and limitations are recorded below. [RFD0005](./RFD0005-write-path-experiment.md) records the later corrected write-path baseline. This amendment supersedes the fixed-four-leaf *future architecture* choice in [RFD0003](./RFD0003-cloudflare-native-graph-database.md). The four-leaf layout remains an accurate description of the earlier checkpoint, not the current source.
 
 ## Summary
 
@@ -12,7 +12,7 @@ The models in [`specs/`](../../specs/README.md) make the visibility and split/cu
 
 ## Context
 
-RFD0003's initial checkpoint uses one graph coordinator and four entity-hash leaves. `poneglyph/src/storage/keys.ts` fixes the shard count in both routing and object names. That topology was intentionally small enough to establish transaction visibility, versioned reads, and bounded distributed Datalog; changing a modulo count after writes would remap every entity without moving its state.
+RFD0003's historical checkpoint used one graph coordinator and four entity-hash leaves. At that checkpoint, `poneglyph/src/storage/keys.ts` fixed the shard count in both routing and object names. That topology was intentionally small enough to establish transaction visibility, versioned reads, and bounded distributed Datalog; changing a modulo count after writes would remap every entity without moving its state.
 
 The next branch phase removes the Rust workspace and makes TypeScript the only Poneglyph implementation on this branch. It adds elastic placement without weakening the durable fact log, replayable projections, or all-or-nothing visibility. The Cloudflare SQLite storage API is private to each DO and provides a current database-size measurement (`ctx.storage.sql.databaseSize`) [CF1]. Cloudflare documents up to 10 GB of SQLite storage per DO [CF2], but the account plan, operational reserve, indexes, SQLite growth, and temporary migration work mean that limit is not a safe application target.
 
@@ -125,7 +125,11 @@ The recorded default run assigns 1 TB across 10,000 synthetic keys and produces 
 
 [`specs/TransactionVisibility.tla`](../../specs/TransactionVisibility.tla) and [`specs/ShardSplit.tla`](../../specs/ShardSplit.tla) are PlusCal algorithms translated and checked by TLC with two abstract participants and one parent/two children. The first checks `visible_seq` cannot publish before every participant applies, recovery can retry an irrevocable commit, and a pinned read result is all-or-nothing. The second checks fenced copying, recovery of missing pages, complete copy before cutover, generation change, old-reader retention, route/data agreement, and post-cutover writes. Run with `TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check.sh`.
 
-The models intentionally abstract away actual SQLite state, Cloudflare request delivery, multiple overlapping writers, abort/cancel behavior, bounds arithmetic, real hash distributions, and worker/network failures beyond interruption between durable steps. Passing TLC does not substitute for TypeScript fault-injection tests. The model and implementation contracts must be updated together if implementation reveals a counterexample or changes the protocol.
+The transaction model abstracts a transaction's effects to the set of participants containing them. The split model checks one fenced parent snapshot, idempotent pages to two children, old-route rejection, and post-cutover writes; actual nested splits, concurrent readers, lookup races, interrupted imports, and recovery against DO storage remain integration-test obligations. Crashes interrupt atomic protocol steps; durable decision/progress/route/lease state survives, and recovery is an idempotent transition rather than TLC machine state modeling volatile Worker memory.
+
+Install a JDK and use pinned [TLA+ tools 1.8.0](https://github.com/tlaplus/tlaplus/releases/tag/v1.8.0), JAR SHA-256 `7beec0f04818732a62fa193731711a99aa4f11279499b2360a7d156c519ea78d`. Do not commit the JAR. `specs/check.sh` translates temporary PlusCal copies and runs TLC with the checked-in `.cfg` files; generated translations/state remain outside the repository.
+
+The models intentionally abstract away actual SQLite state, Cloudflare request delivery and detailed network duplication, Byzantine faults, multiple overlapping writers, abort/cancel behavior, timer/lease-expiry races, bounds arithmetic, real hash distributions, liveness under Cloudflare scheduling, and worker/network failures beyond interruption between durable steps. Passing TLC does not substitute for TypeScript fault-injection tests. The model and implementation contracts must be updated together if implementation reveals a counterexample or changes the protocol.
 
 ## Cloudflare quotas and costs
 
@@ -133,13 +137,221 @@ Cloudflare currently documents a 10 GB SQLite database maximum per DO and no har
 
 For the bounded 2026-10-11 validation, the account subscription list showed an existing `Workers Paid` plan at $5/month before and after the run (21 subscription records both times); no new subscription was added. Billing-history and metered-usage API reads returned HTTP 403 under the available CLI authentication. Therefore no incremental usage charge can be confirmed and the result must not be reported as $0. The small test recorded request latency, query scan/fan-out/tuple/byte counters, and transaction/query outcomes, but did not capture individual DO `databaseSize`, aggregate namespace storage, CPU duration, or SQL row read/write billing metrics. This run does not calibrate the 8 GB estimator or establish physical storage usage.
 
-Before any larger or longer deployment, obtain a billing/usage view and DO storage telemetry. The user-authorized smoke was capped at 10 single-shard transactions, 10 cross-shard TODO moves, and 10 query requests per topology; its actual usage was not independently visible through the available billing API, so no zero-charge or included-quota conclusion is asserted. This small bounded run does not justify an unbounded test when detailed billing visibility is unavailable. See the exact sample and cleanup record in [`poneglyph/OPERATIONS.md`](../../poneglyph/OPERATIONS.md).
+Before any larger or longer deployment, obtain a billing/usage view and DO storage telemetry. The user-authorized smoke was capped at 10 single-shard transactions, 10 cross-shard TODO moves, and 10 query requests per topology; its actual usage was not independently visible through the available billing API, so no zero-charge or included-quota conclusion is asserted. This small bounded run does not justify an unbounded test when detailed billing visibility is unavailable. See the operational evidence and cleanup procedure below.
 
 ## Bounded isolated Cloudflare validation (2026-10-11)
 
-The expandable version was deployed only as `poneglyph-scaleout-validation-20261011` at `poneglyph-scaleout-20261011.poneglyph.leostera.dev`, with `workersDev` disabled and three temporary SQLite DO classes. The authenticated TODO smoke rejected unauthenticated HTTP/WebSocket access, performed a two-participant task move, received matching invalidations on two authenticated clients, and re-queried the destination list at the published commit sequence. The generic smoke verified a four-fact commit, same-`txId` replay, and a four-row query. A 10-transaction / concurrency-2 sample measured 3.41 tx/s single-shard and 2.44 cross-shard TODO moves/s; query latencies and counters are tabulated in the package README. Five query samples per shape make p95/p99 equal the observed maximum, so they are not meaningful tail estimates. These public-network results are exploratory and are neither an SLA nor physical capacity evidence.
+The expandable version was deployed only as `poneglyph-scaleout-validation-20261011` at `poneglyph-scaleout-20261011.poneglyph.leostera.dev`, with `workersDev` disabled and three temporary SQLite DO classes. The authenticated TODO smoke rejected unauthenticated HTTP/WebSocket access, performed a two-participant task move, received matching invalidations on two authenticated clients, and re-queried the destination list at the published commit sequence. The generic smoke verified a four-fact commit, same-`txId` replay, and a four-row query. A 10-transaction / concurrency-2 sample measured 3.41 tx/s single-shard and 2.44 cross-shard TODO moves/s; query latencies and counters are tabulated below. Five query samples per shape make p95/p99 equal the observed maximum, so they are not meaningful tail estimates. These public-network results are exploratory and are neither an SLA nor physical capacity evidence.
 
 Cleanup deployed the class-deletion mode, deleted the dedicated Worker, and verified no matching script, DO namespaces, Worker-managed DNS record, secret, or certificate pack remained. The generated certificate pack disappeared asynchronously after a `pending_deletion` state; no unrelated account resources were changed. A startup-only atomic schema-kind/version marker and fail-closed guard was added after this account run; it passed local workerd tests/build but was not redeployed. The transaction, migration, and query paths measured here were unchanged. The prior fixed-leaf Cloudflare run remains a separate historical record and is not included in these results.
+
+## Public client and Worker API
+
+The experimental `@leostera/poneglyph` package exports portable fact/value/identifier types, `ParseResult` parsers, bounded Datalog AST/value/evaluator and `FactSource` APIs, and a typed HTTP client. It does **not** bundle the SQLite Durable Object storage runtime as a direct embedding API. Downstream applications use an authenticated HTTP endpoint or service-binding adapter; direct SQL access and internal DO class imports are not supported public contracts. Earlier Rust embedding APIs remain historical only.
+
+```ts
+import { createDatabase, type FactInput } from "@leostera/poneglyph";
+
+const db = createDatabase({ url: "https://your-worker.example" });
+const graph = db.defineGraph({ id: "team-memory" });
+const facts: readonly FactInput[] = [{
+  source: "agent:team-memory",
+  entity: "team:task:one",
+  field: "team:task:title",
+  value: { type: "text", value: "First task" },
+}];
+const txId = await graph.stateFacts(facts, { txId: "team-memory:seed-1" });
+const result = await graph.query('team:task:title(Task, "First task")');
+```
+
+`createDatabase` and `defineGraph({ id })` are synchronous local constructors; neither registers a graph nor makes a network request. `defineGraph` accepts only an ID, not a schema: the Worker has no persisted graph catalog/schema enforcement. A default `graphId` in database configuration exposes the same graph methods directly on `db`. Configure `headers` and injected `fetch` for application authentication or a service-binding adapter. Headers alone do not secure the Worker; the generic graph routes are not automatically protected by the TODO demo's session rules. URLs must be absolute HTTP/HTTPS, without credentials, query, or fragment; a path prefix is retained.
+
+| Client method | Result and boundary |
+| --- | --- |
+| `stateFacts(facts, options?)` | Awaits a valid committed receipt, then returns `TransactionId`. |
+| `state(facts, options?)` | Retained alias of `stateFacts`, not a separate write path. |
+| `transact(facts, options?)` | Returns `{ txId, commitSeq, status: "committed" }`. |
+| `query(source, options?)` | Validates Datalog source locally and returns buffered `{ rows, snapshotSeq, metrics }`. |
+
+`FactInput` accepts an optional retraction flag, normalized to false when omitted/nullish; the shared fact parser checks the complete batch before transport. Write options accept `txId` and `AbortSignal`; query options accept `AbortSignal`. Omitted IDs use `poneglyph:tx:${crypto.randomUUID()}`; callers without `crypto.randomUUID` must provide one. The client never retries automatically. Retain the ID before sending and resend the identical facts/ID after an ambiguous failure. A receipt must match the sent ID, have committed status, and contain a positive safe-integer sequence; malformed success is not acknowledgement.
+
+- `PoneglyphInputError`: invalid graph/fact/query input, optionally with parser path/offset. Invalid configuration can instead throw `TypeError`.
+- `PoneglyphNetworkError`: fetch/body-read failure with cause and write ID when applicable; the commit outcome may be unknown.
+- `PoneglyphRequestError`: HTTP failure with status, retryable hint, optional raw `retryAfter`, and write ID. A boolean server hint overrides inference; otherwise 408/423/429/5xx are retryable. A string such as `"false"` is not a boolean hint.
+- `PoneglyphProtocolError`: malformed successful response/receipt/query binding, with write ID when applicable; not proof of abort.
+
+Query rows are parsed/frozen Datalog bindings, not a streaming cursor. Snapshot sequence and access counters must be nonnegative safe integers. Metrics are `scanCalls`, `shardRequests`, `tuplesRead`, `bytesRead`, and `directoryRequests`. The API has no pagination, query objects/builders, `query(txId, query)`, or historical/as-of contract. Latest/read-token/stable-snapshot product questions remain deferred. More clients do not remove the single graph coordinator; multiple graph IDs create separate graphs, not transparent partitioning. Cloudflare's approximately 1,000 requests/second per DO is a soft workload-dependent limit, not a hard ceiling or Poneglyph throughput claim.
+
+The HTTP routes are:
+
+```text
+POST /v1/graphs/{graphId}/transactions  { "txId": "...", "facts": [...] }
+POST /v1/graphs/{graphId}/query         { "query": "..." }
+GET  /v1/graphs/{graphId}/entities?uri=wiki%3Acrew%3Astraw-hats
+```
+
+Transaction drafts contain source/entity/field URIs, a tagged value such as `{ "type": "reference", "value": "wiki:person:luffy" }`, and explicit `retraction` at the HTTP boundary. Graph IDs are lowercase slugs of at most 64 characters. Shared parsers return typed `ParseResult` values rather than silently coercing malformed input. Parsing facts or queries alone persists nothing. See [`src/client.ts`](../../poneglyph/src/client.ts), [`src/index.ts`](../../poneglyph/src/index.ts), and [`client-quickstart.ts`](../../examples/client-quickstart.ts).
+
+### Package construction and publishing gates
+
+The scoped name is used because the unscoped npm name is taken. The [package manifest](../../poneglyph/package.json) sets public access, runs local checks in `prepublishOnly`, and builds ESM JavaScript/declarations into `dist/` in `prepack`. These settings are not publication authorization.
+
+```sh
+cd poneglyph
+pnpm install
+pnpm run build:package
+npm pack --dry-run
+```
+
+Use the private/local package artifact for development and benchmarks. After an intentionally authorized release consumers can install `@leostera/poneglyph`. Publishing requires an authorized scope account and fresh version, but this repository currently has no `LICENSE` file or license metadata. Choose/add the intended license and explicitly authorize publication before running `npm publish --access public`.
+
+## Datalog grammar and access paths
+
+Queries are conjunctions of positive binary relations (`field(Entity, Value)`) and pure constraints. Terms are uppercase-leading variables, `_` in fact relations, URI/string constants, quoted strings, and signed 64-bit integer literals. Repeated variables unify. Top-level list values expose one relation tuple per member, matching the Poneglyph/Datafox conversion rule. Builtin variables must be bound by a positive relation. Supported constraints are `=`, `<`, `<=`, `>`, `>=`, `eq`, `lt`, `lte`, `gt`, `gte`, `before`, `after`, `contains`, `startsWith`, and `endsWith`.
+
+The parser rejects negation, recursive rules, non-binary relations, arbitrary expressions, unsupported builtins, unbound builtin variables, queries without a positive relation, more than 64 clauses, and text over 8 KiB. Positive relations run in source order as a streaming nested-loop join; constraints filter completed bindings. Leaves emit NDJSON tuples, merged concurrently and joined incrementally; final JSON buffers only within byte/result caps. Ordering is not promised, and there is no general-purpose optimizer or global text index.
+
+| Bound terms | Routing | SQLite index |
+| --- | --- | --- |
+| field only | every active leaf, at most 256 | `active_values_by_field_snapshot` |
+| field + entity | one leaf through prefix routers | `active_values_by_field_entity_snapshot` |
+| field + value | every active leaf, at most 256 | `active_values_by_field_value_snapshot` |
+| field + entity + value | entity's leaf | `active_values_by_field_entity_value_snapshot` |
+
+Integer literals map to numeric facts. URI-looking strings map to references except in `wiki:page:title` and `schema:name`; other strings map to text. A value constraint alone does not route to one leaf. Unbound-entity scans are proportional to active leaves plus matching rows. Budgets are 2,000 results, 50,000 tuples, 20,000 shard requests, 20 MB scanned response bytes, 2 MB serialized result bytes, 20 seconds, 128 concurrent read leases, 256 leaves, and 511 directory visits. Budget failure is an error, never silent truncation. An unsplittable entity is limited to 10,000 active assertion tuples and 5,000 projected fields.
+
+## Authenticated reactive TODO operating contract
+
+`GET /todo` serves the shared UI. Set `TODO_SHARED_PASSPHRASE` only as a Worker secret or a throwaway local `.dev.vars` binding (ignored by Git); never reuse the test passphrase from `vitest.config.ts` on Cloudflare. The Worker fails closed without the secret. Login compares bounded SHA-256 digests without early-exit byte comparison, then issues a one-hour HMAC-signed `Secure; HttpOnly; SameSite=Strict` cookie. The phrase is not embedded in the page, stored in a DO, or sent in a WebSocket URL.
+
+Protected TODO HTTP routes and direct reads of `todo-shared-2026` require the session. Generic transaction writes to that graph are denied so mutations cannot bypass invalidations. WebSocket handshakes require the cookie and exact same-origin HTTPS Origin; loopback HTTP is allowed locally. The demo's two list entities (`todo:list:todo`, `todo:list:done`) route to opposite root children. A move is one transaction retracting old membership and asserting destination/task membership. Two-client integration tests verify two participants and query-visible notification sequences.
+
+The hibernatable `TodoHubDO` receives an invalidation only after commit acknowledgement. Delivery is best-effort, errors are logged, and clients refresh on reconnect. There is no durable outbox; a missed signal never rolls back facts. A production notification service needs a separate durable delivery contract.
+
+## Local operating and review gates
+
+Node.js 26 and pnpm 12 are required. `poneglyph/cloudflare.config.ts` is the sole deployment/runtime config; `vite.config.ts` registers the Cloudflare Vite plugin, and `vitest.config.ts` configures local Miniflare/SQLite tests without a Wrangler config. Compatibility date is `2026-10-06`; the recorded types identify `workerd@1.20261006.1`. Keep the cf CLI, plugin, and compatibility date aligned. The CLI delegates bundling to Vite; Wrangler is not a direct configuration/dependency, although test tooling may have internal dependencies.
+
+```sh
+cd poneglyph
+pnpm install --frozen-lockfile
+pnpm check                              # type generation, strict TS, Vitest
+pnpm test:capacity
+pnpm bench:local
+pnpm build
+pnpm exec cf deploy --dry-run
+pnpm exec cf deploy --mode cleanup --dry-run
+pnpm dev                                # optional local Vite/workerd server
+```
+
+Tests use fresh graph IDs and no account resources. `pnpm test:onepiece` is the separate legacy local corpus/query gate described below, not the concurrent comparison. The formal gate uses `TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check.sh` from the repository root. Normal/cleanup dry runs, model checks, and workload tests are historical validations unless explicitly rerun for the revision under review; do not report them as freshly executed merely because documentation moved.
+
+The corrected revision's latest recorded `pnpm check` passed 39 tests, one optional benchmark skipped, and its write-path harness passed six tests. RFD0005 records four 100k cases passing admitted-write fact/index/transaction and restart audits but failing full delivery. The earlier pre-client operating snapshot had 28 passing tests and one skipped. These scoped checks are not universal implementation proofs; the corrected revision was not deployed to Cloudflare.
+
+Review the following invariants: append-only facts/retractions; publication after every participant applies; one pinned sequence/epoch per read; fenced, idempotent copy verified before irreversible cutover; old-owner retention through lease drain; conservative database/WAL/import/headroom accounting; explicit request/storage/query/outcome bounds; atomic schema-kind/version initialization with fail-closed incompatible namespaces; post-commit-only, best-effort TODO notifications. Automatic schema evolution/import is not implemented: use fresh namespaces/graphs unless an explicit importer is separately provided. Do not modify FokosDB, unrelated `.pi/` content, or unrelated Cloudflare resources.
+
+## Recorded local operating workloads (2026-10-11)
+
+These samples predate the corrected concurrent baseline in RFD0005. They are local exploratory evidence, not cloud performance or the current comparison matrix.
+
+### Small throughput/query sample
+
+`pnpm bench:local` runs one unsplit and one root-split topology with temporary Miniflare SQLite. Defaults are 40 transactions per topology, three facts/two entities per transaction, 40 queries per topology (20 scans and 20 joins), and concurrency four. Retry latency includes same-ID/payload busy backoff. `PONEGLYPH_BENCH_TRANSACTIONS`, `PONEGLYPH_BENCH_QUERIES`, and `PONEGLYPH_BENCH_CONCURRENCY` are bounded by the script. Output includes tx/fact/entity rates, QPS, latency, and shard/scan/tuple/byte/directory costs.
+
+| Topology / shape | tx/s / facts/s / entities/s | Write p50/p95/p99 ms | Query QPS | Query p50/p95/p99 ms | Scans / shards / tuples / bytes / directory |
+| --- | --- | --- | ---: | --- | --- |
+| single leaf | 87.34 / 262.01 / 174.67 | 17 / 165 / 227 | — | — | — |
+| single leaf scan | — | — | 30.49 | 9 / 23 / 24 | 1 / 1 / 80 / 6,320 / 1 |
+| single leaf join | — | — | 30.49 | 116 / 130 / 131 | 41 / 41 / 80 / 6,840 / 41 |
+| two leaves | 85.29 / 255.86 / 170.58 | 27 / 101 / 198 | — | — | — |
+| two leaves scan | — | — | 25.87 | 13 / 15 / 18 | 1 / 2 / 80 / 6,241 / 3 |
+| two leaves join | — | — | 25.87 | 134 / 153 / 154 | 41 / 42 / 124 / 10,185 / 55 |
+
+Source-order joins cause repeated scans; the counters expose that cost. Tiny synthetic local samples are noisy and not directly comparable to the corpus workload.
+
+### Legacy One Piece load/query sample
+
+[`examples/onepiece-load.ts`](../../examples/onepiece-load.ts) streams cached MediaWiki XML into a temporary `cf dev` instance, discovers its Vite URL, and runs four queries from [`examples/deployed-smoke.ts`](../../examples/deployed-smoke.ts). It writes up to 500 facts/800,000 estimated fact bytes per transaction (server canonical cap remains 1 MB), adds deterministic crew/island/lore fixtures to real page titles/categories/links, and retains the dump cache while stopping the local process/removing temporary SQLite state. It is a workload, not a wiki connector or RFD0005's packaged-client concurrency benchmark.
+
+```sh
+# From repository root; cache is ignored by Git.
+PONEGLYPH_ONEPIECE_DUMP_SHA256=c4e33cc6793425d9baa5f76a9f12f047d75dec135006093ed9357629a7d1f7bb \
+  ./tests/fixtures/download_onepiece_fandom.sh
+cd poneglyph
+PONEGLYPH_ONEPIECE_MAX_PAGES=20000 PONEGLYPH_ONEPIECE_QUERIES=10 pnpm test:onepiece
+```
+
+`PONEGLYPH_ONEPIECE_XML` overrides the XML path; `PONEGLYPH_ONEPIECE_ARCHIVE` identifies its archive for hash reporting. Default page limit is 5,000; zero attempts the full dump. The mutable current URL requires checksum pinning to expose drift; neither XML nor archive is checked in. Output includes hashes, pages/facts/transactions, load rate, access metrics, and warm median/p95.
+
+The recorded Apple M4 Pro/12-core sample used Node 26.11.0, pnpm 12.10.1, `cf@1.0.0-beta.14`, Cloudflare Vite plugin `2.0.0-beta.sha-91c870c02`, Vite 8.3.4, and compatibility date `2026-10-06`. Input was a 20,000-page prefix of 436,781,838-byte XML, SHA-256 `1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084`, archive SHA-256 as above. It committed 159,332 facts in 320 transactions in 618.19 seconds (257.74 facts/s), slower than the historical fixed-leaf checkpoint. All queries/replays used snapshot 320. No physical DB size was captured; temporary state was removed.
+
+| Query | Rows | Scans | Shard requests | Tuples | Bytes | Directory | Warm median/p95 ms |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| captains/seconds, 5 clauses | 12 | 34 | 34 | 45 | 4,533 | 19 | 133.73 / 184.75 |
+| islands/leaders, 3 clauses | 7 | 15 | 15 | 21 | 2,071 | 15 | 102.21 / 109.45 |
+| Joy Boy-to-Luffy, 6 clauses | 1 | 12 | 12 | 12 | 1,245 | 6 | 88.21 / 130.94 |
+| names containing ` D. `, 2 clauses + builtin | 9 | 669 | 669 | 1,346 | 116,018 | 669 | 2,302.69 / 3,073.49 |
+
+The old ASCII slugger is not injective, so the captain query can include more than six fixture crews; it is not a production identity strategy. RFD0005's percent-encoded corpus fixes identities independently. Query order/wall-clock values are not stability promises.
+
+## Isolated Cloudflare procedure and detailed evidence
+
+The recorded expandable-topology validation used only `poneglyph-scaleout-validation-20261011`, custom domain `poneglyph-scaleout-20261011.poneglyph.leostera.dev`, and three class namespaces (`GraphCoordinatorDO`, `GraphShardDO`, `TodoHubDO`). Worker, hostname, DNS record, and certificate pack were absent beforehand. The 256-bit random TODO passphrase was held only in the shell and Worker secret, never printed or committed. `workersDev` was disabled.
+
+After certificate activation, `pnpm test:deployed:todo` checked page serving, 401 for unauthenticated HTTP, bad passphrase and unauthenticated WebSocket, and matching invalidations to two authenticated clients for a two-participant move. The move committed at sequence 6; the shared graph began the measured smoke at snapshot 4 because earlier smoke writes existed. A generic smoke committed/replayed four facts and queried four rows at snapshot 1.
+
+The benchmark used 10 single-shard transactions (3 facts/2 entities each), 10 cross-shard moves (4 facts/3 touched entities each), concurrency two, and 10 queries per topology (five per shape). It seeded 10 tasks before timing moves; final TODO snapshot had 13 tasks at sequence 26, including three from earlier smoke invocations.
+
+| Workload | Elapsed | tx/s | facts/s | entities/s | Write p50/p95/p99 ms |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 10 single-shard transactions | 2.93 s | 3.41 | 10.24 | 6.83 | 566.76 / 1,358.45 / 1,358.45 |
+| 10 two-participant TODO moves | 4.10 s | 2.44 | 9.77 | 7.32 | 383.13 / 2,522.48 / 2,522.48 |
+
+| Query, five samples per shape | QPS | p50/p95/p99 ms | Scans / shards / tuples / bytes / directory |
+| --- | ---: | --- | --- |
+| single-shard scan | 3.95 | 131.77 / 138.95 / 138.95 | 1 / 1 / 20 / 1,630 / 1 |
+| single-shard join | 3.95 | 338.13 / 381.36 / 381.36 | 11 / 11 / 20 / 1,800 / 11 |
+| TODO membership scan, two leaves | 2.43 | 166.03 / 188.33 / 188.33 | 1 / 2 / 13 / 1,443 / 3 |
+| TODO task join, two leaves | 2.43 | 518.79 / 716.13 / 716.13 | 14 / 15 / 26 / 2,988 / 29 |
+
+Five latency samples make p95/p99 equal the maximum, not meaningful tail estimates. Public network/Worker/DO overhead is included. No individual DB sizes, aggregate storage, CPU duration, physical capacity, or SQL billing metrics were captured. The schema guard and later RFD0005 correctness changes were not deployed; these historical results must not be attributed to the corrected revision. The startup-only schema guard passed local tests/build after the run; measured data paths then were unchanged.
+
+### Deployment, secret handling, and cleanup safety
+
+Before another deployment, verify account identity with `pnpm exec cf auth whoami`, names/host collision, effective plan and limits, usage visibility, and approved request/storage/duration/cost caps. Use fresh uniquely named temporary resources under `*.poneglyph.leostera.dev`; do not blindly redeploy the recorded names. The existing config is the previous validation setup, not RFD0005 benchmark deployment configuration. Pass local gates first. Billing/usage API reads previously returned 403, so obtain an agreed bounded budget if visibility remains unavailable; never claim zero charges.
+
+The following records the old expandable validation procedure. Adapt its exact resource names/configuration only for an approved isolated run; deployment and teardown require authorization. Generate the phrase in the active shell, never echo/save/commit it, and unset it afterward:
+
+```sh
+cd poneglyph
+pnpm deploy
+export PONEGLYPH_TODO_PASSPHRASE="$(openssl rand -hex 32)"
+pnpm exec cf workers secrets update TODO_SHARED_PASSPHRASE \
+  --worker poneglyph-scaleout-validation-20261011 \
+  --type secret_text --text "$PONEGLYPH_TODO_PASSPHRASE"
+sleep 20 # allow secret version propagation; wait for HTTPS certificate active too
+pnpm test:deployed:todo
+PONEGLYPH_CLOUDFLARE_TRANSACTIONS=10 \
+PONEGLYPH_CLOUDFLARE_QUERIES=10 \
+PONEGLYPH_CLOUDFLARE_CONCURRENCY=2 pnpm bench:cloudflare
+pnpm test:deployed
+unset PONEGLYPH_TODO_PASSPHRASE
+# Destructive: only after cleanup approval for this exact deployment.
+pnpm exec cf deploy --mode cleanup
+pnpm exec cf workers delete poneglyph-scaleout-validation-20261011 --force
+```
+
+Cleanup mode permanently deletes the three namespaces and their databases, then Worker deletion removes the domain/DNS binding and secret. Never use it as a harmless dry run. Verify exact-name listings:
+
+```sh
+pnpm exec cf workers scripts search --name poneglyph-scaleout-validation-20261011 --per-page 100
+pnpm exec cf durable-objects namespaces list --per-page 100 | jq '[.[] | select((.script // "") == "poneglyph-scaleout-validation-20261011")]'
+pnpm exec cf dns records list --zone leostera.dev --name poneglyph-scaleout-20261011.poneglyph.leostera.dev --per-page 20
+pnpm exec cf ssl certificate-packs list --zone leostera.dev --status all --per-page 100 | jq '[.[] | select((.hosts // [] | tostring | contains("poneglyph-scaleout-20261011.poneglyph.leostera.dev")))]'
+pnpm exec cf workers secrets list --worker poneglyph-scaleout-validation-20261011
+```
+
+The Worker, namespace filter, DNS, and certificate filter must return no matches. The secret query may return 404 after script deletion. Certificate issuance/deletion is asynchronous: wait for active before HTTPS checks and disappearance after cleanup. The recorded cleanup found no matching Worker, namespaces, DNS, secret, or certificate pack; the pack passed through pending deletion and public hostname/TXT DNS records disappeared. No unrelated account resource changed. If cleanup fails, stop and inspect the exact isolated resources rather than broaden deletion filters.
 
 ## Alternatives
 

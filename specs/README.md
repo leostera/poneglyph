@@ -1,6 +1,6 @@
 # Small TLA+ / PlusCal models
 
-These models are executable, deliberately small state-space checks for the two correctness-critical state machines. They are design aids, not a proof of the TypeScript implementation or of Cloudflare storage behavior.
+These models are executable, deliberately small state-space checks for the two correctness-critical state machines. They are design aids, not a proof of the TypeScript implementation or of Cloudflare storage behavior. Their contract, abstraction limits, tooling pin, and validation procedure are reflected in [RFD0004](../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#formal-model-and-validation).
 
 ## Models
 

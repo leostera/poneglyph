@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted experiment design (2026-10-11), revised to a clean **100,000-fact concurrent-only iteration**. The application/client/database path, four load scenarios, disk-backed fact/index audits, and report saving are implemented under `bench/write-path/`. At the user's explicit request, earlier generated reports, journals, SQLite trial state, archives, and logs were deleted; corpus inputs and harness code were retained. New measurements start from fresh storage with unchanged database code. Scale to 1M only after a design is repeatably better in throughput and durable correctness/recovery. No Cloudflare benchmark or parallel-store candidate has been deployed/implemented. This RFD does not authorize account changes by itself; cloud execution requires the local and resource/cost gates below.
+Accepted experiment design (2026-10-11), revised to a clean **100,000-fact concurrent-only iteration**. The application/client/database path, four load scenarios, disk-backed fact/index audits, and report saving are implemented under `bench/write-path/`. At the user's explicit request, earlier generated reports, journals, SQLite trial state, archives, and logs were deleted; corpus inputs and harness code were retained. The pre-fix and separately identified corrected revisions each completed a fresh-storage 100k matrix. Both passed admitted-write persistence/restart audits; neither completed the full input. No database adaptation was made within a trial. Scale to 1M only after a design is repeatably better in throughput and durable correctness/recovery. This write-path Cloudflare benchmark has not been deployed or measured, and the parallel-store candidate is not implemented. This RFD does not authorize account changes by itself; cloud execution requires the local and resource/cost gates below.
 
 ## Summary
 
@@ -49,14 +49,14 @@ local corpus -> local HTTP driver -> application Worker(s)
 
 The application exposes an authenticated, bounded `POST /facts` accepting `{txId, facts}`. It validates the envelope, calls the package API, awaits the database result, and returns `{txId}` only on success. Application errors must preserve useful failure classifications without leaking secrets. Curl can exercise the endpoint; the load driver uses that same endpoint and contract. There is no success response followed by a `waitUntil` commit.
 
-The proposed write API is:
+The implemented public write API is:
 
 ```typescript
-const db = await createDatabase(poneglyphConfig);
+const db = createDatabase(poneglyphConfig);
 const txId = await db.stateFacts(facts, { txId: requestTxId });
 ```
 
-`createDatabase` may be awaited even if local construction is synchronous. `stateFacts` is the public write operation to add before the benchmark; the options retain caller-supplied identity for retries. The baseline may make this small client-surface change but must not redesign storage, change limits, or add a faster internal write path. Document/package-test that change. Keep baseline-only receipt/sequence details out of the application contract. One configured graph is used throughout a deployment; do not distribute load across graph IDs to evade the coordinator.
+`createDatabase` is synchronous local construction. `stateFacts` is the implemented public write operation; the options retain caller-supplied identity for retries. The baseline may make this small client-surface change but must not redesign storage, change limits, or add a faster internal write path. Document/package-test that change. Keep baseline-only receipt/sequence details out of the application contract. One configured graph is used throughout a deployment; do not distribute load across graph IDs to evade the coordinator.
 
 The package is built and consumed through its exported interface as a pinned artifact, not via source imports into storage internals. Use a private local package artifact; a public npm release is unnecessary. Select HTTP over a service binding through the client's injectable `fetch` if supported and validated; otherwise authenticated HTTPS. Freeze the chosen transport across database comparisons and record it. The application never receives DO bindings or bypasses the database's transaction path.
 
@@ -97,7 +97,7 @@ Extract one deterministic ordered fact stream from the entire locally downloaded
 
 Corpus decoding is local workload preparation, not a database feature. Generate a bounded on-disk stream/manifest before timing so parser/CPU stalls do not masquerade as database limits. The canonical payloads include real values; no synthetic payload-size substitutions. Keep extraction fixed between versions and scenarios. Do not commit the downloaded corpus.
 
-Following the user's revised direction, the iteration comparison defaults to the same first **100,000 facts in every scenario**. Increase to **1,000,000** only after repeated matched trials establish better throughput without durability, required-index, atomic-visibility, or recovery regressions. The complete prepared corpus has 1,530,195 facts; 100k is explicitly an iteration cohort, not a full-corpus load. Every planned batch must be attempted at its stated size, including batches that expose database defects. Do not patch storage, raise retention limits, shrink/rebatch, skip input, or add a fallback write path to make a scenario complete.
+Following the user's revised direction, the iteration comparison defaults to the same first **100,000 facts in every scenario**. Increase to **1,000,000** only after repeated matched trials establish better throughput without durability, required-index, atomic-visibility, or recovery regressions. The complete prepared corpus has 1,530,195 facts; 100k is explicitly an iteration cohort, not a full-corpus load. Every planned batch must be attempted at its stated size, including batches that expose database defects. Do not patch storage during a trial, raise retention limits, shrink/rebatch, skip input, or add a fallback write path to make a scenario complete. Authorized product bug fixes require a separately identified revision and new measurements, as recorded below.
 
 The user subsequently removed both concurrency-1 cases. All current load cases have multiple outstanding calls; single-request protocol fixtures remain correctness tests, not load scenarios. The serial runs and other earlier generated results were explicitly deleted at the user's request and are not evidence for this restarted comparison.
 
@@ -160,7 +160,7 @@ Report:
 - Per-stage timings when available: client/database request, route resolution, prepare, decision, apply/completion; participant fan-out and coordinator/leaf contention, split pauses, routing hops/cache hits, SQL row writes, reported physical storage, and amplification. Missing provider metrics are unknown, not zero.
 - Exact source/artifact digests for database, client, and application; harness revision, runtime/tool versions, limits, retry policy, transport, Worker count, dataset manifest, topology, run timing, account plan, and verified local gate identifier.
 
-Keep traces/logs structured and sampled consistently. Enable logs and traces for the dedicated deployments; never log corpus bodies, secrets, or auth headers. Retry storms and excessive instrumentation can distort results and incur costs. Preserve small reports/manifests in `results/`; keep bulky raw samples as referenced artifacts with checksums. No benchmark result exists until implementation and execution complete.
+Keep traces/logs structured and sampled consistently. Enable logs and traces for the dedicated deployments; never log corpus bodies, secrets, or auth headers. Retry storms and excessive instrumentation can distort results and incur costs. Preserve the final aggregate in `results/` with source/dataset/artifact digests. Per the later explicit retention direction, raw samples and intermediate storage are temporary and removed after runtime/ledger close and successful final-report save; console logs are cleaned up separately. Their absence limits retrospective replay/debugging and must not be described as archival retention. No benchmark result exists until implementation and execution complete.
 
 ## Acceptance criteria and interpretation
 
@@ -193,9 +193,53 @@ This comparison intentionally includes the cost of separately stored indices in 
 
 ## Implementation and evidence reset (2026-10-11)
 
-The [benchmark README](../../bench/write-path/README.md) records commands and limitations; the [result index](../../bench/write-path/results/README.md) describes the clean 100k iteration. Earlier measurements were deleted at the user's request and are not claimed as evidence for the restart. Completed trials now retain a compact `final.json` with identity/digests, final metrics, and fact/index/restart audits. Raw/intermediate trial state is deleted only after the final aggregate is saved and runtimes/ledgers have closed, per the user's retention request.
+### Implemented local harness and reproduction
 
-Streaming corpus preparation produced 1,530,195 ordinary facts from 296,624 pages; its input files and checksums were retained. The driver streams outstanding batches and uses a disk-backed expected-fact/outcome ledger with paginated leaf/router audits. Each iteration attempts all 100,000 selected facts at the fixed matrix sizes without modifying the database or adapting around failures.
+The implemented path is local HTTP driver → gateway → 1–32 application services → pinned `file:` package client → database Worker service binding → real Miniflare SQLite DOs. The gateway only selects local application services; it is not a database coordinator. All applications use one graph/database per trial. Benchmark subclasses inherit production write methods unchanged and expose restricted read-only audits through a token-protected local entrypoint. Audit routes must not become public cloud routes.
+
+```sh
+# From repository root.
+cd poneglyph
+pnpm run build:package
+cd ../bench/write-path
+pnpm install
+pnpm run typecheck
+pnpm test
+pnpm run prepare:corpus
+pnpm run preflight
+BENCH_FACTS=100000 BENCH_WORKERS=4 pnpm run run:local
+```
+
+`prepare:corpus` reads cached `tests/fixtures/cache/onepiece-pages-current.xml` or accepts another XML path as its first argument. It prepares ordinary page-derived facts with exact percent-encoded title identities, at most eight categories/sixteen links per page, no full text, no namespace filtering, and no supplemental hand-authored domain facts. This avoids the legacy extractor's lossy-slug collisions. Preparation produced 1,530,195 facts from 296,624 pages; XML bytes 436,781,838, SHA-256 `1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084`; fact-stream SHA-256 `e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064`. Corpus inputs/manifests remain cached, not committed.
+
+`preflight` is informational: it does not write data, shrink batches, skip cases, or prevent exercising a database defect. The current matrix has only the four concurrent scenarios above; removed serial cases and earlier artifacts are not evidence for this iteration.
+
+| Environment variable | Default / bound |
+| --- | --- |
+| `BENCH_SCENARIOS` | All four; optional comma-separated known names: `parallel-medium`, `parallel-small`, `highly-concurrent`, `saturation`. |
+| `BENCH_FACTS` | 100,000; maximum 2,000,000, and the requested prefix must exist. 1M scale-up is deliberate, not automatic. |
+| `BENCH_WORKERS` | Four application services, maximum 32. |
+| `BENCH_ATTEMPTS` | Eight per logical call, maximum 30. |
+| `BENCH_TIMEOUT_MS` | 30,000 per attempt, maximum 120,000. |
+
+Retries retain the exact ID/payload and use full-jitter exponential backoff from 100 ms to 5 seconds; a slot includes retry/backoff time. IDs are unique per run/scenario/batch. Successful responses await commit. Caller-unknown outcomes stay unknown and are separately reconciled against quiescent storage; absence at audit is not a successful load.
+
+The driver streams only outstanding batches in memory and retains latency samples for exact nearest-rank percentiles. p95 requires at least 1,000 samples and p99 at least 10,000. A disk-backed reference/outcome ledger checks transaction membership, duplicate multiplicity, missing/extra acknowledged facts, partial persistence, and rejected writes unexpectedly persisted. Paginated router/leaf audits reconcile active scalar fact/value indices, terminal participant/coordinator state, fact-log associations, Datalog values/types, and visibility before/after restart. Local application activity/drain probes are not distributed cloud-isolate counters. The small-fixture auditor supports only an unsplit root; the streamed audit covers the scalar assertion corpus, not arbitrary nested/retracted data. Retraction, failure, public query and split semantics use separate package tests. Candidate overlapping-writer/fault/barrier coverage remains required.
+
+### Final evidence retention and interpretation
+
+Completed trials retain `results/<run-id>/final.json`: source/artifact/dataset identity, final metrics, classifications/reconciliation, and pre-/post-restart audits. Per-case reports and raw SQLite/input/reference/journal/bundle/progress artifacts exist temporarily during execution. After runtimes/ledgers close, the final aggregate is saved **before** removing intermediates. Console logs are handled separately. Tokens and corpus bodies are not saved in final reports. Raw archival replay is not possible from the final aggregate alone; reproducibility relies on the recorded source and input identities. Incomplete/failed loads must never be relabeled successful.
+
+Reports distinguish acknowledged unique throughput, all-outcome versus successful-call latency and sample counts, unavailable tails, retries/statuses/transport errors, achieved logical concurrency, fact/index/terminal-state/restart correctness, and local versus unmeasured cloud performance. Both retained 100k matrices attempted every planned batch at its configured size without adaptation. Earlier generated artifacts were explicitly deleted and are not current comparison evidence. The [result README](../../bench/write-path/results/README.md) is a file index, not an independent contract.
+
+| Facts/call × concurrency | Pre-fix acknowledged facts | Pre-fix unknown calls | Pre-fix facts/s | Corrected acknowledged facts | Corrected unknown calls | Corrected facts/s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | 93,900 | 61 | 1,292.44 | 93,700 | 63 | 1,286.11 |
+| 10 × 100 | 67,940 | 3,206 | 303.61 | 68,780 | 3,122 | 310.48 |
+| 10 × 1,000 | 5,740 | 9,426 | 29.13 | 5,820 | 9,418 | 30.14 |
+| 2 × 10,000 | 2,398 | 48,801 | 8.39 | 2,298 | 48,851 | 8.03 |
+
+Each case attempted the same 100,000-fact prefix through four application Workers into fresh storage. Both matrices passed fact/index/transaction and restart audits, with no additional unacknowledged commits or unresolved decisions. Caller-unknown transactions were uncommitted at quiescent audit. **None completed the full load.** The corrected revision is `a21b9a6`; single-pair local rate differences do not establish improvement. Coordinator contention remains; local transport/runtime limits also contribute at high concurrency. This is a correctness baseline only for exercised invariants, not universal proof, full-load success, or cloud performance.
 
 The pre-fix final 100k report is retained separately; all four cases passed admitted-write persistence/restart audits but failed to complete their requested loads. Authorized correctness fixes subsequently changed capacity lookup pages from 500 to the runtime's 100-bind limit; the regression requires batches of 100, 101, and 1,000 distinct entities to persist and query correctly through restart. Participant prepare replay now precedes mutable fact-state/capacity validation; coordinator retained outcomes precede busy admission; explicit boolean retry hints are honored with permanent quota errors distinguished from temporary pressure; post-commit pruning failures cannot fail a published commit. No global coordinator redesign, schema reinterpretation, or quota increase was made. The database still retains at most 100,000 transaction outcomes within seven days. The 100k two-fact case uses 50,000 calls, so it does not exercise that outcome limit; the 1M case uses 500,000 and must explicitly retest it during scale-up. Removing old results does not erase these source/test limitations.
 
@@ -208,7 +252,7 @@ The cloud gate remains closed pending the remaining protocol/driver/deployment s
 - [RFD0003: Cloudflare-native graph database](./RFD0003-cloudflare-native-graph-database.md)
 - [RFD0004: Expandable, capacity-bounded sharding](./RFD0004-expandable-cloudflare-sharding.md)
 - [Current client](../../poneglyph/src/client.ts), [package](../../poneglyph/package.json), and [limits](../../poneglyph/src/storage/constants.ts)
-- [Existing corpus workload](../../examples/onepiece-load.ts), [local benchmark](../../poneglyph/tests/throughput-bench.test.ts), and [bounded operational evidence](../../poneglyph/OPERATIONS.md)
+- [Existing corpus workload](../../examples/onepiece-load.ts), [local benchmark](../../poneglyph/tests/throughput-bench.test.ts), and [bounded operational evidence](./RFD0004-expandable-cloudflare-sharding.md#isolated-cloudflare-procedure-and-detailed-evidence)
 - [Miniflare](https://developers.cloudflare.com/workers/testing/miniflare/) and [Workers Vitest integration](https://developers.cloudflare.com/workers/testing/vitest-integration/)
 - [SQLite-backed DO storage](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/), [limits](https://developers.cloudflare.com/durable-objects/platform/limits/), and [pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/)
 - [Worker service bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/) and [observability](https://developers.cloudflare.com/workers/observability/)

@@ -73,6 +73,14 @@ Use the Workers Vitest integration/Miniflare locally for DO storage and binding 
 
 Only after local gates pass may account testing begin. Deploy an isolated, clearly named namespace/Worker to the user's personal Cloudflare account. Never alter unrelated existing resources. Run a bounded end-to-end transaction and representative graph-query/load test; record the exact deployment and limits used; delete only resources created for this test. Cloudflare documents per-object storage and CPU/throughput limits; verify current plan-specific limits and billing before selecting the deployed load size [CF2].
 
+## Historical fixed-leaf deployment evidence
+
+The checkpoint at commit `521ff54` was validated on 2026-10-11 using only Worker `poneglyph-cloudflare-checkpoint-20261011`, custom domain `poneglyph-checkpoint-20261011.poneglyph.leostera.dev`, `workersDev` disabled, and its `GraphCoordinatorDO`/`GraphShardDO` SQLite namespaces. Worker and DNS hostname were absent beforehand. Four facts spanning fixed leaves 0–3 committed at sequence 1; same-ID/payload replay returned the committed result, and the distributed query returned four rows at snapshot 1. This is a small historical smoke, not production throughput or validation of the later expandable topology.
+
+The historical procedure authenticated the account, checked exact-name collisions, ran local gates, deployed that checkpoint's configuration, then ran the deployed smoke against HTTPS under `*.poneglyph.leostera.dev`. After approval it deployed destructive class-deletion mode before deleting the dedicated Worker, then checked exact Worker/DO/DNS/certificate listings. Namespace deletion permanently removed smoke data. Worker deletion removed its custom domain and Worker-managed DNS; the matching certificate pack disappeared asynchronously. All matching resources were verified absent, with no unrelated resources changed. On failure, cleanup must stop for inspection rather than edit unrelated DNS or certificates.
+
+Do not run that old two-class cleanup procedure against the current three-class config. Current isolated operating commands, resource safety, secret handling, and the separate expandable-topology evidence live in [RFD0004](./RFD0004-expandable-cloudflare-sharding.md#isolated-cloudflare-procedure-and-detailed-evidence). The Rust workspace was removed from this branch at `f460f1d`; history and other branches were preserved.
+
 ## Alternatives
 
 | Option | Benefit | Cost / reason not selected as the whole design |
