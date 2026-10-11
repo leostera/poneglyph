@@ -159,6 +159,19 @@ Attempts: 1,717 / 20,468 / 27,938 / 310,958. Busy responses: 717 / 10,468 / 8,43
 
 **No promotion:** repeat 1 fails the required 100% delivery gate in all four scenarios. Complete B1 control 2 and unchanged D repeat 2 with fresh persistence; retain D even if it remains ineligible. B1 is still the experimental incumbent. A is restored outside explicit tests/trials.
 
+### Matched D comparison: second B1 control
+
+[Control 2 final](../../bench/write-path/results/2026-10-11T23-29-04-964Z-7ec0666d/final.json) identifies `09fbb45`. Both Worker bundle digests exactly match D's first B1 control. Every planned call was attempted; all admitted-write and restart audits passed without reconciled extra commits. All four loads remained incomplete.
+
+| Facts/call × concurrency | B1 D-control 2 acknowledged facts | Unknown calls | Acknowledged facts/s | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 96,900 | 31 | 1,573.40 | 3.15 |
+| 10 × 100 | 86,830 | 1,317 | 488.93 | 7.57 |
+| 10 × 1,000 | 12,800 | 8,720 | 86.06 | 18.44 |
+| 2 × 10,000 | 5,018 | 47,491 | 15.23 | 72.32 |
+
+Attempts: 2,391 / 39,275 / 76,282 / 391,491. Busy responses: 1,422 / 30,592 / 74,971 / 125,293. Transport failures: 0 / 0 / 31 / 263,689. Delivery/rates/latency and transport variance remain separate; identical bundles do not imply identical local performance. Continue with unchanged D repeat 2 and fresh persistence, not a retrospective substitution of an earlier incumbent run.
+
 ## Summary
 
 Build `bench/write-path/` as a repeatable application-level benchmark of Poneglyph's ordinary `stateFacts` API. A local driver converts the already-downloaded One Piece corpus into regular facts and sends bounded HTTP requests to one or more application Workers. Those Workers consume the packaged Poneglyph client and await writes to one deployed database containing one graph. Actual fact, index, transaction, and recovery state must be persisted; acknowledgements of queued work are not successful commits. First measure the implementation currently on disk, then the proposed hash-routed, independently sharded fact/index store trees with distributed transaction coordination. Keep the benchmark, dataset, transport, and common workload parameters fixed between versions. Every version and planned scenario must pass end-to-end correctness tests in Miniflare before deployment. Only Cloudflare runs are evidence of cloud performance.
