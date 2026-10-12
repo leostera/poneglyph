@@ -8,6 +8,8 @@ test("report identity follows the sole bundled coordinator implementation", () =
   assert.equal(identifyDatabaseImplementation(["C:\\repo\\poneglyph\\src\\storage-c\\coordinator.ts"]), "C-pooled-coordinator-ledgers");
   assert.equal(identifyDatabaseImplementation(["../../poneglyph/src/storage-g/coordinator.ts"]), "G-integrated-write-path");
   assert.equal(identifyDatabaseImplementation(["../../poneglyph/src/storage-h/coordinator.ts"]), "H-epoch-fenced-route-cache");
+  assert.equal(identifyDatabaseImplementation(["../../poneglyph/src/storage-i/coordinator.ts"]), "I-deferred-outcome-maintenance");
+  assert.throws(() => identifyDatabaseImplementation(["/src/storage-i/coordinator.ts", "/src/storage-g/coordinator.ts"]), /exactly one/);
   assert.throws(() => identifyDatabaseImplementation(["/src/storage-h/coordinator.ts", "/src/storage-g/coordinator.ts"]), /exactly one/);
   assert.throws(() => identifyDatabaseImplementation(["/src/storage-g/coordinator.ts", "/src/storage-d/coordinator.ts"]), /exactly one/);
   assert.throws(() => identifyDatabaseImplementation([]), /exactly one/);
