@@ -321,7 +321,7 @@ Attempts: 2,395 / 40,313 / 76,272 / 391,417. Busy responses: 1,425 / 31,761 / 74
 | 10 × 1,000 | 37,010 | 6,299 | 145.60 | +75.57% | 33.88 |
 | 2 × 10,000 | 10,552 | 44,724 | 30.75 | +96.18% | 77.52 |
 
-Attempts: 2,059 / 32,429 / 67,186 / 381,418. Busy responses: 1,076 / 23,835 / 63,182 / 95,868. Transport failures: 0 / 0 / 303 / 280,274. All workloads were incomplete: **no promotion**. All four acknowledged rates/partial delivery were higher than the nearby incumbent, but small/high/saturation logical p95 was higher, and high/saturation transport failures increased. More delivered facts and lower busy counts do not certify equal-success throughput, shorter measured gates, low overhead or cloud behavior. Gate removal and metadata/reference/cache invariants are controlled-code evidence; no gate-duration instrumentation or physical per-ID storage/cost comparison was added to the frozen workload. The second unchanged fresh B1/F pair remains required.
+Attempts: 2,059 / 32,429 / 67,186 / 381,418. Busy responses: 1,076 / 23,835 / 63,182 / 95,868. Transport failures: 0 / 0 / 303 / 280,274. All workloads were incomplete: **no promotion**. All four acknowledged rates/partial delivery were higher than the nearby incumbent, but small/high/saturation logical p95 was higher, and high/saturation transport failures increased. More delivered facts and lower busy counts do not certify equal-success throughput, shorter measured gates, low overhead or cloud behavior. Gate removal and metadata/reference/cache invariants are controlled-code evidence; no gate-duration instrumentation or physical per-ID storage/cost comparison was added to the frozen workload. The second unchanged fresh B1/F pair is retained below.
 
 ### Matched F comparison: second B1 control
 
@@ -334,7 +334,24 @@ Attempts: 2,059 / 32,429 / 67,186 / 381,418. Busy responses: 1,076 / 23,835 / 63
 | 10 × 1,000 | 13,000 | 8,700 | 87.49 | 18.45 |
 | 2 × 10,000 | 5,060 | 47,470 | 15.23 | 74.17 |
 
-Attempts: 2,349 / 39,400 / 76,347 / 391,631. Busy responses: 1,380 / 30,773 / 75,016 / 130,324. Transport failures: 0 / 0 / 31 / 258,777. Nearby identical-bundle controls still vary; do not replace them with an older favorable run. Continue unchanged F repeat 2 with fresh persistence.
+Attempts: 2,349 / 39,400 / 76,347 / 391,631. Busy responses: 1,380 / 30,773 / 75,016 / 130,324. Transport failures: 0 / 0 / 31 / 258,777. Nearby identical-bundle controls still vary; do not replace them with an older favorable run. Unchanged F repeat 2 with fresh persistence follows below.
+
+### F repeat 2 and promotion decision
+
+[Repeat 2 final](../../bench/write-path/results/2026-10-12T03-11-29-100Z-2fd794c1/final.json) identifies `7529e1f`. Both Worker bundles exactly match F repeat 1. The complete fresh order is B1 control 1 → F repeat 1 → B1 control 2 → F repeat 2. No measured SUT, client, workload, limits or caller retry setting changed.
+
+| Facts/call × concurrency | F repeat 2 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs nearby B1 control 2 | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | 98,300 | 17 | 1,617.19 | +3.94% | 2.84 |
+| 10 × 100 | 86,340 | 1,366 | 508.01 | +5.51% | 7.96 |
+| 10 × 1,000 | 37,150 | 6,285 | 149.97 | +71.42% | 33.42 |
+| 2 × 10,000 | 10,722 | 44,639 | 32.19 | +111.34% | 73.72 |
+
+Every planned call was attempted; acknowledged facts equalled persisted facts, all admitted-write/index/transaction/restart audits passed, no unresolved decisions remained and no unknown commits were reconciled. Attempts: 2,036 / 31,664 / 66,939 / 381,182. Busy responses: 1,053 / 23,030 / 62,942 / 95,868. Transport failures: 0 / 0 / 282 / 279,953. All four loads remained incomplete.
+
+**Decision: do not promote F.** Its local partial acknowledged rates/delivery increased against nearby B1 controls in all four scenarios in both pairs, with fewer busy responses. Medium p95 decreased, small/high p95 increased in both pairs; saturation p95 direction differed. High/saturation transport failures were higher in both pairs. Preserve those tradeoffs and identical-bundle incumbent variation, without claiming equal-success throughput, measured gate durations, cold-start/lifecycle efficiency, physical bytes/cost or cloud performance. Controlled evidence establishes removed owner staging/hot rereads and routing/recovery invariants; no additional queued input or retry/limit change was used to deliver the missing calls. **All-four full-delivery promotion fails in both repeats.**
+
+Preserve F's independent source/tests and both repeat/control finals with their source/input/client identities. **B1 stays incumbent**; A is restored as default outside explicit trials. F's evaluation is complete, not promotion. The requested independent C → D → E → F sequence is fully evaluated and may conclude even though no candidate qualified.
 
 ### Proposed G: combined integration experiment
 

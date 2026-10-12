@@ -108,8 +108,14 @@ The first two scenarios completed their full input; the last two did not. **D is
 
 ## F provisional planning: first repeat
 
-[Repeat 1 final](2026-10-12T02-33-52-343Z-a00ec2c3/final.json) identifies `cfcb98c`. Acknowledged facts: **98,300 / 85,940 / 37,010 / 10,552**. Acknowledged facts/s: **1,528.58 / 477.35 / 145.60 / 30.75**. Every planned call and admitted-write/restart audit passed; no extra unknown commits were reconciled or decisions remained unresolved. All workloads were incomplete. **No promotion:** all rates/partial delivery increased vs nearby B1, but small/high/saturation p95 and high/saturation transport failures were higher. [Qualified first pair](../../../docs/rfds/RFD0005-write-path-experiment.md#f-repeat-1-greater-partial-delivery-no-promotion). The unchanged F repeat 2 remains required.
+[Repeat 1 final](2026-10-12T02-33-52-343Z-a00ec2c3/final.json) identifies `cfcb98c`. Acknowledged facts: **98,300 / 85,940 / 37,010 / 10,552**. Acknowledged facts/s: **1,528.58 / 477.35 / 145.60 / 30.75**. Every planned call and admitted-write/restart audit passed; no extra unknown commits were reconciled or decisions remained unresolved. All workloads were incomplete. **No promotion:** all rates/partial delivery increased vs nearby B1, but small/high/saturation p95 and high/saturation transport failures were higher. [Qualified first pair](../../../docs/rfds/RFD0005-write-path-experiment.md#f-repeat-1-greater-partial-delivery-no-promotion). The second repeat and decision are retained below.
 
 ## F comparison: second nearby B1 control
 
 [Control 2 final](2026-10-12T02-54-15-303Z-ba9568e6/final.json) identifies `f8ed048`; both Worker bundles match control 1. Acknowledged facts: **96,900 / 86,270 / 13,000 / 5,060**. Acknowledged facts/s: **1,555.90 / 481.49 / 87.49 / 15.23**. All planned calls and admitted-write/restart audits passed; no extra unknown commits were reconciled. All loads remained incomplete. [Control details](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-f-comparison-second-b1-control).
+
+## F provisional planning: second repeat and decision
+
+[Repeat 2 final](2026-10-12T03-11-29-100Z-2fd794c1/final.json) identifies `7529e1f`; both Worker bundles exactly match repeat 1. Acknowledged facts: **98,300 / 86,340 / 37,150 / 10,722**. Acknowledged facts/s: **1,617.19 / 508.01 / 149.97 / 32.19**. All planned calls and admitted-write/restart audits passed; no extra unknown commits were reconciled or decisions remained unresolved.
+
+**F evaluation complete; no promotion.** All four workloads were incomplete in both repeats despite repeatably higher partial acknowledged rates/delivery and fewer busy responses. Medium p95 fell, small/high p95 rose, saturation p95 direction differed; high/saturation transport failures increased in both pairs. [Qualified decision](../../../docs/rfds/RFD0005-write-path-experiment.md#f-repeat-2-and-promotion-decision). B1 stays incumbent and A remains default; independent C–F evaluations are complete, not successful-load or cloud certification.
