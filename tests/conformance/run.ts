@@ -7,6 +7,7 @@ import {buildConformance, implementations, ROOT} from "./build.js";
 import {startLocal} from "./runtime.js";
 import {restart, Session} from "./session.js";
 import {checkAllLookups, smallCases} from "./small.js";
+import {archiveReport} from "./archive.js";
 
 // Tier-first: no larger tier is implemented/enabled until this shared matrix
 // has been diagnosed, repaired across affected implementations and rerun.
@@ -16,7 +17,7 @@ assert.ok(smallCases.length > 0); assert.equal(new Set(smallCases.map(test => te
 const id = new Date().toISOString().replaceAll(":", "-");
 const output = resolve(ROOT, "results", id), artifacts = resolve(ROOT, ".artifacts", id);
 await mkdir(output, {recursive: true});
-const files = ["build.ts", "runtime.ts", "model.ts", "model.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "package.json", "pnpm-lock.yaml"];
+const files = ["build.ts", "runtime.ts", "model.ts", "model.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
 const suiteDigests = Object.fromEntries(await Promise.all(files.map(async path => [path, createHash("sha256").update(await readFile(resolve(ROOT, path))).digest("hex")])));
 const report = {kind: "correctness-conformance", tier: "small-1-100", id,
   gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(),
@@ -50,14 +51,21 @@ for (const implementation of implementations) {
     runtime = await restart(runtime, persistence, bundles);
     for (const [index, original] of sessions.entries()) {
       // Keep the independent oracle/input history; never rebuild it from SQL.
-      const cold = new Session(runtime, original.graph, original.model);
-      cold.queries.push(...original.queries);
-      try {await checkAllLookups(cold); await cold.verify(); results[index]!.cold = "pass";}
-      catch (error) {results[index]!.cold = "fail"; results[index]!.coldError = String(error); failures++;}
-      Object.assign(results[index]!, {coldOutcomes: cold.outcomes});
+      const coldOutcomes: unknown[] = [];
+      try {
+        for (const prior of [original, ...original.related]) {
+          const cold = new Session(runtime, prior.graph, prior.model);
+          cold.queries.push(...prior.queries);
+          try {await checkAllLookups(cold); await cold.verify();}
+          finally {coldOutcomes.push({graph: prior.graph, outcomes: cold.outcomes});}
+        }
+        results[index]!.cold = "pass";
+      } catch (error) {results[index]!.cold = "fail"; results[index]!.coldError = String(error); failures++;}
+      Object.assign(results[index]!, {coldOutcomes});
       console.log(`${implementation.name} cold-${results[index]!.cold} ${results[index]!.name}`); await save();
     }
   } finally {await runtime.mf.dispose(); await save();}
 }
-console.log(`Correctness report: ${resolve(output, "report.json")}; ${failures} failed checks. Persistence retained: ${artifacts}`);
+await archiveReport(resolve(output, "report.json"));
+console.log(`Correctness report: ${resolve(output, "summary.json")}; ${failures} failed checks. Persistence retained: ${artifacts}`);
 if (failures) process.exitCode = 1;

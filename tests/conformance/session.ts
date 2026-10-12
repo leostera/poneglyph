@@ -6,6 +6,7 @@ import { Model, equalBag, type Evidence, type Query } from "./model.js";
 export class Session {
   readonly queries: Query[] = [];
   readonly outcomes: unknown[] = [];
+  readonly related: Session[] = [];
   constructor(readonly runtime: LocalRuntime, readonly graph: string, readonly model = new Model()) {}
   async request(operation: object, app = 0) {
     const response = await fetch(this.runtime.endpoints[app]!, {method: "POST", headers: {authorization: `Bearer ${this.runtime.token}`}, body: JSON.stringify({graph: this.graph, ...operation}), signal: AbortSignal.timeout(30_000)});
@@ -41,9 +42,12 @@ export class Session {
     for (const query of this.queries) await this.query(query, false);
     for (const [entity, fields] of this.model.projections) {
       const result = await this.request({action: "entity", entity}); assert.equal(result.status, 200);
-      const projection = result.body["entity"] as {fields?: unknown} | null;
+      const projection = result.body["entity"] as {uri?: unknown; fields?: unknown} | null;
       if (fields.size === 0) assert.equal(projection, null, `empty projection ${entity}`);
-      else assert.deepEqual(projection?.fields, Object.fromEntries(fields), `public entity ${entity}`);
+      else {
+        assert.equal(projection?.uri, entity, "entity response identity");
+        assert.deepEqual(projection?.fields, Object.fromEntries(fields), `public entity ${entity}`);
+      }
     }
     this.model.verifyEvidence(await inspect(this.runtime, this.graph));
   }

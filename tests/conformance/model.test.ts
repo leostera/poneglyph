@@ -8,7 +8,7 @@ function golden() {
   const evidence: Evidence = {
     fact_log: [{fact_id: "f1", tx_id: "tx", tx_index: 0, source: "agent:one", entity: "test:a", field: "test:value", value_json: '{"type":"text","value":"hello"}', retraction: 0}],
     active_facts: [{fact_id: "f1", tx_id: "tx", source: "agent:one", entity: "test:a", field: "test:value", value_json: '{"type":"text","value":"hello"}'}],
-    active_values: [{fact_id: "f1", tx_id: "tx", source: "agent:one", entity: "test:a", field: "test:value", value_index: 0, value_json: '{"type":"text","value":"hello"}', datalog_type: "string", datalog_value: "hello"}],
+    active_values: [{fact_id: "f1", tx_id: "tx", source: "agent:one", entity: "test:a", field: "test:value", value_index: 0, value_key: '{"type":"text","value":"hello"}', value_json: '{"type":"text","value":"hello"}', datalog_type: "string", datalog_value: "hello"}],
     entity_versions: [{entity: "test:a", fields_json: '{"test:value":{"type":"text","value":"hello"}}'}],
   };
   return {model, evidence};
@@ -44,6 +44,7 @@ const corruptions: [string, (e: Evidence) => void][] = [
   ["missing active assertion", e => e.active_facts.pop()],
   ["missing index row", e => e.active_values.pop()],
   ["wrong index type", e => {e.active_values[0]!["datalog_type"] = "integer";}],
+  ["wrong canonical index key", e => {e.active_values[0]!["value_key"] = "{}";}],
   ["wrong projection", e => {e.entity_versions[0]!["fields_json"] = "{}";}],
   ["orphan active reference", e => {e.active_facts[0]!["fact_id"] = "missing";}],
 ];

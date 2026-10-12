@@ -5,7 +5,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test:oracle": "tsx --test model.test.ts",
-    "test:small": "tsx run.ts"
+    "test:small": "pnpm run test:oracle && tsx run.ts"
   },
   "dependencies": {"@leostera/poneglyph": "file:../../poneglyph"},
   "devDependencies": {

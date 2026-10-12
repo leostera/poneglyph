@@ -37,6 +37,7 @@ export const smallCases: Case[] = [
   {name: "identity/graph-isolation", async run(s) {
     await s.write("same", [fact("test:a", text("first graph"))]);
     const other = new Session(s.runtime, `${s.graph}-other`);
+    s.related.push(other);
     await other.write("same", [fact("test:a", text("second graph"))]);
     await other.query(relation("test:value")); await other.verify();
     // The main graph's oracle never includes the second graph's evidence.

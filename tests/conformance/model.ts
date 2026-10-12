@@ -99,14 +99,21 @@ export class Model {
     assert.equal(new Set(evidence.fact_log.map(row => row["fact_id"])).size, evidence.fact_log.length, "unique durable fact identities");
     equalBag(evidence.active_facts.map(row => ({txId: row["tx_id"], fact: {...content(row), retraction: false}})),
       [...this.active.values()].map(({txId, fact}) => ({txId, fact})), "active source-qualified assertion membership");
-    const values = [...this.active.values()].flatMap(({fact, txId}) => items(fact.value).map((item, index) => ({source: fact.source, entity: fact.entity, field: fact.field, txId, index, item, binding: scalar(item)})));
-    equalBag(evidence.active_values.map(row => ({source: row["source"], entity: row["entity"], field: row["field"], txId: row["tx_id"], index: row["value_index"], item: JSON.parse(String(row["value_json"])), binding: {type: row["datalog_type"], value: row["datalog_value"]}})), values, "complete active value/Datalog membership");
+    const values = [...this.active.values()].flatMap(({fact, txId}) => items(fact.value).map((item, index) => ({source: fact.source, entity: fact.entity, field: fact.field, txId, index, item, key: JSON.stringify(item), binding: scalar(item)})));
+    equalBag(evidence.active_values.map(row => ({source: row["source"], entity: row["entity"], field: row["field"], txId: row["tx_id"], index: row["value_index"], item: JSON.parse(String(row["value_json"])), key: row["value_key"], binding: {type: row["datalog_type"], value: row["datalog_value"]}})), values, "complete active value/Datalog membership");
     equalBag(evidence.entity_versions.map(row => ({entity: row["entity"], fields: JSON.parse(String(row["fields_json"]))})),
       [...this.projections].filter(([, fields]) => fields.size).map(([entity, fields]) => ({entity, fields: Object.fromEntries(fields)})), "complete current projection membership");
     const facts = new Map(evidence.fact_log.map(row => [row["fact_id"], row]));
     for (const row of evidence.active_facts) assert.ok(facts.has(row["fact_id"]), "active fact references durable truth");
     const activeIds = new Set(evidence.active_facts.map(row => row["fact_id"]));
-    for (const row of evidence.active_values) assert.ok(activeIds.has(row["fact_id"]), "index references a current assertion");
+    for (const row of evidence.active_values) {
+      assert.ok(activeIds.has(row["fact_id"]), "index references a current assertion");
+      const parent = facts.get(row["fact_id"])!;
+      for (const key of ["source", "entity", "field", "tx_id"]) assert.equal(row[key], parent[key], `index parent ${key}`);
+      const index = Number(row["value_index"]); assert.ok(Number.isSafeInteger(index) && index >= 0);
+      const members = items(JSON.parse(String(parent["value_json"])) as Value);
+      assert.equal(stable(JSON.parse(String(row["value_json"]))), stable(members[index]), "index member belongs to its exact fact");
+    }
   }
 }
 export const variable = (name: string): Term => ({variable: name});
