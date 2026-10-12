@@ -323,6 +323,19 @@ Attempts: 2,395 / 40,313 / 76,272 / 391,417. Busy responses: 1,425 / 31,761 / 74
 
 Attempts: 2,059 / 32,429 / 67,186 / 381,418. Busy responses: 1,076 / 23,835 / 63,182 / 95,868. Transport failures: 0 / 0 / 303 / 280,274. All workloads were incomplete: **no promotion**. All four acknowledged rates/partial delivery were higher than the nearby incumbent, but small/high/saturation logical p95 was higher, and high/saturation transport failures increased. More delivered facts and lower busy counts do not certify equal-success throughput, shorter measured gates, low overhead or cloud behavior. Gate removal and metadata/reference/cache invariants are controlled-code evidence; no gate-duration instrumentation or physical per-ID storage/cost comparison was added to the frozen workload. The second unchanged fresh B1/F pair remains required.
 
+### Matched F comparison: second B1 control
+
+[Control 2 final](../../bench/write-path/results/2026-10-12T02-54-15-303Z-ba9568e6/final.json) identifies `f8ed048`. Both Worker bundles exactly match F control 1. Every planned call was attempted; admitted-write/restart audits passed without extra unknown commits. All loads remained incomplete.
+
+| Facts/call × concurrency | B1 F-control 2 acknowledged facts | Unknown calls | Acknowledged facts/s | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 96,900 | 31 | 1,555.90 | 3.24 |
+| 10 × 100 | 86,270 | 1,373 | 481.49 | 7.49 |
+| 10 × 1,000 | 13,000 | 8,700 | 87.49 | 18.45 |
+| 2 × 10,000 | 5,060 | 47,470 | 15.23 | 74.17 |
+
+Attempts: 2,349 / 39,400 / 76,347 / 391,631. Busy responses: 1,380 / 30,773 / 75,016 / 130,324. Transport failures: 0 / 0 / 31 / 258,777. Nearby identical-bundle controls still vary; do not replace them with an older favorable run. Continue unchanged F repeat 2 with fresh persistence.
+
 ### Proposed G: combined integration experiment
 
 The user proposed a subsequent G combining C's pooled recovery ledgers, D's entity conflicts/quiescent vector fence, E's payload-bound atomic authority and F's provisional planning/reduced work. This is a **separate integration experiment**, not a promotion of any losing independent candidate. Preserve C–F evaluations; specify interactions before implementing G, particularly out-of-order owner tickets, atomic decision delegation/publication pinning, pooled recovery and stale routing revalidation. Do not assume optimizations compose, import mixed runtime implementations, replace a nearby control or change the workload/limits/retries. G would require its own correctness gates, two fresh 100k matrices and repeated nearby incumbent controls under the same full-delivery rule. Inclusion in the immutable persistent goal awaits user `/goal-tweak`; this proposal is not a G implementation/evaluation claim or an automatic default cutover.
