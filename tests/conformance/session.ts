@@ -15,7 +15,9 @@ export class Session {
     this.outcomes.push({operation, app, status: response.status, body});
     return {status: response.status, body};
   }
-  async write(txId: string, facts: readonly FactInput[], expected = 200, app = 0) {
+  async write(name: string, facts: readonly FactInput[], expected = 200, app = 0) {
+    // Catalog names are labels; the public contract requires a URI identity.
+    const txId = `tx:${name}`;
     let result = await this.request({action: "write", txId, facts}, app);
     for (let attempt = 1; result.body["retryable"] === true && result.status !== expected && attempt < 16; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 5)); result = await this.request({action: "write", txId, facts}, app);

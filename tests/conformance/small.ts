@@ -76,7 +76,7 @@ export const smallCases: Case[] = [
   }},
   {name: "transport/lost-application-reply", async run(s) {
     const facts = [fact("test:a", text("committed")), fact("test:b", text("also committed"))];
-    assert.equal((await s.request({action: "lost-write-reply", txId: "lost", facts})).status, 502);
+    assert.equal((await s.request({action: "lost-write-reply", txId: "tx:lost", facts})).status, 502);
     await s.write("lost", facts, 200, 2);
   }},
   ...[0, 1, 2, 3].map(seed => ({name: `stateful/seed-${seed}`, async run(s: Session) {
@@ -90,10 +90,10 @@ export const smallCases: Case[] = [
     }
   }})),
   ...[
-    ["invalid-late-value", {txId: "invalid", facts: [fact("test:a", text("must not persist")), fact("test:b", {type: "bytes", value: [256]})]}],
-    ["invalid-int64", {txId: "invalid", facts: [fact("test:a", {type: "number", value: "9223372036854775808"})]}],
-    ["invalid-date", {txId: "invalid", facts: [fact("test:a", {type: "date", value: "2023-02-29"})]}],
-    ["empty-batch", {txId: "invalid", facts: []}],
+    ["invalid-late-value", {txId: "tx:invalid", facts: [fact("test:a", text("must not persist")), fact("test:b", {type: "bytes", value: [256]})]}],
+    ["invalid-int64", {txId: "tx:invalid", facts: [fact("test:a", {type: "number", value: "9223372036854775808"})]}],
+    ["invalid-date", {txId: "tx:invalid", facts: [fact("test:a", {type: "date", value: "2023-02-29"})]}],
+    ["empty-batch", {txId: "tx:invalid", facts: []}],
   ].map(([name, body]) => ({name: `boundary/${name}`, async run(s: Session) {
     const result = await s.request({action: "raw", path: "transactions", body}); assert.equal(result.status, 400);
     await s.query(relation("test:value"));
