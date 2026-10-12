@@ -297,6 +297,19 @@ A single bounded hot leaf slot reuses the typed prepared batch only when its ser
 
 With F explicitly selected, **39 tests** passed across F/client/fact-model/Datalog, typecheck/package and all **7 harness tests** passed. A-specific global sequence/schema fixtures remain A gates, not F certification. No F matrix has run; preserve the controls/fresh-input/unchanged-SUT/all-four promotion contract. This proves exercised invariants and identifies removed work, not shorter measured gates, universal correctness, successful-load throughput or cloud performance.
 
+### Matched F comparison: first B1 control
+
+[Control 1 final](../../bench/write-path/results/2026-10-12T02-15-00-285Z-e24a464c/final.json) identifies `428e540`. It begins fresh B1 → F → B1 → F. Every planned call was attempted; admitted-write/index/transaction/restart audits passed without reconciled extra commits. All four loads remained incomplete.
+
+| Facts/call × concurrency | B1 F-control 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 97,000 | 30 | 1,329.45 | 4.11 |
+| 10 × 100 | 85,520 | 1,448 | 441.91 | 7.84 |
+| 10 × 1,000 | 12,860 | 8,714 | 82.93 | 19.24 |
+| 2 × 10,000 | 5,272 | 47,364 | 15.67 | 75.87 |
+
+Attempts: 2,395 / 40,313 / 76,272 / 391,417. Busy responses: 1,425 / 31,761 / 74,980 / 130,752. Transport failures: 0 / 0 / 6 / 258,029. This is incumbent partial-load evidence, not F, cloud or promotion evidence. No F matrix has run at this checkpoint.
+
 ### Proposed G: combined integration experiment
 
 The user proposed a subsequent G combining C's pooled recovery ledgers, D's entity conflicts/quiescent vector fence, E's payload-bound atomic authority and F's provisional planning/reduced work. This is a **separate integration experiment**, not a promotion of any losing independent candidate. Preserve C–F evaluations; specify interactions before implementing G, particularly out-of-order owner tickets, atomic decision delegation/publication pinning, pooled recovery and stale routing revalidation. Do not assume optimizations compose, import mixed runtime implementations, replace a nearby control or change the workload/limits/retries. G would require its own correctness gates, two fresh 100k matrices and repeated nearby incumbent controls under the same full-delivery rule. Inclusion in the immutable persistent goal awaits user `/goal-tweak`; this proposal is not a G implementation/evaluation claim or an automatic default cutover.

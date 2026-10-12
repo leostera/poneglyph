@@ -101,3 +101,7 @@ The first two scenarios completed their full input; the last two did not. **D is
 [Repeat 2 final](2026-10-12T01-31-18-399Z-482b2d6f/final.json) identifies `7cf5b67`; both Worker bundles exactly match repeat 1. Acknowledged facts: **97,100 / 86,920 / 12,810 / 4,672**. Acknowledged facts/s: **1,543.08 / 490.86 / 83.81 / 14.26**. Every planned call and admitted-write/atomic-membership/restart audit passed; no extra unknown commits were reconciled and no decisions remained unresolved.
 
 **E evaluation complete; no promotion.** All four workloads were incomplete in both repeats. Small/high partial acknowledged rates improved in both pairs, medium direction differed, and saturation rates/delivery fell. Preserve tail latency and transport failures alongside rates; this is not successful-load throughput. [Qualified decision](../../../docs/rfds/RFD0005-write-path-experiment.md#e-repeat-2-and-promotion-decision). F starts from B1; A remains default outside explicit trials.
+
+## F comparison: first nearby B1 control
+
+[Control 1 final](2026-10-12T02-15-00-285Z-e24a464c/final.json) identifies `428e540`. Acknowledged facts: **97,000 / 85,520 / 12,860 / 5,272**. Acknowledged facts/s: **1,329.45 / 441.91 / 82.93 / 15.67**. All planned calls and admitted-write/restart audits passed; no extra unknown commits were reconciled. All loads remained incomplete. [Control details](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-f-comparison-first-b1-control). Begins B1 → F → B1 → F; not an F result or promotion.
