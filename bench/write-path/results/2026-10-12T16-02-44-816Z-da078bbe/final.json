@@ -1,0 +1,5836 @@
+{
+  "kind": "final local write-path result",
+  "manifest": {
+    "runId": "2026-10-12T16-02-44-816Z-da078bbe",
+    "version": "G-integrated-write-path",
+    "environment": "Miniflare; not cloud performance",
+    "build": {
+      "databaseImplementation": "G-integrated-write-path",
+      "gitBase": "e7216a2a59e3f5fabf8de98979f61e11ab71b5fc",
+      "gitStatus": [
+        "?? docs/poneglyph-explainer-preview.mp4",
+        "?? docs/poneglyph-explainer.mp4",
+        "?? docs/video/"
+      ],
+      "sourceDigests": {
+        "../../poneglyph/src/database-implementation.ts": "a506a9f7468b8a74fe6b0c40f817c4a651bef05cb7d83f8dac3cc569c60c0814",
+        "../../poneglyph/src/datalog/ast.ts": "586cc0a795c7114b6813eaf6d309fedc13b5d32180aebcb10b2da4bbeff7b9f0",
+        "../../poneglyph/src/datalog/evaluator.ts": "36deb0ce2faefa73272a4d06c05c752d2993b028da62ac2a647fae1bf8514907",
+        "../../poneglyph/src/datalog/parser.ts": "558f30101ecd7547efd62df4976fe1fd834651624fae58406411ebb8080ae183",
+        "../../poneglyph/src/datalog/value.ts": "7291d44c1f0856b7d448dce8fef8d1a127f7ad364f4e9782ad7beb223e996a05",
+        "../../poneglyph/src/domain/date-validation.ts": "7f141cf8063ea3519680f0a71bc424212283f1401c9415dbbf3d6af5cb1d75e1",
+        "../../poneglyph/src/domain/fact-value.ts": "8df5f3e2b8a22899325ff75d4d2ed35e53c7adb296a64fc6b28af1db2831c71a",
+        "../../poneglyph/src/domain/fact.ts": "ba92f8a48cfba0ab82bcbc611ddf7e4a8107df7a89ef0a203c7a2dae4b6cf6b4",
+        "../../poneglyph/src/domain/graph-id.ts": "fb23faf3dc333f49752a9e17009bcaf512a01632419b1b574fb9f491d25cf641",
+        "../../poneglyph/src/domain/identifiers.ts": "747dc1fa083705aea2927965c0da9990e417a89bb0a90e4c446ddd1daa49b6ac",
+        "../../poneglyph/src/domain/int64.ts": "4448f6097cdf97b1bdc72e4ecd7819516ade0661f424f9ec18865a3a45460ffd",
+        "../../poneglyph/src/domain/result.ts": "9f1e517b566238e0a4fc771172c6c7c5d7f0954e82584201193d298bd061b8f5",
+        "../../poneglyph/src/domain/string-order.ts": "a38dc679f8479e9f089e0795c3da5d48d72dceb01046567f6184d5457bcf1ea4",
+        "../../poneglyph/src/storage-g/batch-cache.ts": "0d5aab84937d90fc7713f62d55b768ad9ce6ebb039bcdc9da8cd6748899dc516",
+        "../../poneglyph/src/storage-g/benchmark.ts": "ad6d5208b49f55c335321d1e62b2b057db4add3e19659c44588f193816a765d2",
+        "../../poneglyph/src/storage-g/capacity.ts": "9f4104bb26c43a07270d7c2a185c69379b71a6e24309224094a3fb622e58b4fa",
+        "../../poneglyph/src/storage-g/constants.ts": "bb27d8f50fd140642b2af9cf82775c18ebd95d0e912ee63c881052fbc7c0dc93",
+        "../../poneglyph/src/storage-g/coordinator.ts": "9425b72b22c7bd478fbd5c47d40c5c68eac8385da5ce10927fd6b81ac93e41da",
+        "../../poneglyph/src/storage-g/distributed-fact-source.ts": "59819f44ef7ca5dc25ff48c45c8bbdf10afca95a8a3b2dbb616ba68ed646e71a",
+        "../../poneglyph/src/storage-g/forest.ts": "87dfc6307261c34daa2a62355bd617ac7a71d2d1cb9418ca37dbe03154b5b78c",
+        "../../poneglyph/src/storage-g/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+        "../../poneglyph/src/storage-g/implementation.ts": "f9ece80f67dfa9f29ffb0b29515b8d6e489086509cc3e12ae8df813843f47aff",
+        "../../poneglyph/src/storage-g/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+        "../../poneglyph/src/storage-g/ledger.ts": "c79be8fe3f8d55c3f1bd9039a7ee6fc8c75f02ee9c5d96faa294e70d716f00e3",
+        "../../poneglyph/src/storage-g/migration.ts": "46e149dd4ffce655979864fd20ed4906e7a02d3344b76713a8cf3b941151e55a",
+        "../../poneglyph/src/storage-g/owner-writes.ts": "437838c1740d499f8b3d66059367e8098d3243bd9a0e42aa710da8d7a24ba6c4",
+        "../../poneglyph/src/storage-g/plan.ts": "75faee0bf6336bad43b7445c94b6c4c6192003da5120ea53c42a3799bddd02dc",
+        "../../poneglyph/src/storage-g/protocol.ts": "62ee047e5d6d46c170fda3994374a3033600f42adad19d0a36b1674c6e6aa117",
+        "../../poneglyph/src/storage-g/routing.ts": "482f1aed8edf73597ba0a108dfa3e16853e1053e3a0c3ca530326975294c9b98",
+        "../../poneglyph/src/storage-g/shard.ts": "1b69d917212fdc5af36775dcd9c89d5ac4c5a1f04ccdb3b1d8c4ed90d0674517",
+        "../../poneglyph/src/storage-g/sql.ts": "b7c606e6232edba94a32c549751536e83908db69a019dfecf5006328712b7414",
+        "../../poneglyph/src/storage-g/transaction.ts": "e70325da920b3d3219d5aa8502c294b78f9f8647db34d0d704726efb73e57157",
+        "../../poneglyph/src/storage/constants.ts": "bef7eeb48dae158f10e9b018ad29a86230752bf0848817b81dcd9f5b083a1e5b",
+        "../../poneglyph/src/storage/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+        "../../poneglyph/src/storage/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+        "../../poneglyph/src/storage/protocol.ts": "06238f68cdc0153eddd4584d2eefa6d2f6f3f5ca5632d6cc8595abc140c38c86",
+        "../../poneglyph/src/testing/storage-audit.ts": "32babba0e76eb9c19edb04d7ea019bc9a0589d4a9bf2f5a1582ffdebd61e2077",
+        "../../poneglyph/src/todo_demo/auth.ts": "388c7607879e7ca4c681a801e5904e989008293d2bd5dc2aa0d8874aead8429e",
+        "../../poneglyph/src/todo_demo/hub.ts": "c65b83f1f492c723f6715efb286e4307ea7ee6397debe53a199dd21ddeb680a8",
+        "../../poneglyph/src/todo_demo/page.ts": "52c594afd72cc40de04b260ce5d6230d9d9c9ca392bcab0520e5362934515a89",
+        "../../poneglyph/src/todo_demo/service.ts": "707dcfd8eb55a75afea03e9016e36a61cbe773b939eea4d086a8c85e4bef425e",
+        "../../poneglyph/src/todo_demo/worker.ts": "91bae6a11adc83b6fab7ce9b230a5d2beff4a78fe9be1ae14898e9b0f65e9616",
+        "../../poneglyph/src/worker.ts": "7235743b034628f043fa17fbfc329166101cc7e0f01b9c8643dee7003cb10f69",
+        "build.ts": "872b869c6e7d125fe7872700fcccea2429d2f2ff1702924d6ba35b3c2b6348a8",
+        "corpus.ts": "d800c51667c3e2c63d04b1eaf286cf38fc1cb3cc114b0477e297315022451f41",
+        "database-identity.ts": "bf2fa1ca2eb021dd8b910ceae6391fc05268a12ef6b9da7de922d0946c3766c9",
+        "driver.ts": "b89c40be8de75c0b0e0b849b8238b194dcf24ffd5cd3db5dc860fc421801140b",
+        "final-result.ts": "529aa7bc4448b03ca89edf90dd7876a59fb00327dbf5946501a7b12bf6aa0238",
+        "ledger.ts": "d3a6e6aab618f4af43349b39e96eb1060d25da280c97c755fb9c25c09a3e75ba",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/client.js": "3788367ce7fb30ecb936d3cc18a56a4cea7c9c9c634fffd14c95609109edc073",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/ast.js": "20d3ed3a2f4bbdf67581c4a1a8cca094f636415a0e05657a812b6c35288e4e16",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/evaluator.js": "7ad7a5447c361af94e39b8653ad69062c30f03007c38617f8251a40bc0b3e43d",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/fact-source.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/parser.js": "bc528dae38e60b2f87137f89a35dd154f5d7a280cb99490c97f2cca911afb36f",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/value.js": "a42784eaf59359e86d6e3ca31a66dbbde9d96d6558e717296fb29a878853ec80",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/date-validation.js": "4b7d7283ed28fdc9a5bf6a5827b6796c54454503e4113b23f69108a9e64ae6f9",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact-value.js": "dbf69ccc15f594656aa28892522b9909a0000d04f926d5e995e8685aa3df8248",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact.js": "549cc66749833c217ea9d9860f9a942b91f130b0345689a0f2bb18e549b64ac2",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/graph-id.js": "b20ec3aaf6d8343b4709beab1d8b1d70f33022720eca700b1689930ec024db99",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/identifiers.js": "d33ab8baf96f99472d71b5c4da99ffc154b56ef044e437b4dac075070e053010",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/int64.js": "2e3e55ccc389336263a1dd51d6089b641da0515fbb3c1307d09df995d47af9a5",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/result.js": "d8d4830e99f43409a946d8b2e1316a1f13e5171b599865ab00643585bcda9609",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/string-order.js": "aa59fe031cfc95f85594e9b0ee8eccf3b1234378c157da25a5628ea12b03460c",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/index.js": "5e0312a2a755a9c79da33339efcc6a4132c5f919fa94ce30ea29929dc38739e4",
+        "package.json": "e0fd97b233e5db487a8647ef48069e1aac28b26b29cd5e478282714ecc961dea",
+        "pnpm-lock.yaml": "448245d86b7446f89d2d53964df4602ef1928006525697982f5b1e3ad4a894d1",
+        "run.ts": "1972c2e5fe6a13d3792dbead9f811c2a6e2476d3e04c9e0202af0150b5f78acb",
+        "runtime.ts": "cff1d5cd5f7d27a51d848165960c3a2ece483dad2895354c83720bf18fda80d0",
+        "scenarios.ts": "34b37fa0261d22723e07414916e3d7ccf4d483760f43f5748e64f34f2b728022",
+        "stream-audit.ts": "fd8b7d04a96db46c222c80c872de03baac62eb2ce0e9d89a83614781e14d2e5d",
+        "worker/application.ts": "fbc969a312a2855ee95bdcde6ec78b115107719f98f9a6374b5de94884cc5b66",
+        "worker/database.ts": "02773fc8c2b7e71a2d8839c71d43edbbb8345a6fdcef37f8f4eb112cc42b1eae"
+      },
+      "bundleDigests": {
+        "application": "7a0020d0c9fc5115b694867706b4e06520a8817d9fb755f583a5e1555418d043",
+        "database": "a4ab71e8dd22bdb278dd23f5e111910e8c5474be6093462b1f0af291de9b646f"
+      },
+      "runtime": {
+        "miniflare": "5.20261006.1-alpha",
+        "compatibilityDate": "2026-10-06",
+        "node": "v26.11.0"
+      },
+      "clientPackage": "@leostera/poneglyph@0.1.0 (local packed file dependency)"
+    },
+    "corpus": {
+      "extractionVersion": 1,
+      "xmlSha256": "1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084",
+      "xmlBytes": 436781838,
+      "pages": 296624,
+      "facts": 1530195,
+      "factsSha256": "e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064",
+      "policies": {
+        "identity": "exact percent-encoded title",
+        "categoriesPerPage": 8,
+        "linksPerPage": 16,
+        "fullTextStored": false,
+        "supplementalFacts": 0,
+        "namespaceFilter": "none"
+      }
+    },
+    "reference": {
+      "facts": 100000,
+      "normalizedPrefixSha256": "2dd6061bfc95c78a90af1a2faa3ee147908981b4b6b480ed30c1726493af5309"
+    },
+    "selectedFacts": 100000,
+    "scope": "100k iteration cohort",
+    "workerCount": 4,
+    "retry": {
+      "maxAttempts": 8,
+      "attemptTimeoutMs": 30000,
+      "backoff": "full jitter, exponential 100ms..5s"
+    },
+    "selected": [
+      "parallel-medium",
+      "parallel-small",
+      "highly-concurrent",
+      "saturation"
+    ],
+    "policy": "Every planned batch is attempted; no batch shrinking, input skipping, storage fixes, outcome-limit changes, or fallback delivery"
+  },
+  "summary": {
+    "runId": "2026-10-12T16-02-44-816Z-da078bbe",
+    "status": "complete",
+    "persistenceChecksPassed": true,
+    "fullWorkloadsCompleted": false,
+    "cloudGate": "admitted-write persistence checks passed; full delivery is reported separately; cloud execution remains unauthorized; incomplete loads are not throughput winners",
+    "reportDirectory": "results/2026-10-12T16-02-44-816Z-da078bbe"
+  },
+  "scenarios": [
+    {
+      "scenario": {
+        "name": "parallel-medium",
+        "batchSize": 100,
+        "concurrency": 10
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 1000,
+      "startedAt": "2026-10-12T16:02:45.711Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 74299.57825,
+        "plannedCallsAttempted": 1000,
+        "acknowledgedFacts": 100000,
+        "acknowledgedTransactions": 1000,
+        "factsPerSecond": 1345.902659952178,
+        "transactionsPerSecond": 13.45902659952178,
+        "rejected": 0,
+        "unknown": 0,
+        "attempts": 1546,
+        "statuses": {
+          "200": 1000,
+          "423": 546
+        },
+        "logicalLatency": {
+          "count": 1000,
+          "meanMs": 735.350485505,
+          "p50Ms": 561.185083999997,
+          "p95Ms": 1894.445499999998,
+          "p99Ms": null,
+          "maxMs": 3604.7065409999996,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 1000,
+          "meanMs": 735.350485505,
+          "p50Ms": 561.185083999997,
+          "p95Ms": 1894.445499999998,
+          "p99Ms": null,
+          "maxMs": 3604.7065409999996,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 1546,
+          "meanMs": 455.3868431714103,
+          "p50Ms": 362.5006249999997,
+          "p95Ms": 982.1729159999959,
+          "p99Ms": null,
+          "maxMs": 3040.3062079999945,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 1808738,
+            "system": 192470
+          },
+          "eventLoopDelayMeanMs": 20.778631053426576,
+          "eventLoopDelayMaxMs": 22.593535,
+          "memoryBytes": {
+            "rss": 358241568,
+            "heapTotal": 102334464,
+            "heapUsed": 45200208,
+            "external": 63568331,
+            "arrayBuffers": 42136817
+          }
+        },
+        "failureExamples": [],
+        "databaseAwaitLatency": {
+          "count": 1000,
+          "meanMs": 329.527,
+          "p50Ms": 274,
+          "p95Ms": 613,
+          "p99Ms": null,
+          "maxMs": 2634,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 10,
+          "mean": 9.897145692761717,
+          "target": 10
+        },
+        "workerDistribution": {
+          "app-0": 250,
+          "app-2": 250,
+          "app-1": 250,
+          "app-3": 250
+        }
+      },
+      "localDrainMs": 523.0933339999901,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 100000,
+        "persistedTransactions": 1000,
+        "activeTuples": 100000,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": true,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 371425280,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 779,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 515
+            },
+            {
+              "phase": "complete",
+              "count": 508
+            },
+            {
+              "phase": "complete",
+              "count": 502
+            },
+            {
+              "phase": "complete",
+              "count": 531
+            },
+            {
+              "phase": "complete",
+              "count": 516
+            },
+            {
+              "phase": "complete",
+              "count": 495
+            },
+            {
+              "phase": "complete",
+              "count": 511
+            },
+            {
+              "phase": "complete",
+              "count": 525
+            },
+            {
+              "phase": "complete",
+              "count": 500
+            },
+            {
+              "phase": "complete",
+              "count": 506
+            },
+            {
+              "phase": "complete",
+              "count": 502
+            },
+            {
+              "phase": "complete",
+              "count": 484
+            },
+            {
+              "phase": "complete",
+              "count": 493
+            },
+            {
+              "phase": "complete",
+              "count": 525
+            },
+            {
+              "phase": "complete",
+              "count": 514
+            },
+            {
+              "phase": "complete",
+              "count": 485
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 779,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 515
+                }
+              ],
+              "databaseBytes": 303104
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 733,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 508
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 689,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 502
+                }
+              ],
+              "databaseBytes": 290816
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 714,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 531
+                }
+              ],
+              "databaseBytes": 303104
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 686,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 516
+                }
+              ],
+              "databaseBytes": 303104
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 639,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 495
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 626,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 511
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 651,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 525
+                }
+              ],
+              "databaseBytes": 303104
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 601,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 500
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 578,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 506
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 562,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 502
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 530,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 484
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 532,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 493
+                }
+              ],
+              "databaseBytes": 278528
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 543,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 525
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 522,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 514
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 485,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 485
+                }
+              ],
+              "databaseBytes": 270336
+            }
+          ],
+          "checkedTransactionCoordinators": 1000,
+          "ledgers": [
+            {
+              "bucket": "0",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "0"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 69
+                }
+              ],
+              "databaseBytes": 2215936
+            },
+            {
+              "bucket": "1",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "1"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 63
+                }
+              ],
+              "databaseBytes": 2056192
+            },
+            {
+              "bucket": "2",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "2"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "databaseBytes": 1990656
+            },
+            {
+              "bucket": "3",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "3"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 54
+                }
+              ],
+              "databaseBytes": 1777664
+            },
+            {
+              "bucket": "4",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "4"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 69
+                }
+              ],
+              "databaseBytes": 2252800
+            },
+            {
+              "bucket": "5",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "5"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 59
+                }
+              ],
+              "databaseBytes": 1933312
+            },
+            {
+              "bucket": "6",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "6"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 64
+                }
+              ],
+              "databaseBytes": 2076672
+            },
+            {
+              "bucket": "7",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "7"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 70
+                }
+              ],
+              "databaseBytes": 2277376
+            },
+            {
+              "bucket": "8",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "8"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 56
+                }
+              ],
+              "databaseBytes": 1835008
+            },
+            {
+              "bucket": "9",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "9"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 69
+                }
+              ],
+              "databaseBytes": 2224128
+            },
+            {
+              "bucket": "a",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "a"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 55
+                }
+              ],
+              "databaseBytes": 1798144
+            },
+            {
+              "bucket": "b",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "b"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "databaseBytes": 1957888
+            },
+            {
+              "bucket": "c",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "c"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 64
+                }
+              ],
+              "databaseBytes": 2088960
+            },
+            {
+              "bucket": "d",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "d"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "databaseBytes": 1961984
+            },
+            {
+              "bucket": "e",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "e"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 59
+                }
+              ],
+              "databaseBytes": 1921024
+            },
+            {
+              "bucket": "f",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "f"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 66
+                }
+              ],
+              "databaseBytes": 2142208
+            }
+          ],
+          "transactionCoordinatorStorageBytes": 32509952,
+          "storageScope": "fact leaves, owner/facade metadata, and all sixteen transaction ledger databases",
+          "databaseBytes": 37269504
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 100000,
+        "persistedTransactions": 1000,
+        "activeTuples": 100000,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": true,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 371425280,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 779,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 515
+            },
+            {
+              "phase": "complete",
+              "count": 508
+            },
+            {
+              "phase": "complete",
+              "count": 502
+            },
+            {
+              "phase": "complete",
+              "count": 531
+            },
+            {
+              "phase": "complete",
+              "count": 516
+            },
+            {
+              "phase": "complete",
+              "count": 495
+            },
+            {
+              "phase": "complete",
+              "count": 511
+            },
+            {
+              "phase": "complete",
+              "count": 525
+            },
+            {
+              "phase": "complete",
+              "count": 500
+            },
+            {
+              "phase": "complete",
+              "count": 506
+            },
+            {
+              "phase": "complete",
+              "count": 502
+            },
+            {
+              "phase": "complete",
+              "count": 484
+            },
+            {
+              "phase": "complete",
+              "count": 493
+            },
+            {
+              "phase": "complete",
+              "count": 525
+            },
+            {
+              "phase": "complete",
+              "count": 514
+            },
+            {
+              "phase": "complete",
+              "count": 485
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 779,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 515
+                }
+              ],
+              "databaseBytes": 303104
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 733,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 508
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 689,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 502
+                }
+              ],
+              "databaseBytes": 290816
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 714,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 531
+                }
+              ],
+              "databaseBytes": 303104
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 686,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 516
+                }
+              ],
+              "databaseBytes": 303104
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 639,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 495
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 626,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 511
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 651,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 525
+                }
+              ],
+              "databaseBytes": 303104
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 601,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 500
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 578,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 506
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 562,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 502
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 530,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 484
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 532,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 493
+                }
+              ],
+              "databaseBytes": 278528
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 543,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 525
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 522,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 514
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 485,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 485
+                }
+              ],
+              "databaseBytes": 270336
+            }
+          ],
+          "checkedTransactionCoordinators": 1000,
+          "ledgers": [
+            {
+              "bucket": "0",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "0"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 69
+                }
+              ],
+              "databaseBytes": 2215936
+            },
+            {
+              "bucket": "1",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "1"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 63
+                }
+              ],
+              "databaseBytes": 2056192
+            },
+            {
+              "bucket": "2",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "2"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "databaseBytes": 1990656
+            },
+            {
+              "bucket": "3",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "3"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 54
+                }
+              ],
+              "databaseBytes": 1777664
+            },
+            {
+              "bucket": "4",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "4"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 69
+                }
+              ],
+              "databaseBytes": 2252800
+            },
+            {
+              "bucket": "5",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "5"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 59
+                }
+              ],
+              "databaseBytes": 1933312
+            },
+            {
+              "bucket": "6",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "6"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 64
+                }
+              ],
+              "databaseBytes": 2076672
+            },
+            {
+              "bucket": "7",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "7"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 70
+                }
+              ],
+              "databaseBytes": 2277376
+            },
+            {
+              "bucket": "8",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "8"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 56
+                }
+              ],
+              "databaseBytes": 1835008
+            },
+            {
+              "bucket": "9",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "9"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 69
+                }
+              ],
+              "databaseBytes": 2224128
+            },
+            {
+              "bucket": "a",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "a"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 55
+                }
+              ],
+              "databaseBytes": 1798144
+            },
+            {
+              "bucket": "b",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "b"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "databaseBytes": 1957888
+            },
+            {
+              "bucket": "c",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "c"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 64
+                }
+              ],
+              "databaseBytes": 2088960
+            },
+            {
+              "bucket": "d",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "d"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 61
+                }
+              ],
+              "databaseBytes": 1961984
+            },
+            {
+              "bucket": "e",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "e"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 59
+                }
+              ],
+              "databaseBytes": 1921024
+            },
+            {
+              "bucket": "f",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-medium",
+                  "bucket": "f"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 66
+                }
+              ],
+              "databaseBytes": 2142208
+            }
+          ],
+          "transactionCoordinatorStorageBytes": 32509952,
+          "storageScope": "fact leaves, owner/facade metadata, and all sixteen transaction ledger databases",
+          "databaseBytes": 37269504
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": true,
+      "finishedAt": "2026-10-12T16:04:10.284Z"
+    },
+    {
+      "scenario": {
+        "name": "parallel-small",
+        "batchSize": 10,
+        "concurrency": 100
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 10000,
+      "startedAt": "2026-10-12T16:04:10.290Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 155702.2115,
+        "plannedCallsAttempted": 10000,
+        "acknowledgedFacts": 100000,
+        "acknowledgedTransactions": 10000,
+        "factsPerSecond": 642.251635584508,
+        "transactionsPerSecond": 64.2251635584508,
+        "rejected": 0,
+        "unknown": 0,
+        "attempts": 16199,
+        "statuses": {
+          "200": 10000,
+          "423": 6146,
+          "transport": 53
+        },
+        "logicalLatency": {
+          "count": 10000,
+          "meanMs": 1550.467832179696,
+          "p50Ms": 1140.0870839999989,
+          "p95Ms": 3360.891957999993,
+          "p99Ms": 10711.796082999994,
+          "maxMs": 21296.760207999992,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 10000,
+          "meanMs": 1550.467832179696,
+          "p50Ms": 1140.0870839999989,
+          "p95Ms": 3360.891957999993,
+          "p99Ms": 10711.796082999994,
+          "maxMs": 21296.760207999992,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 16199,
+          "meanMs": 931.7840178105462,
+          "p50Ms": 787.7424579999933,
+          "p95Ms": 1716.6447920000064,
+          "p99Ms": 6654.655958000018,
+          "maxMs": 11097.943790999998,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 6174215,
+            "system": 878936
+          },
+          "eventLoopDelayMeanMs": 20.777617885493125,
+          "eventLoopDelayMaxMs": 51.871743,
+          "memoryBytes": {
+            "rss": 232710456,
+            "heapTotal": 101859328,
+            "heapUsed": 66531592,
+            "external": 64412980,
+            "arrayBuffers": 42977350
+          }
+        },
+        "failureExamples": [],
+        "databaseAwaitLatency": {
+          "count": 10000,
+          "meanMs": 661.8705,
+          "p50Ms": 518,
+          "p95Ms": 1194,
+          "p99Ms": 6529,
+          "maxMs": 9282,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 100,
+          "mean": 99.57913345514716,
+          "target": 100
+        },
+        "workerDistribution": {
+          "app-0": 2500,
+          "app-2": 2500,
+          "app-3": 2500,
+          "app-1": 2500
+        }
+      },
+      "localDrainMs": 516.2977499999979,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 100000,
+        "persistedTransactions": 10000,
+        "activeTuples": 100000,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": true,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 392097792,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1551,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1091
+            },
+            {
+              "phase": "complete",
+              "count": 1209
+            },
+            {
+              "phase": "complete",
+              "count": 1187
+            },
+            {
+              "phase": "complete",
+              "count": 1135
+            },
+            {
+              "phase": "complete",
+              "count": 1212
+            },
+            {
+              "phase": "complete",
+              "count": 1194
+            },
+            {
+              "phase": "complete",
+              "count": 1138
+            },
+            {
+              "phase": "complete",
+              "count": 1110
+            },
+            {
+              "phase": "complete",
+              "count": 1186
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1194
+            },
+            {
+              "phase": "complete",
+              "count": 1227
+            },
+            {
+              "phase": "complete",
+              "count": 1236
+            },
+            {
+              "phase": "complete",
+              "count": 1110
+            },
+            {
+              "phase": "complete",
+              "count": 1311
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1443,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1091
+                }
+              ],
+              "databaseBytes": 466944
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1551,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1209
+                }
+              ],
+              "databaseBytes": 507904
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1493,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1187
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1385,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1135
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1479,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1212
+                }
+              ],
+              "databaseBytes": 507904
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1427,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1194
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1327,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1138
+                }
+              ],
+              "databaseBytes": 483328
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1258,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1110
+                }
+              ],
+              "databaseBytes": 462848
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1323,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1186
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1352,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1353,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 512000
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1270,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1194
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1295,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1227
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1276,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1236
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1132,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1110
+                }
+              ],
+              "databaseBytes": 454656
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1311,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1311
+                }
+              ],
+              "databaseBytes": 503808
+            }
+          ],
+          "checkedTransactionCoordinators": 10000,
+          "ledgers": [
+            {
+              "bucket": "0",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "0"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 631
+                }
+              ],
+              "databaseBytes": 2772992
+            },
+            {
+              "bucket": "1",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "1"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 626
+                }
+              ],
+              "databaseBytes": 2752512
+            },
+            {
+              "bucket": "2",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "2"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 591
+                }
+              ],
+              "databaseBytes": 2609152
+            },
+            {
+              "bucket": "3",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "3"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 622
+                }
+              ],
+              "databaseBytes": 2736128
+            },
+            {
+              "bucket": "4",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "4"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 638
+                }
+              ],
+              "databaseBytes": 2809856
+            },
+            {
+              "bucket": "5",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "5"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 632
+                }
+              ],
+              "databaseBytes": 2781184
+            },
+            {
+              "bucket": "6",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "6"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 630
+                }
+              ],
+              "databaseBytes": 2768896
+            },
+            {
+              "bucket": "7",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "7"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 598
+                }
+              ],
+              "databaseBytes": 2637824
+            },
+            {
+              "bucket": "8",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "8"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 605
+                }
+              ],
+              "databaseBytes": 2662400
+            },
+            {
+              "bucket": "9",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "9"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 636
+                }
+              ],
+              "databaseBytes": 2801664
+            },
+            {
+              "bucket": "a",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "a"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 648
+                }
+              ],
+              "databaseBytes": 2842624
+            },
+            {
+              "bucket": "b",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "b"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 634
+                }
+              ],
+              "databaseBytes": 2789376
+            },
+            {
+              "bucket": "c",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "c"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 640
+                }
+              ],
+              "databaseBytes": 2818048
+            },
+            {
+              "bucket": "d",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "d"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 629
+                }
+              ],
+              "databaseBytes": 2760704
+            },
+            {
+              "bucket": "e",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "e"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 610
+                }
+              ],
+              "databaseBytes": 2682880
+            },
+            {
+              "bucket": "f",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "f"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 630
+                }
+              ],
+              "databaseBytes": 2764800
+            }
+          ],
+          "transactionCoordinatorStorageBytes": 43991040,
+          "storageScope": "fact leaves, owner/facade metadata, and all sixteen transaction ledger databases",
+          "databaseBytes": 51957760
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 100000,
+        "persistedTransactions": 10000,
+        "activeTuples": 100000,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": true,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 392097792,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1551,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1091
+            },
+            {
+              "phase": "complete",
+              "count": 1209
+            },
+            {
+              "phase": "complete",
+              "count": 1187
+            },
+            {
+              "phase": "complete",
+              "count": 1135
+            },
+            {
+              "phase": "complete",
+              "count": 1212
+            },
+            {
+              "phase": "complete",
+              "count": 1194
+            },
+            {
+              "phase": "complete",
+              "count": 1138
+            },
+            {
+              "phase": "complete",
+              "count": 1110
+            },
+            {
+              "phase": "complete",
+              "count": 1186
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1194
+            },
+            {
+              "phase": "complete",
+              "count": 1227
+            },
+            {
+              "phase": "complete",
+              "count": 1236
+            },
+            {
+              "phase": "complete",
+              "count": 1110
+            },
+            {
+              "phase": "complete",
+              "count": 1311
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1443,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1091
+                }
+              ],
+              "databaseBytes": 466944
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1551,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1209
+                }
+              ],
+              "databaseBytes": 507904
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1493,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1187
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1385,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1135
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1479,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1212
+                }
+              ],
+              "databaseBytes": 507904
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1427,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1194
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1327,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1138
+                }
+              ],
+              "databaseBytes": 483328
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1258,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1110
+                }
+              ],
+              "databaseBytes": 462848
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1323,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1186
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1352,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1353,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 512000
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1270,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1194
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1295,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1227
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1276,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1236
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1132,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1110
+                }
+              ],
+              "databaseBytes": 454656
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1311,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1311
+                }
+              ],
+              "databaseBytes": 503808
+            }
+          ],
+          "checkedTransactionCoordinators": 10000,
+          "ledgers": [
+            {
+              "bucket": "0",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "0"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 631
+                }
+              ],
+              "databaseBytes": 2772992
+            },
+            {
+              "bucket": "1",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "1"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 626
+                }
+              ],
+              "databaseBytes": 2752512
+            },
+            {
+              "bucket": "2",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "2"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 591
+                }
+              ],
+              "databaseBytes": 2609152
+            },
+            {
+              "bucket": "3",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "3"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 622
+                }
+              ],
+              "databaseBytes": 2736128
+            },
+            {
+              "bucket": "4",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "4"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 638
+                }
+              ],
+              "databaseBytes": 2809856
+            },
+            {
+              "bucket": "5",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "5"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 632
+                }
+              ],
+              "databaseBytes": 2781184
+            },
+            {
+              "bucket": "6",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "6"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 630
+                }
+              ],
+              "databaseBytes": 2768896
+            },
+            {
+              "bucket": "7",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "7"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 598
+                }
+              ],
+              "databaseBytes": 2637824
+            },
+            {
+              "bucket": "8",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "8"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 605
+                }
+              ],
+              "databaseBytes": 2662400
+            },
+            {
+              "bucket": "9",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "9"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 636
+                }
+              ],
+              "databaseBytes": 2801664
+            },
+            {
+              "bucket": "a",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "a"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 648
+                }
+              ],
+              "databaseBytes": 2842624
+            },
+            {
+              "bucket": "b",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "b"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 634
+                }
+              ],
+              "databaseBytes": 2789376
+            },
+            {
+              "bucket": "c",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "c"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 640
+                }
+              ],
+              "databaseBytes": 2818048
+            },
+            {
+              "bucket": "d",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "d"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 629
+                }
+              ],
+              "databaseBytes": 2760704
+            },
+            {
+              "bucket": "e",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "e"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 610
+                }
+              ],
+              "databaseBytes": 2682880
+            },
+            {
+              "bucket": "f",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-parallel-small",
+                  "bucket": "f"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 630
+                }
+              ],
+              "databaseBytes": 2764800
+            }
+          ],
+          "transactionCoordinatorStorageBytes": 43991040,
+          "storageScope": "fact leaves, owner/facade metadata, and all sixteen transaction ledger databases",
+          "databaseBytes": 51957760
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": true,
+      "finishedAt": "2026-10-12T16:08:17.290Z"
+    },
+    {
+      "scenario": {
+        "name": "highly-concurrent",
+        "batchSize": 10,
+        "concurrency": 1000
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 10000,
+      "startedAt": "2026-10-12T16:08:17.316Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 150941.370583,
+        "plannedCallsAttempted": 10000,
+        "acknowledgedFacts": 99900,
+        "acknowledgedTransactions": 9990,
+        "factsPerSecond": 661.8463819040701,
+        "transactionsPerSecond": 66.18463819040701,
+        "rejected": 0,
+        "unknown": 10,
+        "attempts": 19397,
+        "statuses": {
+          "200": 9990,
+          "423": 3977,
+          "transport": 5430
+        },
+        "logicalLatency": {
+          "count": 10000,
+          "meanMs": 13932.90838387641,
+          "p50Ms": 10386.225083000027,
+          "p95Ms": 36275.933709000004,
+          "p99Ms": 52422.092833,
+          "maxMs": 74932.39437499997,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 9990,
+          "meanMs": 13883.987376169182,
+          "p50Ms": 10320.893500000006,
+          "p95Ms": 36251.02558299998,
+          "p99Ms": null,
+          "maxMs": 74932.39437499997,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 19397,
+          "meanMs": 7121.282126511869,
+          "p50Ms": 6544.758124999993,
+          "p95Ms": 16785.972958000028,
+          "p99Ms": 21318.346291999973,
+          "maxMs": 23838.942666999996,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 8198088,
+            "system": 1171300
+          },
+          "eventLoopDelayMeanMs": 20.893132403100775,
+          "eventLoopDelayMaxMs": 58.359807,
+          "memoryBytes": {
+            "rss": 405342384,
+            "heapTotal": 131022848,
+            "heapUsed": 67566424,
+            "external": 64579586,
+            "arrayBuffers": 43143956
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:60519"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 9990,
+          "meanMs": 3116.1348348348347,
+          "p50Ms": 2650,
+          "p95Ms": 7797,
+          "p99Ms": null,
+          "maxMs": 8408,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 1000,
+          "mean": 923.0676437458224,
+          "target": 1000
+        },
+        "workerDistribution": {
+          "app-1": 2498,
+          "app-0": 2498,
+          "app-3": 2497,
+          "app-2": 2497
+        }
+      },
+      "localDrainMs": 519.8235839999979,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 99900,
+        "persistedTransactions": 9990,
+        "activeTuples": 99900,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 410796032,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1416,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1181
+            },
+            {
+              "phase": "complete",
+              "count": 1219
+            },
+            {
+              "phase": "complete",
+              "count": 1184
+            },
+            {
+              "phase": "complete",
+              "count": 1166
+            },
+            {
+              "phase": "complete",
+              "count": 1150
+            },
+            {
+              "phase": "complete",
+              "count": 1224
+            },
+            {
+              "phase": "complete",
+              "count": 1148
+            },
+            {
+              "phase": "complete",
+              "count": 1208
+            },
+            {
+              "phase": "complete",
+              "count": 1158
+            },
+            {
+              "phase": "complete",
+              "count": 1074
+            },
+            {
+              "phase": "complete",
+              "count": 1258
+            },
+            {
+              "phase": "complete",
+              "count": 1253
+            },
+            {
+              "phase": "complete",
+              "count": 1121
+            },
+            {
+              "phase": "complete",
+              "count": 1218
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1187
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1364,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1181
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1416,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1219
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1378,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1184
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1331,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1166
+                }
+              ],
+              "databaseBytes": 483328
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1282,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1150
+                }
+              ],
+              "databaseBytes": 475136
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1359,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1224
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1281,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1148
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1322,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1208
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1249,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1158
+                }
+              ],
+              "databaseBytes": 475136
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1150,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1074
+                }
+              ],
+              "databaseBytes": 446464
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1317,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1258
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1304,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1253
+                }
+              ],
+              "databaseBytes": 507904
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1155,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1121
+                }
+              ],
+              "databaseBytes": 454656
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1253,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1218
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1249,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1187,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1187
+                }
+              ],
+              "databaseBytes": 471040
+            }
+          ],
+          "checkedTransactionCoordinators": 9990,
+          "ledgers": [
+            {
+              "bucket": "0",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "0"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 621
+                }
+              ],
+              "databaseBytes": 2740224
+            },
+            {
+              "bucket": "1",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "1"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 609
+                }
+              ],
+              "databaseBytes": 2695168
+            },
+            {
+              "bucket": "2",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "2"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 620
+                }
+              ],
+              "databaseBytes": 2732032
+            },
+            {
+              "bucket": "3",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "3"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 645
+                }
+              ],
+              "databaseBytes": 2842624
+            },
+            {
+              "bucket": "4",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "4"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 619
+                }
+              ],
+              "databaseBytes": 2736128
+            },
+            {
+              "bucket": "5",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "5"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 614
+                }
+              ],
+              "databaseBytes": 2707456
+            },
+            {
+              "bucket": "6",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "6"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 605
+                }
+              ],
+              "databaseBytes": 2666496
+            },
+            {
+              "bucket": "7",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "7"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 650
+                }
+              ],
+              "databaseBytes": 2863104
+            },
+            {
+              "bucket": "8",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "8"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 624
+                }
+              ],
+              "databaseBytes": 2744320
+            },
+            {
+              "bucket": "9",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "9"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 626
+                }
+              ],
+              "databaseBytes": 2756608
+            },
+            {
+              "bucket": "a",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "a"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 630
+                }
+              ],
+              "databaseBytes": 2785280
+            },
+            {
+              "bucket": "b",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "b"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 655
+                }
+              ],
+              "databaseBytes": 2883584
+            },
+            {
+              "bucket": "c",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "c"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 592
+                }
+              ],
+              "databaseBytes": 2617344
+            },
+            {
+              "bucket": "d",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "d"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 640
+                }
+              ],
+              "databaseBytes": 2813952
+            },
+            {
+              "bucket": "e",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "e"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 619
+                }
+              ],
+              "databaseBytes": 2727936
+            },
+            {
+              "bucket": "f",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "f"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 621
+                }
+              ],
+              "databaseBytes": 2736128
+            }
+          ],
+          "transactionCoordinatorStorageBytes": 44048384,
+          "storageScope": "fact leaves, owner/facade metadata, and all sixteen transaction ledger databases",
+          "databaseBytes": 51924992
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 99900,
+        "persistedTransactions": 9990,
+        "activeTuples": 99900,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 410796032,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1416,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1181
+            },
+            {
+              "phase": "complete",
+              "count": 1219
+            },
+            {
+              "phase": "complete",
+              "count": 1184
+            },
+            {
+              "phase": "complete",
+              "count": 1166
+            },
+            {
+              "phase": "complete",
+              "count": 1150
+            },
+            {
+              "phase": "complete",
+              "count": 1224
+            },
+            {
+              "phase": "complete",
+              "count": 1148
+            },
+            {
+              "phase": "complete",
+              "count": 1208
+            },
+            {
+              "phase": "complete",
+              "count": 1158
+            },
+            {
+              "phase": "complete",
+              "count": 1074
+            },
+            {
+              "phase": "complete",
+              "count": 1258
+            },
+            {
+              "phase": "complete",
+              "count": 1253
+            },
+            {
+              "phase": "complete",
+              "count": 1121
+            },
+            {
+              "phase": "complete",
+              "count": 1218
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1187
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1364,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1181
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1416,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1219
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1378,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1184
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1331,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1166
+                }
+              ],
+              "databaseBytes": 483328
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1282,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1150
+                }
+              ],
+              "databaseBytes": 475136
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1359,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1224
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1281,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1148
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1322,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1208
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1249,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1158
+                }
+              ],
+              "databaseBytes": 475136
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1150,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1074
+                }
+              ],
+              "databaseBytes": 446464
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1317,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1258
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1304,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1253
+                }
+              ],
+              "databaseBytes": 507904
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1155,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1121
+                }
+              ],
+              "databaseBytes": 454656
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1253,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1218
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1249,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1187,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1187
+                }
+              ],
+              "databaseBytes": 471040
+            }
+          ],
+          "checkedTransactionCoordinators": 9990,
+          "ledgers": [
+            {
+              "bucket": "0",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "0"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 621
+                }
+              ],
+              "databaseBytes": 2740224
+            },
+            {
+              "bucket": "1",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "1"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 609
+                }
+              ],
+              "databaseBytes": 2695168
+            },
+            {
+              "bucket": "2",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "2"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 620
+                }
+              ],
+              "databaseBytes": 2732032
+            },
+            {
+              "bucket": "3",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "3"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 645
+                }
+              ],
+              "databaseBytes": 2842624
+            },
+            {
+              "bucket": "4",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "4"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 619
+                }
+              ],
+              "databaseBytes": 2736128
+            },
+            {
+              "bucket": "5",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "5"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 614
+                }
+              ],
+              "databaseBytes": 2707456
+            },
+            {
+              "bucket": "6",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "6"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 605
+                }
+              ],
+              "databaseBytes": 2666496
+            },
+            {
+              "bucket": "7",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "7"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 650
+                }
+              ],
+              "databaseBytes": 2863104
+            },
+            {
+              "bucket": "8",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "8"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 624
+                }
+              ],
+              "databaseBytes": 2744320
+            },
+            {
+              "bucket": "9",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "9"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 626
+                }
+              ],
+              "databaseBytes": 2756608
+            },
+            {
+              "bucket": "a",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "a"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 630
+                }
+              ],
+              "databaseBytes": 2785280
+            },
+            {
+              "bucket": "b",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "b"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 655
+                }
+              ],
+              "databaseBytes": 2883584
+            },
+            {
+              "bucket": "c",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "c"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 592
+                }
+              ],
+              "databaseBytes": 2617344
+            },
+            {
+              "bucket": "d",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "d"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 640
+                }
+              ],
+              "databaseBytes": 2813952
+            },
+            {
+              "bucket": "e",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "e"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 619
+                }
+              ],
+              "databaseBytes": 2727936
+            },
+            {
+              "bucket": "f",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-highly-concurrent",
+                  "bucket": "f"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 621
+                }
+              ],
+              "databaseBytes": 2736128
+            }
+          ],
+          "transactionCoordinatorStorageBytes": 44048384,
+          "storageScope": "fact leaves, owner/facade metadata, and all sixteen transaction ledger databases",
+          "databaseBytes": 51924992
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-12T16:12:21.543Z"
+    },
+    {
+      "scenario": {
+        "name": "saturation",
+        "batchSize": 2,
+        "concurrency": 10000
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 50000,
+      "startedAt": "2026-10-12T16:12:21.566Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 257254.16895900003,
+        "plannedCallsAttempted": 50000,
+        "acknowledgedFacts": 64094,
+        "acknowledgedTransactions": 32047,
+        "factsPerSecond": 249.14659404495404,
+        "transactionsPerSecond": 124.57329702247702,
+        "rejected": 0,
+        "unknown": 17953,
+        "attempts": 264446,
+        "statuses": {
+          "200": 32047,
+          "423": 20020,
+          "transport": 212379
+        },
+        "logicalLatency": {
+          "count": 50000,
+          "meanMs": 46012.33968382555,
+          "p50Ms": 50327.545542000094,
+          "p95Ms": 81952.89708400005,
+          "p99Ms": 87238.41008399997,
+          "maxMs": 108219.48574999999,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 32047,
+          "meanMs": 29726.876635844546,
+          "p50Ms": 24472.081375000067,
+          "p95Ms": 71254.548542,
+          "p99Ms": 81447.13904199994,
+          "maxMs": 108219.48574999999,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 264446,
+          "meanMs": 8104.999824589789,
+          "p50Ms": 7785.754083000007,
+          "p95Ms": 12364.187250000075,
+          "p99Ms": 13709.644666000037,
+          "maxMs": 30009.942666999996,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 117138865,
+            "system": 15526849
+          },
+          "eventLoopDelayMeanMs": 27.930380333659595,
+          "eventLoopDelayMaxMs": 1820.327935,
+          "memoryBytes": {
+            "rss": 440627504,
+            "heapTotal": 165478400,
+            "heapUsed": 94990304,
+            "external": 66521735,
+            "arrayBuffers": 45086105
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:51803"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 32047,
+          "meanMs": 1635.6727930851562,
+          "p50Ms": 1355,
+          "p95Ms": 3534,
+          "p99Ms": 6944,
+          "maxMs": 11397,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 10000,
+          "mean": 8942.972822586913,
+          "target": 10000
+        },
+        "workerDistribution": {
+          "app-0": 8038,
+          "app-3": 7982,
+          "app-2": 8019,
+          "app-1": 8008
+        }
+      },
+      "localDrainMs": 521.3422080000164,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 64110,
+        "persistedTransactions": 32055,
+        "activeTuples": 64110,
+        "reconciledUnacknowledgedTransactions": 8,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 252559360,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 2409,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 2227
+            },
+            {
+              "phase": "complete",
+              "count": 2283
+            },
+            {
+              "phase": "complete",
+              "count": 2261
+            },
+            {
+              "phase": "complete",
+              "count": 2155
+            },
+            {
+              "phase": "complete",
+              "count": 2236
+            },
+            {
+              "phase": "complete",
+              "count": 2154
+            },
+            {
+              "phase": "complete",
+              "count": 2354
+            },
+            {
+              "phase": "complete",
+              "count": 2149
+            },
+            {
+              "phase": "complete",
+              "count": 2192
+            },
+            {
+              "phase": "complete",
+              "count": 2086
+            },
+            {
+              "phase": "complete",
+              "count": 2245
+            },
+            {
+              "phase": "complete",
+              "count": 2089
+            },
+            {
+              "phase": "complete",
+              "count": 2330
+            },
+            {
+              "phase": "complete",
+              "count": 2361
+            },
+            {
+              "phase": "complete",
+              "count": 2095
+            },
+            {
+              "phase": "complete",
+              "count": 2053
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 2324,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2227
+                }
+              ],
+              "databaseBytes": 765952
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 2362,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2283
+                }
+              ],
+              "databaseBytes": 786432
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 2341,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2261
+                }
+              ],
+              "databaseBytes": 774144
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 2230,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2155
+                }
+              ],
+              "databaseBytes": 753664
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 2298,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2236
+                }
+              ],
+              "databaseBytes": 761856
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 2216,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2154
+                }
+              ],
+              "databaseBytes": 737280
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 2409,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2354
+                }
+              ],
+              "databaseBytes": 802816
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 2201,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2149
+                }
+              ],
+              "databaseBytes": 745472
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 2234,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2192
+                }
+              ],
+              "databaseBytes": 753664
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 2115,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2086
+                }
+              ],
+              "databaseBytes": 720896
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 2272,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2245
+                }
+              ],
+              "databaseBytes": 765952
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 2107,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2089
+                }
+              ],
+              "databaseBytes": 720896
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 2340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2330
+                }
+              ],
+              "databaseBytes": 790528
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 2370,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2361
+                }
+              ],
+              "databaseBytes": 798720
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 2103,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2095
+                }
+              ],
+              "databaseBytes": 712704
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 2053,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2053
+                }
+              ],
+              "databaseBytes": 708608
+            }
+          ],
+          "checkedTransactionCoordinators": 32055,
+          "ledgers": [
+            {
+              "bucket": "0",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "0"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2022
+                }
+              ],
+              "databaseBytes": 4460544
+            },
+            {
+              "bucket": "1",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "1"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1970
+                }
+              ],
+              "databaseBytes": 4272128
+            },
+            {
+              "bucket": "2",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "2"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2014
+                }
+              ],
+              "databaseBytes": 4423680
+            },
+            {
+              "bucket": "3",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "3"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2015
+                }
+              ],
+              "databaseBytes": 4444160
+            },
+            {
+              "bucket": "4",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "4"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2005
+                }
+              ],
+              "databaseBytes": 4403200
+            },
+            {
+              "bucket": "5",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "5"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2073
+                }
+              ],
+              "databaseBytes": 4571136
+            },
+            {
+              "bucket": "6",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "6"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2010
+                }
+              ],
+              "databaseBytes": 4505600
+            },
+            {
+              "bucket": "7",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "7"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1953
+                }
+              ],
+              "databaseBytes": 4313088
+            },
+            {
+              "bucket": "8",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "8"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1992
+                }
+              ],
+              "databaseBytes": 4386816
+            },
+            {
+              "bucket": "9",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "9"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2015
+                }
+              ],
+              "databaseBytes": 4448256
+            },
+            {
+              "bucket": "a",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "a"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2002
+                }
+              ],
+              "databaseBytes": 4440064
+            },
+            {
+              "bucket": "b",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "b"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2004
+                }
+              ],
+              "databaseBytes": 4456448
+            },
+            {
+              "bucket": "c",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "c"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2006
+                }
+              ],
+              "databaseBytes": 4444160
+            },
+            {
+              "bucket": "d",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "d"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1955
+                }
+              ],
+              "databaseBytes": 4358144
+            },
+            {
+              "bucket": "e",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "e"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2020
+                }
+              ],
+              "databaseBytes": 4444160
+            },
+            {
+              "bucket": "f",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "f"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1999
+                }
+              ],
+              "databaseBytes": 4374528
+            }
+          ],
+          "transactionCoordinatorStorageBytes": 70746112,
+          "storageScope": "fact leaves, owner/facade metadata, and all sixteen transaction ledger databases",
+          "databaseBytes": 82956288
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 64110,
+        "persistedTransactions": 32055,
+        "activeTuples": 64110,
+        "reconciledUnacknowledgedTransactions": 8,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 252559360,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 2409,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 2227
+            },
+            {
+              "phase": "complete",
+              "count": 2283
+            },
+            {
+              "phase": "complete",
+              "count": 2261
+            },
+            {
+              "phase": "complete",
+              "count": 2155
+            },
+            {
+              "phase": "complete",
+              "count": 2236
+            },
+            {
+              "phase": "complete",
+              "count": 2154
+            },
+            {
+              "phase": "complete",
+              "count": 2354
+            },
+            {
+              "phase": "complete",
+              "count": 2149
+            },
+            {
+              "phase": "complete",
+              "count": 2192
+            },
+            {
+              "phase": "complete",
+              "count": 2086
+            },
+            {
+              "phase": "complete",
+              "count": 2245
+            },
+            {
+              "phase": "complete",
+              "count": 2089
+            },
+            {
+              "phase": "complete",
+              "count": 2330
+            },
+            {
+              "phase": "complete",
+              "count": 2361
+            },
+            {
+              "phase": "complete",
+              "count": 2095
+            },
+            {
+              "phase": "complete",
+              "count": 2053
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 2324,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2227
+                }
+              ],
+              "databaseBytes": 765952
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 2362,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2283
+                }
+              ],
+              "databaseBytes": 786432
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 2341,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2261
+                }
+              ],
+              "databaseBytes": 774144
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 2230,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2155
+                }
+              ],
+              "databaseBytes": 753664
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 2298,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2236
+                }
+              ],
+              "databaseBytes": 761856
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 2216,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2154
+                }
+              ],
+              "databaseBytes": 737280
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 2409,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2354
+                }
+              ],
+              "databaseBytes": 802816
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 2201,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2149
+                }
+              ],
+              "databaseBytes": 745472
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 2234,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2192
+                }
+              ],
+              "databaseBytes": 753664
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 2115,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2086
+                }
+              ],
+              "databaseBytes": 720896
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 2272,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2245
+                }
+              ],
+              "databaseBytes": 765952
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 2107,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2089
+                }
+              ],
+              "databaseBytes": 720896
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 2340,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2330
+                }
+              ],
+              "databaseBytes": 790528
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 2370,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2361
+                }
+              ],
+              "databaseBytes": 798720
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 2103,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2095
+                }
+              ],
+              "databaseBytes": 712704
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 2053,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 2053
+                }
+              ],
+              "databaseBytes": 708608
+            }
+          ],
+          "checkedTransactionCoordinators": 32055,
+          "ledgers": [
+            {
+              "bucket": "0",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "0"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2022
+                }
+              ],
+              "databaseBytes": 4460544
+            },
+            {
+              "bucket": "1",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "1"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1970
+                }
+              ],
+              "databaseBytes": 4272128
+            },
+            {
+              "bucket": "2",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "2"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2014
+                }
+              ],
+              "databaseBytes": 4423680
+            },
+            {
+              "bucket": "3",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "3"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2015
+                }
+              ],
+              "databaseBytes": 4444160
+            },
+            {
+              "bucket": "4",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "4"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2005
+                }
+              ],
+              "databaseBytes": 4403200
+            },
+            {
+              "bucket": "5",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "5"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2073
+                }
+              ],
+              "databaseBytes": 4571136
+            },
+            {
+              "bucket": "6",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "6"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2010
+                }
+              ],
+              "databaseBytes": 4505600
+            },
+            {
+              "bucket": "7",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "7"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1953
+                }
+              ],
+              "databaseBytes": 4313088
+            },
+            {
+              "bucket": "8",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "8"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1992
+                }
+              ],
+              "databaseBytes": 4386816
+            },
+            {
+              "bucket": "9",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "9"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2015
+                }
+              ],
+              "databaseBytes": 4448256
+            },
+            {
+              "bucket": "a",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "a"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2002
+                }
+              ],
+              "databaseBytes": 4440064
+            },
+            {
+              "bucket": "b",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "b"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2004
+                }
+              ],
+              "databaseBytes": 4456448
+            },
+            {
+              "bucket": "c",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "c"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2006
+                }
+              ],
+              "databaseBytes": 4444160
+            },
+            {
+              "bucket": "d",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "d"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1955
+                }
+              ],
+              "databaseBytes": 4358144
+            },
+            {
+              "bucket": "e",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "e"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 2020
+                }
+              ],
+              "databaseBytes": 4444160
+            },
+            {
+              "bucket": "f",
+              "context": [
+                {
+                  "singleton": 1,
+                  "graph_id": "bench-saturation",
+                  "bucket": "f"
+                }
+              ],
+              "phases": [
+                {
+                  "phase": "complete",
+                  "count": 1999
+                }
+              ],
+              "databaseBytes": 4374528
+            }
+          ],
+          "transactionCoordinatorStorageBytes": 70746112,
+          "storageScope": "fact leaves, owner/facade metadata, and all sixteen transaction ledger databases",
+          "databaseBytes": 82956288
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-12T16:19:22.483Z"
+    }
+  ],
+  "artifactRetention": "Final aggregate only; raw SQLite state, input snapshots, reference ledgers, journals, bundles and progress samples are not retained. Runtime console logs are managed separately. Corpus cache and source/dataset digests are retained."
+}

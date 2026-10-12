@@ -480,6 +480,41 @@ After correctness/package/shared/harness gates, freeze H and compare fresh **G c
 
 This is controlled correctness/removal-of-redundant-work evidence, **not** measured transport/delivery/rate improvement. H has not been measured or promoted. A is restored outside explicit trials; G is the accepted experimental incumbent. Next freeze the gated H revision and run the required fresh G → H → G → unchanged H comparison, preserving full-delivery and mixed-tradeoff rules.
 
+### H repeated local result: reject promotion, retain G
+
+The required fresh **G → H → G → unchanged H** sequence completed with all 284,000 planned calls across sixteen frozen scenario loads attempted. No measured-run SUT patch, mixed runtime, rebatching, skipping, extra delivery path or changed limits/transport/retries. Source selections and compact finals:
+
+| Role | Revision | Retained final |
+| --- | --- | --- |
+| G control 1 | `e7216a2` | [2026-10-12T16-02-44-816Z-da078bbe](../../bench/write-path/results/2026-10-12T16-02-44-816Z-da078bbe/final.json) |
+| H repeat 1 | `a586dc9` (implementation/gate `e86c0f6`) | [2026-10-12T16-20-12-241Z-306ba82f](../../bench/write-path/results/2026-10-12T16-20-12-241Z-306ba82f/final.json) |
+| G control 2 | `843f5f8` | [2026-10-12T16-39-08-772Z-ca5946c1](../../bench/write-path/results/2026-10-12T16-39-08-772Z-ca5946c1/final.json) |
+| Unchanged H repeat 2 | `57914bb` | [2026-10-12T16-57-09-584Z-23d64f9e](../../bench/write-path/results/2026-10-12T16-57-09-584Z-23d64f9e/final.json) |
+
+G remains bundle `a4ab71e8dd22bdb278dd23f5e111910e8c5474be6093462b1f0af291de9b646f`; H's sole independent bundle is `2d65eb443fe038355168530eff57cde77e39fecc2553c385779803de6c0282e4` (`H-epoch-fenced-route-cache`). Each implementation's full source-digest map and bundle repeats unchanged. All four retain the same corpus/XML/normalized 100k hashes, application `7a0020d0c9fc5115b694867706b4e06520a8817d9fb755f583a5e1555418d043`, client `3788367ce7fb30ecb936d3cc18a56a4cea7c9c9c634fffd14c95609109edc073`, four awaited application Workers, caller-ID construction, retry/transport/timing/limits and Miniflare/compatibility/Node identities recorded for G above. Adding truthful H build-identity recognition did not change the workload; it stayed constant within this entire comparison.
+
+Values are **repeat 1 / repeat 2**, each candidate compared with its corresponding nearby G control:
+
+| Facts/call × outstanding calls | G acknowledged facts (of 100k) | H acknowledged facts | G acknowledged facts/s | H acknowledged facts/s | H rate change | G logical p95 seconds | H logical p95 seconds |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 × 10 | 100,000 / 100,000 | 100,000 / 100,000 | 1,345.90 / 1,814.23 | 1,978.49 / 1,499.90 | +47.0% / **−17.3%** | 1.894 / 1.180 | 1.023 / 1.715 |
+| 10 × 100 | 100,000 / 100,000 | 100,000 / 100,000 | 642.25 / 658.80 | 548.24 / 743.82 | **−14.6%** / +12.9% | 3.361 / 3.537 | 4.312 / 3.213 |
+| 10 × 1,000 | 99,900 / 99,990 | 99,990 / 99,990 | 661.85 / 623.51 | 724.77 / 716.81 | +9.5% / +15.0% | 36.276 / 36.855 | 29.532 / 30.378 |
+| 2 × 10,000 | 64,094 / 60,710 | 67,350 / 65,954 | 249.15 / 201.79 | 270.27 / 245.82 | +8.5% / +21.8% | 81.953 / 84.327 | 77.022 / 83.466 |
+
+| Scenario | G / H attempts, repeat 1 | G / H attempts, repeat 2 | G / H busy responses, repeat 1 | G / H busy, repeat 2 | G / H transport failures, repeat 1 | G / H transport, repeat 2 | G unknown calls, repeats 1 / 2 | H unknown calls, repeats 1 / 2 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Medium | 1,546 / 1,582 | 1,548 / 1,598 | 546 / 582 | 548 / 598 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Small | 16,199 / 18,081 | 16,211 / 18,235 | 6,146 / 8,081 | 6,211 / 8,235 | 53 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| High | 19,397 / 20,246 | 20,626 / 20,119 | 3,977 / 5,204 | 3,960 / 5,547 | 5,430 / 5,043 | 6,667 / 4,573 | 10 / 1 | 1 / 1 |
+| Saturation | 264,446 / 264,173 | 285,353 / 267,814 | 20,020 / 23,646 | 13,699 / 23,710 | 212,379 / 206,852 | 241,299 / 211,127 | 17,953 / 19,645 | 16,325 / 17,023 |
+
+All sixteen hot/restart integrity audits are valid: every acknowledged fact is present with complete membership, no partial/unexplained transactions, no unresolved ledger decisions/owner locks/ticket anomalies/topology operations. **G control 1 saturation separately reconciles eight caller-unknown committed transactions / sixteen facts**, hot and after restart: 64,110 total facts persisted versus **64,094 acknowledged**. Those full-payload matched outcomes explain the extra storage; they are neither missing acknowledgements nor an alternate feeder, and cannot be counted as caller delivery. Other fifteen cases reconcile zero additional unknown commits. H persisted facts equal acknowledgements. Do not generalize the earlier G comparison's zero-reconciliation result to these later controls. Complete attempt/committed/database-await percentiles, host/concurrency observations, physical ledger bytes and unknown-outcome distinctions remain in the linked finals.
+
+**Decision: do not promote H.** Both medium/small fully deliver (acceptable full-delivery ties), but small rate regresses in pair 1 and medium rate in pair 2. High pair 2 ties **incomplete** delivery at 99,990, which is explicitly not a delivery gain. Thus the all-scenario/two-pair numerical gate fails; saturation gains and lower high tails cannot override it. Higher small/high busy counts accompany reduced route work, but no measured gate-duration/CPU-stage instrumentation supports attributing a mechanism. Correct cache reuse alone does not prove a better workload result. Both H and these G controls complete **4/8** cases; H is short by ten facts in each high repeat and 32,650 / 34,046 in saturation. Mandatory full delivery still fails.
+
+Preserve H source/tests/evidence as a losing independent experiment. **G remains the accepted experimental incumbent; A remains default.** The next independent experiment starts from unchanged G, not H. This ordinary incomplete/regressive result is not a blocker and does not complete the improvement objective. Compact finals/identities precede authorized completed-run log cleanup; all historical implementations/corpus/source remain, without a retrospective raw replay, equal-success throughput, cloud/default cutover or resource-expansion claim.
+
 ## Final C–F comparison and retained incumbent
 
 **The independent C → D → E → F evaluation is complete. Zero promotions.** Each candidate was built from the actual incumbent **B1**, because its predecessor failed the mandatory all-four/two-repeat delivery gate. No losing implementation became the next base, and A remains the source/default outside explicit trials. C/D/E/F and their protocol tests remain independent preserved implementations, not a production cutover.

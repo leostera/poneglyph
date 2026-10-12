@@ -158,3 +158,18 @@ All 284,000 planned logical calls across 16 cases were attempted; hot/restart au
 **The user accepted G's experimental promotion** after the comparative numerical gate passed, acknowledging the tradeoffs: high logical p95 worsened +66.6% / +33.2% and transport failures grew from 36 / 0 to 6,219 / 5,342; saturation p95 rose +0.6% / +4.7%; small repeat 2 added 49 transport failures. Busy/retries/unknown calls fell markedly. Attempt percentile mixtures and full per-scenario counts, physical pooled-ledger accounting and limitations are in the [authoritative G results](../../../docs/rfds/RFD0005-write-path-experiment.md#g-two-repeat-local-results-and-accepted-experimental-promotion) and linked finals. The accepted experimental lineage is **B1 → G**; follow-up candidates derive independently from G. A remains default. Further independent improvements/full-delivery proof are still required.
 
 Compact finals and identities are retained; authorized completed intermediates/logs are removed only afterward. Corpus cache and earlier results/implementations stay intact. No retrospective raw replay claim or cloud/default cutover.
+
+## H: rejected, G retained
+
+Fresh sequence: [G control 1](./2026-10-12T16-02-44-816Z-da078bbe/final.json) → [H repeat 1](./2026-10-12T16-20-12-241Z-306ba82f/final.json) → [G control 2](./2026-10-12T16-39-08-772Z-ca5946c1/final.json) → [unchanged H repeat 2](./2026-10-12T16-57-09-584Z-23d64f9e/final.json). H protocol/gate `c595ec0` / `e86c0f6`: 47 controlled / 69 controlled-plus-shared tests, package/typechecks/seven harness gates pass.
+
+| Frozen scenario | H acknowledged and durable facts, repeat 1 / 2 (of 100k) | Rate change against paired G |
+| --- | --- | --- |
+| 100 × 10 | 100,000 / 100,000 | +47.0% / **−17.3%** |
+| 10 × 100 | 100,000 / 100,000 | **−14.6%** / +12.9% |
+| 10 × 1,000 | 99,990 / 99,990 | +9.5% / +15.0% |
+| 2 × 10,000 | 67,350 / 65,954 | +8.5% / +21.8% |
+
+All 284,000 planned calls / sixteen loads were attempted; frozen source/bundle/input/client/application/runtime/transport settings repeat, and hot/restart integrity audits pass with no missing acknowledged facts/partial/unexplained transactions or unresolved decisions/owner anomalies. **G control 1 saturation reconciles eight additional caller-unknown commits / sixteen facts** (64,110 total persisted, **64,094 acknowledged**), not caller delivery; all other cases reconcile zero. This is distinct from the earlier G cohort's zero extra commits.
+
+**No H promotion:** small pair 1 and medium pair 2 rates regress; high pair 2 ties incomplete delivery, which does not qualify. Both H and its controls fully deliver only **4/8** cases. Saturation/high partial gains and verified route reuse do not override the comparative/full-delivery gates. [Full paired retries/busy/transport/latency/reconciliation decision](../../../docs/rfds/RFD0005-write-path-experiment.md#h-repeated-local-result-reject-promotion-retain-g). Preserve losing H; subsequent independent candidates start from **G**, not H. A remains default; the improvement goal continues, with no cloud/default/resource/workload expansion.
