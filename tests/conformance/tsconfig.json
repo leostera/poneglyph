@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "NodeNext", "moduleResolution": "NodeNext",
+    "strict": true, "noUncheckedIndexedAccess": true, "skipLibCheck": true,
+    "types": ["node", "@cloudflare/workers-types"], "noEmit": true
+  },
+  "include": ["*.ts", "worker/*.ts", "../../poneglyph/.cloudflare/types/index.d.ts", "../../poneglyph/src/todo_demo/env.d.ts"]
+}

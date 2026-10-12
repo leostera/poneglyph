@@ -1,0 +1,19 @@
+{
+  "name": "@poneglyph/conformance-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:oracle": "tsx --test model.test.ts",
+    "test:small": "tsx run.ts"
+  },
+  "dependencies": {"@leostera/poneglyph": "file:../../poneglyph"},
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261011.1",
+    "@types/node": "25.6.0",
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261006.1-alpha",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}
