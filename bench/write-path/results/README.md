@@ -119,3 +119,20 @@ The first two scenarios completed their full input; the last two did not. **D is
 [Repeat 2 final](2026-10-12T03-11-29-100Z-2fd794c1/final.json) identifies `7529e1f`; both Worker bundles exactly match repeat 1. Acknowledged facts: **98,300 / 86,340 / 37,150 / 10,722**. Acknowledged facts/s: **1,617.19 / 508.01 / 149.97 / 32.19**. All planned calls and admitted-write/restart audits passed; no extra unknown commits were reconciled or decisions remained unresolved.
 
 **F evaluation complete; no promotion.** All four workloads were incomplete in both repeats despite repeatably higher partial acknowledged rates/delivery and fewer busy responses. Medium p95 fell, small/high p95 rose, saturation p95 direction differed; high/saturation transport failures increased in both pairs. [Qualified decision](../../../docs/rfds/RFD0005-write-path-experiment.md#f-repeat-2-and-promotion-decision). B1 stays incumbent and A remains default; independent C–F evaluations are complete, not successful-load or cloud certification.
+
+## Final C–F comparison
+
+**All four independent evaluations are complete. No candidate qualifies for promotion.** Each started from B1 and has two unchanged fresh matrices plus two nearby B1 controls. All 16 finals / 64 scenario loads passed admitted-write persistence/index/transaction and restart audits, attempted every planned call, and reconciled zero extra unknown commits. Corpus/reference/settings, application bundle and packaged client are identical across the comparison; all B1 bundles and each candidate's repeated bundles match.
+
+Acknowledged facts out of 100k, repeat 1 / repeat 2:
+
+| Candidate | 100 × 10 | 10 × 100 | 10 × 1,000 | 2 × 10,000 | Full cases / 8 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| C | 92,100 / 92,700 | 84,200 / 87,160 | 21,070 / 20,460 | 13,410 / 14,088 | 0 |
+| D | **100,000 / 100,000** | **100,000 / 100,000** | 99,580 / 99,930 | 49,384 / 53,758 | 4 |
+| E | 97,100 / 97,100 | 86,810 / 86,920 | 13,150 / 12,810 | 4,892 / 4,672 | 0 |
+| F | 98,300 / 98,300 | 85,940 / 86,340 | 37,010 / 37,150 | 10,552 / 10,722 | 0 |
+
+The gate requires **8/8 full cases** per candidate, not the best admitted rate or a near-100% high-concurrency load. D's stronger delivery signal and F's repeatable partial-rate gains remain useful evidence, not winners. Preserve each pair's latency, retries/transport and delivery tradeoffs; no successful-load or cloud ranking follows. B1 stays experimental incumbent; A is restored as default. Sources, controlled tests, historical A/B1 finals, corpus cache and final identities remain; only authorized completed-run intermediates/logs were removed after final retention. No push/deployment/publication/1M/default cutover occurred.
+
+[Authoritative final comparison, source/input identities and limitations](../../../docs/rfds/RFD0005-write-path-experiment.md#final-cf-comparison-and-retained-incumbent). G remains a separately proposed combined experiment, not a measured/promoted candidate or part of this immutable goal without user confirmation.
