@@ -90,8 +90,14 @@ The first two scenarios completed their full input; the last two did not. **D is
 
 ## E atomic leaf authority: first repeat
 
-[Repeat 1 final](2026-10-12T00-54-16-107Z-34414cc8/final.json) identifies `ed69538`. Acknowledged facts: **97,100 / 86,810 / 13,150 / 4,892**. Acknowledged facts/s: **1,420.95 / 492.29 / 90.24 / 14.57**. Every planned call and admitted-write/atomic-membership/restart audit passed; no extra unknown commits were reconciled. All workloads were incomplete. **No promotion:** mixed partial acknowledged rates do not satisfy the all-four delivery gate. [Qualified first pair](../../../docs/rfds/RFD0005-write-path-experiment.md#e-repeat-1-incomplete-delivery-mixed-admitted-rates). The unchanged E repeat 2 remains required.
+[Repeat 1 final](2026-10-12T00-54-16-107Z-34414cc8/final.json) identifies `ed69538`. Acknowledged facts: **97,100 / 86,810 / 13,150 / 4,892**. Acknowledged facts/s: **1,420.95 / 492.29 / 90.24 / 14.57**. Every planned call and admitted-write/atomic-membership/restart audit passed; no extra unknown commits were reconciled. All workloads were incomplete. **No promotion:** mixed partial acknowledged rates do not satisfy the all-four delivery gate. [Qualified first pair](../../../docs/rfds/RFD0005-write-path-experiment.md#e-repeat-1-incomplete-delivery-mixed-admitted-rates). The second repeat and decision are retained below.
 
 ## E comparison: second nearby B1 control
 
 [Control 2 final](2026-10-12T01-12-49-018Z-a98c4096/final.json) identifies `47cf04d`; both Worker bundles exactly match control 1. Acknowledged facts: **96,800 / 85,910 / 12,560 / 4,688**. Acknowledged facts/s: **1,505.24 / 460.14 / 77.59 / 14.56**. All planned calls and admitted-write/restart audits passed; no extra unknown commits were reconciled. All loads remained incomplete. [Control details](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-e-comparison-second-b1-control).
+
+## E atomic authority: second repeat and decision
+
+[Repeat 2 final](2026-10-12T01-31-18-399Z-482b2d6f/final.json) identifies `7cf5b67`; both Worker bundles exactly match repeat 1. Acknowledged facts: **97,100 / 86,920 / 12,810 / 4,672**. Acknowledged facts/s: **1,543.08 / 490.86 / 83.81 / 14.26**. Every planned call and admitted-write/atomic-membership/restart audit passed; no extra unknown commits were reconciled and no decisions remained unresolved.
+
+**E evaluation complete; no promotion.** All four workloads were incomplete in both repeats. Small/high partial acknowledged rates improved in both pairs, medium direction differed, and saturation rates/delivery fell. Preserve tail latency and transport failures alongside rates; this is not successful-load throughput. [Qualified decision](../../../docs/rfds/RFD0005-write-path-experiment.md#e-repeat-2-and-promotion-decision). F starts from B1; A remains default outside explicit trials.

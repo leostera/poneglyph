@@ -239,7 +239,7 @@ Attempts: 2,434 / 40,030 / 76,465 / 391,682. Busy responses: 1,462 / 31,493 / 75
 | 10 × 1,000 | 13,150 | 8,685 | 90.24 | +2.01% | 18.20 |
 | 2 × 10,000 | 4,892 | 47,554 | 14.57 | −5.23% | 75.73 |
 
-Attempts: 2,374 / 39,012 / 76,155 / 391,682. Busy responses: 1,403 / 30,331 / 74,801 / 123,366. Transport failures: 0 / 0 / 39 / 265,870. All four workloads remained incomplete. **No promotion:** the mandatory delivery gate fails in this repeat. Mixed partial acknowledged-rate changes do not certify successful-load throughput or repeatability. B1's coarse owner conflict/visibility rules and per-ID placement remain intact; atomic local mutation is not proof those bottlenecks disappeared. Physical per-ID metadata bytes and cloud behavior remain unmeasured. Complete the second fresh B1/E pair with unchanged E.
+Attempts: 2,374 / 39,012 / 76,155 / 391,682. Busy responses: 1,403 / 30,331 / 74,801 / 123,366. Transport failures: 0 / 0 / 39 / 265,870. All four workloads remained incomplete. **No promotion:** the mandatory delivery gate fails in this repeat. Mixed partial acknowledged-rate changes do not certify successful-load throughput or repeatability. B1's coarse owner conflict/visibility rules and per-ID placement remain intact; atomic local mutation is not proof those bottlenecks disappeared. Physical per-ID metadata bytes and cloud behavior remain unmeasured. The second fresh B1/E pair with unchanged E is retained below.
 
 ### Matched E comparison: second B1 control
 
@@ -252,7 +252,24 @@ Attempts: 2,374 / 39,012 / 76,155 / 391,682. Busy responses: 1,403 / 30,331 / 74
 | 10 × 1,000 | 12,560 | 8,744 | 77.59 | 20.14 |
 | 2 × 10,000 | 4,688 | 47,656 | 14.56 | 70.41 |
 
-Attempts: 2,364 / 40,022 / 76,235 / 392,167. Busy responses: 1,396 / 31,431 / 74,947 / 121,218. Transport failures: 0 / 0 / 32 / 268,605. Identical-bundle variation remains visible. Continue unchanged E repeat 2, fresh persistence, before concluding its independent evaluation.
+Attempts: 2,364 / 40,022 / 76,235 / 392,167. Busy responses: 1,396 / 31,431 / 74,947 / 121,218. Transport failures: 0 / 0 / 32 / 268,605. Identical-bundle variation remains visible. Unchanged E repeat 2 with fresh persistence follows below.
+
+### E repeat 2 and promotion decision
+
+[Repeat 2 final](../../bench/write-path/results/2026-10-12T01-31-18-399Z-482b2d6f/final.json) identifies `7cf5b67`. Both Worker bundles exactly match E repeat 1. The complete fresh order is B1 control 1 → E repeat 1 → B1 control 2 → E repeat 2. No implementation, client, workload, limits or caller retry behavior changed between repeats.
+
+| Facts/call × concurrency | E repeat 2 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs nearby B1 control 2 | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | 97,100 | 29 | 1,543.08 | +2.51% | 3.68 |
+| 10 × 100 | 86,920 | 1,308 | 490.86 | +6.68% | 7.46 |
+| 10 × 1,000 | 12,810 | 8,719 | 83.81 | +8.02% | 18.81 |
+| 2 × 10,000 | 4,672 | 47,664 | 14.26 | −2.08% | 72.19 |
+
+Every planned call was attempted; acknowledged facts equalled persisted facts, with valid admitted-write/index/atomic-membership/transaction/restart audits, no unresolved decisions and zero reconciled unknown commits. Attempts: 2,390 / 39,279 / 76,348 / 391,999. Busy responses: 1,419 / 30,587 / 75,067 / 118,822. Transport failures: 0 / 0 / 0 / 270,841. All four loads were incomplete in both E repeats.
+
+**Decision: do not promote E.** Small/high acknowledged rates were higher than their nearby B1 controls in both pairs; medium direction differed, and saturation rates/delivery were lower in both. Small logical p95 was slightly lower, medium/saturation higher, and high-concurrency p95 direction differed between pairs. These are partial-load local descriptions with identical-bundle incumbent variation, not equal-success throughput or evidence that atomic local commits resolve coarse owner contention/per-ID lifecycle overhead. Controlled rollback/replay/authority recovery is separate from measured matrices, which observed no extra unknown commits recovered. Physical per-ID bytes/cost and cloud performance remain unmeasured. Full-delivery promotion fails in **every scenario in both repeats**.
+
+Preserve E's independent source, controlled tests, both repeats/nearby controls and all source/input/client identities. **F starts from unchanged B1**, not E, D or C. A is restored as default outside explicit trials. E's evaluation is complete, not successful promotion; no caller-limit/workload/retry change, additional input queue, cloud execution or default cutover follows.
 
 ### Proposed G: combined integration experiment
 
