@@ -83,3 +83,7 @@ The first two scenarios completed their full input; the last two did not. **D is
 [Repeat 2 final](2026-10-11T23-46-28-059Z-71e7d580/final.json) identifies `60e42b9`; both Worker bundles exactly match repeat 1. Acknowledged facts: **100,000 / 100,000 / 99,930 / 53,758**. Acknowledged facts/s: **1,636.56 / 636.93 / 600.07 / 183.07**. Every planned call was attempted; admitted-write/restart audits passed without extra unacknowledged commits, leaked entity locks or unresolved decisions.
 
 **D evaluation complete; D is not promoted.** Both repeats completed the medium/small workloads, but neither completed the other two. Preserve the large partial-delivery improvement alongside the higher high-concurrency/saturation caller p95 and remaining transport failures. [Decision and limitations](../../../docs/rfds/RFD0005-write-path-experiment.md#d-repeat-2-and-promotion-decision): the all-four delivery gate fails, so E starts from B1. A remains the default outside explicit trials.
+
+## E comparison: first nearby B1 control
+
+[Control 1 final](2026-10-12T00-36-54-973Z-94051e91/final.json) identifies `d6c085f`. Acknowledged facts: **97,200 / 85,370 / 12,930 / 5,104**. Acknowledged facts/s: **1,553.12 / 463.31 / 88.46 / 15.37**. All planned calls and admitted-write/restart audits passed; no extra unknown commits were reconciled. All loads remained incomplete. [RFD details](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-e-comparison-first-b1-control). This begins B1 → E → B1 → E, not an E result or promotion.

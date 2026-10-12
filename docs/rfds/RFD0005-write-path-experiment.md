@@ -215,6 +215,19 @@ Local committed and aborted outcomes remain pinned until owner publication is co
 
 The abort-recovery test found an inherited private-owner replay classification issue: same-payload terminal abort returned 409, leaving the graph driver's intent nonterminal. E classifies that authoritative abort as **422**, matching the normal public abort outcome, while changed payload remains 409; tests verify graph records finish `aborted`/`complete`. No A/B1/C/D source or client behavior changed. With E explicitly selected, **36 tests** passed across E/client/fact-model/Datalog, typecheck/package and all **7 harness tests** passed. These certify only exercised invariants, not A-specific global ordering/schema fixtures or universal correctness. No E load has run; promotion still requires both unchanged fresh matrices and nearby B1 controls.
 
+### Matched E comparison: first B1 control
+
+[Control 1 final](../../bench/write-path/results/2026-10-12T00-36-54-973Z-94051e91/final.json) identifies `d6c085f`. It starts the fresh B1 → E → B1 → E sequence. All planned calls were attempted; admitted-write/index/transaction/restart audits passed, with no reconciled extra commits. All four loads remained incomplete.
+
+| Facts/call × concurrency | B1 E-control 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 97,200 | 28 | 1,553.12 | 3.03 |
+| 10 × 100 | 85,370 | 1,463 | 463.31 | 7.51 |
+| 10 × 1,000 | 12,930 | 8,707 | 88.46 | 17.94 |
+| 2 × 10,000 | 5,104 | 47,448 | 15.37 | 74.50 |
+
+Attempts: 2,434 / 40,030 / 76,465 / 391,682. Busy responses: 1,462 / 31,493 / 75,172 / 124,944. Transport failures: 0 / 0 / 0 / 264,186. These are incumbent admitted-rate measurements, not successful-load, E or cloud claims. No E matrix has run at this checkpoint.
+
 ## Summary
 
 Build `bench/write-path/` as a repeatable application-level benchmark of Poneglyph's ordinary `stateFacts` API. A local driver converts the already-downloaded One Piece corpus into regular facts and sends bounded HTTP requests to one or more application Workers. Those Workers consume the packaged Poneglyph client and await writes to one deployed database containing one graph. Actual fact, index, transaction, and recovery state must be persisted; acknowledgements of queued work are not successful commits. First measure the implementation currently on disk, then the proposed hash-routed, independently sharded fact/index store trees with distributed transaction coordination. Keep the benchmark, dataset, transport, and common workload parameters fixed between versions. Every version and planned scenario must pass end-to-end correctness tests in Miniflare before deployment. Only Cloudflare runs are evidence of cloud performance.
