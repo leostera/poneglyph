@@ -417,7 +417,46 @@ Bounded maintenance tests verify **100 selected records / six concurrent drives/
 
 A real G gate correction adds live-read-lease exclusion to split reservation. The inherited split path could begin copying while an old lease existed (the older protocol retained old-readable data through retirement fencing); G explicitly chose stricter quiescent split admission, so merely blocking writes was insufficient for its stated protocol. The new live-lease/split test found and verifies that guard. Two fixture issues were fixed without weakening contracts: clone a request before its body is consumed, and invoke a same-object alarm in that object's context rather than using an external I/O-bound stub from inside another callback.
 
-A/B1/C/D/E/F-specific schema/global-sequence/protocol suites remain explicitly selected for their own implementations; their default skips are not G certification. G has its own applied-ticket/quiescent-vector and delegated/pooled recovery tests above. No SUT revision was patched during a measured trial: **G matrices have not begun**. Preserve this gate revision, then obtain fresh B1 → G → B1 → unchanged G controls/repeats under the amended comparative promotion and unchanged full-delivery certification contracts.
+A/B1/C/D/E/F-specific schema/global-sequence/protocol suites remain explicitly selected for their own implementations; their default skips are not G certification. G has its own applied-ticket/quiescent-vector and delegated/pooled recovery tests above. At this gate checkpoint G matrices had not begun. The subsequent frozen B1 → G → B1 → unchanged G trials below used the corrected gate revision without measured-run SUT patches, under the amended comparative promotion and unchanged full-delivery certification contracts.
+
+### G two-repeat local results and pending promotion judgment
+
+The four fresh serial matrices completed in the required order; all **284,000 planned logical calls / 16 scenario loads** were attempted at their frozen sizes, with no rebatching, skipping, added delivery path, mixed implementation, limit change or measured-run patch. Retained finals:
+
+| Role | Identified source selection | Retained final |
+| --- | --- | --- |
+| B1 control 1 | `60972a1` | [2026-10-12T13-55-23-715Z-4bd7e0b8](../../bench/write-path/results/2026-10-12T13-55-23-715Z-4bd7e0b8/final.json) |
+| G repeat 1 | `e435551` (G correction/gate `f02ddeb`) | [2026-10-12T14-18-45-346Z-612f8f61](../../bench/write-path/results/2026-10-12T14-18-45-346Z-612f8f61/final.json) |
+| B1 control 2 | `99558d5` | [2026-10-12T14-37-48-924Z-f60c2d09](../../bench/write-path/results/2026-10-12T14-37-48-924Z-f60c2d09/final.json) |
+| Unchanged G repeat 2 | `241c5ec` | [2026-10-12T14-58-03-344Z-04075d57](../../bench/write-path/results/2026-10-12T14-58-03-344Z-04075d57/final.json) |
+
+Both B1 source-digest maps and both G source-digest maps are **identical within each implementation**, including harness/client inputs. B1 bundle remains `0213b0fdf6a301d63d59c115e13537729abde9dcacbea8e1d83e153067643c93`; G's sole independent bundle is `a4ab71e8dd22bdb278dd23f5e111910e8c5474be6093462b1f0af291de9b646f` (`G-integrated-write-path`). All four preserve application `7a0020d0c9fc5115b694867706b4e06520a8817d9fb755f583a5e1555418d043`, packaged client `3788367ce7fb30ecb936d3cc18a56a4cea7c9c9c634fffd14c95609109edc073`, normalized ordered 100k `2dd6061bfc95c78a90af1a2faa3ee147908981b4b6b480ed30c1726493af5309`, corpus/XML manifests, four awaited application Workers, caller-ID construction, eight-attempt/30-second/full-jitter retry/transport settings and scenario limits. Runtime remains Miniflare `5.20261006.1-alpha`, compatibility `2026-10-06`, Node `v26.11.0`; **not cloud evidence**.
+
+Values below are **repeat 1 / repeat 2**, against each corresponding nearby control. Delivery is acknowledged and durably persisted facts out of the same 100,000 planned input facts. Rates include unsuccessful delivery and retries; they are not equal-success throughput certification.
+
+| Facts/call × outstanding logical calls | B1 acknowledged facts | G acknowledged facts | B1 acknowledged facts/s | G acknowledged facts/s | G rate gain | B1 logical p95 seconds | G logical p95 seconds |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 × 10 | 96,300 / 96,600 | 100,000 / 100,000 | 1,036.27 / 1,109.22 | 1,328.94 / 1,579.56 | +28.2% / +42.4% | 4.906 / 4.676 | 1.883 / 1.518 |
+| 10 × 100 | 84,980 / 84,740 | 100,000 / 100,000 | 425.49 / 422.93 | 579.40 / 519.27 | +36.2% / +22.8% | 7.990 / 7.900 | 4.039 / 5.113 |
+| 10 × 1,000 | 12,710 / 12,780 | 99,980 / 100,000 | 77.63 / 80.73 | 649.72 / 764.97 | +737.0% / +847.6% | 20.498 / 19.433 | 34.146 / 25.894 |
+| 2 × 10,000 | 4,482 / 4,120 | 66,908 / 67,910 | 12.85 / 11.38 | 269.04 / 279.19 | +1,994.5% / +2,352.7% | 77.897 / 76.854 | 78.361 / 80.486 |
+
+| Scenario | B1 / G attempts, repeat 1 | B1 / G attempts, repeat 2 | B1 / G 423 busy responses, repeat 1 | B1 / G busy, repeat 2 | B1 / G transport failures, repeat 1 | B1 / G transport, repeat 2 | B1 unknown calls, repeats 1 / 2 | G unknown calls, repeats 1 / 2 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Medium | 2,706 / 1,554 | 2,610 / 1,550 | 1,743 / 554 | 1,644 / 550 | 0 / 0 | 0 / 0 | 37 / 34 | 0 / 0 |
+| Small | 40,677 / 16,144 | 40,768 / 16,152 | 32,179 / 6,144 | 32,294 / 6,103 | 0 / 0 | 0 / 49 | 1,502 / 1,526 | 0 / 0 |
+| High | 76,188 / 19,966 | 76,292 / 19,126 | 74,881 / 3,749 | 75,014 / 3,784 | 36 / 6,219 | 0 / 5,342 | 8,729 / 8,722 | 2 / 0 |
+| Saturation | 392,998 / 262,416 | 392,615 / 253,595 | 106,877 / 19,466 | 111,586 / 21,994 | 283,880 / 209,496 | 278,969 / 197,646 | 47,759 / 47,940 | 16,546 / 16,045 |
+
+Attempt p95 seconds also change: medium B1 **0.285 / 0.228** → G **1.025 / 0.797**; small **0.277 / 0.240** → **2.178 / 3.175**; high **2.078 / 1.814** → **14.763 / 12.647**; saturation **11.050 / 10.642** → **10.977 / 10.755**. Failed fast-busy and successful awaited attempts have different mixtures, so neither attempt nor logical percentiles isolate equal-success service latency. Mean/p50/p99/maximum, committed logical/database-await samples, achieved concurrency, app distribution and host CPU/event-loop/memory observations remain in the linked finals; unavailable provider timings are unknown.
+
+All 16 cases have valid read-only hot/restart fact/index/outcome audits; persisted facts equal acknowledgements, **zero additional unacknowledged transactions reconciled**, no pending ledger decisions, no owner locks/ticket anomalies or topology operations. Controlled fault recovery remains separate from measured delivery. G fully delivered **5/8 candidate cases**, controls **0/8**: medium/small both repeats, high only repeat 2; saturation remains short by 33,092 / 32,090 facts, and repeat 1 high by 20. Therefore **full-delivery certification fails** and the improvement objective is not complete.
+
+Actual pooled G ledger SQLite bytes are medium **32,555,008 / 32,604,160**, small **43,995,136 / 44,011,520**, high **44,052,480 / 44,093,440**, saturation **73,695,232 / 74,797,056**, across 16 graph-scoped actors. B1 per-ID physical ledger bytes remain unaggregated; no total-storage/cold-start/lifecycle-cost advantage is certified.
+
+**Decision checkpoint: the all-scenario/two-pair comparative delivery-and-rate gate passes, but G is not promoted yet.** High logical p95 worsens **+66.6% / +33.2%** and high transport failures rise materially to **6,219 / 5,342**; saturation p95 rises **+0.6% / +4.7%**, and small repeat 2 adds 49 transport failures. These require the user's explicit tradeoff judgment under the amended rule. Recommendation: accept G only as the **experimental incumbent** for further independent improvements, acknowledging those costs; otherwise retain B1. Until that decision, B1 remains the accepted incumbent and **A remains default**. Partial experimental promotion would not certify throughput/full delivery or authorize cloud/default cutover.
+
+Compact finals/source/input/client/runtime identities are retained before authorized completed-run log/intermediate cleanup. Raw storage/reference/journals/bundles are not retained for retrospective replay; corpus stream/manifest and all historical evidence/implementations remain. A is restored and validated separately outside the explicit trials: **41 default tests pass / 95 candidate-specific tests explicitly skip**, package/typechecks and all seven harness tests pass. Skips are selection boundaries, not substitute candidate certification. No cloud, 1M, account/resource, publication, push or unrelated work occurred.
 
 ## Final C–F comparison and retained incumbent
 

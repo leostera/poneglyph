@@ -135,4 +135,26 @@ Acknowledged facts out of 100k, repeat 1 / repeat 2:
 
 The gate requires **8/8 full cases** per candidate, not the best admitted rate or a near-100% high-concurrency load. D's stronger delivery signal and F's repeatable partial-rate gains remain useful evidence, not winners. Preserve each pair's latency, retries/transport and delivery tradeoffs; no successful-load or cloud ranking follows. B1 stays experimental incumbent; A is restored as default. Sources, controlled tests, historical A/B1 finals, corpus cache and final identities remain; only authorized completed-run intermediates/logs were removed after final retention. No push/deployment/publication/1M/default cutover occurred.
 
-[Authoritative final comparison, source/input identities and limitations](../../../docs/rfds/RFD0005-write-path-experiment.md#final-cf-comparison-and-retained-incumbent). G is now separately confirmed after C–F, not part of this completed evaluation. Its amended goal permits experimental promotion on repeatable delivery/rate gains in all four scenarios in both pairs, subject to correctness and mixed-tradeoff judgment; full-delivery certification remains distinct. G's 34 controlled / 56 controlled-plus-shared tests and package/typecheck/seven harness gates pass. Measured G finals/promotion are not yet claimed; its independent source and protocol are in RFD0005.
+[Authoritative final comparison, source/input identities and limitations](../../../docs/rfds/RFD0005-write-path-experiment.md#final-cf-comparison-and-retained-incumbent). G is now separately confirmed after C–F, not part of this completed evaluation. Its amended goal permits experimental promotion on repeatable delivery/rate gains in all four scenarios in both pairs, subject to correctness and mixed-tradeoff judgment; full-delivery certification remains distinct. G's 34 controlled / 56 controlled-plus-shared tests and package/typecheck/seven harness gates pass. Its independent source/protocol and subsequent measured results are in RFD0005.
+
+## G: paired gains, promotion awaiting tradeoff judgment
+
+Fresh sequence (source selections `60972a1` → `e435551` → `99558d5` → `241c5ec`, G corrected gate `f02ddeb`):
+
+- [B1 control 1](./2026-10-12T13-55-23-715Z-4bd7e0b8/final.json)
+- [G repeat 1](./2026-10-12T14-18-45-346Z-612f8f61/final.json)
+- [B1 control 2](./2026-10-12T14-37-48-924Z-f60c2d09/final.json)
+- [Unchanged G repeat 2](./2026-10-12T14-58-03-344Z-04075d57/final.json)
+
+| Frozen scenario | G acknowledged/persisted facts, repeat 1 / 2 (of 100k) | Rate gains against paired B1 controls |
+| --- | --- | --- |
+| 100 × 10 | 100,000 / 100,000 | +28.2% / +42.4% |
+| 10 × 100 | 100,000 / 100,000 | +36.2% / +22.8% |
+| 10 × 1,000 | 99,980 / 100,000 | +737.0% / +847.6% |
+| 2 × 10,000 | 66,908 / 67,910 | +1,994.5% / +2,352.7% |
+
+All 284,000 planned logical calls across 16 cases were attempted; hot/restart audits pass with persisted=acknowledged, zero extra unacknowledged commits reconciled and no unresolved decisions/owner-ticket anomalies. Both controls and both G bundles/source maps repeat unchanged; corpus, client, application, retry/transport/runtime identities are frozen. Only **5/8 G cases** fully delivered, controls **0/8**. These are paired partial-delivery/rate comparisons, **not full-delivery, equal-success throughput or cloud certification**.
+
+The comparative numerical promotion gate passes, but **G promotion is pending user judgment**: high logical p95 worsened +66.6% / +33.2% and transport failures grew from 36 / 0 to 6,219 / 5,342; saturation p95 rose +0.6% / +4.7%; small repeat 2 added 49 transport failures. Busy/retries/unknown calls fell markedly. Attempt percentile mixtures and full per-scenario counts, physical pooled-ledger accounting and limitations are in the [authoritative G results](../../../docs/rfds/RFD0005-write-path-experiment.md#g-two-repeat-local-results-and-pending-promotion-judgment) and linked finals. B1 remains incumbent pending that decision; A remains default. Further independent improvements/full-delivery proof are still required.
+
+Compact finals and identities are retained; authorized completed intermediates/logs are removed only afterward. Corpus cache and earlier results/implementations stay intact. No retrospective raw replay claim or cloud/default cutover.
