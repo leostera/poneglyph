@@ -241,6 +241,23 @@ Attempts: 2,434 / 40,030 / 76,465 / 391,682. Busy responses: 1,462 / 31,493 / 75
 
 Attempts: 2,374 / 39,012 / 76,155 / 391,682. Busy responses: 1,403 / 30,331 / 74,801 / 123,366. Transport failures: 0 / 0 / 39 / 265,870. All four workloads remained incomplete. **No promotion:** the mandatory delivery gate fails in this repeat. Mixed partial acknowledged-rate changes do not certify successful-load throughput or repeatability. B1's coarse owner conflict/visibility rules and per-ID placement remain intact; atomic local mutation is not proof those bottlenecks disappeared. Physical per-ID metadata bytes and cloud behavior remain unmeasured. Complete the second fresh B1/E pair with unchanged E.
 
+### Matched E comparison: second B1 control
+
+[Control 2 final](../../bench/write-path/results/2026-10-12T01-12-49-018Z-a98c4096/final.json) identifies `47cf04d`. Both Worker bundles exactly match E control 1. All planned calls were attempted; admitted-write/restart audits passed without extra unknown commits. All loads remained incomplete.
+
+| Facts/call × concurrency | B1 E-control 2 acknowledged facts | Unknown calls | Acknowledged facts/s | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 96,800 | 32 | 1,505.24 | 3.18 |
+| 10 × 100 | 85,910 | 1,409 | 460.14 | 7.69 |
+| 10 × 1,000 | 12,560 | 8,744 | 77.59 | 20.14 |
+| 2 × 10,000 | 4,688 | 47,656 | 14.56 | 70.41 |
+
+Attempts: 2,364 / 40,022 / 76,235 / 392,167. Busy responses: 1,396 / 31,431 / 74,947 / 121,218. Transport failures: 0 / 0 / 32 / 268,605. Identical-bundle variation remains visible. Continue unchanged E repeat 2, fresh persistence, before concluding its independent evaluation.
+
+### Proposed G: combined integration experiment
+
+The user proposed a subsequent G combining C's pooled recovery ledgers, D's entity conflicts/quiescent vector fence, E's payload-bound atomic authority and F's provisional planning/reduced work. This is a **separate integration experiment**, not a promotion of any losing independent candidate. Preserve C–F evaluations; specify interactions before implementing G, particularly out-of-order owner tickets, atomic decision delegation/publication pinning, pooled recovery and stale routing revalidation. Do not assume optimizations compose, import mixed runtime implementations, replace a nearby control or change the workload/limits/retries. G would require its own correctness gates, two fresh 100k matrices and repeated nearby incumbent controls under the same full-delivery rule. Inclusion in the immutable persistent goal awaits user `/goal-tweak`; this proposal is not a G implementation/evaluation claim or an automatic default cutover.
+
 ## Summary
 
 Build `bench/write-path/` as a repeatable application-level benchmark of Poneglyph's ordinary `stateFacts` API. A local driver converts the already-downloaded One Piece corpus into regular facts and sends bounded HTTP requests to one or more application Workers. Those Workers consume the packaged Poneglyph client and await writes to one deployed database containing one graph. Actual fact, index, transaction, and recovery state must be persisted; acknowledgements of queued work are not successful commits. First measure the implementation currently on disk, then the proposed hash-routed, independently sharded fact/index store trees with distributed transaction coordination. Keep the benchmark, dataset, transport, and common workload parameters fixed between versions. Every version and planned scenario must pass end-to-end correctness tests in Miniflare before deployment. Only Cloudflare runs are evidence of cloud performance.
