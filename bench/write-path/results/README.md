@@ -188,3 +188,18 @@ Fresh sequence: [G control 1](./2026-10-12T17-46-35-909Z-6221fd41/final.json) �
 All 284,000 planned calls / sixteen loads were attempted, frozen identities/settings repeat, and hot/restart integrity audits pass with no missing acknowledged facts, partial/unexplained transactions or unresolved decisions/owner anomalies. **I repeat 1 high/saturation reconcile 59 / 227 additional caller-unknown complete commits (590 / 454 facts); G control 2 high/saturation reconcile 42 / 74 (420 / 148 facts)**. All other twelve cases reconcile zero. These extra persisted facts are not caller acknowledgment and are not in the table's delivery counts.
 
 **No I promotion:** pair 1 regresses throughout, medium rate regresses in both; pair 2's partial benefits do not meet the all-scenario/two-pair rule. Only **4/8 I cases** fully deliver, paired controls **5/8**. [Authoritative complete result/latency/transport/reconciliation decision](../../../docs/rfds/RFD0005-write-path-experiment.md#i-matched-comparison-and-rejection). Preserve I and every final; accepted lineage stays **B1 → G**. A is restored outside trials. Subsequent independent candidates derive from unchanged G, not I/H. Rejection is not a blocker or goal completion; workload/limits/transport and cloud/default authorization remain unchanged.
+
+## J: rejected, G retained
+
+Fresh sequence: [G control 1](./2026-10-12T19-20-49-498Z-a9268621/final.json) → [J repeat 1](./2026-10-12T19-36-44-908Z-6b7f9504/final.json) → [G control 2](./2026-10-12T19-54-26-081Z-98948c8e/final.json) → [unchanged J repeat 2](./2026-10-12T20-11-53-774Z-0e85b4ab/final.json). J protocol/gate `41f70ed` / `ee05bd4`: **42 controlled / 64 with shared tests**, package/typechecks/seven harness gates pass. J skips only one-leaf provisional capacity hints while retaining actual fenced admission and the existing 5GB projected split trigger/8GB accounted limit. All distributed preflight/decision/publication/cleanup behavior stays G.
+
+| Frozen scenario | J acknowledged facts, repeat 1 / 2 (of 100k) | Rate change against paired G |
+| --- | --- | --- |
+| 100 × 10 | 100,000 / 100,000 | **−44.53%** / +2.72% |
+| 10 × 100 | 100,000 / 100,000 | **−31.37% / −10.33%** |
+| 10 × 1,000 | 99,940 / 98,570 | +0.60% / **−11.34%** |
+| 2 × 10,000 | 65,598 / 62,454 | **−16.27%** / +45.13% |
+
+All 284,000 planned calls / sixteen loads were attempted; frozen identities/settings repeat, with passing hot/restart integrity audits and no missing acknowledged facts, partial/unexplained commits or unresolved decisions/owner anomalies. Additional complete caller-unknown commits reconcile in **J1 saturation 1 / 2 facts; G2 saturation 380 / 760; J2 high 37 / 370; J2 saturation 46 / 92**. All other twelve cases reconcile zero. Extra persisted facts are not caller acknowledgment or delivery credit.
+
+**J is rejected:** high delivery is lower in both pairs, small rates regress in both, and other directions are mixed. J and its controls fully acknowledged only **4/8 cases** each. [Authoritative latency/transport/reconciliation decision](../../../docs/rfds/RFD0005-write-path-experiment.md#j-matched-comparison-and-rejection). Preserve J and all finals. **B1 → G** remains accepted lineage, A is restored as default, and the improvement goal continues independently from G without workload/limit/transport/cloud/default expansion.

@@ -576,6 +576,25 @@ The independent G-derived `storage-j/` changes only source/schema/routing identi
 
 No J matrix has begun at this gate; freeze this independently gated revision for G → J → G → unchanged J. A is restored/validated outside trials. G remains the experimental incumbent; I's rejected cohort and caller-unknown reconciliation remain retained unchanged.
 
+### J matched comparison and rejection
+
+Fresh serial **G → J → G → unchanged J** selections: `90100c0` → `4e4a39c` → `4c5f925` → `31322bf`. G source/bundle stayed unchanged (`a4ab71e8dd22bdb278dd23f5e111910e8c5474be6093462b1f0af291de9b646f`); J source/bundle repeated unchanged (`f6d822b5db67293646914133c33391bd21b86abfda2bd9425faaeee5257f0500`). All **284,000 planned logical calls / sixteen loads** were attempted with identical frozen corpus/reference/client/application/runtime/retry/transport/settings, fresh persistence, no overlap/rebatching/measured patches.
+
+| Scenario | G control 1 ack / facts/s | J repeat 1 ack / facts/s | G control 2 ack / facts/s | J repeat 2 ack / facts/s |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 100,000 / 1,860.73 | 100,000 / 1,032.12 | 100,000 / 1,581.85 | 100,000 / 1,624.90 |
+| 10 × 100 | 100,000 / 778.46 | 100,000 / 534.25 | 100,000 / 650.99 | 100,000 / 583.75 |
+| 10 × 1,000 | 99,980 / 757.89 | 99,940 / 762.42 | 99,580 / 496.28 | 98,570 / 440.00 |
+| 2 × 10,000 | 69,716 / 300.06 | 65,598 / 251.25 | 45,624 / 151.57 | 62,454 / 219.97 |
+
+J rate deltas: **−44.53% / −31.37% / +0.60% / −16.27%**, then **+2.72% / −10.33% / −11.34% / +45.13%**. Logical p95 deltas: **+82.35% / +39.77% / +2.68% / +17.68%**, then **+0.98% / +12.10% / +38.98% / +15.96%**. High delivery is lower in both pairs; small rate is lower in both. Pair 2 saturation and medium gains cannot repair the failed all-scenario/two-pair rule. **Reject J, retain accepted experimental incumbent G (B1 → G).** Both J and these controls fully acknowledged only **4/8 cases**. A is restored and validated as default; no full-delivery/equal-success/cloud/default certification.
+
+All admitted fact/value/index/projection/transaction/owner-ticket hot/restart audits passed, without acknowledged loss, partial/unexplained commits, unresolved decisions or leftover locks. **Caller-unknown complete commits reconcile in J repeat 1 saturation: 1 transaction / 2 facts; G control 2 saturation: 380 / 760; J repeat 2 high: 37 / 370; J repeat 2 saturation: 46 / 92**. Total **464 transactions / 1,224 facts**, exactly bound to the original complete inputs/outcomes; all other twelve cases have zero extras. These are not caller acknowledgment and do not raise the delivery counts. Prior cohorts' zero/nonzero reconciliation remains cohort-specific, not rewritten. Recovery does not supply new input.
+
+Transport attempts (G1 / J1 / G2 / J2): medium **0 / 0 / 0 / 0**, small **1 / 35 / 0 / 105**, high **5,583 / 5,364 / 10,100 / 11,041**, saturation **191,796 / 210,112 / 273,471 / 229,184**. Full retries/423/exhaustion/unknown/attempt tails/drain/pooled accounting are retained. Reduced provisional RPC code is not repeatable delivery evidence; local variability cannot excuse a failed promotion.
+
+Finals: [G control 1](../../bench/write-path/results/2026-10-12T19-20-49-498Z-a9268621/final.json), [J repeat 1](../../bench/write-path/results/2026-10-12T19-36-44-908Z-6b7f9504/final.json), [G control 2](../../bench/write-path/results/2026-10-12T19-54-26-081Z-98948c8e/final.json), [J repeat 2](../../bench/write-path/results/2026-10-12T20-11-53-774Z-0e85b4ab/final.json). Preserve J/every source/final/identity; remove only authorized completed intermediates after final retention. The serial improvement goal continues from unchanged G, not J/I/H. Ordinary rejection is not a blocker or completion.
+
 ## Final C–F comparison and retained incumbent
 
 **The independent C → D → E → F evaluation is complete. Zero promotions.** Each candidate was built from the actual incumbent **B1**, because its predecessor failed the mandatory all-four/two-repeat delivery gate. No losing implementation became the next base, and A remains the source/default outside explicit trials. C/D/E/F and their protocol tests remain independent preserved implementations, not a production cutover.
