@@ -72,8 +72,14 @@ Acknowledged facts: **92,100 / 84,200 / 21,070 / 13,410**. Acknowledged facts/s:
 
 [Repeat 1 final](2026-10-11T23-07-35-051Z-bfaf2f2a/final.json) identifies `7efbcbd` / `D-narrower-conflict-locks`. Acknowledged facts: **100,000 / 100,000 / 99,580 / 49,384**. Acknowledged facts/s: **1,532.62 / 541.70 / 473.26 / 167.07**. All planned calls and admitted-write/restart audits passed, with no extra unacknowledged commits, leaked entity locks or unresolved decisions.
 
-The first two scenarios completed their full input; the last two did not. **D is not promoted:** the mandatory all-four delivery gate fails in this repeat. High-concurrency acknowledged-rate changes cannot turn incomplete delivery into a successful-load win; tail latency and transport failures remain material. [Qualified comparison](../../../docs/rfds/RFD0005-write-path-experiment.md#d-repeat-1-full-delivery-in-two-cases-no-promotion). The second D repeat remains required.
+The first two scenarios completed their full input; the last two did not. **D is not promoted:** the mandatory all-four delivery gate fails in this repeat. High-concurrency acknowledged-rate changes cannot turn incomplete delivery into a successful-load win; tail latency and transport failures remain material. [Qualified comparison](../../../docs/rfds/RFD0005-write-path-experiment.md#d-repeat-1-full-delivery-in-two-cases-no-promotion). The second repeat and decision are retained below.
 
 ## D comparison: second nearby B1 control
 
 [Control 2 final](2026-10-11T23-29-04-964Z-7ec0666d/final.json) identifies `09fbb45`; both Worker bundles exactly match D's first B1 control. Acknowledged facts: **96,900 / 86,830 / 12,800 / 5,018**. Acknowledged facts/s: **1,573.40 / 488.93 / 86.06 / 15.23**. Every planned call was attempted; admitted-write/restart audits passed without extra unacknowledged commits. All four loads remained incomplete. [Control details](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-d-comparison-second-b1-control).
+
+## D entity conflicts: second repeat and decision
+
+[Repeat 2 final](2026-10-11T23-46-28-059Z-71e7d580/final.json) identifies `60e42b9`; both Worker bundles exactly match repeat 1. Acknowledged facts: **100,000 / 100,000 / 99,930 / 53,758**. Acknowledged facts/s: **1,636.56 / 636.93 / 600.07 / 183.07**. Every planned call was attempted; admitted-write/restart audits passed without extra unacknowledged commits, leaked entity locks or unresolved decisions.
+
+**D evaluation complete; D is not promoted.** Both repeats completed the medium/small workloads, but neither completed the other two. Preserve the large partial-delivery improvement alongside the higher high-concurrency/saturation caller p95 and remaining transport failures. [Decision and limitations](../../../docs/rfds/RFD0005-write-path-experiment.md#d-repeat-2-and-promotion-decision): the all-four delivery gate fails, so E starts from B1. A remains the default outside explicit trials.

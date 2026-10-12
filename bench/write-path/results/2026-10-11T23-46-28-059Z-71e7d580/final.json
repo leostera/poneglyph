@@ -1,0 +1,3628 @@
+{
+  "kind": "final local write-path result",
+  "manifest": {
+    "runId": "2026-10-11T23-46-28-059Z-71e7d580",
+    "version": "D-narrower-conflict-locks",
+    "environment": "Miniflare; not cloud performance",
+    "build": {
+      "databaseImplementation": "D-narrower-conflict-locks",
+      "gitBase": "60e42b9ad34151a090b7820c0b4b75fa292fce15",
+      "gitStatus": [
+        "?? docs/poneglyph-explainer-preview.mp4",
+        "?? docs/poneglyph-explainer.mp4",
+        "?? docs/video/"
+      ],
+      "sourceDigests": {
+        "../../poneglyph/src/database-implementation.ts": "ab7b6701fad5ee6a8bcd4c9957d8c50820714974348cfd0852e4ef824f95ec35",
+        "../../poneglyph/src/datalog/ast.ts": "586cc0a795c7114b6813eaf6d309fedc13b5d32180aebcb10b2da4bbeff7b9f0",
+        "../../poneglyph/src/datalog/evaluator.ts": "36deb0ce2faefa73272a4d06c05c752d2993b028da62ac2a647fae1bf8514907",
+        "../../poneglyph/src/datalog/parser.ts": "558f30101ecd7547efd62df4976fe1fd834651624fae58406411ebb8080ae183",
+        "../../poneglyph/src/datalog/value.ts": "7291d44c1f0856b7d448dce8fef8d1a127f7ad364f4e9782ad7beb223e996a05",
+        "../../poneglyph/src/domain/date-validation.ts": "7f141cf8063ea3519680f0a71bc424212283f1401c9415dbbf3d6af5cb1d75e1",
+        "../../poneglyph/src/domain/fact-value.ts": "8df5f3e2b8a22899325ff75d4d2ed35e53c7adb296a64fc6b28af1db2831c71a",
+        "../../poneglyph/src/domain/fact.ts": "ba92f8a48cfba0ab82bcbc611ddf7e4a8107df7a89ef0a203c7a2dae4b6cf6b4",
+        "../../poneglyph/src/domain/graph-id.ts": "fb23faf3dc333f49752a9e17009bcaf512a01632419b1b574fb9f491d25cf641",
+        "../../poneglyph/src/domain/identifiers.ts": "747dc1fa083705aea2927965c0da9990e417a89bb0a90e4c446ddd1daa49b6ac",
+        "../../poneglyph/src/domain/int64.ts": "4448f6097cdf97b1bdc72e4ecd7819516ade0661f424f9ec18865a3a45460ffd",
+        "../../poneglyph/src/domain/result.ts": "9f1e517b566238e0a4fc771172c6c7c5d7f0954e82584201193d298bd061b8f5",
+        "../../poneglyph/src/domain/string-order.ts": "a38dc679f8479e9f089e0795c3da5d48d72dceb01046567f6184d5457bcf1ea4",
+        "../../poneglyph/src/storage-d/benchmark.ts": "9eb8bc84dbc3cc1e4d64ad94600cdb172b5893151ed3cd24447f273a33db3b2d",
+        "../../poneglyph/src/storage-d/capacity.ts": "9f4104bb26c43a07270d7c2a185c69379b71a6e24309224094a3fb622e58b4fa",
+        "../../poneglyph/src/storage-d/constants.ts": "4771f41a280327a7ce70fe22d637a69c004140bd8ae22c22e85dbbc0cd4a7f9e",
+        "../../poneglyph/src/storage-d/coordinator.ts": "9de76f368e894247c1e518ba899b7624186eb2705a58d9f290c41855c2fc97c6",
+        "../../poneglyph/src/storage-d/distributed-fact-source.ts": "59819f44ef7ca5dc25ff48c45c8bbdf10afca95a8a3b2dbb616ba68ed646e71a",
+        "../../poneglyph/src/storage-d/forest.ts": "44fed1b6aa1dbc4a094940496a8a34182bf92ce770aa8a3bc59a2e9a0b92ea28",
+        "../../poneglyph/src/storage-d/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+        "../../poneglyph/src/storage-d/implementation.ts": "57aaebbda2db7c2d117f57b68df63280177dd8697a502aaa7fa82a54f60b67d1",
+        "../../poneglyph/src/storage-d/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+        "../../poneglyph/src/storage-d/migration.ts": "46e149dd4ffce655979864fd20ed4906e7a02d3344b76713a8cf3b941151e55a",
+        "../../poneglyph/src/storage-d/owner-writes.ts": "67a269c692b636390d89289556a2427e15563590b44e6208d039810ea68b335b",
+        "../../poneglyph/src/storage-d/protocol.ts": "06238f68cdc0153eddd4584d2eefa6d2f6f3f5ca5632d6cc8595abc140c38c86",
+        "../../poneglyph/src/storage-d/routing.ts": "482f1aed8edf73597ba0a108dfa3e16853e1053e3a0c3ca530326975294c9b98",
+        "../../poneglyph/src/storage-d/shard.ts": "3462e559df42aa9ec1a045f913501e259f6cba888ad3684cdb4b287caed1b9c9",
+        "../../poneglyph/src/storage-d/sql.ts": "5eaedf35cb933f84a09e82ef57c205ef0baaf809c544af4e567765698f25a420",
+        "../../poneglyph/src/storage-d/transaction.ts": "351a3e335b5441e346970e0716ce4d7519e56f1f68fbe21b3a5162b76e331dc7",
+        "../../poneglyph/src/storage/constants.ts": "bef7eeb48dae158f10e9b018ad29a86230752bf0848817b81dcd9f5b083a1e5b",
+        "../../poneglyph/src/storage/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+        "../../poneglyph/src/storage/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+        "../../poneglyph/src/storage/protocol.ts": "06238f68cdc0153eddd4584d2eefa6d2f6f3f5ca5632d6cc8595abc140c38c86",
+        "../../poneglyph/src/testing/storage-audit.ts": "32babba0e76eb9c19edb04d7ea019bc9a0589d4a9bf2f5a1582ffdebd61e2077",
+        "../../poneglyph/src/todo_demo/auth.ts": "388c7607879e7ca4c681a801e5904e989008293d2bd5dc2aa0d8874aead8429e",
+        "../../poneglyph/src/todo_demo/hub.ts": "c65b83f1f492c723f6715efb286e4307ea7ee6397debe53a199dd21ddeb680a8",
+        "../../poneglyph/src/todo_demo/page.ts": "52c594afd72cc40de04b260ce5d6230d9d9c9ca392bcab0520e5362934515a89",
+        "../../poneglyph/src/todo_demo/service.ts": "707dcfd8eb55a75afea03e9016e36a61cbe773b939eea4d086a8c85e4bef425e",
+        "../../poneglyph/src/todo_demo/worker.ts": "91bae6a11adc83b6fab7ce9b230a5d2beff4a78fe9be1ae14898e9b0f65e9616",
+        "../../poneglyph/src/worker.ts": "7235743b034628f043fa17fbfc329166101cc7e0f01b9c8643dee7003cb10f69",
+        "build.ts": "872b869c6e7d125fe7872700fcccea2429d2f2ff1702924d6ba35b3c2b6348a8",
+        "corpus.ts": "d800c51667c3e2c63d04b1eaf286cf38fc1cb3cc114b0477e297315022451f41",
+        "database-identity.ts": "07cb264b7eee4685859315092b9dd502d14c5f3852caeff93fc2c1136f4d49ef",
+        "driver.ts": "b89c40be8de75c0b0e0b849b8238b194dcf24ffd5cd3db5dc860fc421801140b",
+        "final-result.ts": "529aa7bc4448b03ca89edf90dd7876a59fb00327dbf5946501a7b12bf6aa0238",
+        "ledger.ts": "d3a6e6aab618f4af43349b39e96eb1060d25da280c97c755fb9c25c09a3e75ba",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/client.js": "3788367ce7fb30ecb936d3cc18a56a4cea7c9c9c634fffd14c95609109edc073",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/ast.js": "20d3ed3a2f4bbdf67581c4a1a8cca094f636415a0e05657a812b6c35288e4e16",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/evaluator.js": "7ad7a5447c361af94e39b8653ad69062c30f03007c38617f8251a40bc0b3e43d",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/fact-source.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/parser.js": "bc528dae38e60b2f87137f89a35dd154f5d7a280cb99490c97f2cca911afb36f",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/value.js": "a42784eaf59359e86d6e3ca31a66dbbde9d96d6558e717296fb29a878853ec80",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/date-validation.js": "4b7d7283ed28fdc9a5bf6a5827b6796c54454503e4113b23f69108a9e64ae6f9",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact-value.js": "dbf69ccc15f594656aa28892522b9909a0000d04f926d5e995e8685aa3df8248",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact.js": "549cc66749833c217ea9d9860f9a942b91f130b0345689a0f2bb18e549b64ac2",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/graph-id.js": "b20ec3aaf6d8343b4709beab1d8b1d70f33022720eca700b1689930ec024db99",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/identifiers.js": "d33ab8baf96f99472d71b5c4da99ffc154b56ef044e437b4dac075070e053010",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/int64.js": "2e3e55ccc389336263a1dd51d6089b641da0515fbb3c1307d09df995d47af9a5",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/result.js": "d8d4830e99f43409a946d8b2e1316a1f13e5171b599865ab00643585bcda9609",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/string-order.js": "aa59fe031cfc95f85594e9b0ee8eccf3b1234378c157da25a5628ea12b03460c",
+        "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/index.js": "5e0312a2a755a9c79da33339efcc6a4132c5f919fa94ce30ea29929dc38739e4",
+        "package.json": "e0fd97b233e5db487a8647ef48069e1aac28b26b29cd5e478282714ecc961dea",
+        "pnpm-lock.yaml": "448245d86b7446f89d2d53964df4602ef1928006525697982f5b1e3ad4a894d1",
+        "run.ts": "1972c2e5fe6a13d3792dbead9f811c2a6e2476d3e04c9e0202af0150b5f78acb",
+        "runtime.ts": "cff1d5cd5f7d27a51d848165960c3a2ece483dad2895354c83720bf18fda80d0",
+        "scenarios.ts": "34b37fa0261d22723e07414916e3d7ccf4d483760f43f5748e64f34f2b728022",
+        "stream-audit.ts": "fd8b7d04a96db46c222c80c872de03baac62eb2ce0e9d89a83614781e14d2e5d",
+        "worker/application.ts": "fbc969a312a2855ee95bdcde6ec78b115107719f98f9a6374b5de94884cc5b66",
+        "worker/database.ts": "02773fc8c2b7e71a2d8839c71d43edbbb8345a6fdcef37f8f4eb112cc42b1eae"
+      },
+      "bundleDigests": {
+        "application": "7a0020d0c9fc5115b694867706b4e06520a8817d9fb755f583a5e1555418d043",
+        "database": "ac0530dc5ca84f2f125ca512a177528ef9cb6dcbbb5e3ef89f9190347a586253"
+      },
+      "runtime": {
+        "miniflare": "5.20261006.1-alpha",
+        "compatibilityDate": "2026-10-06",
+        "node": "v26.11.0"
+      },
+      "clientPackage": "@leostera/poneglyph@0.1.0 (local packed file dependency)"
+    },
+    "corpus": {
+      "extractionVersion": 1,
+      "xmlSha256": "1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084",
+      "xmlBytes": 436781838,
+      "pages": 296624,
+      "facts": 1530195,
+      "factsSha256": "e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064",
+      "policies": {
+        "identity": "exact percent-encoded title",
+        "categoriesPerPage": 8,
+        "linksPerPage": 16,
+        "fullTextStored": false,
+        "supplementalFacts": 0,
+        "namespaceFilter": "none"
+      }
+    },
+    "reference": {
+      "facts": 100000,
+      "normalizedPrefixSha256": "2dd6061bfc95c78a90af1a2faa3ee147908981b4b6b480ed30c1726493af5309"
+    },
+    "selectedFacts": 100000,
+    "scope": "100k iteration cohort",
+    "workerCount": 4,
+    "retry": {
+      "maxAttempts": 8,
+      "attemptTimeoutMs": 30000,
+      "backoff": "full jitter, exponential 100ms..5s"
+    },
+    "selected": [
+      "parallel-medium",
+      "parallel-small",
+      "highly-concurrent",
+      "saturation"
+    ],
+    "policy": "Every planned batch is attempted; no batch shrinking, input skipping, storage fixes, outcome-limit changes, or fallback delivery"
+  },
+  "summary": {
+    "runId": "2026-10-11T23-46-28-059Z-71e7d580",
+    "status": "complete",
+    "persistenceChecksPassed": true,
+    "fullWorkloadsCompleted": false,
+    "cloudGate": "admitted-write persistence checks passed; full delivery is reported separately; cloud execution remains unauthorized; incomplete loads are not throughput winners",
+    "reportDirectory": "results/2026-10-11T23-46-28-059Z-71e7d580"
+  },
+  "scenarios": [
+    {
+      "scenario": {
+        "name": "parallel-medium",
+        "batchSize": 100,
+        "concurrency": 10
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 1000,
+      "startedAt": "2026-10-11T23:46:28.879Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 61103.648541,
+        "plannedCallsAttempted": 1000,
+        "acknowledgedFacts": 100000,
+        "acknowledgedTransactions": 1000,
+        "factsPerSecond": 1636.5634849595092,
+        "transactionsPerSecond": 16.365634849595093,
+        "rejected": 0,
+        "unknown": 0,
+        "attempts": 1711,
+        "statuses": {
+          "200": 1000,
+          "423": 711
+        },
+        "logicalLatency": {
+          "count": 1000,
+          "meanMs": 608.1108853449999,
+          "p50Ms": 578.992041999998,
+          "p95Ms": 1113.5111250000045,
+          "p99Ms": null,
+          "maxMs": 1939.6050830000022,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 1000,
+          "meanMs": 608.1108853449999,
+          "p50Ms": 578.992041999998,
+          "p95Ms": 1113.5111250000045,
+          "p99Ms": null,
+          "maxMs": 1939.6050830000022,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 1711,
+          "meanMs": 329.063248924021,
+          "p50Ms": 320.2933340000018,
+          "p95Ms": 659.9712910000017,
+          "p99Ms": null,
+          "maxMs": 974.9858749999985,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 1849834,
+            "system": 214422
+          },
+          "eventLoopDelayMeanMs": 21.43646917614035,
+          "eventLoopDelayMaxMs": 22.970367,
+          "memoryBytes": {
+            "rss": 234411296,
+            "heapTotal": 102416384,
+            "heapUsed": 56117016,
+            "external": 64306620,
+            "arrayBuffers": 42875106
+          }
+        },
+        "failureExamples": [],
+        "databaseAwaitLatency": {
+          "count": 1000,
+          "meanMs": 287.967,
+          "p50Ms": 288,
+          "p95Ms": 421,
+          "p99Ms": null,
+          "maxMs": 498,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 10,
+          "mean": 9.952166196932778,
+          "target": 10
+        },
+        "workerDistribution": {
+          "app-0": 250,
+          "app-2": 250,
+          "app-1": 250,
+          "app-3": 250
+        }
+      },
+      "localDrainMs": 521.6652909999975,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 100000,
+        "persistedTransactions": 1000,
+        "activeTuples": 100000,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": true,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 367861760,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 904,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 515
+            },
+            {
+              "phase": "complete",
+              "count": 508
+            },
+            {
+              "phase": "complete",
+              "count": 502
+            },
+            {
+              "phase": "complete",
+              "count": 531
+            },
+            {
+              "phase": "complete",
+              "count": 516
+            },
+            {
+              "phase": "complete",
+              "count": 495
+            },
+            {
+              "phase": "complete",
+              "count": 511
+            },
+            {
+              "phase": "complete",
+              "count": 525
+            },
+            {
+              "phase": "complete",
+              "count": 500
+            },
+            {
+              "phase": "complete",
+              "count": 506
+            },
+            {
+              "phase": "complete",
+              "count": 502
+            },
+            {
+              "phase": "complete",
+              "count": 484
+            },
+            {
+              "phase": "complete",
+              "count": 493
+            },
+            {
+              "phase": "complete",
+              "count": 525
+            },
+            {
+              "phase": "complete",
+              "count": 514
+            },
+            {
+              "phase": "complete",
+              "count": 485
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 904,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 515
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 822,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 508
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 794,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 502
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 808,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 531
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 765,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 516
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 710,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 495
+                }
+              ],
+              "databaseBytes": 278528
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 702,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 511
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 694,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 525
+                }
+              ],
+              "databaseBytes": 290816
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 636,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 500
+                }
+              ],
+              "databaseBytes": 278528
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 614,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 506
+                }
+              ],
+              "databaseBytes": 278528
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 591,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 502
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 551,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 484
+                }
+              ],
+              "databaseBytes": 270336
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 546,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 493
+                }
+              ],
+              "databaseBytes": 270336
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 553,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 525
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 533,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 514
+                }
+              ],
+              "databaseBytes": 274432
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 485,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 485
+                }
+              ],
+              "databaseBytes": 258048
+            }
+          ],
+          "checkedTransactionCoordinators": 1000,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 4591616
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 100000,
+        "persistedTransactions": 1000,
+        "activeTuples": 100000,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": true,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 367861760,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 904,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 515
+            },
+            {
+              "phase": "complete",
+              "count": 508
+            },
+            {
+              "phase": "complete",
+              "count": 502
+            },
+            {
+              "phase": "complete",
+              "count": 531
+            },
+            {
+              "phase": "complete",
+              "count": 516
+            },
+            {
+              "phase": "complete",
+              "count": 495
+            },
+            {
+              "phase": "complete",
+              "count": 511
+            },
+            {
+              "phase": "complete",
+              "count": 525
+            },
+            {
+              "phase": "complete",
+              "count": 500
+            },
+            {
+              "phase": "complete",
+              "count": 506
+            },
+            {
+              "phase": "complete",
+              "count": 502
+            },
+            {
+              "phase": "complete",
+              "count": 484
+            },
+            {
+              "phase": "complete",
+              "count": 493
+            },
+            {
+              "phase": "complete",
+              "count": 525
+            },
+            {
+              "phase": "complete",
+              "count": 514
+            },
+            {
+              "phase": "complete",
+              "count": 485
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 904,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 515
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 822,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 508
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 794,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 502
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 808,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 531
+                }
+              ],
+              "databaseBytes": 294912
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 765,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 516
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 710,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 495
+                }
+              ],
+              "databaseBytes": 278528
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 702,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 511
+                }
+              ],
+              "databaseBytes": 286720
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 694,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 525
+                }
+              ],
+              "databaseBytes": 290816
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 636,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 500
+                }
+              ],
+              "databaseBytes": 278528
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 614,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 506
+                }
+              ],
+              "databaseBytes": 278528
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 591,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 502
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 551,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 484
+                }
+              ],
+              "databaseBytes": 270336
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 546,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 493
+                }
+              ],
+              "databaseBytes": 270336
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 553,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 525
+                }
+              ],
+              "databaseBytes": 282624
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 533,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 514
+                }
+              ],
+              "databaseBytes": 274432
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 485,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 485
+                }
+              ],
+              "databaseBytes": 258048
+            }
+          ],
+          "checkedTransactionCoordinators": 1000,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 4591616
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": true,
+      "finishedAt": "2026-10-11T23:47:40.458Z"
+    },
+    {
+      "scenario": {
+        "name": "parallel-small",
+        "batchSize": 10,
+        "concurrency": 100
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 10000,
+      "startedAt": "2026-10-11T23:47:40.462Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 157004.32520800002,
+        "plannedCallsAttempted": 10000,
+        "acknowledgedFacts": 100000,
+        "acknowledgedTransactions": 10000,
+        "factsPerSecond": 636.9251284480192,
+        "transactionsPerSecond": 63.692512844801925,
+        "rejected": 0,
+        "unknown": 0,
+        "attempts": 20430,
+        "statuses": {
+          "200": 10000,
+          "423": 10430
+        },
+        "logicalLatency": {
+          "count": 10000,
+          "meanMs": 1560.6542237605977,
+          "p50Ms": 1306.904291999992,
+          "p95Ms": 3520.0409170000057,
+          "p99Ms": 4579.1317500000005,
+          "maxMs": 8541.47745799998,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 10000,
+          "meanMs": 1560.6542237605977,
+          "p50Ms": 1306.904291999992,
+          "p95Ms": 3520.0409170000057,
+          "p99Ms": 4579.1317500000005,
+          "maxMs": 8541.47745799998,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 20430,
+          "meanMs": 721.5542596334807,
+          "p50Ms": 646.8452089999919,
+          "p95Ms": 1474.371708999999,
+          "p99Ms": 1877.8555829999968,
+          "maxMs": 3218.697709,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 7050813,
+            "system": 1007599
+          },
+          "eventLoopDelayMeanMs": 21.36526890364725,
+          "eventLoopDelayMaxMs": 27.262975,
+          "memoryBytes": {
+            "rss": 224256072,
+            "heapTotal": 97173504,
+            "heapUsed": 48069144,
+            "external": 59105672,
+            "arrayBuffers": 37670042
+          }
+        },
+        "failureExamples": [],
+        "databaseAwaitLatency": {
+          "count": 10000,
+          "meanMs": 515.852,
+          "p50Ms": 432,
+          "p95Ms": 1005,
+          "p99Ms": 1561,
+          "maxMs": 2806,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 100,
+          "mean": 99.40206657640388,
+          "target": 100
+        },
+        "workerDistribution": {
+          "app-0": 2500,
+          "app-2": 2500,
+          "app-1": 2500,
+          "app-3": 2500
+        }
+      },
+      "localDrainMs": 515.1486659999937,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 100000,
+        "persistedTransactions": 10000,
+        "activeTuples": 100000,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": true,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 387276800,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1860,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1091
+            },
+            {
+              "phase": "complete",
+              "count": 1209
+            },
+            {
+              "phase": "complete",
+              "count": 1187
+            },
+            {
+              "phase": "complete",
+              "count": 1135
+            },
+            {
+              "phase": "complete",
+              "count": 1212
+            },
+            {
+              "phase": "complete",
+              "count": 1194
+            },
+            {
+              "phase": "complete",
+              "count": 1138
+            },
+            {
+              "phase": "complete",
+              "count": 1110
+            },
+            {
+              "phase": "complete",
+              "count": 1186
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1194
+            },
+            {
+              "phase": "complete",
+              "count": 1227
+            },
+            {
+              "phase": "complete",
+              "count": 1236
+            },
+            {
+              "phase": "complete",
+              "count": 1110
+            },
+            {
+              "phase": "complete",
+              "count": 1311
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1730,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1091
+                }
+              ],
+              "databaseBytes": 462848
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1860,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1209
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1787,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1187
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1612,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1135
+                }
+              ],
+              "databaseBytes": 483328
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1681,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1212
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1579,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1194
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1481,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1138
+                }
+              ],
+              "databaseBytes": 479232
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1412,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1110
+                }
+              ],
+              "databaseBytes": 466944
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1478,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1186
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1441,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1432,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1355,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1194
+                }
+              ],
+              "databaseBytes": 483328
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1333,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1227
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1309,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1236
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1140,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1110
+                }
+              ],
+              "databaseBytes": 438272
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1311,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1311
+                }
+              ],
+              "databaseBytes": 491520
+            }
+          ],
+          "checkedTransactionCoordinators": 10000,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 7864320
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 100000,
+        "persistedTransactions": 10000,
+        "activeTuples": 100000,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": true,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 387276800,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1860,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1091
+            },
+            {
+              "phase": "complete",
+              "count": 1209
+            },
+            {
+              "phase": "complete",
+              "count": 1187
+            },
+            {
+              "phase": "complete",
+              "count": 1135
+            },
+            {
+              "phase": "complete",
+              "count": 1212
+            },
+            {
+              "phase": "complete",
+              "count": 1194
+            },
+            {
+              "phase": "complete",
+              "count": 1138
+            },
+            {
+              "phase": "complete",
+              "count": 1110
+            },
+            {
+              "phase": "complete",
+              "count": 1186
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1229
+            },
+            {
+              "phase": "complete",
+              "count": 1194
+            },
+            {
+              "phase": "complete",
+              "count": 1227
+            },
+            {
+              "phase": "complete",
+              "count": 1236
+            },
+            {
+              "phase": "complete",
+              "count": 1110
+            },
+            {
+              "phase": "complete",
+              "count": 1311
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1730,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1091
+                }
+              ],
+              "databaseBytes": 462848
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1860,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1209
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1787,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1187
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1612,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1135
+                }
+              ],
+              "databaseBytes": 483328
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1681,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1212
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1579,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1194
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1481,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1138
+                }
+              ],
+              "databaseBytes": 479232
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1412,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1110
+                }
+              ],
+              "databaseBytes": 466944
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1478,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1186
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1441,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1432,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1229
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1355,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1194
+                }
+              ],
+              "databaseBytes": 483328
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1333,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1227
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1309,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1236
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1140,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1110
+                }
+              ],
+              "databaseBytes": 438272
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1311,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1311
+                }
+              ],
+              "databaseBytes": 491520
+            }
+          ],
+          "checkedTransactionCoordinators": 10000,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 7864320
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": true,
+      "finishedAt": "2026-10-11T23:50:46.595Z"
+    },
+    {
+      "scenario": {
+        "name": "highly-concurrent",
+        "batchSize": 10,
+        "concurrency": 1000
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 10000,
+      "startedAt": "2026-10-11T23:50:46.617Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 166531.313167,
+        "plannedCallsAttempted": 10000,
+        "acknowledgedFacts": 99930,
+        "acknowledgedTransactions": 9993,
+        "factsPerSecond": 600.0673272766952,
+        "transactionsPerSecond": 60.00673272766952,
+        "rejected": 0,
+        "unknown": 7,
+        "attempts": 24369,
+        "statuses": {
+          "200": 9993,
+          "423": 8489,
+          "transport": 5887
+        },
+        "logicalLatency": {
+          "count": 10000,
+          "meanMs": 15470.190853877493,
+          "p50Ms": 12777.989792000037,
+          "p95Ms": 35978.57725000003,
+          "p99Ms": 45583.97970799997,
+          "maxMs": 67996.115459,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 9993,
+          "meanMs": 15445.021704007904,
+          "p50Ms": 12777.296208000043,
+          "p95Ms": 35850.66966700001,
+          "p99Ms": null,
+          "maxMs": 67996.115459,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 24369,
+          "meanMs": 6268.742715386889,
+          "p50Ms": 5854.35699999996,
+          "p95Ms": 12520.495584000018,
+          "p99Ms": 16478.62604199996,
+          "maxMs": 20247.685624999984,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 9363035,
+            "system": 1186563
+          },
+          "eventLoopDelayMeanMs": 21.52187374331136,
+          "eventLoopDelayMaxMs": 55.574527,
+          "memoryBytes": {
+            "rss": 270451976,
+            "heapTotal": 120389632,
+            "heapUsed": 59735096,
+            "external": 61876419,
+            "arrayBuffers": 40440789
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: read ECONNRESET"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: read ECONNRESET"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: read ECONNRESET"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: read ECONNRESET"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: read ECONNRESET"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: read ECONNRESET"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:63774"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 9993,
+          "meanMs": 2605.812969078355,
+          "p50Ms": 2398,
+          "p95Ms": 4571,
+          "p99Ms": null,
+          "maxMs": 4861,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 1000,
+          "mean": 928.9659543592376,
+          "target": 1000
+        },
+        "workerDistribution": {
+          "app-0": 2499,
+          "app-1": 2497,
+          "app-2": 2498,
+          "app-3": 2499
+        }
+      },
+      "localDrainMs": 564.6279160000267,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 99930,
+        "persistedTransactions": 9993,
+        "activeTuples": 99930,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 410017792,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1729,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1180
+            },
+            {
+              "phase": "complete",
+              "count": 1219
+            },
+            {
+              "phase": "complete",
+              "count": 1184
+            },
+            {
+              "phase": "complete",
+              "count": 1166
+            },
+            {
+              "phase": "complete",
+              "count": 1154
+            },
+            {
+              "phase": "complete",
+              "count": 1222
+            },
+            {
+              "phase": "complete",
+              "count": 1147
+            },
+            {
+              "phase": "complete",
+              "count": 1207
+            },
+            {
+              "phase": "complete",
+              "count": 1157
+            },
+            {
+              "phase": "complete",
+              "count": 1075
+            },
+            {
+              "phase": "complete",
+              "count": 1258
+            },
+            {
+              "phase": "complete",
+              "count": 1252
+            },
+            {
+              "phase": "complete",
+              "count": 1123
+            },
+            {
+              "phase": "complete",
+              "count": 1218
+            },
+            {
+              "phase": "complete",
+              "count": 1227
+            },
+            {
+              "phase": "complete",
+              "count": 1190
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1729,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1180
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1718,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1219
+                }
+              ],
+              "databaseBytes": 512000
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1637,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1184
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1563,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1166
+                }
+              ],
+              "databaseBytes": 479232
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1474,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1154
+                }
+              ],
+              "databaseBytes": 475136
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1562,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1222
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1421,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1147
+                }
+              ],
+              "databaseBytes": 471040
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1453,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1207
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1371,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1157
+                }
+              ],
+              "databaseBytes": 471040
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1239,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1075
+                }
+              ],
+              "databaseBytes": 438272
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1408,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1258
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1363,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1252
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1199,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1123
+                }
+              ],
+              "databaseBytes": 450560
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1275,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1218
+                }
+              ],
+              "databaseBytes": 475136
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1256,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1227
+                }
+              ],
+              "databaseBytes": 479232
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1190,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1190
+                }
+              ],
+              "databaseBytes": 458752
+            }
+          ],
+          "checkedTransactionCoordinators": 9993,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 7782400
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 99930,
+        "persistedTransactions": 9993,
+        "activeTuples": 99930,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 410017792,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 1729,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1180
+            },
+            {
+              "phase": "complete",
+              "count": 1219
+            },
+            {
+              "phase": "complete",
+              "count": 1184
+            },
+            {
+              "phase": "complete",
+              "count": 1166
+            },
+            {
+              "phase": "complete",
+              "count": 1154
+            },
+            {
+              "phase": "complete",
+              "count": 1222
+            },
+            {
+              "phase": "complete",
+              "count": 1147
+            },
+            {
+              "phase": "complete",
+              "count": 1207
+            },
+            {
+              "phase": "complete",
+              "count": 1157
+            },
+            {
+              "phase": "complete",
+              "count": 1075
+            },
+            {
+              "phase": "complete",
+              "count": 1258
+            },
+            {
+              "phase": "complete",
+              "count": 1252
+            },
+            {
+              "phase": "complete",
+              "count": 1123
+            },
+            {
+              "phase": "complete",
+              "count": 1218
+            },
+            {
+              "phase": "complete",
+              "count": 1227
+            },
+            {
+              "phase": "complete",
+              "count": 1190
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1729,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1180
+                }
+              ],
+              "databaseBytes": 491520
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1718,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1219
+                }
+              ],
+              "databaseBytes": 512000
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1637,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1184
+                }
+              ],
+              "databaseBytes": 499712
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1563,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1166
+                }
+              ],
+              "databaseBytes": 479232
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 1474,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1154
+                }
+              ],
+              "databaseBytes": 475136
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1562,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1222
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 1421,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1147
+                }
+              ],
+              "databaseBytes": 471040
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1453,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1207
+                }
+              ],
+              "databaseBytes": 487424
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1371,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1157
+                }
+              ],
+              "databaseBytes": 471040
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1239,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1075
+                }
+              ],
+              "databaseBytes": 438272
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1408,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1258
+                }
+              ],
+              "databaseBytes": 503808
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1363,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1252
+                }
+              ],
+              "databaseBytes": 495616
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1199,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1123
+                }
+              ],
+              "databaseBytes": 450560
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1275,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1218
+                }
+              ],
+              "databaseBytes": 475136
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1256,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1227
+                }
+              ],
+              "databaseBytes": 479232
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1190,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1190
+                }
+              ],
+              "databaseBytes": 458752
+            }
+          ],
+          "checkedTransactionCoordinators": 9993,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 7782400
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-11T23:54:08.406Z"
+    },
+    {
+      "scenario": {
+        "name": "saturation",
+        "batchSize": 2,
+        "concurrency": 10000
+      },
+      "selectedFacts": 100000,
+      "plannedCalls": 50000,
+      "startedAt": "2026-10-11T23:54:08.429Z",
+      "stage": "complete",
+      "metrics": {
+        "elapsedMs": 293643.09866699995,
+        "plannedCallsAttempted": 50000,
+        "acknowledgedFacts": 53758,
+        "acknowledgedTransactions": 26879,
+        "factsPerSecond": 183.07258111644973,
+        "transactionsPerSecond": 91.53629055822486,
+        "rejected": 0,
+        "unknown": 23121,
+        "attempts": 298488,
+        "statuses": {
+          "200": 26879,
+          "423": 27867,
+          "transport": 243742
+        },
+        "logicalLatency": {
+          "count": 50000,
+          "meanMs": 51721.32699846988,
+          "p50Ms": 63138.828624999966,
+          "p95Ms": 80803.20420799998,
+          "p99Ms": 84892.05970800004,
+          "maxMs": 95912.01758300001,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "committedLogicalLatency": {
+          "count": 26879,
+          "meanMs": 33766.86233465665,
+          "p50Ms": 31447.624582999968,
+          "p95Ms": 71023.98945800005,
+          "p99Ms": 78982.16116700007,
+          "maxMs": 95912.01758300001,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "attemptLatency": {
+          "count": 298488,
+          "meanMs": 8068.884875619866,
+          "p50Ms": 7788.685458000051,
+          "p95Ms": 10501.983375000069,
+          "p99Ms": 11269.297875000047,
+          "maxMs": 20244.85404200002,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "driver": {
+          "cpuMicroseconds": {
+            "user": 124663580,
+            "system": 15068859
+          },
+          "eventLoopDelayMeanMs": 23.112064544852593,
+          "eventLoopDelayMaxMs": 1243.611135,
+          "memoryBytes": {
+            "rss": 330211048,
+            "heapTotal": 166117376,
+            "heapUsed": 76409328,
+            "external": 62514553,
+            "arrayBuffers": 41078923
+          }
+        },
+        "failureExamples": [
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: read ECONNRESET"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          },
+          {
+            "status": 0,
+            "detail": "retry budget exhausted: fetch failed: Error: connect ETIMEDOUT 127.0.0.1:54750"
+          }
+        ],
+        "databaseAwaitLatency": {
+          "count": 26879,
+          "meanMs": 1605.8226496521447,
+          "p50Ms": 1606,
+          "p95Ms": 2689,
+          "p99Ms": 3489,
+          "maxMs": 3576,
+          "method": "nearest rank; p95 requires 1,000 and p99 10,000 samples"
+        },
+        "achievedConcurrency": {
+          "peak": 10000,
+          "mean": 8806.835283217677,
+          "target": 10000
+        },
+        "workerDistribution": {
+          "app-0": 6535,
+          "app-2": 6727,
+          "app-3": 6692,
+          "app-1": 6925
+        }
+      },
+      "localDrainMs": 523.4667909999844,
+      "audit": {
+        "valid": true,
+        "persistedFacts": 53758,
+        "persistedTransactions": 26879,
+        "activeTuples": 53758,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 225513472,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 2036,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1801
+            },
+            {
+              "phase": "complete",
+              "count": 1837
+            },
+            {
+              "phase": "complete",
+              "count": 1809
+            },
+            {
+              "phase": "complete",
+              "count": 1808
+            },
+            {
+              "phase": "complete",
+              "count": 1898
+            },
+            {
+              "phase": "complete",
+              "count": 1752
+            },
+            {
+              "phase": "complete",
+              "count": 1917
+            },
+            {
+              "phase": "complete",
+              "count": 1784
+            },
+            {
+              "phase": "complete",
+              "count": 1852
+            },
+            {
+              "phase": "complete",
+              "count": 1755
+            },
+            {
+              "phase": "complete",
+              "count": 1894
+            },
+            {
+              "phase": "complete",
+              "count": 1756
+            },
+            {
+              "phase": "complete",
+              "count": 1903
+            },
+            {
+              "phase": "complete",
+              "count": 1919
+            },
+            {
+              "phase": "complete",
+              "count": 1803
+            },
+            {
+              "phase": "complete",
+              "count": 1792
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1983,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1801
+                }
+              ],
+              "databaseBytes": 643072
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1982,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1837
+                }
+              ],
+              "databaseBytes": 643072
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1967,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1809
+                }
+              ],
+              "databaseBytes": 643072
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1934,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1808
+                }
+              ],
+              "databaseBytes": 638976
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 2034,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1898
+                }
+              ],
+              "databaseBytes": 655360
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1879,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1752
+                }
+              ],
+              "databaseBytes": 614400
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 2036,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1917
+                }
+              ],
+              "databaseBytes": 663552
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1877,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1784
+                }
+              ],
+              "databaseBytes": 626688
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1928,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1852
+                }
+              ],
+              "databaseBytes": 630784
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1827,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1755
+                }
+              ],
+              "databaseBytes": 618496
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1956,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1894
+                }
+              ],
+              "databaseBytes": 647168
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1792,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1756
+                }
+              ],
+              "databaseBytes": 606208
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1940,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1903
+                }
+              ],
+              "databaseBytes": 647168
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1947,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1919
+                }
+              ],
+              "databaseBytes": 655360
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1812,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1803
+                }
+              ],
+              "databaseBytes": 610304
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1792,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1792
+                }
+              ],
+              "databaseBytes": 614400
+            }
+          ],
+          "checkedTransactionCoordinators": 26879,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 10256384
+        }
+      },
+      "restartAudit": {
+        "valid": true,
+        "persistedFacts": 53758,
+        "persistedTransactions": 26879,
+        "activeTuples": 53758,
+        "reconciledUnacknowledgedTransactions": 0,
+        "allFactsPersisted": false,
+        "leaves": 16,
+        "directoryNodes": 31,
+        "databaseBytes": 225513472,
+        "coordinator": {
+          "state": [
+            {
+              "visible_seq": 2036,
+              "writer_tx_id": null
+            }
+          ],
+          "phases": [
+            {
+              "phase": "complete",
+              "count": 1801
+            },
+            {
+              "phase": "complete",
+              "count": 1837
+            },
+            {
+              "phase": "complete",
+              "count": 1809
+            },
+            {
+              "phase": "complete",
+              "count": 1808
+            },
+            {
+              "phase": "complete",
+              "count": 1898
+            },
+            {
+              "phase": "complete",
+              "count": 1752
+            },
+            {
+              "phase": "complete",
+              "count": 1917
+            },
+            {
+              "phase": "complete",
+              "count": 1784
+            },
+            {
+              "phase": "complete",
+              "count": 1852
+            },
+            {
+              "phase": "complete",
+              "count": 1755
+            },
+            {
+              "phase": "complete",
+              "count": 1894
+            },
+            {
+              "phase": "complete",
+              "count": 1756
+            },
+            {
+              "phase": "complete",
+              "count": 1903
+            },
+            {
+              "phase": "complete",
+              "count": 1919
+            },
+            {
+              "phase": "complete",
+              "count": 1803
+            },
+            {
+              "phase": "complete",
+              "count": 1792
+            }
+          ],
+          "visibilityScope": "subtree-vector",
+          "trees": [
+            {
+              "prefix": "0000",
+              "visible_seq": 1983,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1801
+                }
+              ],
+              "databaseBytes": 643072
+            },
+            {
+              "prefix": "0001",
+              "visible_seq": 1982,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1837
+                }
+              ],
+              "databaseBytes": 643072
+            },
+            {
+              "prefix": "0010",
+              "visible_seq": 1967,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1809
+                }
+              ],
+              "databaseBytes": 643072
+            },
+            {
+              "prefix": "0011",
+              "visible_seq": 1934,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1808
+                }
+              ],
+              "databaseBytes": 638976
+            },
+            {
+              "prefix": "0100",
+              "visible_seq": 2034,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1898
+                }
+              ],
+              "databaseBytes": 655360
+            },
+            {
+              "prefix": "0101",
+              "visible_seq": 1879,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1752
+                }
+              ],
+              "databaseBytes": 614400
+            },
+            {
+              "prefix": "0110",
+              "visible_seq": 2036,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1917
+                }
+              ],
+              "databaseBytes": 663552
+            },
+            {
+              "prefix": "0111",
+              "visible_seq": 1877,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1784
+                }
+              ],
+              "databaseBytes": 626688
+            },
+            {
+              "prefix": "1000",
+              "visible_seq": 1928,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1852
+                }
+              ],
+              "databaseBytes": 630784
+            },
+            {
+              "prefix": "1001",
+              "visible_seq": 1827,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1755
+                }
+              ],
+              "databaseBytes": 618496
+            },
+            {
+              "prefix": "1010",
+              "visible_seq": 1956,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1894
+                }
+              ],
+              "databaseBytes": 647168
+            },
+            {
+              "prefix": "1011",
+              "visible_seq": 1792,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1756
+                }
+              ],
+              "databaseBytes": 606208
+            },
+            {
+              "prefix": "1100",
+              "visible_seq": 1940,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1903
+                }
+              ],
+              "databaseBytes": 647168
+            },
+            {
+              "prefix": "1101",
+              "visible_seq": 1947,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1919
+                }
+              ],
+              "databaseBytes": 655360
+            },
+            {
+              "prefix": "1110",
+              "visible_seq": 1812,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1803
+                }
+              ],
+              "databaseBytes": 610304
+            },
+            {
+              "prefix": "1111",
+              "visible_seq": 1792,
+              "directory_epoch": 0,
+              "writer_tx_id": null,
+              "topology_op_id": null,
+              "next_statement_time_ms": 0,
+              "entityLockCount": 0,
+              "ownerTicketAnomalies": 0,
+              "phases": [],
+              "reservations": [
+                {
+                  "phase": "complete",
+                  "count": 1792
+                }
+              ],
+              "databaseBytes": 614400
+            }
+          ],
+          "checkedTransactionCoordinators": 26879,
+          "transactionCoordinatorStorageBytes": null,
+          "storageScope": "fact leaves and owner/facade metadata; per-transaction DO sizes not aggregated",
+          "databaseBytes": 10256384
+        }
+      },
+      "persistenceChecksPassed": true,
+      "fullWorkloadCompleted": false,
+      "finishedAt": "2026-10-12T00:02:31.083Z"
+    }
+  ],
+  "artifactRetention": "Final aggregate only; raw SQLite state, input snapshots, reference ledgers, journals, bundles and progress samples are not retained. Runtime console logs are managed separately. Corpus cache and source/dataset digests are retained."
+}

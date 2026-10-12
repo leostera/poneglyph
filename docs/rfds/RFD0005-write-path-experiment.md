@@ -157,7 +157,7 @@ Every planned call was attempted. Acknowledged facts exactly matched persisted f
 
 Attempts: 1,717 / 20,468 / 27,938 / 310,958. Busy responses: 717 / 10,468 / 8,438 / 21,105. Transport failures: 0 / 0 / 9,542 / 265,161. All final caller failures were unknown after the unchanged retry budget. In particular the 1,000-call case's 42 exhausted calls and the saturation case's transport failures cannot be treated as delivered input. D still uses per-transaction DOs, whose physical metadata bytes are not fully aggregated; no storage-cost win is measured. Fault-test recovery is separate from this repeat, which observed no extra unknown commits recovered in the background.
 
-**No promotion:** repeat 1 fails the required 100% delivery gate in all four scenarios. Complete B1 control 2 and unchanged D repeat 2 with fresh persistence; retain D even if it remains ineligible. B1 is still the experimental incumbent. A is restored outside explicit tests/trials.
+**No promotion:** repeat 1 fails the required 100% delivery gate in all four scenarios. B1 control 2 and unchanged D repeat 2 are retained below; D remains isolated and ineligible. B1 is still the experimental incumbent. A is restored outside explicit tests/trials.
 
 ### Matched D comparison: second B1 control
 
@@ -171,6 +171,23 @@ Attempts: 1,717 / 20,468 / 27,938 / 310,958. Busy responses: 717 / 10,468 / 8,43
 | 2 × 10,000 | 5,018 | 47,491 | 15.23 | 72.32 |
 
 Attempts: 2,391 / 39,275 / 76,282 / 391,491. Busy responses: 1,422 / 30,592 / 74,971 / 125,293. Transport failures: 0 / 0 / 31 / 263,689. Delivery/rates/latency and transport variance remain separate; identical bundles do not imply identical local performance. Continue with unchanged D repeat 2 and fresh persistence, not a retrospective substitution of an earlier incumbent run.
+
+### D repeat 2 and promotion decision
+
+[Repeat 2 final](../../bench/write-path/results/2026-10-11T23-46-28-059Z-71e7d580/final.json) identifies `60e42b9`. Both Worker bundle digests exactly match D repeat 1. The complete fresh-persistence order is B1 control 1 → D repeat 1 → B1 control 2 → D repeat 2. No measured SUT was patched and no correction, workload/limit/client change was introduced between D repeats.
+
+| Facts/call × concurrency | D repeat 2 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs nearby B1 control 2 | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | **100,000** | 0 | 1,636.56 | +4.01% | 1.11 |
+| 10 × 100 | **100,000** | 0 | 636.93 | +30.27% | 3.52 |
+| 10 × 1,000 | 99,930 | 7 | 600.07 | +597.25% | 35.98 |
+| 2 × 10,000 | 53,758 | 23,121 | 183.07 | +1,102.13% | 80.80 |
+
+All planned calls were attempted. Acknowledged facts equalled persisted facts; admitted-write/index/owner-ticket/transaction audits passed hot and after restart, without leaked entity locks, unresolved decisions or reconciled unknown commits. Attempts: 1,711 / 20,430 / 24,369 / 298,488. Busy responses: 711 / 10,430 / 8,489 / 27,867. Transport failures: 0 / 0 / 5,887 / 243,742. The remaining seven exhausted calls at concurrency 1,000 and 23,121 at saturation are not delivered input.
+
+**Decision: do not promote D.** D repeatably completed the medium and small cases, substantially improved partial delivery at high concurrency/saturation, and reduced their busy responses. However **both repeats failed full delivery in the other two cases**, so the immutable all-four promotion gate fails. High-concurrency/saturation logical p95 was higher than the nearby incumbent in both pairs, even with much greater delivery; caller latency and transport failures cannot be hidden behind an acknowledged rate. Incumbent controls remain incomplete, so percentages are descriptive local acknowledged-rate comparisons, not an equal-success throughput certification. No cloud, universal correctness, physical-storage cost or 1M claim follows.
+
+Preserve D's independent source, exercised protocol tests, all four finals and input/source/client identities. **E starts from unchanged B1**, not D or C. A is restored outside explicitly selected tests/trials. D's evaluation task is complete, while its promotion contract is not satisfied; no additional automatic retry, delivery queue or transport-limit increase is permitted to turn this result into a winner.
 
 ## Summary
 
