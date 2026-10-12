@@ -184,7 +184,8 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
   private reserveSplit(prefix: VirtualPrefix, force: boolean): string {
     return this.ctx.storage.transactionSync(() => {
       const state = this.readGraphState();
-      if (state.writer_tx_id !== null || this.ownerWrites.hasWriters()) throw new CoordinatorError(423, "cannot split while entity reservations are pending");
+      if (state.writer_tx_id !== null || this.ownerWrites.hasWriters() || this.hasReadLease())
+        throw new CoordinatorError(423, "cannot split while entity reservations or read leases are pending");
       if (state.topology_op_id !== null) {
         const existing = this.readSplit(state.topology_op_id);
         if (existing?.source_prefix === prefix) return state.topology_op_id;
