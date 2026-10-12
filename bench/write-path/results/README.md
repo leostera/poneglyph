@@ -105,3 +105,7 @@ The first two scenarios completed their full input; the last two did not. **D is
 ## F comparison: first nearby B1 control
 
 [Control 1 final](2026-10-12T02-15-00-285Z-e24a464c/final.json) identifies `428e540`. Acknowledged facts: **97,000 / 85,520 / 12,860 / 5,272**. Acknowledged facts/s: **1,329.45 / 441.91 / 82.93 / 15.67**. All planned calls and admitted-write/restart audits passed; no extra unknown commits were reconciled. All loads remained incomplete. [Control details](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-f-comparison-first-b1-control). Begins B1 → F → B1 → F; not an F result or promotion.
+
+## F provisional planning: first repeat
+
+[Repeat 1 final](2026-10-12T02-33-52-343Z-a00ec2c3/final.json) identifies `cfcb98c`. Acknowledged facts: **98,300 / 85,940 / 37,010 / 10,552**. Acknowledged facts/s: **1,528.58 / 477.35 / 145.60 / 30.75**. Every planned call and admitted-write/restart audit passed; no extra unknown commits were reconciled or decisions remained unresolved. All workloads were incomplete. **No promotion:** all rates/partial delivery increased vs nearby B1, but small/high/saturation p95 and high/saturation transport failures were higher. [Qualified first pair](../../../docs/rfds/RFD0005-write-path-experiment.md#f-repeat-1-greater-partial-delivery-no-promotion). The unchanged second fresh pair remains required.

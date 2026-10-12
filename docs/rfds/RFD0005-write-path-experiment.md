@@ -308,7 +308,20 @@ With F explicitly selected, **39 tests** passed across F/client/fact-model/Datal
 | 10 × 1,000 | 12,860 | 8,714 | 82.93 | 19.24 |
 | 2 × 10,000 | 5,272 | 47,364 | 15.67 | 75.87 |
 
-Attempts: 2,395 / 40,313 / 76,272 / 391,417. Busy responses: 1,425 / 31,761 / 74,980 / 130,752. Transport failures: 0 / 0 / 6 / 258,029. This is incumbent partial-load evidence, not F, cloud or promotion evidence. No F matrix has run at this checkpoint.
+Attempts: 2,395 / 40,313 / 76,272 / 391,417. Busy responses: 1,425 / 31,761 / 74,980 / 130,752. Transport failures: 0 / 0 / 6 / 258,029. This is incumbent partial-load evidence, not F, cloud or promotion evidence. F repeat 1 follows below.
+
+### F repeat 1: greater partial delivery, no promotion
+
+[Repeat 1 final](../../bench/write-path/results/2026-10-12T02-33-52-343Z-a00ec2c3/final.json) identifies `cfcb98c` / `F-shorter-critical-sections`, implementation `6df5196`. The measured SUT/client/workload/limits/caller settings stayed frozen. Every planned call was attempted; acknowledgements equalled persisted facts. Admitted-write/index/transaction/restart audits passed with no unresolved decisions or reconciled extra commits.
+
+| Facts/call × concurrency | F repeat 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs nearby B1 control 1 | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | 98,300 | 17 | 1,528.58 | +14.98% | 2.73 |
+| 10 × 100 | 85,940 | 1,406 | 477.35 | +8.02% | 8.06 |
+| 10 × 1,000 | 37,010 | 6,299 | 145.60 | +75.57% | 33.88 |
+| 2 × 10,000 | 10,552 | 44,724 | 30.75 | +96.18% | 77.52 |
+
+Attempts: 2,059 / 32,429 / 67,186 / 381,418. Busy responses: 1,076 / 23,835 / 63,182 / 95,868. Transport failures: 0 / 0 / 303 / 280,274. All workloads were incomplete: **no promotion**. All four acknowledged rates/partial delivery were higher than the nearby incumbent, but small/high/saturation logical p95 was higher, and high/saturation transport failures increased. More delivered facts and lower busy counts do not certify equal-success throughput, shorter measured gates, low overhead or cloud behavior. Gate removal and metadata/reference/cache invariants are controlled-code evidence; no gate-duration instrumentation or physical per-ID storage/cost comparison was added to the frozen workload. The second unchanged fresh B1/F pair remains required.
 
 ### Proposed G: combined integration experiment
 
