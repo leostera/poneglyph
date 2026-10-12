@@ -5,6 +5,7 @@ import base from "./vitest.config.js";
 // Static test-build selection. No production selector edits or live backend
 // switches; the selected controlled suite still proves actual class identity.
 const implementations: Record<string, string> = {A: "storage", B1: "storage-candidate", C: "storage-c", D: "storage-d", E: "storage-e", F: "storage-f", G: "storage-g", H: "storage-h", I: "storage-i", J: "storage-j", K: "storage-k"};
+if (process.env["PONEGLYPH_RUN_BENCH"] === "1") throw new Error("benchmarks cannot run in the correctness configuration");
 const name = process.env["PONEGLYPH_CORRECTNESS_IMPLEMENTATION"];
 if (!name || !Object.hasOwn(implementations, name)) throw new Error("explicit known correctness implementation required");
 const controlled: Record<string, string[]> = {
