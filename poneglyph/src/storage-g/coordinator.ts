@@ -2,7 +2,8 @@ import { DurableObject } from "cloudflare:workers";
 import type { CandidateStorageEnv as Env } from "./environment.js";
 import { parseFactBatch, type FactBatch, type FactDraft } from "../domain/fact.js";
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
-import { parseUri } from "../domain/identifiers.js";
+import { parseUri, type Uri } from "../domain/identifiers.js";
+import { OwnerWrites, OwnerWriteError } from "./owner-writes.js";
 import { isRecord } from "../domain/result.js";
 import { evaluateDatalog, QueryResultLimitExceeded } from "../datalog/evaluator.js";
 import { parseDatalogQuery } from "../datalog/parser.js";
@@ -35,7 +36,7 @@ import { matchesPrefix, parseVirtualPrefix, shardObjectName, virtualKeyForEntity
 import { listShardLeaves, resolveEntityLeaf, type LeafAddress } from "./routing.js";
 import { factAsJson } from "./protocol.js";
 import { ensureCoordinatorSchema } from "./sql.js";
-import { DistributedTransaction } from "./transaction.js";
+import { TransactionLedger } from "./ledger.js";
 import { TREE_PREFIXES, TREE_DEPTH, TREE_OUTCOME_LIMIT, treeCoordinatorName, transactionCoordinatorName, treeForKey, type TreeSnapshot } from "./forest.js";
 
 type TransactionPhase = "preparing" | "committing" | "cancelling" | "complete" | "aborted";
@@ -87,22 +88,31 @@ type ResumeOutcome = "committed" | "aborted";
 export class GraphCoordinatorDO extends DurableObject<Env> {
   private activeWriterTxId: string | undefined;
   private activeTopologyOpId: string | undefined;
-  private readonly transaction: DistributedTransaction;
+  private readonly ledger: TransactionLedger;
+  private readonly ownerWrites: OwnerWrites;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    this.transaction = new DistributedTransaction(ctx.storage, env);
+    this.ledger = new TransactionLedger(ctx.storage, env);
+    this.ownerWrites = new OwnerWrites(ctx.storage);
     void ctx.blockConcurrencyWhile(async () => ensureCoordinatorSchema(ctx.storage));
   }
 
   override async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname;
-    if (request.method === "POST" && path === "/_transact") return this.transaction.fetch(request);
-    if (request.method === "POST" && path === "/_transaction-audit") return jsonResponse(this.ctx.storage.sql.exec("SELECT tx_id, phase, payload_hash FROM candidate_transactions").toArray());
+    if (request.method === "POST" && path === "/_transact") return this.ledger.fetch(request);
+    if (request.method === "POST" && path === "/_transaction-audit") return jsonResponse(this.ctx.storage.sql.exec(
+      "SELECT tx_id, phase, payload_hash FROM candidate_transactions WHERE tx_id = ?", new URL(request.url).searchParams.get("txId"),
+    ).toArray());
+    if (request.method === "POST" && path === "/_ledger-audit") return jsonResponse({
+      context: this.ctx.storage.sql.exec("SELECT * FROM ledger_context").toArray(),
+      phases: this.ctx.storage.sql.exec("SELECT phase, COUNT(*) AS count FROM candidate_transactions GROUP BY phase").toArray(),
+      databaseBytes: this.ctx.storage.sql.databaseSize,
+    });
     if (request.method === "POST" && path.startsWith("/_tree-")) {
       try { return await this.treeControl(request); }
-      catch (error) { const status = error instanceof CoordinatorError ? error.status : 503;
-        return jsonResponse({ error: errorMessage(error), retryable: error instanceof CoordinatorError ? error.retryable : true }, status); }
+      catch (error) { const known = error instanceof CoordinatorError || error instanceof OwnerWriteError;
+        return jsonResponse({ error: errorMessage(error), retryable: known ? error.retryable : true }, known ? error.status : 503); }
     }
     if (request.method === "POST" && path === "/_split") {
       const raw = await readJsonBody(request, 8192);
@@ -124,7 +134,7 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
         if (!raw.ok) return jsonResponse({error: raw.error.message}, 400);
         const parsed = parseBatchBody(raw.value);
         if (!parsed.ok) return jsonResponse({error: parsed.error.message}, 400);
-        return this.env.GRAPH_COORDINATORS.getByName(transactionCoordinatorName(route.graphId, parsed.value.batch.txId)).fetch("https://transaction.internal/_transact", {
+        return this.env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(route.graphId, parsed.value.batch.txId)).fetch("https://transaction.internal/_transact", {
           method: "POST", body: JSON.stringify({graphId: route.graphId, batch: parsed.value.batch}),
         });
       }
@@ -140,6 +150,8 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       return jsonResponse({ error: errorMessage(error), retryable: error instanceof CoordinatorError ? error.retryable : true }, status);
     }
   }
+
+  override async alarm(): Promise<void> { await this.ledger.alarm(); }
 
   private async requestSplit(request: Request): Promise<Response> {
     const input = await readJsonBody(request, 8_192);
@@ -172,7 +184,7 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
   private reserveSplit(prefix: VirtualPrefix, force: boolean): string {
     return this.ctx.storage.transactionSync(() => {
       const state = this.readGraphState();
-      if (state.writer_tx_id !== null) throw new CoordinatorError(423, "cannot split while a transaction decision is pending");
+      if (state.writer_tx_id !== null || this.ownerWrites.hasWriters()) throw new CoordinatorError(423, "cannot split while entity reservations are pending");
       if (state.topology_op_id !== null) {
         const existing = this.readSplit(state.topology_op_id);
         if (existing?.source_prefix === prefix) return state.topology_op_id;
@@ -885,7 +897,7 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
   private beginReadLease(): ReadLease {
     return this.ctx.storage.transactionSync(() => {
       const state = this.readGraphState();
-      if (state.writer_tx_id !== null || state.topology_op_id !== null) throw new CoordinatorError(423, "subtree writer/topology operation is active");
+      if (state.writer_tx_id !== null || this.ownerWrites.hasWriters() || state.topology_op_id !== null) throw new CoordinatorError(423, "subtree writer/topology operation is active");
       const now = Date.now();
       this.ctx.storage.sql.exec("DELETE FROM graph_read_leases WHERE expires_at_ms <= ?", now);
       const leaseCount = this.ctx.storage.sql.exec<{ count: number }>(
@@ -1085,7 +1097,7 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     const body = raw.value;
     const graph = parseGraphId(body["graphId"]), prefix = parseVirtualPrefix(body["prefix"]);
     if (!graph.ok || !prefix.ok || prefix.value.length !== TREE_DEPTH) throw new CoordinatorError(400, "invalid subtree identity");
-    if (new URL(request.url).pathname === "/_tree-audit") return jsonResponse({ ...this.readGraphState(),
+    if (new URL(request.url).pathname === "/_tree-audit") return jsonResponse({ ...this.readGraphState(), ...this.ownerWrites.audit(),
       phases: this.ctx.storage.sql.exec("SELECT phase, COUNT(*) AS count FROM graph_transactions GROUP BY phase").toArray(),
       reservations: this.ctx.storage.sql.exec("SELECT phase, COUNT(*) AS count FROM tree_reservations GROUP BY phase").toArray(),
       transactions: this.ctx.storage.sql.exec("SELECT tx_id, phase FROM graph_transactions UNION ALL SELECT tx_id, phase FROM tree_reservations").toArray(),
@@ -1100,7 +1112,11 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     if (action === "/_tree-split") return this.requestSplit(new Request("https://tree.internal/_split", {
       method: "POST", body: JSON.stringify({...body, prefix: body["sourcePrefix"]}),
     }));
-    if (action === "/_tree-status") return jsonResponse({ ...this.readGraphState(),
+    if (action === "/_tree-directory") {
+      const state = this.readGraphState();
+      return jsonResponse({directoryEpoch: state.directory_epoch, visibleSeq: state.visible_seq});
+    }
+    if (action === "/_tree-status") return jsonResponse({ ...this.readGraphState(), ...this.ownerWrites.audit(),
       phases: this.ctx.storage.sql.exec("SELECT phase, COUNT(*) AS count FROM graph_transactions GROUP BY phase").toArray(),
       reservations: this.ctx.storage.sql.exec("SELECT phase, COUNT(*) AS count FROM tree_reservations GROUP BY phase").toArray(),
       transactions: this.ctx.storage.sql.exec("SELECT tx_id, phase FROM graph_transactions UNION ALL SELECT tx_id, phase FROM tree_reservations").toArray(),
@@ -1110,57 +1126,46 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       if (typeof body["readId"] !== "string") throw new CoordinatorError(400, "invalid read ID");
       this.releaseReadLease(body["readId"]); return jsonResponse({ status: "released" });
     }
-    if (action === "/_tree-transaction") {
-      const batch = parseFactBatch(body["batch"]);
-      if (!batch.ok) throw new CoordinatorError(400, "invalid tree batch");
-      for (const fact of batch.value.facts) if (treeForKey(await virtualKeyForEntity(graph.value, fact.entity)) !== prefix.value)
-        throw new CoordinatorError(409, "transaction escapes its subtree");
-      return this.writeTransaction(new Request(`https://tree.internal/v1/graphs/${graph.value}/transactions`, {
-        method: "POST", body: canonicalBatchJson(batch.value),
-      }), graph.value);
-    }
+    if (action === "/_tree-transaction") throw new CoordinatorError(404, "coarse local transaction path is not part of G");
     const txId = body["txId"], hash = body["payloadHash"];
     if (typeof txId !== "string" || typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash)) throw new CoordinatorError(400, "invalid transaction control identity");
-    return this.ctx.storage.transactionSync(() => {
-      const row = this.ctx.storage.sql.exec<{payload_hash: string; phase: string; commit_seq: number}>("SELECT * FROM tree_reservations WHERE tx_id = ?", txId).toArray()[0];
-      if (row && row.payload_hash !== hash) throw new CoordinatorError(409, "tree reservation payload conflict");
-      const state = this.readGraphState();
-      if (action === "/_tree-lock") {
-        if (state.writer_tx_id !== null && state.writer_tx_id !== txId || state.topology_op_id !== null || this.hasReadLease())
-          return jsonResponse({ error: "subtree is busy", retryable: true }, 423);
-        if (row?.phase === "complete") return jsonResponse({ visibleSeq: state.visible_seq, directoryEpoch: state.directory_epoch });
-        if (row?.phase === "aborted") throw new CoordinatorError(409, "reservation was aborted");
-        this.ctx.storage.sql.exec("DELETE FROM tree_reservations WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?", Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS);
-        this.ctx.storage.sql.exec("DELETE FROM graph_transactions WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?", Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS);
-        const count = this.ctx.storage.sql.exec<{count: number}>(`SELECT (SELECT COUNT(*) FROM graph_transactions WHERE phase IN ('complete', 'aborted')) +
-          (SELECT COUNT(*) FROM tree_reservations WHERE phase IN ('complete', 'aborted')) AS count`).one().count;
-        if (!row && count >= TREE_OUTCOME_LIMIT) throw new CoordinatorError(429, "subtree retained-outcome share is full", false);
-        const capacity = accountStorage(this.ctx.storage.sql.databaseSize, { factLogBytes: 0, activeIndexBytes: 0, projectionBytes: 0, transactionStagingBytes: 2048 });
-        if (!capacity.canAdmit) throw new CoordinatorError(413, "subtree metadata capacity exceeded");
-        this.ctx.storage.sql.exec("INSERT OR IGNORE INTO tree_reservations (tx_id, payload_hash, phase, created_at_ms) VALUES (?, ?, 'preparing', ?)", txId, hash, Date.now());
-        this.ctx.storage.sql.exec("UPDATE graph_state SET writer_tx_id = ? WHERE singleton = 1", txId);
-        return jsonResponse({ visibleSeq: state.visible_seq, directoryEpoch: state.directory_epoch });
+    const identityTime = body["identityTimeMs"];
+    if (typeof identityTime !== "number" || !Number.isSafeInteger(identityTime) || identityTime < 0)
+      throw new CoordinatorError(400, "invalid transaction identity anchor");
+    if (action === "/_tree-atomic-proof") {
+      const seq = body["commitSeq"], epoch = body["directoryEpoch"], decision = body["decision"];
+      if (typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1 ||
+          typeof epoch !== "number" || !Number.isSafeInteger(epoch) || epoch < 0 ||
+          decision !== "committed" && decision !== "aborted") throw new CoordinatorError(400, "invalid local authority proof tuple");
+      return jsonResponse({authorityReleased: this.ownerWrites.authorityReleased(txId, hash, seq, epoch, identityTime, decision)});
+    }
+    if (action === "/_tree-lock") {
+      const epoch = body["directoryEpoch"];
+      if (typeof epoch !== "number" || !Number.isSafeInteger(epoch) || epoch < 0) throw new CoordinatorError(400, "invalid provisional directory epoch");
+      const rawEntities = body["entities"];
+      if (!Array.isArray(rawEntities) || rawEntities.length === 0 || rawEntities.length > MAX_TRANSACTION_FACTS)
+        throw new CoordinatorError(400, "invalid owner entity set");
+      const entities: Uri[] = [];
+      for (const rawEntity of rawEntities) {
+        const entity = parseUri(rawEntity);
+        if (!entity.ok || treeForKey(await virtualKeyForEntity(graph.value, entity.value)) !== prefix.value)
+          throw new CoordinatorError(409, "entity reservation escapes its owner");
+        entities.push(entity.value);
       }
-      if (action === "/_tree-unlock") {
-        if (state.writer_tx_id === txId) this.ctx.storage.sql.exec("UPDATE graph_state SET writer_tx_id = NULL WHERE singleton = 1");
-        if (body["abort"] === true) this.ctx.storage.sql.exec("UPDATE tree_reservations SET phase = 'aborted' WHERE tx_id = ? AND phase = 'preparing'", txId);
-        else this.ctx.storage.sql.exec("DELETE FROM tree_reservations WHERE tx_id = ? AND phase = 'preparing'", txId);
-        return jsonResponse({ status: "released" });
-      }
-      if (action === "/_tree-finish") {
-        const seq = body["commitSeq"];
-        if (typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1) throw new CoordinatorError(400, "invalid publication sequence");
-        if (row?.phase === "complete") {
-          if (row.commit_seq !== seq) throw new CoordinatorError(409, "publication sequence conflict");
-          return jsonResponse({ status: "complete" });
-        }
-        if (!row || state.writer_tx_id !== txId || seq <= state.visible_seq) throw new CoordinatorError(409, "publication does not own the subtree gate");
-        this.ctx.storage.sql.exec("UPDATE tree_reservations SET phase = 'complete', commit_seq = ? WHERE tx_id = ?", seq, txId);
-        this.ctx.storage.sql.exec("UPDATE graph_state SET writer_tx_id = NULL, visible_seq = ? WHERE singleton = 1", seq);
-        return jsonResponse({ status: "complete" });
-      }
-      throw new CoordinatorError(404, "unknown tree operation");
-    });
+      const unique = [...new Set(entities)].sort();
+      return jsonResponse(this.ownerWrites.reserve(txId, hash, unique, epoch, identityTime));
+    }
+    if (action === "/_tree-unlock") {
+      this.ownerWrites.release(txId, hash, identityTime, body["abort"] === true);
+      return jsonResponse({status: "released"});
+    }
+    if (action === "/_tree-finish") {
+      const seq = body["commitSeq"];
+      if (typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1) throw new CoordinatorError(400, "invalid publication sequence");
+      this.ownerWrites.publish(txId, hash, seq, identityTime);
+      return jsonResponse({status: "complete"});
+    }
+    throw new CoordinatorError(404, "unknown tree operation");
   }
 
   private async acquireReadCut(graphId: GraphId): Promise<TreeSnapshot[]> {

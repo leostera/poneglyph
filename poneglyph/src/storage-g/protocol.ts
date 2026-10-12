@@ -16,6 +16,7 @@ export type ParticipantBatch = Readonly<{
   txId: TransactionId;
   payloadHash: string;
   statementTimeMs: number;
+  identityTimeMs: number;
   commitSeq: number;
   facts: NonEmptyArray<IndexedFact>;
 }>;
@@ -51,6 +52,8 @@ export function parseParticipantBatch(input: unknown): ParseResult<ParticipantBa
   if (!Number.isSafeInteger(statementTimeMs) || typeof statementTimeMs !== "number" || statementTimeMs < 0) {
     return rejected("participant.statementTimeMs", "expected a non-negative safe integer timestamp");
   }
+  const identityTimeMs = readNonNegativeInteger(input["identityTimeMs"]);
+  if (identityTimeMs === undefined) return rejected("participant.identityTimeMs", "expected an identity-window timestamp");
   const commitSeq = input["commitSeq"];
   if (!Number.isSafeInteger(commitSeq) || typeof commitSeq !== "number" || commitSeq < 1) {
     return rejected("participant.commitSeq", "expected a positive safe integer sequence");
@@ -64,7 +67,7 @@ export function parseParticipantBatch(input: unknown): ParseResult<ParticipantBa
   for (const [offset, item] of input["facts"].entries()) {
     if (!isRecord(item)) return rejected(`participant.facts[${offset}]`, "expected an indexed fact");
     const index = item["index"];
-    if (!Number.isSafeInteger(index) || typeof index !== "number" || index < 0 || indices.has(index)) {
+    if (!Number.isSafeInteger(index) || typeof index !== "number" || index < 0 || indices.has(index) || (facts.length > 0 && index <= facts[facts.length - 1]!.index)) {
       return rejected(`participant.facts[${offset}].index`, "expected a unique non-negative fact index");
     }
     const fact = parseFactDraft(item["fact"], `participant.facts[${offset}].fact`);
@@ -83,6 +86,7 @@ export function parseParticipantBatch(input: unknown): ParseResult<ParticipantBa
     txId: txId.value,
     payloadHash,
     statementTimeMs,
+    identityTimeMs,
     commitSeq,
     facts: Object.freeze(facts) as NonEmptyArray<IndexedFact>,
   }));

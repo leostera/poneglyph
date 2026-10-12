@@ -1,10 +1,20 @@
 const COORDINATOR_SCHEMA = [
+  `CREATE TABLE ledger_context (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), graph_id TEXT NOT NULL, bucket TEXT NOT NULL)`,
   `CREATE TABLE tree_context (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), prefix TEXT NOT NULL)`,
   `CREATE TABLE tree_reservations (tx_id TEXT PRIMARY KEY, payload_hash TEXT NOT NULL,
-    phase TEXT NOT NULL, commit_seq INTEGER NOT NULL DEFAULT 0, created_at_ms INTEGER NOT NULL)`,
+    entities_json TEXT NOT NULL, ticket_seq INTEGER NOT NULL UNIQUE CHECK (ticket_seq > 0), directory_epoch INTEGER NOT NULL,
+    phase TEXT NOT NULL CHECK (phase IN ('preparing', 'complete', 'aborted')),
+    commit_seq INTEGER NOT NULL DEFAULT 0, created_at_ms INTEGER NOT NULL)`,
+  `CREATE INDEX tree_reservations_pending ON tree_reservations (phase) WHERE phase = 'preparing'`,
+  `CREATE TABLE entity_write_locks (entity TEXT PRIMARY KEY, tx_id TEXT NOT NULL, payload_hash TEXT NOT NULL)`,
+  `CREATE INDEX entity_write_locks_by_transaction ON entity_write_locks (tx_id)`,
   `CREATE TABLE candidate_transactions (tx_id TEXT PRIMARY KEY, graph_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
     batch_json TEXT NOT NULL, trees_json TEXT NOT NULL, plan_json TEXT, phase TEXT NOT NULL,
-    commit_seq INTEGER NOT NULL, statement_time_ms INTEGER NOT NULL, created_at_ms INTEGER NOT NULL)`,
+    commit_seq INTEGER NOT NULL, statement_time_ms INTEGER NOT NULL, created_at_ms INTEGER NOT NULL,
+    next_recovery_at_ms INTEGER NOT NULL, local_witness_json TEXT,
+    participant_witness INTEGER NOT NULL DEFAULT 0 CHECK (participant_witness IN (0, 1)))`,
+  `CREATE INDEX candidate_transactions_by_recovery ON candidate_transactions (next_recovery_at_ms) WHERE phase NOT IN ('complete', 'aborted')`,
+  `CREATE INDEX candidate_transactions_by_expiry ON candidate_transactions (created_at_ms) WHERE phase IN ('complete', 'aborted')`,
   `CREATE TABLE IF NOT EXISTS graph_identity (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
     graph_id TEXT NOT NULL,
@@ -16,7 +26,8 @@ const COORDINATOR_SCHEMA = [
     directory_epoch INTEGER NOT NULL,
     writer_tx_id TEXT,
     topology_op_id TEXT,
-    next_statement_time_ms INTEGER NOT NULL
+    next_statement_time_ms INTEGER NOT NULL,
+    next_write_seq INTEGER NOT NULL DEFAULT 0 CHECK (next_write_seq >= visible_seq)
   )`,
   `INSERT OR IGNORE INTO graph_state
    (singleton, visible_seq, directory_epoch, writer_tx_id, topology_op_id, next_statement_time_ms)
@@ -74,8 +85,17 @@ const SHARD_SCHEMA = [
     payload_hash TEXT NOT NULL,
     payload_json TEXT,
     status TEXT NOT NULL CHECK (status IN ('prepared', 'committed', 'cancelled')),
+    reserved_mutation_bytes INTEGER NOT NULL DEFAULT 0 CHECK (reserved_mutation_bytes >= 0),
+    decision_kind TEXT NOT NULL DEFAULT 'distributed' CHECK (decision_kind IN ('distributed', 'atomic')),
+    decision_context_json TEXT,
+    atomic_commit_seq INTEGER, atomic_statement_ms INTEGER, atomic_fact_count INTEGER,
+    atomic_generation INTEGER, atomic_directory_epoch INTEGER,
+    atomic_rejection_status INTEGER, atomic_error TEXT,
+    owner_released INTEGER NOT NULL DEFAULT 0 CHECK (owner_released IN (0, 1)),
     created_at_ms INTEGER NOT NULL
   )`,
+  `CREATE INDEX shard_outcome_pending ON shard_transactions (created_at_ms) WHERE status IN ('committed', 'cancelled') AND owner_released = 0`,
+  `CREATE INDEX shard_outcome_expiry ON shard_transactions (created_at_ms) WHERE status IN ('committed', 'cancelled') AND owner_released = 1`,
   `CREATE TABLE IF NOT EXISTS fact_log (
     fact_id TEXT PRIMARY KEY,
     tx_id TEXT NOT NULL,
@@ -173,8 +193,7 @@ const SHARD_SCHEMA = [
 
 const PONEGLYPH_SCHEMA_VERSION = 7;
 
-// G starts from B1 but must never interpret any incumbent/candidate persistence.
-// The unified protocol is under construction; this is not a certified layout.
+// Unified G persistence cannot reinterpret any earlier candidate schema.
 type SchemaKind = "g-coordinator" | "g-shard";
 
 export function ensureCoordinatorSchema(storage: DurableObjectStorage): void {

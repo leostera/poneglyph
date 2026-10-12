@@ -17,7 +17,7 @@ export async function dispatchGraphRequest(request: Request, env: CandidateStora
     if (!parsed.ok) return jsonResponse({ error: parsed.error.message }, 400);
     if (parsed.value.batch.facts.length > MAX_TRANSACTION_FACTS || new TextEncoder().encode(parsed.value.json).byteLength > MAX_TRANSACTION_BYTES)
       return jsonResponse({ error: "transaction exceeds fact/byte limits", retryable: false }, 413);
-    return env.GRAPH_COORDINATORS.getByName(transactionCoordinatorName(graphId, parsed.value.batch.txId)).fetch("https://transaction.internal/_transact", {
+    return env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graphId, parsed.value.batch.txId)).fetch("https://transaction.internal/_transact", {
       method: "POST", body: JSON.stringify({ graphId, batch: parsed.value.batch }),
     });
   }

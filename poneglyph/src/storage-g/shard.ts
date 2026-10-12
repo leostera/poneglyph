@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import type { CandidateStorageEnv as Env } from "./environment.js";
-import { TREE_DEPTH } from "./forest.js";
+import { TREE_DEPTH, treeCoordinatorName } from "./forest.js";
+import { parseFactBatch } from "../domain/fact.js";
 import { parseFactValue, type FactValue } from "../domain/fact-value.js";
 import { compareUnicodeScalars } from "../domain/string-order.js";
 import { parseFactId, parseTransactionId, parseUri } from "../domain/identifiers.js";
@@ -19,10 +20,24 @@ import {
 } from "./constants.js";
 import { accountStorage, estimateMutationFootprint } from "./capacity.js";
 import { MIGRATION_TABLES, migrationRowBytes, parseMigrationTable, virtualKeyRange, type MigrationTable, type MigrationRow } from "./migration.js";
-import { jsonResponse, readJsonBody, sha256Hex } from "./http.js";
+import { canonicalBatchJson, jsonResponse, readJsonBody, sha256Hex } from "./http.js";
 import { matchesPrefix, parseVirtualKey, parseVirtualPrefix, virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
 import { parseParticipantBatch, parseScanRequest, type ParticipantBatch, type ScanRequest } from "./protocol.js";
 import { ensureShardSchema } from "./sql.js";
+
+type AtomicRecord = Readonly<{payload_hash: string; status: string; decision_kind: string;
+  atomic_commit_seq: number | null; atomic_statement_ms: number | null; atomic_fact_count: number | null;
+  atomic_rejection_status: number | null; atomic_error: string | null;
+  atomic_generation: number | null; atomic_directory_epoch: number | null; created_at_ms: number;
+  decision_context_json: string | null; tx_id: string}>;
+type DecisionControl = Readonly<{graphId: string; shardPrefix: VirtualPrefix; shardGeneration: number;
+  directoryEpoch: number; txId: string; payloadHash: string; commitSeq: number; statementTimeMs: number; identityTimeMs: number}>;
+
+function decisionContext(batch: DecisionControl): string {
+  return JSON.stringify({graphId: batch.graphId, shardPrefix: batch.shardPrefix, shardGeneration: batch.shardGeneration,
+    directoryEpoch: batch.directoryEpoch, txId: batch.txId, payloadHash: batch.payloadHash, commitSeq: batch.commitSeq,
+    statementTimeMs: batch.statementTimeMs, identityTimeMs: batch.identityTimeMs});
+}
 
 const ENTITY_TEXT_FIELDS = new Set(["wiki:page:title", "schema:name"]);
 
@@ -60,6 +75,8 @@ type ShardIdentity = Readonly<{
 }>;
 
 export class GraphShardDO extends DurableObject<Env> {
+  // One exact-payload slot; replacing/evicting it never loses durable staging.
+  private staged: Readonly<{payloadJson: string; batch: ParticipantBatch}> | undefined;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     void ctx.blockConcurrencyWhile(async () => ensureShardSchema(ctx.storage));
@@ -79,6 +96,8 @@ export class GraphShardDO extends DurableObject<Env> {
       if (request.method === "POST" && path === "/_count") return await this.countRange(request);
       if (request.method === "POST" && path === "/_abort-split") return await this.abortSplit(request);
       if (request.method === "POST" && path === "/_retire") return await this.retire(request);
+      if (request.method === "POST" && path === "/_atomic") return await this.atomic(request);
+      if (request.method === "POST" && path === "/_decision-finalize") return await this.finalizeDecision(request);
       if (request.method === "POST" && path === "/_prepare") return await this.prepare(request);
       if (request.method === "POST" && path === "/_commit") return await this.commit(request);
       if (request.method === "POST" && path === "/_cancel") return await this.cancel(request);
@@ -90,6 +109,138 @@ export class GraphShardDO extends DurableObject<Env> {
       const status = error instanceof ShardProtocolError ? error.status : 500;
       return jsonResponse({ error: errorMessage(error) }, status);
     }
+  }
+
+  private async atomic(request: Request): Promise<Response> {
+    const raw = await readJsonBody(request, MAX_TRANSACTION_BYTES);
+    if (!raw.ok) return jsonResponse({error: raw.error.message}, 400);
+    const parsed = parseParticipantBatch(raw.value);
+    if (!parsed.ok) return jsonResponse({error: parsed.error.message}, 400);
+    const batch = parsed.value;
+    for (const [index, entry] of batch.facts.entries()) {
+      if (entry.index !== index || await virtualKeyForEntity(batch.graphId, entry.fact.entity) !== entry.virtualKey || !matchesPrefix(entry.virtualKey, batch.shardPrefix))
+        return jsonResponse({error: "atomic message is not a complete ordered local batch"}, 409);
+    }
+    const full = parseFactBatch({txId: batch.txId, facts: batch.facts.map(entry => entry.fact)});
+    if (!full.ok || await sha256Hex(canonicalBatchJson(full.value)) !== batch.payloadHash)
+      return jsonResponse({error: "atomic payload binding mismatch"}, 409);
+    const outcome = this.ctx.storage.transactionSync(() => {
+      this.assertIdentity(batch.graphId, batch.shardPrefix);
+      this.ctx.storage.sql.exec(`DELETE FROM shard_transactions WHERE status IN ('committed', 'cancelled')
+        AND created_at_ms < ? AND owner_released = 1`, Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS);
+      const prior = this.atomicRecord(batch.txId);
+      if (prior) {
+        if (prior.payload_hash !== batch.payloadHash || prior.decision_kind !== "atomic" ||
+            prior.atomic_commit_seq !== batch.commitSeq || prior.atomic_statement_ms !== batch.statementTimeMs ||
+            prior.atomic_generation !== batch.shardGeneration || prior.atomic_directory_epoch !== batch.directoryEpoch || prior.created_at_ms !== batch.identityTimeMs)
+          throw new ShardProtocolError(409, "atomic identity/authority binding conflicts with a retained outcome");
+        return this.atomicReceipt(prior, batch);
+      }
+      this.assertWritableIdentity(batch.graphId, batch.shardPrefix, batch.shardGeneration);
+      // Only validation/admission at the fenced authority may decide abort.
+      // An application exception is outside this catch and rolls everything back.
+      try {this.validatePreparedBatch(batch); this.assertCapacity(batch.facts.map(entry => entry.fact));}
+      catch (error) {
+        if (!(error instanceof ShardProtocolError) || error.status < 400 || error.status >= 500) throw error;
+        this.ctx.storage.sql.exec(`INSERT INTO shard_transactions
+          (tx_id, payload_hash, status, created_at_ms, decision_kind, atomic_commit_seq, atomic_statement_ms,
+           atomic_fact_count, atomic_rejection_status, atomic_error, owner_released, atomic_generation, atomic_directory_epoch)
+          VALUES (?, ?, 'cancelled', ?, 'atomic', ?, ?, 0, ?, ?, 0, ?, ?)`, batch.txId, batch.payloadHash,
+          batch.identityTimeMs, batch.commitSeq, batch.statementTimeMs, error.status, error.message, batch.shardGeneration, batch.directoryEpoch);
+        return this.atomicReceipt(this.atomicRecord(batch.txId)!, batch);
+      }
+      this.applyParticipantBatch(batch);
+      this.ctx.storage.sql.exec(`INSERT INTO shard_transactions
+        (tx_id, payload_hash, status, created_at_ms, decision_kind, atomic_commit_seq, atomic_statement_ms, atomic_fact_count, owner_released, atomic_generation, atomic_directory_epoch)
+        VALUES (?, ?, 'committed', ?, 'atomic', ?, ?, ?, 0, ?, ?)`, batch.txId, batch.payloadHash, batch.identityTimeMs,
+        batch.commitSeq, batch.statementTimeMs, batch.facts.length, batch.shardGeneration, batch.directoryEpoch);
+      return this.atomicReceipt(this.atomicRecord(batch.txId)!, batch);
+    });
+    // Scheduling is maintenance after the authoritative SQLite decision. Its
+    // failure cannot turn a durable local commit into an invented local abort.
+    try {await this.scheduleOutcomeMaintenance();} catch (error) {console.warn("participant maintenance scheduling deferred", String(error));}
+    return jsonResponse(outcome);
+  }
+
+  private atomicRecord(txId: string): AtomicRecord | undefined {
+    return this.ctx.storage.sql.exec<AtomicRecord>("SELECT * FROM shard_transactions WHERE tx_id = ?", txId).toArray()[0];
+  }
+  private atomicReceipt(row: AtomicRecord, batch: ParticipantBatch): object {
+    if (row.status !== "committed" && row.status !== "cancelled") throw new ShardProtocolError(409, "an atomic operation cannot adopt distributed staging");
+    return {txId: batch.txId, graphId: batch.graphId, shardPrefix: batch.shardPrefix, payloadHash: row.payload_hash,
+      commitSeq: row.atomic_commit_seq, statementTimeMs: row.atomic_statement_ms, identityTimeMs: row.created_at_ms,
+      shardGeneration: row.atomic_generation, directoryEpoch: row.atomic_directory_epoch, factCount: row.atomic_fact_count,
+      status: row.status === "committed" ? "committed" : "aborted", rejectionStatus: row.atomic_rejection_status, error: row.atomic_error};
+  }
+
+  private outcomeContext(row: AtomicRecord, identity: ShardIdentity): DecisionControl {
+    const raw: unknown = row.decision_kind === "atomic" ? {
+      graphId: identity.graph_id, shardPrefix: identity.prefix, shardGeneration: row.atomic_generation,
+      directoryEpoch: row.atomic_directory_epoch, txId: row.tx_id, payloadHash: row.payload_hash,
+      commitSeq: row.atomic_commit_seq, statementTimeMs: row.atomic_statement_ms, identityTimeMs: row.created_at_ms,
+    } : JSON.parse(row.decision_context_json ?? "null");
+    const context = decodeDecisionContext(raw);
+    if (context.graphId !== identity.graph_id || context.shardPrefix !== identity.prefix || context.txId !== row.tx_id ||
+        context.payloadHash !== row.payload_hash || context.identityTimeMs !== row.created_at_ms) throw new ShardProtocolError(409, "corrupt outcome identity context");
+    return context;
+  }
+
+  private async finalizeDecision(request: Request): Promise<Response> {
+    const control = await this.readControl(request); if (!control.ok) return control.response;
+    const identity = this.ctx.storage.sql.exec<ShardIdentity>("SELECT * FROM shard_identity").toArray()[0];
+    const row = this.atomicRecord(control.value.txId);
+    if (!identity || !row || row.status === "prepared" || decisionContext(this.outcomeContext(row, identity)) !== decisionContext(control.value))
+      return jsonResponse({error: "participant finalization witness mismatch"}, 409);
+    // Internal ledger notice follows all apply/cancel and owner publication;
+    // only the exact old context is updated, including on a retired router.
+    this.ctx.storage.sql.exec("UPDATE shard_transactions SET owner_released = 1 WHERE tx_id = ?", row.tx_id);
+    try {await this.scheduleOutcomeMaintenance();} catch (error) {console.warn("participant expiry scheduling deferred", String(error));}
+    return jsonResponse({status: "finalized"});
+  }
+
+  private async scheduleOutcomeMaintenance(): Promise<void> {
+    const pending = this.ctx.storage.sql.exec("SELECT 1 FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND owner_released = 0 LIMIT 1").toArray().length > 0;
+    const expiry = this.ctx.storage.sql.exec<{at: number | null}>("SELECT MIN(created_at_ms) AS at FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND owner_released = 1").one().at;
+    const deadlines = [pending ? Date.now() + 5000 : null, expiry === null ? null : expiry + TRANSACTION_IDEMPOTENCY_RETENTION_MS].filter((at): at is number => at !== null);
+    if (!deadlines.length) return;
+    const due = Math.max(Date.now() + 1000, Math.min(...deadlines)), current = await this.ctx.storage.getAlarm();
+    if (current === null || due < current) await this.ctx.storage.setAlarm(due);
+  }
+
+  private async proveOwnerRelease(row: AtomicRecord, identity: ShardIdentity): Promise<void> {
+    const context = this.outcomeContext(row, identity), prefix = identity.prefix.slice(0, TREE_DEPTH) as VirtualPrefix;
+    const response = await this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(identity.graph_id, prefix)).fetch("https://owner.internal/_tree-atomic-proof", {
+      method: "POST", body: JSON.stringify({...context, prefix, decision: row.status === "committed" ? "committed" : "aborted"}),
+    });
+    const proof: unknown = await response.json();
+    if (response.ok && isRecord(proof) && proof["authorityReleased"] === true)
+      this.ctx.storage.sql.exec(`UPDATE shard_transactions SET owner_released = 1
+        WHERE tx_id = ? AND payload_hash = ? AND created_at_ms = ? AND decision_kind = ?
+        AND atomic_commit_seq IS ? AND atomic_statement_ms IS ? AND atomic_generation IS ? AND atomic_directory_epoch IS ? AND decision_context_json IS ?`,
+        row.tx_id, row.payload_hash, row.created_at_ms, row.decision_kind, row.atomic_commit_seq, row.atomic_statement_ms,
+        row.atomic_generation, row.atomic_directory_epoch, row.decision_context_json);
+  }
+
+  override async alarm(): Promise<void> {
+    const identity = this.ctx.storage.sql.exec<ShardIdentity>("SELECT * FROM shard_identity").toArray()[0];
+    if (!identity) return;
+    const rows = this.ctx.storage.sql.exec<AtomicRecord>(`SELECT * FROM shard_transactions
+      WHERE status IN ('committed', 'cancelled') AND owner_released = 0 ORDER BY created_at_ms LIMIT 100`).toArray();
+    let index = 0;
+    const worker = async () => {
+      while (index < rows.length) {
+        const row = rows[index++]!;
+        try {await this.proveOwnerRelease(row, identity);}
+        catch (error) {console.warn("participant publication proof deferred", row.tx_id, String(error));}
+      }
+    };
+    try {
+      await Promise.all(Array.from({length: 6}, worker));
+      const expired = this.ctx.storage.sql.exec<{tx_id: string}>(`SELECT tx_id FROM shard_transactions
+        WHERE status IN ('committed', 'cancelled') AND owner_released = 1 AND created_at_ms < ? ORDER BY created_at_ms LIMIT ?`,
+        Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS, 100 - rows.length).toArray();
+      this.ctx.storage.transactionSync(() => {for (const row of expired) this.ctx.storage.sql.exec("DELETE FROM shard_transactions WHERE tx_id = ? AND owner_released = 1", row.tx_id);});
+    } finally {await this.scheduleOutcomeMaintenance();}
   }
 
   private async prepare(request: Request): Promise<Response> {
@@ -105,19 +256,20 @@ export class GraphShardDO extends DurableObject<Env> {
     }
 
     const payloadJson = JSON.stringify(batch.value);
+    let inserted = false;
     const outcome = this.ctx.storage.transactionSync(() => {
       this.assertWritableIdentity(batch.value.graphId, batch.value.shardPrefix, batch.value.shardGeneration);
       this.ctx.storage.sql.exec(
-        `DELETE FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND created_at_ms < ?`,
+        `DELETE FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND created_at_ms < ? AND owner_released = 1`,
         Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS,
       );
       const existing = this.ctx.storage.sql.exec<{
         payload_hash: string;
-        status: string;
-      }>("SELECT payload_hash, status FROM shard_transactions WHERE tx_id = ?", batch.value.txId).toArray()[0];
+        status: string; decision_kind: string; decision_context_json: string | null;
+      }>("SELECT payload_hash, status, decision_kind, decision_context_json FROM shard_transactions WHERE tx_id = ?", batch.value.txId).toArray()[0];
 
       if (existing !== undefined) {
-        if (existing.payload_hash !== batch.value.payloadHash) {
+        if (existing.payload_hash !== batch.value.payloadHash || existing.decision_kind !== "distributed" || existing.decision_context_json !== decisionContext(batch.value)) {
           throw new ShardProtocolError(409, "transaction ID was already used with a different participant payload");
         }
         if (existing.status === "cancelled") {
@@ -129,18 +281,17 @@ export class GraphShardDO extends DurableObject<Env> {
       // Replay is decided from the durable outcome, not the now-changed fact state
       // or another capacity reservation for the same transaction.
       this.validatePreparedBatch(batch.value);
-      this.assertCapacity(batch.value.facts.map((indexed) => indexed.fact));
-      this.ctx.storage.sql.exec(
-        `INSERT INTO shard_transactions (tx_id, payload_hash, payload_json, status, created_at_ms)
-         VALUES (?, ?, ?, 'prepared', ?)`,
-        batch.value.txId,
-        batch.value.payloadHash,
-        payloadJson,
-        Date.now(),
-      );
+      const capacity = this.capacityFor(batch.value.facts.map(indexed => indexed.fact));
+      if (!capacity.canAdmit) throw new ShardProtocolError(413, `per-DO accounted capacity limit exceeded (${capacity.projectedAccountedBytes} bytes)`);
+      const reservedGrowth = Object.values(capacity.pending).reduce((sum, bytes) => sum + bytes, 0) - this.preparedGrowth();
+      this.ctx.storage.sql.exec(`INSERT INTO shard_transactions
+        (tx_id, payload_hash, payload_json, status, created_at_ms, reserved_mutation_bytes, decision_context_json)
+        VALUES (?, ?, ?, 'prepared', ?, ?, ?)`, batch.value.txId, batch.value.payloadHash, payloadJson,
+        batch.value.identityTimeMs, reservedGrowth, decisionContext(batch.value));
+      inserted = true;
       return "prepared";
     });
-
+    if (inserted) this.staged = {payloadJson, batch: batch.value};
     return jsonResponse({ status: outcome });
   }
 
@@ -153,70 +304,56 @@ export class GraphShardDO extends DurableObject<Env> {
       const row = this.ctx.storage.sql.exec<{
         payload_hash: string;
         payload_json: string | null;
-        status: string;
-      }>("SELECT payload_hash, payload_json, status FROM shard_transactions WHERE tx_id = ?", txId).toArray()[0];
+        status: string; decision_kind: string; decision_context_json: string | null;
+      }>("SELECT payload_hash, payload_json, status, decision_kind, decision_context_json FROM shard_transactions WHERE tx_id = ?", txId).toArray()[0];
       if (row === undefined) throw new ShardProtocolError(409, "transaction was not prepared on this shard");
-      if (row.payload_hash !== payloadHash) throw new ShardProtocolError(409, "participant payload hash mismatch");
+      if (row.payload_hash !== payloadHash || row.decision_kind !== "distributed" || row.decision_context_json !== decisionContext(control.value))
+        throw new ShardProtocolError(409, "participant authority/identity context mismatch");
       if (row.status === "committed") return "committed";
       if (row.status !== "prepared" || row.payload_json === null) {
         throw new ShardProtocolError(409, "transaction is not in the prepared state");
       }
 
-      const parsed = parseParticipantBatch(JSON.parse(row.payload_json) as unknown);
-      if (!parsed.ok) throw new ShardProtocolError(500, `stored prepare record is invalid: ${parsed.error.message}`);
-      if (parsed.value.commitSeq !== commitSeq) throw new ShardProtocolError(409, "commit sequence mismatch");
-      this.applyParticipantBatch(parsed.value);
+      const batch = this.decodePrepared(row.payload_json);
+      if (decisionContext(batch) !== decisionContext(control.value)) throw new ShardProtocolError(409, "prepared context binding mismatch");
+      this.applyParticipantBatch(batch);
       this.ctx.storage.sql.exec(
-        `UPDATE shard_transactions SET payload_json = NULL, status = 'committed' WHERE tx_id = ?`,
+        `UPDATE shard_transactions SET payload_json = NULL, status = 'committed', reserved_mutation_bytes = 0 WHERE tx_id = ?`,
         txId,
       );
       return "committed";
     });
 
+    if (this.staged?.batch.txId === txId) this.staged = undefined;
+    try {await this.scheduleOutcomeMaintenance();} catch (error) {console.warn("participant maintenance scheduling deferred", String(error));}
     return jsonResponse({ status: result, txId, commitSeq });
   }
 
-  private async cancel(request: Request): Promise<Response> {
-    const input = await readJsonBody(request, 4_096);
-    if (!input.ok || !isRecord(input.value)) {
-      return jsonResponse({ error: input.ok ? "expected a cancel object" : input.error.message }, 400);
-    }
-    const graphId = parseGraphId(input.value["graphId"]);
-    const txId = parseTransactionId(input.value["txId"]);
-    const payloadHash = input.value["payloadHash"];
-    const shardPrefix = parseVirtualPrefix(input.value["shardPrefix"]);
-    const shardGeneration = readNonNegativeInteger(input.value["shardGeneration"]);
-    if (!graphId.ok || !txId.ok || !shardPrefix.ok || !shardGeneration.ok || typeof payloadHash !== "string" || !/^[a-f0-9]{64}$/.test(payloadHash)) {
-      return jsonResponse({ error: "invalid cancel request" }, 400);
-    }
+  private decodePrepared(json: string): ParticipantBatch {
+    if (this.staged?.payloadJson === json) return this.staged.batch;
+    const parsed = parseParticipantBatch(JSON.parse(json));
+    if (!parsed.ok) throw new ShardProtocolError(500, `stored prepare record is invalid: ${parsed.error.message}`);
+    return parsed.value;
+  }
 
+  private async cancel(request: Request): Promise<Response> {
+    const parsed = await this.readControl(request); if (!parsed.ok) return parsed.response;
+    const control = parsed.value, context = decisionContext(control);
     this.ctx.storage.transactionSync(() => {
-      this.assertWritableIdentity(graphId.value, shardPrefix.value, shardGeneration.value);
-      const row = this.ctx.storage.sql.exec<{
-        payload_hash: string;
-        status: string;
-      }>("SELECT payload_hash, status FROM shard_transactions WHERE tx_id = ?", txId.value).toArray()[0];
-      if (row !== undefined && row.payload_hash !== payloadHash) {
-        throw new ShardProtocolError(409, "participant payload hash mismatch");
-      }
+      this.assertWritableIdentity(control.graphId, control.shardPrefix, control.shardGeneration);
+      const row = this.atomicRecord(control.txId);
+      if (row && (row.payload_hash !== control.payloadHash || row.decision_kind !== "distributed" || row.decision_context_json !== context))
+        throw new ShardProtocolError(409, "participant cancellation context mismatch");
       if (row?.status === "committed") throw new ShardProtocolError(409, "committed transaction cannot be cancelled");
       if (row?.status === "cancelled") return;
-      if (row === undefined) {
-        this.ctx.storage.sql.exec(
-          `INSERT INTO shard_transactions (tx_id, payload_hash, payload_json, status, created_at_ms)
-           VALUES (?, ?, NULL, 'cancelled', ?)`,
-          txId.value,
-          payloadHash,
-          Date.now(),
-        );
-      } else {
-        this.ctx.storage.sql.exec(
-          `UPDATE shard_transactions SET payload_json = NULL, status = 'cancelled' WHERE tx_id = ?`,
-          txId.value,
-        );
-      }
+      if (!row) this.ctx.storage.sql.exec(`INSERT INTO shard_transactions
+        (tx_id, payload_hash, status, created_at_ms, decision_context_json) VALUES (?, ?, 'cancelled', ?, ?)`,
+        control.txId, control.payloadHash, control.identityTimeMs, context);
+      else this.ctx.storage.sql.exec("UPDATE shard_transactions SET payload_json = NULL, status = 'cancelled', reserved_mutation_bytes = 0 WHERE tx_id = ?", control.txId);
     });
-    return jsonResponse({ status: "cancelled", txId: txId.value });
+    if (this.staged?.batch.txId === control.txId) this.staged = undefined;
+    try {await this.scheduleOutcomeMaintenance();} catch (error) {console.warn("participant maintenance scheduling deferred", String(error));}
+    return jsonResponse({status: "cancelled", txId: control.txId});
   }
 
   private async scan(request: Request): Promise<Response> {
@@ -619,6 +756,8 @@ export class GraphShardDO extends DurableObject<Env> {
         txId: string;
         payloadHash: string;
         commitSeq: number;
+        statementTimeMs: number;
+        identityTimeMs: number;
       }> }
     | { ok: false; response: Response }
   > {
@@ -633,6 +772,8 @@ export class GraphShardDO extends DurableObject<Env> {
     const txId = parseTransactionId(input.value["txId"]);
     const payloadHash = input.value["payloadHash"];
     const commitSeq = readPositiveInteger(input.value["commitSeq"]);
+    const statementTimeMs = readNonNegativeInteger(input.value["statementTimeMs"]), identityTimeMs = readNonNegativeInteger(input.value["identityTimeMs"]);
+    if (!statementTimeMs.ok || !identityTimeMs.ok) return {ok: false, response: jsonResponse({error: "invalid decision timestamps"}, 400)};
     if (!graphId.ok || !shardPrefix.ok || !shardGeneration.ok || !directoryEpoch.ok || !txId.ok || !commitSeq.ok || typeof payloadHash !== "string" || !/^[a-f0-9]{64}$/.test(payloadHash)) {
       return { ok: false, response: jsonResponse({ error: "invalid commit request" }, 400) };
     }
@@ -646,6 +787,8 @@ export class GraphShardDO extends DurableObject<Env> {
         txId: txId.value,
         payloadHash,
         commitSeq: commitSeq.value,
+        statementTimeMs: statementTimeMs.value,
+        identityTimeMs: identityTimeMs.value,
       },
     };
   }
@@ -1001,7 +1144,10 @@ export class GraphShardDO extends DurableObject<Env> {
       if (identity.role !== "router" || identity.migration_id !== migrationId) throw new ShardProtocolError(409, "router migration identity mismatch");
       if (identity.migration_state === "retired") return;
       for (const table of Object.keys(MIGRATION_TABLES) as MigrationTable[]) this.ctx.storage.sql.exec(`DELETE FROM ${table}`);
-      this.ctx.storage.sql.exec("DELETE FROM shard_transactions");
+      // Atomic decisions survive migration on this stable old object until
+      // publication is proven and the existing terminal retention window ends.
+      // Both decision kinds retain exact witnesses through publication/expiry;
+      // migrated source rows are no longer active membership on this router.
       this.ctx.storage.sql.exec("DELETE FROM migration_import_pages");
       this.ctx.storage.sql.exec("UPDATE shard_identity SET migration_state = 'retired' WHERE singleton = 1");
     });
@@ -1041,6 +1187,11 @@ export class GraphShardDO extends DurableObject<Env> {
     const identity = this.ctx.storage.transactionSync(() => this.assertIdentity(batch.value.graphId, batch.value.shardPrefix));
     if (identity.role !== "leaf" || identity.generation !== batch.value.shardGeneration || identity.migration_state !== "active") {
       return jsonResponse({ error: "shard route is stale or topology is moving" }, 409);
+    }
+    const prior = this.atomicRecord(batch.value.txId);
+    if (prior?.decision_kind === "distributed" && prior.decision_context_json === decisionContext(batch.value)) {
+      if (prior.payload_hash !== batch.value.payloadHash || prior.status === "cancelled") return jsonResponse({error: "participant replay conflict"}, 409);
+      return jsonResponse({canAdmit: true, shouldSplit: false, replay: true});
     }
     return jsonResponse(this.capacityFor(batch.value.facts.map((indexed) => indexed.fact)));
   }
@@ -1110,17 +1261,35 @@ export class GraphShardDO extends DurableObject<Env> {
       ).toArray();
       for (const row of rows) existingProjectionBytes.set(row.entity, row.bytes);
     }
-    return accountStorage(
-      this.ctx.storage.sql.databaseSize + syntheticSize,
-      estimateMutationFootprint(facts, existingProjectionBytes),
-      migrationReserve,
-    );
+    const footprint = estimateMutationFootprint(facts, existingProjectionBytes);
+    return accountStorage(this.ctx.storage.sql.databaseSize + syntheticSize,
+      {...footprint, transactionStagingBytes: footprint.transactionStagingBytes + this.preparedGrowth()}, migrationReserve);
+  }
+
+  private preparedGrowth(): number {
+    return this.ctx.storage.sql.exec<{bytes: number}>("SELECT COALESCE(SUM(reserved_mutation_bytes), 0) AS bytes FROM shard_transactions WHERE status = 'prepared'").one().bytes;
   }
 
   private assertCapacity(facts: readonly import("../domain/fact.js").FactDraft[]): void {
     const account = this.capacityFor(facts);
     if (!account.canAdmit) throw new ShardProtocolError(413, `per-DO accounted capacity limit exceeded (${account.projectedAccountedBytes} bytes)`);
   }
+}
+
+function decodeDecisionContext(input: unknown): DecisionControl {
+  if (!isRecord(input)) throw new ShardProtocolError(400, "invalid decision context");
+  const graph = parseGraphId(input["graphId"]), prefix = parseVirtualPrefix(input["shardPrefix"]), id = parseTransactionId(input["txId"]);
+  const hash = input["payloadHash"];
+  if (!graph.ok || !prefix.ok || !id.ok || typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash))
+    throw new ShardProtocolError(400, "invalid decision identity");
+  const integer = (field: string, minimum = 0): number => {
+    const value = input[field];
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum) throw new ShardProtocolError(400, "invalid decision integer");
+    return value;
+  };
+  return {graphId: graph.value, shardPrefix: prefix.value, txId: id.value, payloadHash: hash,
+    shardGeneration: integer("shardGeneration"), directoryEpoch: integer("directoryEpoch"), commitSeq: integer("commitSeq", 1),
+    statementTimeMs: integer("statementTimeMs"), identityTimeMs: integer("identityTimeMs")};
 }
 
 function datalogValueToFactValue(field: string, value: DatalogValue): FactValue | undefined {

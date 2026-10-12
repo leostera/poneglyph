@@ -5,6 +5,7 @@ const IMPLEMENTATIONS = [
   {directory: "storage-d", identity: "D-narrower-conflict-locks"},
   {directory: "storage-e", identity: "E-idempotent-local-commit"},
   {directory: "storage-f", identity: "F-shorter-critical-sections"},
+  {directory: "storage-g", identity: "G-integrated-write-path"},
 ] as const;
 
 // Identity follows actual bundled implementation classes, not a request flag
