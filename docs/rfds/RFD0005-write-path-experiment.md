@@ -613,6 +613,25 @@ Independent `storage-k/` differs from G only in schema/routing/error identity, p
 
 K has not been measured/promoted at this gate. Freeze this revision for G → K → G → unchanged K. A is restored and validated outside trials, G remains the accepted experimental incumbent, and all rejected H/I/J evidence remains intact.
 
+### K matched comparison and rejection
+
+Fresh **G → K → G → unchanged K** selections: `0910012` → `520dd03` → `e614110` → `c29e008`. Both G source/bundle appearances stayed unchanged (`a4ab71e8dd22bdb278dd23f5e111910e8c5474be6093462b1f0af291de9b646f`); K source/bundle repeated unchanged (`d97e1e702a05b0d5be260caec6b67b0dea1892b8f15f6a851c3ded2cf0537762`). All **284,000 planned calls / sixteen loads** were attempted with fresh persistence, identical frozen inputs/client/application/runtime/retry/transport/settings/limits and no overlap, rebatching or measured patches.
+
+| Scenario | G control 1 ack / facts/s | K repeat 1 ack / facts/s | G control 2 ack / facts/s | K repeat 2 ack / facts/s |
+| --- | ---: | ---: | ---: | ---: |
+| 100 × 10 | 100,000 / 1,609.03 | 100,000 / 1,187.11 | 100,000 / 1,816.95 | 100,000 / 1,979.52 |
+| 10 × 100 | 100,000 / 724.76 | 100,000 / 818.74 | 100,000 / 808.41 | 100,000 / 837.05 |
+| 10 × 1,000 | 99,920 / 626.14 | 99,890 / 604.45 | 100,000 / 847.23 | 100,000 / 850.80 |
+| 2 × 10,000 | 69,598 / 293.87 | 68,650 / 293.62 | 69,372 / 312.21 | 70,734 / 312.19 |
+
+K rate deltas: **−26.22% / +12.97% / −3.46% / −0.085%**, then **+8.95% / +3.54% / +0.42% / −0.0075%**. Logical p95 deltas: **+53.06% / −14.65% / −20.78% / −5.59%**, then **−13.87% / −2.10% / −3.97% / +2.78%**. Small benefits repeat, but pair 1 medium/high regress and saturation rate does not improve in either pair; high/saturation pair 1 delivery is lower. Do not round a tiny negative rate into a qualifying gain. **Reject K; retain G and B1 → G lineage.** K and these controls fully acknowledged only **5/8 cases** each, not 8/8. One larger saturation receipt count is neither promotion nor full delivery.
+
+All admitted fact/value/index/projection/membership/owner-ticket hot/restart checks passed, persisted facts equal caller acknowledgments in all sixteen cases, **zero additional caller-unknown commits reconciled**, and no partial/missing/unexplained transactions, pending decisions or leftover entity/topology fences. These zero extras are specific to K's cohort, not a rewrite of I/J's explicit reconciliation. All successful facts remain indefinitely retained; unsuccessful calls remain delivery failures.
+
+Transport attempts (G1 / K1 / G2 / K2): medium **0 / 1 / 0 / 0**, small **0 / 0 / 0 / 0**, high **6,691 / 6,261 / 4,850 / 5,057**, saturation **191,111 / 193,481 / 188,595 / 183,413**. Full attempts/423s/retries/unknown/logical/attempt tails/drain and actual pooled storage remain in the finals. Confirmed duplicate-hash removal alone does not establish equal-success throughput, repeatable all-scenario gains or cloud performance.
+
+Finals: [G control 1](../../bench/write-path/results/2026-10-12T20-41-33-371Z-7d64f1bc/final.json), [K repeat 1](../../bench/write-path/results/2026-10-12T20-58-06-706Z-5547e1d9/final.json), [G control 2](../../bench/write-path/results/2026-10-12T21-15-00-080Z-104f91bf/final.json), [K repeat 2](../../bench/write-path/results/2026-10-12T21-30-10-978Z-1c67692c/final.json). Preserve K/every source/final/identity and corpus; remove only authorized completed intermediates after retention. A is restored/validated outside trials. The serial improvement goal remains open and must continue from unchanged G, not rejected K/J/I/H; ordinary regression/incomplete delivery is not a user-decision blocker.
+
 ## Final C–F comparison and retained incumbent
 
 **The independent C → D → E → F evaluation is complete. Zero promotions.** Each candidate was built from the actual incumbent **B1**, because its predecessor failed the mandatory all-four/two-repeat delivery gate. No losing implementation became the next base, and A remains the source/default outside explicit trials. C/D/E/F and their protocol tests remain independent preserved implementations, not a production cutover.

@@ -203,3 +203,18 @@ Fresh sequence: [G control 1](./2026-10-12T19-20-49-498Z-a9268621/final.json) �
 All 284,000 planned calls / sixteen loads were attempted; frozen identities/settings repeat, with passing hot/restart integrity audits and no missing acknowledged facts, partial/unexplained commits or unresolved decisions/owner anomalies. Additional complete caller-unknown commits reconcile in **J1 saturation 1 / 2 facts; G2 saturation 380 / 760; J2 high 37 / 370; J2 saturation 46 / 92**. All other twelve cases reconcile zero. Extra persisted facts are not caller acknowledgment or delivery credit.
 
 **J is rejected:** high delivery is lower in both pairs, small rates regress in both, and other directions are mixed. J and its controls fully acknowledged only **4/8 cases** each. [Authoritative latency/transport/reconciliation decision](../../../docs/rfds/RFD0005-write-path-experiment.md#j-matched-comparison-and-rejection). Preserve J and all finals. **B1 → G** remains accepted lineage, A is restored as default, and the improvement goal continues independently from G without workload/limit/transport/cloud/default expansion.
+
+## K: rejected, G retained
+
+Fresh sequence: [G control 1](./2026-10-12T20-41-33-371Z-7d64f1bc/final.json) → [K repeat 1](./2026-10-12T20-58-06-706Z-5547e1d9/final.json) → [G control 2](./2026-10-12T21-15-00-080Z-104f91bf/final.json) → [unchanged K repeat 2](./2026-10-12T21-30-10-978Z-1c67692c/final.json). K protocol/gate `1c06c8d` / `64f3111`: **48 controlled / 70 with shared tests**, package/typechecks/seven harness gates pass. Only call-local entity hash reuse and routing with an already-derived key change; all G entry/hash/range/ordering/identity/decision/admission/publication/query/cleanup checks remain.
+
+| Frozen scenario | K acknowledged facts, repeat 1 / 2 (of 100k) | Rate change against paired G |
+| --- | --- | --- |
+| 100 × 10 | 100,000 / 100,000 | **−26.22%** / +8.95% |
+| 10 × 100 | 100,000 / 100,000 | +12.97% / +3.54% |
+| 10 × 1,000 | 99,890 / 100,000 | **−3.46%** / +0.42% |
+| 2 × 10,000 | 68,650 / 70,734 | **−0.085% / −0.0075%** |
+
+All 284,000 planned calls / sixteen loads were attempted; frozen identities/settings repeat and hot/restart integrity audits pass. Persisted=acknowledged in every case, **zero extra unknown commits reconciled**, no partial/missing/unexplained outcomes or unresolved decisions/owner anomalies. These zero extras apply to this cohort only.
+
+**K is rejected:** pair 1 medium/high regress; saturation rates do not improve, even where receipt counts rise. Do not round tiny negative deltas into gains. Both candidate and nearby controls fully deliver only **5/8 cases**, not full certification. [Authoritative latency/transport/decision](../../../docs/rfds/RFD0005-write-path-experiment.md#k-matched-comparison-and-rejection). Preserve K and every final; G remains accepted incumbent (**B1 → G**), A is restored as default. Continue independently from G with the same limits/workload/transport and no cloud/default cutover.
