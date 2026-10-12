@@ -98,6 +98,17 @@ export const smallCases: Case[] = [
     const result = await s.request({action: "raw", path: "transactions", body}); assert.equal(result.status, 400);
     await s.query(relation("test:value"));
   }})),
+  {name: "query/many-to-one-value-encodings", async run(s) {
+    const values: Value[] = [
+      {type: "null"}, text("null"), {type: "boolean", value: true}, text("true"),
+      {type: "reference", value: "test:target"}, text("test:target"),
+      {type: "number", value: "7"}, text("7"), {type: "date", value: "2024-02-29"}, text("2024-02-29"),
+      {type: "bytes", value: []}, text("[]"), {type: "list", value: []},
+    ];
+    await s.write("collisions", values.map(value => fact("test:a", value)));
+    // Same public encoding can come from different fact tags; integer/string
+    // are still distinct. Common lookup checks must preserve all multiplicity.
+  }},
 ];
 
 export async function checkAllLookups(s: Session) {

@@ -29,8 +29,6 @@ type AtomicRecord = Readonly<{payload_hash: string; status: string; decision_kin
   atomic_commit_seq: number | null; atomic_statement_ms: number | null; atomic_fact_count: number | null;
   atomic_rejection_status: number | null; atomic_error: string | null}>;
 
-const ENTITY_TEXT_FIELDS = new Set(["wiki:page:title", "schema:name"]);
-
 type ActiveFactRow = Readonly<{
   source: string;
   entity: string;
@@ -492,12 +490,11 @@ export class GraphShardDO extends DurableObject<Env> {
     }
 
     if (scan.value !== undefined) {
-      const factValue = datalogValueToFactValue(scan.field, scan.value);
-      if (factValue === undefined) {
-        return { sql: "SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE 0", args: [] };
-      }
-      clauses.push("value_key = ?");
-      args.push(JSON.stringify(factValue));
+      // Datalog conversion is many-to-one: strings also encode references,
+      // booleans, dates and collections. Compare the exposed typed value;
+      // guessing an original FactValue silently loses valid bound matches.
+      clauses.push("datalog_type = ?", "datalog_value = ?");
+      args.push(scan.value.type, scan.value.value);
     }
 
     return {
@@ -1242,15 +1239,6 @@ export class GraphShardDO extends DurableObject<Env> {
     const account = this.capacityFor(facts);
     if (!account.canAdmit) throw new ShardProtocolError(413, `per-DO accounted capacity limit exceeded (${account.projectedAccountedBytes} bytes)`);
   }
-}
-
-function datalogValueToFactValue(field: string, value: DatalogValue): FactValue | undefined {
-  if (value.type === "integer") return Object.freeze({ type: "number", value: value.value });
-  if (ENTITY_TEXT_FIELDS.has(field)) return Object.freeze({ type: "text", value: value.value });
-  const reference = parseUri(value.value);
-  return reference.ok
-    ? Object.freeze({ type: "reference", value: reference.value })
-    : Object.freeze({ type: "text", value: value.value });
 }
 
 function readNonNegativeInteger(input: unknown): { ok: true; value: number } | { ok: false } {

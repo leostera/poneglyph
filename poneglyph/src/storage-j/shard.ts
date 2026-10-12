@@ -39,8 +39,6 @@ function decisionContext(batch: DecisionControl): string {
     statementTimeMs: batch.statementTimeMs, identityTimeMs: batch.identityTimeMs});
 }
 
-const ENTITY_TEXT_FIELDS = new Set(["wiki:page:title", "schema:name"]);
-
 type ActiveFactRow = Readonly<{
   source: string;
   entity: string;
@@ -517,12 +515,11 @@ export class GraphShardDO extends DurableObject<Env> {
     }
 
     if (scan.value !== undefined) {
-      const factValue = datalogValueToFactValue(scan.field, scan.value);
-      if (factValue === undefined) {
-        return { sql: "SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE 0", args: [] };
-      }
-      clauses.push("value_key = ?");
-      args.push(JSON.stringify(factValue));
+      // Datalog conversion is many-to-one: strings also encode references,
+      // booleans, dates and collections. Compare the exposed typed value;
+      // guessing an original FactValue silently loses valid bound matches.
+      clauses.push("datalog_type = ?", "datalog_value = ?");
+      args.push(scan.value.type, scan.value.value);
     }
 
     return {
@@ -1297,15 +1294,6 @@ function decodeDecisionContext(input: unknown): DecisionControl {
   return {graphId: graph.value, shardPrefix: prefix.value, txId: id.value, payloadHash: hash,
     shardGeneration: integer("shardGeneration"), directoryEpoch: integer("directoryEpoch"), commitSeq: integer("commitSeq", 1),
     statementTimeMs: integer("statementTimeMs"), identityTimeMs: integer("identityTimeMs")};
-}
-
-function datalogValueToFactValue(field: string, value: DatalogValue): FactValue | undefined {
-  if (value.type === "integer") return Object.freeze({ type: "number", value: value.value });
-  if (ENTITY_TEXT_FIELDS.has(field)) return Object.freeze({ type: "text", value: value.value });
-  const reference = parseUri(value.value);
-  return reference.ok
-    ? Object.freeze({ type: "reference", value: reference.value })
-    : Object.freeze({ type: "text", value: value.value });
 }
 
 function readNonNegativeInteger(input: unknown): { ok: true; value: number } | { ok: false } {
