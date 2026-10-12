@@ -87,3 +87,7 @@ The first two scenarios completed their full input; the last two did not. **D is
 ## E comparison: first nearby B1 control
 
 [Control 1 final](2026-10-12T00-36-54-973Z-94051e91/final.json) identifies `d6c085f`. Acknowledged facts: **97,200 / 85,370 / 12,930 / 5,104**. Acknowledged facts/s: **1,553.12 / 463.31 / 88.46 / 15.37**. All planned calls and admitted-write/restart audits passed; no extra unknown commits were reconciled. All loads remained incomplete. [RFD details](../../../docs/rfds/RFD0005-write-path-experiment.md#matched-e-comparison-first-b1-control). This begins B1 → E → B1 → E, not an E result or promotion.
+
+## E atomic leaf authority: first repeat
+
+[Repeat 1 final](2026-10-12T00-54-16-107Z-34414cc8/final.json) identifies `ed69538`. Acknowledged facts: **97,100 / 86,810 / 13,150 / 4,892**. Acknowledged facts/s: **1,420.95 / 492.29 / 90.24 / 14.57**. Every planned call and admitted-write/atomic-membership/restart audit passed; no extra unknown commits were reconciled. All workloads were incomplete. **No promotion:** mixed partial acknowledged rates do not satisfy the all-four delivery gate. [Qualified first pair](../../../docs/rfds/RFD0005-write-path-experiment.md#e-repeat-1-incomplete-delivery-mixed-admitted-rates). The unchanged second fresh B1/E pair remains required.

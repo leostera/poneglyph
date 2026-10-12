@@ -226,7 +226,20 @@ The abort-recovery test found an inherited private-owner replay classification i
 | 10 × 1,000 | 12,930 | 8,707 | 88.46 | 17.94 |
 | 2 × 10,000 | 5,104 | 47,448 | 15.37 | 74.50 |
 
-Attempts: 2,434 / 40,030 / 76,465 / 391,682. Busy responses: 1,462 / 31,493 / 75,172 / 124,944. Transport failures: 0 / 0 / 0 / 264,186. These are incumbent admitted-rate measurements, not successful-load, E or cloud claims. No E matrix has run at this checkpoint.
+Attempts: 2,434 / 40,030 / 76,465 / 391,682. Busy responses: 1,462 / 31,493 / 75,172 / 124,944. Transport failures: 0 / 0 / 0 / 264,186. These are incumbent admitted-rate measurements, not successful-load, E or cloud claims. E repeat 1 follows below.
+
+### E repeat 1: incomplete delivery, mixed admitted rates
+
+[Repeat 1 final](../../bench/write-path/results/2026-10-12T00-54-16-107Z-34414cc8/final.json) identifies `ed69538` / `E-idempotent-local-commit`, implementation `7fd8d73`. The SUT stayed frozen with unchanged client, caller/workload/limit settings. Every planned call was attempted; acknowledged facts exactly matched persisted facts, and all admitted-write/index/transaction/atomic-membership/restart audits passed without unresolved decisions or reconciled extra commits.
+
+| Facts/call × concurrency | E repeat 1 acknowledged facts | Unknown calls | Acknowledged facts/s | Rate change vs nearby B1 control 1 | Logical p95 (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 100 × 10 | 97,100 | 29 | 1,420.95 | −8.51% | 3.69 |
+| 10 × 100 | 86,810 | 1,319 | 492.29 | +6.26% | 7.48 |
+| 10 × 1,000 | 13,150 | 8,685 | 90.24 | +2.01% | 18.20 |
+| 2 × 10,000 | 4,892 | 47,554 | 14.57 | −5.23% | 75.73 |
+
+Attempts: 2,374 / 39,012 / 76,155 / 391,682. Busy responses: 1,403 / 30,331 / 74,801 / 123,366. Transport failures: 0 / 0 / 39 / 265,870. All four workloads remained incomplete. **No promotion:** the mandatory delivery gate fails in this repeat. Mixed partial acknowledged-rate changes do not certify successful-load throughput or repeatability. B1's coarse owner conflict/visibility rules and per-ID placement remain intact; atomic local mutation is not proof those bottlenecks disappeared. Physical per-ID metadata bytes and cloud behavior remain unmeasured. Complete the second fresh B1/E pair with unchanged E.
 
 ## Summary
 
