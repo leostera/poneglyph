@@ -9,7 +9,7 @@ import {Session} from "./session.js";
 import {checkAllLookups, smallCases} from "./small.js";
 import {archiveReport} from "./archive.js";
 import {auditAuthorities} from "./authority-audit.js";
-import {RunControl, type RunStage} from "./run-control.js";
+import {RunControl, persistCompletion, type RunStage} from "./run-control.js";
 import {correctnessBudgets, requiredCoverage, smallTierComplete, statefulSeeds} from "./contract.js";
 
 // Tier-first: no larger tier is implemented/enabled until this shared matrix
@@ -91,7 +91,7 @@ for (const implementation of implementations) {
     finally {await save();}
   }
 }
-execution.complete();
+await persistCompletion(execution, save);
 } catch (error) {execution.stop(stage, error); failures = 1; await save();}
 await archiveReport(resolve(output, "report.json"));
 console.log(`Correctness report: ${resolve(output, "summary.json")}; ${failures} failed checks. Persistence retained: ${artifacts}`);

@@ -1,4 +1,9 @@
 import {errorEvidence} from "./response-evidence.js";
+// Archival reads a file, not the live control object. Completion must be saved
+// before that consumer can validate a terminal traversal.
+export async function persistCompletion(control: RunControl, save: () => Promise<void>) {
+  control.complete(); await save();
+}
 export type RunStage = Readonly<{implementation: string; phase: "build" | "startup" | "warm" | "restart" | "cold" | "cleanup"; caseName?: string}>;
 export type RunFailure = Readonly<RunStage & {error: string; diagnostic: ReturnType<typeof errorEvidence>}>;
 export class RunControl {

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {RunControl} from "./run-control.js";
-import {parseArchivedRun, validateTraversal} from "./archive.js";
+import {RunControl, persistCompletion} from "./run-control.js";
+import {archiveReport, parseArchivedRun, validateTraversal} from "./archive.js";
+import {mkdtemp, readFile, writeFile, rm} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+import {gunzipSync} from "node:zlib";
 import {Session} from "./session.js";
 test("fail-fast drains the original caller without issuing another retry or fabricating abort", async context => {
   let release: (() => void) | undefined, entered: (() => void) | undefined;
@@ -42,6 +46,19 @@ test("cold fail-fast retains warm coverage but cannot execute a later cold case"
   const control = new RunControl(); control.stop({implementation: "A", phase: "cold", caseName: "one"}, "cold defect");
   validateTraversal(report(control, [actor("A", [row("one", "pass", "fail"), row("two", "pass", "not-run")])]));
   assert.throws(() => validateTraversal(report(control, [actor("A", [row("one", "pass", "fail"), row("two")])])));
+});
+test("terminal completion is persisted before the file-level archiver consumes it", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "conformance-terminal-"));
+  try {
+    const control = new RunControl(), body = report(control, actors.map(name => actor(name))), path = join(directory, "report.json");
+    const save = () => writeFile(path, JSON.stringify(body));
+    await save(); await assert.rejects(archiveReport(path), /unfinished run/);
+    await persistCompletion(control, save); await archiveReport(path);
+    const retained = JSON.parse(gunzipSync(await readFile(path + ".gz")).toString());
+    assert.equal(retained.execution.status, "complete");
+    const summary = JSON.parse(await readFile(join(directory, "summary.json"), "utf8"));
+    assert.equal(summary.executedPhases, 44); assert.equal(summary.unexecutedPhases, 0);
+  } finally {await rm(directory, {recursive: true, force: true});}
 });
 test("startup/build failure and full completion have distinct terminal evidence", () => {
   const build = new RunControl(); build.stop({implementation: "A", phase: "build"}, "build defect"); validateTraversal(report(build, []));
