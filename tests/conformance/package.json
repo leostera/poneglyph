@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test:oracle": "tsx --test model.test.ts",
+    "test:oracle": "tsx --test --test-concurrency=1 *.test.ts",
     "test:small": "pnpm run test:oracle && tsx run.ts"
   },
   "dependencies": {"@leostera/poneglyph": "file:../../poneglyph"},

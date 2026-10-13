@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
@@ -31,11 +32,20 @@ export async function buildConformance(implementation: Implementation, output: s
     });
     for (const path of Object.keys(result.metafile.inputs)) inputs.set(path, hash(await readFile(path)));
   }
-  const selected = implementations.filter(spec => [...inputs.keys()].some(path => path.endsWith(`/src/${spec.directory}/coordinator.ts`)));
-  if (selected.length !== 1 || selected[0]!.name !== implementation.name) throw new Error("conformance bundle must contain exactly the selected implementation");
-  const identity = selected[0]!.directory;
+  const identity = identifyActorInputs([...inputs.keys()], implementation);
   const bundleDigests = Object.fromEntries(await Promise.all(["application", "database"].map(async name =>
     [name, hash(await readFile(resolve(output, `${name}.mjs`)))])));
   return {implementation: implementation.name, identity, sourceDigests: Object.fromEntries([...inputs].sort()), bundleDigests};
+}
+export function identifyActorInputs(inputs: readonly string[], selected: Implementation): string {
+  const actors = inputs.flatMap(path => {
+    const match = /(?:^|\/)src\/(storage(?:-[^/]+)?)\/(coordinator|shard)\.ts$/.exec(path.replaceAll("\\", "/"));
+    return match ? [{directory: match[1]!, role: match[2]!}] : [];
+  });
+  for (const role of ["coordinator", "shard"]) {
+    const directories = new Set(actors.filter(actor => actor.role === role).map(actor => actor.directory));
+    assert.deepEqual([...directories], [selected.directory], `exact selected ${role} implementation, no mixed/unknown actors`);
+  }
+  return selected.directory;
 }
 function hash(bytes: Uint8Array) {return createHash("sha256").update(bytes).digest("hex");}

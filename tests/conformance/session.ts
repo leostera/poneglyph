@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { startLocal, type LocalRuntime } from "./runtime.js";
 import type { FactInput } from "@leostera/poneglyph";
 import { Model, equalBag, type Evidence, type Query } from "./model.js";
+import {parseInspectionPage} from "./inspection-page.js";
 
 export class Session {
   readonly queries: Query[] = [];
@@ -71,11 +72,10 @@ export async function inspect(runtime: LocalRuntime, graph: string): Promise<Evi
         for (const [key, value] of Object.entries({graph, prefix, table, after: String(after)})) url.searchParams.set(key, value);
         const response = await database.fetch(url, {headers: {authorization: `Bearer ${runtime.token}`}});
         assert.equal(response.status, 200, await response.clone().text());
-        const page = await response.json() as {children: string[]; rows: Record<string, unknown>[]};
-        if (page.children.length) {if (table === "fact_log") pending.push(...page.children); break;}
+        const page = parseInspectionPage(await response.json(), prefix, after);
+        if (page.kind === "router") {if (table === "fact_log") pending.push(...page.children); break;}
         if (page.rows.length === 0) break;
-        evidence[table].push(...page.rows); const next = Number(page.rows.at(-1)!["cursor"]);
-        assert.ok(next > after, "inspection cursor advances"); after = next;
+        evidence[table].push(...page.rows); after = page.rows.at(-1)!.cursor;
       }
     }
   }

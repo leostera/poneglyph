@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import type {FactInput} from "@leostera/poneglyph";
 import {constant, variable, relation, items, scalar, type Query, type Value} from "./model.js";
 import {Session} from "./session.js";
+import {readFaultCases} from "./read-faults.js";
 export type Case = {name: string; run: (session: Session) => Promise<void>};
 export const fact = (entity: string, value: Value, field = "test:value", source = "agent:one", retraction = false): FactInput => ({source, entity, field, value, retraction});
 const text = (value: string): Value => ({type: "text", value});
@@ -110,6 +111,7 @@ export const smallCases: Case[] = [
     // Same public encoding can come from different fact tags; integer/string
     // are still distinct. Common lookup checks must preserve all multiplicity.
   }},
+  ...readFaultCases,
 ];
 
 export async function checkAllLookups(s: Session) {

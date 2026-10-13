@@ -1,10 +1,31 @@
 import original, { TodoHubDO } from "../../../poneglyph/src/worker.js";
 import { GraphCoordinatorDO, GraphShardDO, shardObjectName, parseVirtualPrefix } from "../../../poneglyph/src/database-implementation.js";
 
+import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
+
 declare const __E2E_OWNER_DEPTH__: number;
 export {TodoHubDO};
 export class InspectionCoordinatorDO extends GraphCoordinatorDO {}
 export class InspectionShardDO extends GraphShardDO {
+  private readFault: ReadFaultMode = "none";
+  private faultHits = 0;
+  private successfulScans = 0;
+  configureReadFault(input: unknown) {
+    const mode = parseReadFaultMode(input);
+    const previous = this.readFaultStatus();
+    this.readFault = mode; this.faultHits = 0; this.successfulScans = 0;
+    return previous;
+  }
+  readFaultStatus() {return {mode: this.readFault, hits: this.faultHits, successfulScans: this.successfulScans};}
+  override async fetch(request: Request): Promise<Response> {
+    const mode = this.readFault;
+    if (new URL(request.url).pathname !== "/_scan" || mode === "none") return super.fetch(request);
+    this.faultHits++;
+    if (mode === "unavailable-before") return Response.json({error: "injected unavailable scan participant"}, {status: 503});
+    const response = await super.fetch(request);
+    if (response.ok) this.successfulScans++;
+    return transformRead(response, mode);
+  }
   async inspection(prefix: string, table: string, after: number) {
     // B1+ have sixteen virtual owner roots; these upper nodes contain no data.
     if (prefix.length < __E2E_OWNER_DEPTH__) return {children: [`${prefix}0`, `${prefix}1`], rows: []};
@@ -19,6 +40,16 @@ interface InspectionEnv extends Env {GRAPH_COORDINATORS: DurableObjectNamespace<
 export default {
   async fetch(request: Request, env: InspectionEnv) {
     const url = new URL(request.url);
+    if (url.pathname === "/__e2e/read-fault") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
+      if (!graph || !prefix.ok) return new Response("bad fault identity", {status: 400});
+      const stub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix.value));
+      if (request.method === "GET") return Response.json(await stub.readFaultStatus());
+      const body: unknown = await request.json();
+      try {return Response.json(await stub.configureReadFault(body));}
+      catch {return new Response("invalid fault control", {status: 400});}
+    }
     if (url.pathname === "/__e2e/inspect") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
