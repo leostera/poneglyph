@@ -9,8 +9,8 @@ import {parseBarrierStatus, type BarrierConfig, type BarrierStatus, type WritePh
 
 type Reply = Awaited<ReturnType<Session["request"]>>;
 type Scenario = {kind: "read"; phase: WritePhase} | {kind: "duplicate"; payload: "same" | "different"; phase: "prepared"};
-type Observed<T> = {kind: "returned"; value: T} | {kind: "failed"; error: unknown};
-async function observed<T>(s: Session, label: string, run: () => Promise<T>): Promise<Observed<T>> {
+export type Observed<T> = {kind: "returned"; value: T} | {kind: "failed"; error: unknown};
+export async function observed<T>(s: Session, label: string, run: () => Promise<T>): Promise<Observed<T>> {
   s.outcomes.push({history: label, event: "invoked"});
   try {
     const value = await run();
@@ -21,7 +21,7 @@ async function observed<T>(s: Session, label: string, run: () => Promise<T>): Pr
     return {kind: "failed", error};
   }
 }
-async function barrier(s: Session, prefix: string, action?: "arm" | "release" | "clear", config?: BarrierConfig): Promise<BarrierStatus> {
+export async function barrier(s: Session, prefix: string, action?: "arm" | "release" | "clear", config?: BarrierConfig): Promise<BarrierStatus> {
   const database = await s.runtime.mf.getWorker("database");
   const url = new URL("https://control.internal/__e2e/write-barrier");
   url.searchParams.set("graph", s.graph); url.searchParams.set("prefix", prefix);
@@ -35,7 +35,7 @@ async function barrier(s: Session, prefix: string, action?: "arm" | "release" | 
   s.outcomes.push({control: "write-barrier", prefix, action, status});
   return status;
 }
-async function reached(s: Session, prefix: string, config: BarrierConfig) {
+export async function reached(s: Session, prefix: string, config: BarrierConfig) {
   // Observation polling is only for the causal barrier, never an implicit write
   // retry. Each control request is bounded; expired/rejected fixtures fail.
   for (let poll = 0; poll < correctnessBudgets.phaseObservationPolls; poll++) {
@@ -124,9 +124,11 @@ async function runPhase(s: Session, scenario: Scenario) {
     const released = await barrier(s, placement.prefix, "release");
     assert.ok(released.state === "released" && released.outcome === "released", "fixture must release explicitly before safety expiry");
   } finally {
-    await barrier(s, placement.prefix, "clear");
-    write = await pending; // Always drain and retain every caller outcome.
-    if (peer) peerResult = await peer;
+    try {await barrier(s, placement.prefix, "clear");}
+    finally {
+      write = await pending; // Drain every caller even if control cleanup fails.
+      if (peer) peerResult = await peer;
+    }
   }
   if (write.kind === "failed") throw write.error;
   if (scenario.kind === "duplicate") {

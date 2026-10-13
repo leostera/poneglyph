@@ -8,6 +8,9 @@ declare const __E2E_OWNER_DEPTH__: number;
 export {TodoHubDO};
 export class InspectionCoordinatorDO extends GraphCoordinatorDO {}
 export class InspectionShardDO extends GraphShardDO {
+  private readonly incarnation = crypto.randomUUID();
+  lifecycleStatus() {return {objectId: this.ctx.id.toString(), incarnation: this.incarnation};}
+  terminateActor() {this.ctx.abort("conformance actual native actor reset");}
   private readFault: ReadFaultMode = "none";
   private faultHits = 0;
   private successfulScans = 0;
@@ -49,6 +52,17 @@ interface InspectionEnv extends Env {GRAPH_COORDINATORS: DurableObjectNamespace<
 export default {
   async fetch(request: Request, env: InspectionEnv) {
     const url = new URL(request.url);
+    if (url.pathname === "/__e2e/lifecycle") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
+      if (!graph || !prefix.ok) return new Response("invalid lifecycle identity", {status: 400});
+      const stub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix.value));
+      if (request.method === "GET") return Response.json(await stub.lifecycleStatus());
+      if (request.method !== "POST") return new Response("abort requires POST", {status: 405});
+      try {await stub.terminateActor();}
+      catch (error) {return Response.json({action: "native-abort", requestInterrupted: true, error: String(error)}, {status: 503});}
+      return Response.json({error: "native abort unexpectedly returned"}, {status: 500});
+    }
     if (url.pathname === "/__e2e/split") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       if (request.method !== "POST") return new Response("split requires POST", {status: 405});

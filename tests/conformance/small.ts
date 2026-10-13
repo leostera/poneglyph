@@ -5,6 +5,7 @@ import {Session} from "./session.js";
 import {readFaultCases} from "./read-faults.js";
 import {writePhaseCases} from "./write-phases.js";
 import {splitCases} from "./splits.js";
+import {lifecycleCases} from "./lifecycle.js";
 export type Case = {name: string; run: (session: Session) => Promise<void>};
 export const fact = (entity: string, value: Value, field = "test:value", source = "agent:one", retraction = false): FactInput => ({source, entity, field, value, retraction});
 const text = (value: string): Value => ({type: "text", value});
@@ -116,6 +117,7 @@ export const smallCases: Case[] = [
   ...readFaultCases,
   ...writePhaseCases,
   ...splitCases,
+  ...lifecycleCases,
 ];
 
 export async function checkAllLookups(s: Session) {
