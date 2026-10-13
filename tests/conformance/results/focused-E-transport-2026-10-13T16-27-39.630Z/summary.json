@@ -1,0 +1,405 @@
+{
+  "kind": "focused-conformance-transport-diagnostic",
+  "id": "focused-E-transport-2026-10-13T16-27-39.630Z",
+  "manifest": {
+    "implementation": "E",
+    "identity": "storage-e",
+    "sourceDigests": {
+      "../../poneglyph/src/datalog/ast.ts": "586cc0a795c7114b6813eaf6d309fedc13b5d32180aebcb10b2da4bbeff7b9f0",
+      "../../poneglyph/src/datalog/evaluator.ts": "36deb0ce2faefa73272a4d06c05c752d2993b028da62ac2a647fae1bf8514907",
+      "../../poneglyph/src/datalog/parser.ts": "558f30101ecd7547efd62df4976fe1fd834651624fae58406411ebb8080ae183",
+      "../../poneglyph/src/datalog/scan-stream.ts": "a6cda81757c4bd0dd4fe8845635275ae451521df7d7eaf65cf82140026049d4e",
+      "../../poneglyph/src/datalog/value.ts": "7291d44c1f0856b7d448dce8fef8d1a127f7ad364f4e9782ad7beb223e996a05",
+      "../../poneglyph/src/domain/date-validation.ts": "7f141cf8063ea3519680f0a71bc424212283f1401c9415dbbf3d6af5cb1d75e1",
+      "../../poneglyph/src/domain/fact-value.ts": "8df5f3e2b8a22899325ff75d4d2ed35e53c7adb296a64fc6b28af1db2831c71a",
+      "../../poneglyph/src/domain/fact.ts": "ba92f8a48cfba0ab82bcbc611ddf7e4a8107df7a89ef0a203c7a2dae4b6cf6b4",
+      "../../poneglyph/src/domain/graph-id.ts": "fb23faf3dc333f49752a9e17009bcaf512a01632419b1b574fb9f491d25cf641",
+      "../../poneglyph/src/domain/identifiers.ts": "747dc1fa083705aea2927965c0da9990e417a89bb0a90e4c446ddd1daa49b6ac",
+      "../../poneglyph/src/domain/int64.ts": "4448f6097cdf97b1bdc72e4ecd7819516ade0661f424f9ec18865a3a45460ffd",
+      "../../poneglyph/src/domain/result.ts": "9f1e517b566238e0a4fc771172c6c7c5d7f0954e82584201193d298bd061b8f5",
+      "../../poneglyph/src/domain/string-order.ts": "a38dc679f8479e9f089e0795c3da5d48d72dceb01046567f6184d5457bcf1ea4",
+      "../../poneglyph/src/storage-e/benchmark.ts": "902a1467530390829bce74875b05c1aaf7531c02bbfa077bac421f76631c8f82",
+      "../../poneglyph/src/storage-e/capacity.ts": "9f4104bb26c43a07270d7c2a185c69379b71a6e24309224094a3fb622e58b4fa",
+      "../../poneglyph/src/storage-e/constants.ts": "c1920c195c263811a0f47ae8c64aaa00573dd87e21de18683bf80fb6c3097c9e",
+      "../../poneglyph/src/storage-e/coordinator.ts": "f389462568e68b4bce5254a614a71a173945d708f04611ee2332ccf865f4654d",
+      "../../poneglyph/src/storage-e/distributed-fact-source.ts": "7dc7c0b178d517c2068a9568c6587e96b29144bd9dc08892fe9cc3c9b915abaa",
+      "../../poneglyph/src/storage-e/forest.ts": "44fed1b6aa1dbc4a094940496a8a34182bf92ce770aa8a3bc59a2e9a0b92ea28",
+      "../../poneglyph/src/storage-e/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+      "../../poneglyph/src/storage-e/implementation.ts": "57aaebbda2db7c2d117f57b68df63280177dd8697a502aaa7fa82a54f60b67d1",
+      "../../poneglyph/src/storage-e/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+      "../../poneglyph/src/storage-e/migration.ts": "46e149dd4ffce655979864fd20ed4906e7a02d3344b76713a8cf3b941151e55a",
+      "../../poneglyph/src/storage-e/protocol.ts": "06238f68cdc0153eddd4584d2eefa6d2f6f3f5ca5632d6cc8595abc140c38c86",
+      "../../poneglyph/src/storage-e/routing.ts": "482f1aed8edf73597ba0a108dfa3e16853e1053e3a0c3ca530326975294c9b98",
+      "../../poneglyph/src/storage-e/shard.ts": "6921fdb0671d8c2823a8b1e67918eb5273ac64f046c4bc4359fc9b248cffd35f",
+      "../../poneglyph/src/storage-e/sql.ts": "3602e385011bf6c231349c471a855ab5c51cf14b2a10631495689a1559a8af52",
+      "../../poneglyph/src/storage-e/transaction.ts": "bfb9900d7a63ff816ecef3116bce98f302865b8a73a4f6793fa0948b4c342ff3",
+      "../../poneglyph/src/storage/constants.ts": "bef7eeb48dae158f10e9b018ad29a86230752bf0848817b81dcd9f5b083a1e5b",
+      "../../poneglyph/src/storage/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+      "../../poneglyph/src/storage/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+      "../../poneglyph/src/storage/protocol.ts": "06238f68cdc0153eddd4584d2eefa6d2f6f3f5ca5632d6cc8595abc140c38c86",
+      "../../poneglyph/src/testing/storage-audit.ts": "32babba0e76eb9c19edb04d7ea019bc9a0589d4a9bf2f5a1582ffdebd61e2077",
+      "../../poneglyph/src/todo_demo/auth.ts": "388c7607879e7ca4c681a801e5904e989008293d2bd5dc2aa0d8874aead8429e",
+      "../../poneglyph/src/todo_demo/hub.ts": "c65b83f1f492c723f6715efb286e4307ea7ee6397debe53a199dd21ddeb680a8",
+      "../../poneglyph/src/todo_demo/page.ts": "52c594afd72cc40de04b260ce5d6230d9d9c9ca392bcab0520e5362934515a89",
+      "../../poneglyph/src/todo_demo/service.ts": "707dcfd8eb55a75afea03e9016e36a61cbe773b939eea4d086a8c85e4bef425e",
+      "../../poneglyph/src/todo_demo/worker.ts": "91bae6a11adc83b6fab7ce9b230a5d2beff4a78fe9be1ae14898e9b0f65e9616",
+      "../../poneglyph/src/worker.ts": "7235743b034628f043fa17fbfc329166101cc7e0f01b9c8643dee7003cb10f69",
+      ".artifacts/focused-E-transport-2026-10-13T16-27-39.630Z/bundles/selected-authority-placement.ts": "a80d436cd8c1c7fde6390fef647e712d8ff751647751492c822befce253553f9",
+      "contract.ts": "83731988b88855a37e17b26701247403af04a863fbf23449eb867e47d4480073",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/client.js": "3788367ce7fb30ecb936d3cc18a56a4cea7c9c9c634fffd14c95609109edc073",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/ast.js": "20d3ed3a2f4bbdf67581c4a1a8cca094f636415a0e05657a812b6c35288e4e16",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/evaluator.js": "7ad7a5447c361af94e39b8653ad69062c30f03007c38617f8251a40bc0b3e43d",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/fact-source.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/parser.js": "bc528dae38e60b2f87137f89a35dd154f5d7a280cb99490c97f2cca911afb36f",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/datalog/value.js": "a42784eaf59359e86d6e3ca31a66dbbde9d96d6558e717296fb29a878853ec80",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/date-validation.js": "4b7d7283ed28fdc9a5bf6a5827b6796c54454503e4113b23f69108a9e64ae6f9",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact-value.js": "dbf69ccc15f594656aa28892522b9909a0000d04f926d5e995e8685aa3df8248",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/fact.js": "549cc66749833c217ea9d9860f9a942b91f130b0345689a0f2bb18e549b64ac2",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/graph-id.js": "b20ec3aaf6d8343b4709beab1d8b1d70f33022720eca700b1689930ec024db99",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/identifiers.js": "d33ab8baf96f99472d71b5c4da99ffc154b56ef044e437b4dac075070e053010",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/int64.js": "2e3e55ccc389336263a1dd51d6089b641da0515fbb3c1307d09df995d47af9a5",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/result.js": "d8d4830e99f43409a946d8b2e1316a1f13e5171b599865ab00643585bcda9609",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/domain/string-order.js": "aa59fe031cfc95f85594e9b0ee8eccf3b1234378c157da25a5628ea12b03460c",
+      "node_modules/.pnpm/@leostera+poneglyph@file+..+..+poneglyph/node_modules/@leostera/poneglyph/dist/index.js": "5e0312a2a755a9c79da33339efcc6a4132c5f919fa94ce30ea29929dc38739e4",
+      "response-evidence.ts": "8fc5cba5a6492bfe1c7ac8d7394965daf10a04d3962855f247664b2cb78cf22e",
+      "worker/application.ts": "334363d759468af770e3707588b30641ec1279b9fff2eb1034b58c28ca29a5d9",
+      "worker/authority-controls.ts": "bf232e9f436c1bdf460c44abb31c6cc419f5e330cf185a3cd37e45efa6a940c7",
+      "worker/authority-sql.ts": "5a3b4d18835d4722d7ba260ca1a5dda16068b5ad2690d52744ff43c31aebb419",
+      "worker/database.ts": "f003023a4ee245444bfdcfb200e821e70d2e242ec3d9632083815a6c1c2e0d3b",
+      "worker/read-fault.ts": "a6b976fbceab5a4e26e4e3750e17b080a3bccddbf6267381185b250c9409fac7",
+      "worker/write-barrier.ts": "0126ed4b837d38d7d9efc3df679189ddeb5a9e083b7b55af153fe239d70066ea"
+    },
+    "bundleDigests": {
+      "application": "9381bd485edb7408ce278dc1e38ab3d0602e10be07dde045a508ac5552855fb4",
+      "database": "acdb37c9203a3ea5b5495e98f396708f1209f1e4ac5a7188f22229ed7c5369f0"
+    }
+  },
+  "persistence": "/Users/leostera/Developer/github.com/leostera/poneglyph/tests/conformance/.artifacts/focused-E-transport-2026-10-13T16-27-39.630Z/persistence",
+  "plannedCases": [
+    "value/null",
+    "value/text-empty",
+    "value/text-unicode-escaped",
+    "value/integer-min",
+    "value/integer-max",
+    "value/integer-zero",
+    "value/boolean-true",
+    "value/boolean-false",
+    "value/bytes",
+    "value/bytes-empty",
+    "value/reference",
+    "value/date",
+    "value/date-time",
+    "value/list-empty",
+    "value/list-duplicates",
+    "value/map-empty",
+    "value/nested-collections",
+    "value/map-unicode-order",
+    "size/1",
+    "size/2",
+    "size/10",
+    "size/25",
+    "size/50",
+    "size/99",
+    "size/100",
+    "identity/exact-replay",
+    "identity/changed-payload",
+    "identity/canonical-map-order",
+    "identity/graph-isolation",
+    "assertion/duplicate-input",
+    "assertion/multiple-sources",
+    "assertion/multiple-values",
+    "order/assert-retract",
+    "order/retract-assert",
+    "order/assert-retract-assert",
+    "order/source-qualified",
+    "order/old-value-retraction",
+    "query/joins-cycles-repeated-variables",
+    "query/disconnected-and-constraints",
+    "transport/lost-application-reply",
+    "stateful/seed-0",
+    "stateful/seed-1",
+    "stateful/seed-2",
+    "stateful/seed-3",
+    "boundary/invalid-late-value",
+    "boundary/invalid-int64",
+    "boundary/invalid-date",
+    "boundary/empty-batch",
+    "query/many-to-one-value-encodings",
+    "read-fault/unavailable-before",
+    "read-fault/malformed",
+    "read-fault/empty-eof",
+    "read-fault/record-eof",
+    "read-fault/record-error",
+    "write-phase/prepared-atomic-public-read",
+    "write-phase/applied-atomic-public-read",
+    "concurrent/same-payload-admitted-identity",
+    "concurrent/different-payload-admitted-identity",
+    "topology/nested-exact-public-and-durable",
+    "topology/interrupted-copy-exact-public-and-durable",
+    "lifecycle/native-actor-reset-after-ack",
+    "recovery/native-actor-reset-after-apply-before-reply",
+    "lifecycle/SIGKILL-process-group-after-ack",
+    "recovery/SIGKILL-process-group-after-native-apply"
+  ],
+  "results": [
+    {
+      "name": "value/null",
+      "status": "pass"
+    },
+    {
+      "name": "value/text-empty",
+      "status": "pass"
+    },
+    {
+      "name": "value/text-unicode-escaped",
+      "status": "pass"
+    },
+    {
+      "name": "value/integer-min",
+      "status": "pass"
+    },
+    {
+      "name": "value/integer-max",
+      "status": "pass"
+    },
+    {
+      "name": "value/integer-zero",
+      "status": "pass"
+    },
+    {
+      "name": "value/boolean-true",
+      "status": "pass"
+    },
+    {
+      "name": "value/boolean-false",
+      "status": "pass"
+    },
+    {
+      "name": "value/bytes",
+      "status": "pass"
+    },
+    {
+      "name": "value/bytes-empty",
+      "status": "pass"
+    },
+    {
+      "name": "value/reference",
+      "status": "pass"
+    },
+    {
+      "name": "value/date",
+      "status": "pass"
+    },
+    {
+      "name": "value/date-time",
+      "status": "pass"
+    },
+    {
+      "name": "value/list-empty",
+      "status": "pass"
+    },
+    {
+      "name": "value/list-duplicates",
+      "status": "pass"
+    },
+    {
+      "name": "value/map-empty",
+      "status": "pass"
+    },
+    {
+      "name": "value/nested-collections",
+      "status": "pass"
+    },
+    {
+      "name": "value/map-unicode-order",
+      "status": "pass"
+    },
+    {
+      "name": "size/1",
+      "status": "pass"
+    },
+    {
+      "name": "size/2",
+      "status": "pass"
+    },
+    {
+      "name": "size/10",
+      "status": "pass"
+    },
+    {
+      "name": "size/25",
+      "status": "pass"
+    },
+    {
+      "name": "size/50",
+      "status": "pass"
+    },
+    {
+      "name": "size/99",
+      "status": "pass"
+    },
+    {
+      "name": "size/100",
+      "status": "pass"
+    },
+    {
+      "name": "identity/exact-replay",
+      "status": "pass"
+    },
+    {
+      "name": "identity/changed-payload",
+      "status": "pass"
+    },
+    {
+      "name": "identity/canonical-map-order",
+      "status": "pass"
+    },
+    {
+      "name": "identity/graph-isolation",
+      "status": "pass"
+    },
+    {
+      "name": "assertion/duplicate-input",
+      "status": "pass"
+    },
+    {
+      "name": "assertion/multiple-sources",
+      "status": "pass"
+    },
+    {
+      "name": "assertion/multiple-values",
+      "status": "pass"
+    },
+    {
+      "name": "order/assert-retract",
+      "status": "pass"
+    },
+    {
+      "name": "order/retract-assert",
+      "status": "pass"
+    },
+    {
+      "name": "order/assert-retract-assert",
+      "status": "pass"
+    },
+    {
+      "name": "order/source-qualified",
+      "status": "pass"
+    },
+    {
+      "name": "order/old-value-retraction",
+      "status": "pass"
+    },
+    {
+      "name": "query/joins-cycles-repeated-variables",
+      "status": "pass"
+    },
+    {
+      "name": "query/disconnected-and-constraints",
+      "status": "pass"
+    },
+    {
+      "name": "transport/lost-application-reply",
+      "status": "pass"
+    },
+    {
+      "name": "stateful/seed-0",
+      "status": "pass"
+    },
+    {
+      "name": "stateful/seed-1",
+      "status": "pass"
+    },
+    {
+      "name": "stateful/seed-2",
+      "status": "pass"
+    },
+    {
+      "name": "stateful/seed-3",
+      "status": "pass"
+    },
+    {
+      "name": "boundary/invalid-late-value",
+      "status": "pass"
+    },
+    {
+      "name": "boundary/invalid-int64",
+      "status": "pass"
+    },
+    {
+      "name": "boundary/invalid-date",
+      "status": "pass"
+    },
+    {
+      "name": "boundary/empty-batch",
+      "status": "pass"
+    },
+    {
+      "name": "query/many-to-one-value-encodings",
+      "status": "pass"
+    },
+    {
+      "name": "read-fault/unavailable-before",
+      "status": "pass"
+    },
+    {
+      "name": "read-fault/malformed",
+      "status": "pass"
+    },
+    {
+      "name": "read-fault/empty-eof",
+      "status": "pass"
+    },
+    {
+      "name": "read-fault/record-eof",
+      "status": "pass"
+    },
+    {
+      "name": "read-fault/record-error",
+      "status": "pass"
+    },
+    {
+      "name": "write-phase/prepared-atomic-public-read",
+      "status": "pass"
+    },
+    {
+      "name": "write-phase/applied-atomic-public-read",
+      "status": "pass"
+    },
+    {
+      "name": "concurrent/same-payload-admitted-identity",
+      "status": "pass"
+    },
+    {
+      "name": "concurrent/different-payload-admitted-identity",
+      "status": "pass"
+    },
+    {
+      "name": "topology/nested-exact-public-and-durable",
+      "status": "pass"
+    },
+    {
+      "name": "topology/interrupted-copy-exact-public-and-durable",
+      "status": "pass"
+    },
+    {
+      "name": "lifecycle/native-actor-reset-after-ack",
+      "status": "pass"
+    },
+    {
+      "name": "recovery/native-actor-reset-after-apply-before-reply",
+      "status": "pass"
+    },
+    {
+      "name": "lifecycle/SIGKILL-process-group-after-ack",
+      "status": "pass"
+    },
+    {
+      "name": "recovery/SIGKILL-process-group-after-native-apply",
+      "status": "pass"
+    }
+  ],
+  "status": "complete",
+  "notCertification": true,
+  "coldChecksExecuted": false
+}

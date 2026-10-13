@@ -15,8 +15,11 @@ async function launch(graphId: string, persistence: string, token: string, bundl
     {cwd: ROOT, detached: true, stdio: ["ignore", "pipe", "pipe", "ipc"]});
   const pid = child.pid; assert.ok(pid && Number.isSafeInteger(pid) && pid > 1, "dedicated host process identity");
   const log = resolve(bundles, "native-process.log");
+  appendFileSync(log, JSON.stringify({event: "host-started", pid, graphId, persistence, bundles, recordedAt: new Date().toISOString()}) + "\n");
   child.stdout?.on("data", chunk => appendFileSync(log, chunk)); child.stderr?.on("data", chunk => appendFileSync(log, chunk));
-  const exited = new Promise<{code: number | null; signal: NodeJS.Signals | null}>(resolve => child.once("exit", (code, signal) => resolve({code, signal})));
+  const exited = new Promise<{code: number | null; signal: NodeJS.Signals | null}>(resolve => child.once("exit", (code, signal) => {
+    appendFileSync(log, JSON.stringify({event: "host-exited", pid, code, signal, recordedAt: new Date().toISOString()}) + "\n"); resolve({code, signal});
+  }));
   try {
     const endpoints = await new Promise<readonly string[]>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("native host startup budget exceeded")), correctnessBudgets.processStartMs);
@@ -33,6 +36,7 @@ async function launch(graphId: string, persistence: string, token: string, bundl
         } catch (error) {reject(error);}
       });
     });
+    appendFileSync(log, JSON.stringify({event: "host-ready", pid, endpoints, recordedAt: new Date().toISOString()}) + "\n");
     return {child, pid, endpoints, exited};
   } catch (error) {process.kill(-pid, "SIGKILL"); await exited; throw error;}
 }

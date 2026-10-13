@@ -17,7 +17,8 @@ export async function startLocal(graphId: string, persistence: string, workerCou
     return env["APP_" + index].fetch(request);
   }};`;
   const manifest = (contents: string) => ({mainModule: "index.mjs", modules: {"index.mjs": {type: "esm" as const, contents}}});
-  const options: MiniflareOptions = {port: 0, host: "127.0.0.1", log: new Log(LogLevel.ERROR),
+  const options: MiniflareOptions = {port: 0, host: "127.0.0.1", log: new Log(LogLevel.INFO),
+    handleStructuredLogs: (event: unknown) => console.log(JSON.stringify({event: "native-workerd-log", recordedAt: new Date().toISOString(), log: event})),
     resourcePersistencePath: persistence, telemetry: {enabled: false}, workers: [
       {config: {name: "gateway", manifest: manifest(gateway), compatibilityDate: "2026-10-06",
         env: {...Object.fromEntries(apps.map((name, i) => [`APP_${i}`, {type: "worker" as const, worker: name}])), DATABASE: {type: "worker", worker: "database"}}}},
