@@ -17,7 +17,7 @@ assert.ok(smallCases.length > 0); assert.equal(new Set(smallCases.map(test => te
 const id = new Date().toISOString().replaceAll(":", "-");
 const output = resolve(ROOT, "results", id), artifacts = resolve(ROOT, ".artifacts", id);
 await mkdir(output, {recursive: true});
-const files = ["build.ts", "runtime.ts", "model.ts", "model.test.ts", "inspection-page.ts", "inspection-page.test.ts", "read-faults.ts", "read-fault.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "worker/read-fault.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
+const files = ["build.ts", "build-identity.test.ts", "runtime.ts", "model.ts", "model.test.ts", "inspection-page.ts", "inspection-page.test.ts", "read-faults.ts", "read-fault.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "worker/read-fault.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
 const suiteDigests = Object.fromEntries(await Promise.all(files.map(async path => [path, createHash("sha256").update(await readFile(resolve(ROOT, path))).digest("hex")])));
 const report = {kind: "correctness-conformance", tier: "small-1-100", id,
   gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(),
