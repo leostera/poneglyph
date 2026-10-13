@@ -17,6 +17,7 @@ export const correctnessBudgets = Object.freeze({
   phaseObservationPolls: 128, phaseObservationDelayMs: 5,
   controlRequestMs: 2_000, inFlightReadMs: 2_000, replyBarrierSafetyMs: 10_000,
   recoveryAttempts: 16, // Original graph/ID/payload only; unknown is not abort.
+  authorityRowsPerActor: 100_000, authorityPageRows: 128, // Existing retention bound; read-only paging, never pruning.
 });
 // Stable, recorded inputs for the next tier; declaring them is not execution.
 // uint32 seeds are numeric PRNG states, never backend routing/expected data.

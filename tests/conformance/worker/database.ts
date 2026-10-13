@@ -3,11 +3,18 @@ import { GraphCoordinatorDO, GraphShardDO, shardObjectName, coordinatorObjectNam
 
 import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
 import {WriteBarrier} from "./write-barrier.js";
+import {authorityActors, authorityLayout} from "./authority-placement.js";
+import {coordinatorAuthority, shardAuthority, type AuthorityRole} from "./authority-sql.js";
+import {parseReply} from "../response-evidence.js";
+import {parseAuthorityIdentities} from "./authority-controls.js";
 
 declare const __E2E_OWNER_DEPTH__: number;
 export {TodoHubDO};
-export class InspectionCoordinatorDO extends GraphCoordinatorDO {}
+export class InspectionCoordinatorDO extends GraphCoordinatorDO {
+  authorityStatus(role: AuthorityRole, after: number) {return coordinatorAuthority(this.ctx.storage, authorityLayout, role, after);}
+}
 export class InspectionShardDO extends GraphShardDO {
+  authorityStatus() {return shardAuthority(this.ctx.storage, authorityLayout);}
   private readonly incarnation = crypto.randomUUID();
   lifecycleStatus() {return {objectId: this.ctx.id.toString(), incarnation: this.incarnation};}
   terminateActor() {this.ctx.abort("conformance actual native actor reset");}
@@ -52,6 +59,28 @@ interface InspectionEnv extends Env {GRAPH_COORDINATORS: DurableObjectNamespace<
 export default {
   async fetch(request: Request, env: InspectionEnv) {
     const url = new URL(request.url);
+    if (url.pathname === "/__e2e/authority-actors") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      const graph = url.searchParams.get("graph");
+      if (!graph) return new Response("missing authority graph", {status: 400});
+      let ids: readonly string[];
+      try {ids = parseAuthorityIdentities(parseReply(await request.json())["txIds"]);}
+      catch (error) {return Response.json({error: String(error)}, {status: 400});}
+      return Response.json(await authorityActors(graph, ids));
+    }
+    if (url.pathname === "/__e2e/coordinator-authority") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      const graph = url.searchParams.get("graph"), name = url.searchParams.get("name"), role = url.searchParams.get("role");
+      const after = Number(url.searchParams.get("after") ?? 0);
+      if (!graph || !name || !(name === coordinatorObjectName(graph) || name.startsWith(`${coordinatorObjectName(graph)}:`)) || (role !== "graph" && role !== "owner" && role !== "ledger") || !Number.isSafeInteger(after) || after < 0) return new Response("invalid authority inspection", {status: 400});
+      return Response.json(await env.GRAPH_COORDINATORS.getByName(name).authorityStatus(role, after));
+    }
+    if (url.pathname === "/__e2e/shard-authority") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
+      if (!graph || !prefix.ok || prefix.value.length < __E2E_OWNER_DEPTH__) return new Response("invalid physical authority identity", {status: 400});
+      return Response.json(await env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix.value)).authorityStatus());
+    }
     if (url.pathname === "/__e2e/lifecycle") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");

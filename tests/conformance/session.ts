@@ -10,9 +10,16 @@ export class Session {
   readonly queries: Query[] = [];
   readonly outcomes: unknown[] = [];
   readonly related: Session[] = [];
+  readonly acknowledgedSequences = new Map<string, number>();
+  readonly submittedTransactionIds = new Set<string>();
   constructor(readonly runtime: LocalRuntime, readonly graph: string, readonly model = new Model()) {}
   async request(operation: object, app = 0, options: {timeoutMs: number} = {timeoutMs: correctnessBudgets.requestMs}) {
     const invokedAt = new Date().toISOString();
+    const input: unknown = Reflect.get(operation, "body") ?? operation;
+    if (input && typeof input === "object") {
+      const id: unknown = Reflect.get(input, "txId");
+      if (typeof id === "string" && id.length <= 1024 && /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(id)) this.submittedTransactionIds.add(id);
+    }
     this.outcomes.push({event: "request-invoked", operation, app, invokedAt});
     let response: Response | undefined;
     let text: string | undefined;
@@ -41,8 +48,11 @@ export class Session {
     assert.equal(result.status, expected, `write ${txId}: ${JSON.stringify(result.body)}`);
     if (expected === 200) {
       assert.equal(result.body["txId"], txId); assert.equal(result.body["status"], "committed");
-      assert.ok(Number.isSafeInteger(result.body["commitSeq"]) && Number(result.body["commitSeq"]) > 0, "positive receipt, not admission");
-      this.model.commit(txId, facts);
+      const sequence = result.body["commitSeq"];
+      assert.ok(typeof sequence === "number" && Number.isSafeInteger(sequence) && sequence > 0, "typed positive receipt, not admission");
+      const prior = this.acknowledgedSequences.get(txId);
+      if (prior !== undefined) assert.equal(sequence, prior, "replay preserves the acknowledged receipt sequence");
+      this.model.commit(txId, facts); this.acknowledgedSequences.set(txId, sequence);
     }
     return result;
   }

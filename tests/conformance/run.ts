@@ -8,6 +8,7 @@ import {startLocal} from "./runtime.js";
 import {restart, Session} from "./session.js";
 import {checkAllLookups, smallCases} from "./small.js";
 import {archiveReport} from "./archive.js";
+import {auditAuthorities} from "./authority-audit.js";
 import {correctnessBudgets, requiredCoverage, smallTierComplete, statefulSeeds} from "./contract.js";
 
 // Tier-first: no larger tier is implemented/enabled until this shared matrix
@@ -18,7 +19,7 @@ assert.ok(smallCases.length > 0); assert.equal(new Set(smallCases.map(test => te
 const id = new Date().toISOString().replaceAll(":", "-");
 const output = resolve(ROOT, "results", id), artifacts = resolve(ROOT, ".artifacts", id);
 await mkdir(output, {recursive: true});
-const files = ["contract.ts", "contract.test.ts", "build.ts", "build-identity.test.ts", "runtime.ts", "model.ts", "model.test.ts", "inspection-page.ts", "inspection-page.test.ts", "read-faults.ts", "read-fault.test.ts", "write-phases.ts", "splits.ts", "lifecycle.ts", "actor-fingerprint.ts", "actor-fingerprint.test.ts", "write-barrier.test.ts", "response-evidence.ts", "response-evidence.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "worker/read-fault.ts", "worker/write-barrier.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
+const files = ["contract.ts", "contract.test.ts", "build.ts", "build-identity.test.ts", "runtime.ts", "model.ts", "model.test.ts", "inspection-page.ts", "inspection-page.test.ts", "read-faults.ts", "read-fault.test.ts", "write-phases.ts", "splits.ts", "lifecycle.ts", "actor-fingerprint.ts", "actor-fingerprint.test.ts", "authority-audit.ts", "authority-evidence.ts", "authority-evidence.test.ts", "transaction-digest.ts", "transaction-digest.test.ts", "worker/authority-placement.ts", "worker/authority-sql.ts", "worker/authority-controls.ts", "write-barrier.test.ts", "response-evidence.ts", "response-evidence.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "worker/read-fault.ts", "worker/write-barrier.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
 const suiteDigests = Object.fromEntries(await Promise.all(files.map(async path => [path, createHash("sha256").update(await readFile(resolve(ROOT, path))).digest("hex")])));
 const report = {kind: "correctness-conformance", tier: "small-1-100", id,
   gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(),
@@ -45,6 +46,7 @@ for (const implementation of implementations) {
       results.push(result);
       try {
         await test.run(session); assert.ok(session.model.log.length <= 100, "small-tier fact envelope");
+        for (const scope of [session, ...session.related]) await auditAuthorities(scope);
         await checkAllLookups(session); await session.verify(); result.warm = "pass";
       } catch (error) {result.warm = "fail"; Object.assign(result, {error: String(error)}); failures++;}
       result.facts = session.model.log.length;
@@ -58,7 +60,9 @@ for (const implementation of implementations) {
         for (const prior of [original, ...original.related]) {
           const cold = new Session(runtime, prior.graph, prior.model);
           cold.queries.push(...prior.queries);
-          try {await checkAllLookups(cold); await cold.verify();}
+          for (const [txId, sequence] of prior.acknowledgedSequences) cold.acknowledgedSequences.set(txId, sequence);
+          for (const txId of prior.submittedTransactionIds) cold.submittedTransactionIds.add(txId);
+          try {await auditAuthorities(cold); await checkAllLookups(cold); await cold.verify();}
           finally {coldOutcomes.push({graph: prior.graph, outcomes: cold.outcomes});}
         }
         results[index]!.cold = "pass";
