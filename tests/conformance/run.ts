@@ -17,14 +17,14 @@ assert.ok(smallCases.length > 0); assert.equal(new Set(smallCases.map(test => te
 const id = new Date().toISOString().replaceAll(":", "-");
 const output = resolve(ROOT, "results", id), artifacts = resolve(ROOT, ".artifacts", id);
 await mkdir(output, {recursive: true});
-const files = ["build.ts", "build-identity.test.ts", "runtime.ts", "model.ts", "model.test.ts", "inspection-page.ts", "inspection-page.test.ts", "read-faults.ts", "read-fault.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "worker/read-fault.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
+const files = ["build.ts", "build-identity.test.ts", "runtime.ts", "model.ts", "model.test.ts", "inspection-page.ts", "inspection-page.test.ts", "read-faults.ts", "read-fault.test.ts", "write-phases.ts", "write-barrier.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "worker/read-fault.ts", "worker/write-barrier.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
 const suiteDigests = Object.fromEntries(await Promise.all(files.map(async path => [path, createHash("sha256").update(await readFile(resolve(ROOT, path))).digest("hex")])));
 const report = {kind: "correctness-conformance", tier: "small-1-100", id,
   gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(),
   gitStatus: execFileSync("git", ["status", "--short"], {encoding: "utf8"}),
   runtime: {node: process.version, miniflare: "5.20261006.1-alpha", compatibilityDate: "2026-10-06"},
   suiteDigests, cases: smallCases.map(test => test.name),
-  limitations: ["Initial small-tier foundation plus actual scan-response fault adapters; controlled write phases/splits/concurrency history checker are not yet implemented", "Quiescent disk runtime restart, not abrupt process kill or elapsed retention evidence", "No throughput/latency/performance measurements or promotion decisions"],
+  limitations: ["Initial small-tier foundation plus actual scan-response faults and prepared/applied reply barriers with atomic public reads; write failures/splits/concurrent-history checker are not complete", "Quiescent disk runtime restart, not abrupt process kill or elapsed retention evidence", "No throughput/latency/performance measurements or promotion decisions"],
   implementations: [] as unknown[],
 };
 let failures = 0;

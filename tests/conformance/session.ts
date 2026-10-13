@@ -9,10 +9,10 @@ export class Session {
   readonly outcomes: unknown[] = [];
   readonly related: Session[] = [];
   constructor(readonly runtime: LocalRuntime, readonly graph: string, readonly model = new Model()) {}
-  async request(operation: object, app = 0) {
+  async request(operation: object, app = 0, options = {timeoutMs: 30_000}) {
     let response: Response;
     try {
-      response = await fetch(this.runtime.endpoints[app]!, {method: "POST", headers: {authorization: `Bearer ${this.runtime.token}`}, body: JSON.stringify({graph: this.graph, ...operation}), signal: AbortSignal.timeout(30_000)});
+      response = await fetch(this.runtime.endpoints[app]!, {method: "POST", headers: {authorization: `Bearer ${this.runtime.token}`}, body: JSON.stringify({graph: this.graph, ...operation}), signal: AbortSignal.timeout(options.timeoutMs)});
     } catch (error) {
       this.outcomes.push({operation, app, status: "unknown", error: String(error), cause: error instanceof Error ? String(error.cause) : undefined});
       throw error; // Record uncertainty; do not hide it with an implicit retry.

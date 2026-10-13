@@ -3,6 +3,7 @@ import type {FactInput} from "@leostera/poneglyph";
 import {constant, variable, relation, items, scalar, type Query, type Value} from "./model.js";
 import {Session} from "./session.js";
 import {readFaultCases} from "./read-faults.js";
+import {writePhaseCases} from "./write-phases.js";
 export type Case = {name: string; run: (session: Session) => Promise<void>};
 export const fact = (entity: string, value: Value, field = "test:value", source = "agent:one", retraction = false): FactInput => ({source, entity, field, value, retraction});
 const text = (value: string): Value => ({type: "text", value});
@@ -112,6 +113,7 @@ export const smallCases: Case[] = [
     // are still distinct. Common lookup checks must preserve all multiplicity.
   }},
   ...readFaultCases,
+  ...writePhaseCases,
 ];
 
 export async function checkAllLookups(s: Session) {

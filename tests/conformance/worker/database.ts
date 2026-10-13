@@ -2,6 +2,7 @@ import original, { TodoHubDO } from "../../../poneglyph/src/worker.js";
 import { GraphCoordinatorDO, GraphShardDO, shardObjectName, parseVirtualPrefix } from "../../../poneglyph/src/database-implementation.js";
 
 import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
+import {WriteBarrier} from "./write-barrier.js";
 
 declare const __E2E_OWNER_DEPTH__: number;
 export {TodoHubDO};
@@ -10,6 +11,11 @@ export class InspectionShardDO extends GraphShardDO {
   private readFault: ReadFaultMode = "none";
   private faultHits = 0;
   private successfulScans = 0;
+  private readonly writeBarrier = new WriteBarrier();
+  writeBarrierStatus() {return this.writeBarrier.status();}
+  armWriteBarrier(input: unknown) {return this.writeBarrier.arm(input);}
+  releaseWriteBarrier() {return this.writeBarrier.release();}
+  clearWriteBarrier() {return this.writeBarrier.clear();}
   configureReadFault(input: unknown) {
     const mode = parseReadFaultMode(input);
     const previous = this.readFaultStatus();
@@ -18,6 +24,9 @@ export class InspectionShardDO extends GraphShardDO {
   }
   readFaultStatus() {return {mode: this.readFault, hits: this.faultHits, successfulScans: this.successfulScans};}
   override async fetch(request: Request): Promise<Response> {
+    return this.writeBarrier.intercept(request, () => this.fetchWithReadFault(request));
+  }
+  private async fetchWithReadFault(request: Request): Promise<Response> {
     const mode = this.readFault;
     if (new URL(request.url).pathname !== "/_scan" || mode === "none") return super.fetch(request);
     this.faultHits++;
@@ -40,6 +49,20 @@ interface InspectionEnv extends Env {GRAPH_COORDINATORS: DurableObjectNamespace<
 export default {
   async fetch(request: Request, env: InspectionEnv) {
     const url = new URL(request.url);
+    if (url.pathname === "/__e2e/write-barrier") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
+      if (!graph || !prefix.ok) return new Response("bad barrier identity", {status: 400});
+      const stub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix.value));
+      if (request.method === "GET") return Response.json(await stub.writeBarrierStatus());
+      try {
+        const action = url.searchParams.get("action");
+        if (action === "arm") return Response.json(await stub.armWriteBarrier(await request.json()));
+        if (action === "release") return Response.json(await stub.releaseWriteBarrier());
+        if (action === "clear") return Response.json(await stub.clearWriteBarrier());
+      } catch (error) {return Response.json({error: String(error)}, {status: 400});}
+      return new Response("invalid barrier action", {status: 400});
+    }
     if (url.pathname === "/__e2e/read-fault") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
