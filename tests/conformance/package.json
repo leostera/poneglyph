@@ -6,7 +6,7 @@
     "typecheck": "tsc --noEmit",
     "test:oracle": "tsx --test --test-concurrency=1 *.test.ts",
     "test:small": "pnpm run test:oracle && tsx run.ts",
-    "test:histories": "pnpm run test:oracle && tsx run-histories.ts"
+    "test:focused": "pnpm run test:oracle && tsx run-focused.ts"
   },
   "dependencies": {"@leostera/poneglyph": "file:../../poneglyph"},
   "devDependencies": {

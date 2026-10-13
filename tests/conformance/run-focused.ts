@@ -8,17 +8,19 @@ import {buildConformance, implementations, ROOT} from "./build.js";
 import {startHosted} from "./process-runtime.js";
 import {Session} from "./session.js";
 import {concurrentHistoryCases} from "./concurrent-histories.js";
+import {partialApplyCases} from "./partial-apply.js";
+const focusedCases = [...concurrentHistoryCases, ...partialApplyCases];
 import {checkAllLookups} from "./small.js";
 import {auditAuthorities} from "./authority-audit.js";
 import {RunControl, persistCompletion, type RunStage} from "./run-control.js";
 assert.equal(process.argv.length, 2, "focused shared regression has no selection arguments");
-const id = `focused-histories-${new Date().toISOString().replaceAll(":", "-")}`, output = resolve(ROOT, "results", id), artifacts = resolve(ROOT, ".artifacts", id);
+const id = `focused-controls-${new Date().toISOString().replaceAll(":", "-")}`, output = resolve(ROOT, "results", id), artifacts = resolve(ROOT, ".artifacts", id);
 await mkdir(output, {recursive: true});
 const execution = new RunControl();
-const files = ["run-histories.ts", "run.ts", "run-control.ts", "build.ts", "runtime.ts", "process-runtime.ts", "process-host.ts", "session.ts", "model.ts", "query-catalogue.ts", "legal-history.ts", "concurrent-histories.ts", "authority-audit.ts", "owner-witness.ts"];
+const files = ["run-focused.ts", "partial-apply.ts", "participant-stage.ts", "worker/apply-gate.ts", "run.ts", "run-control.ts", "build.ts", "runtime.ts", "process-runtime.ts", "process-host.ts", "session.ts", "model.ts", "query-catalogue.ts", "legal-history.ts", "concurrent-histories.ts", "authority-audit.ts", "owner-witness.ts"];
 const digests = Object.fromEntries(await Promise.all(files.map(async file => [file, createHash("sha256").update(await readFile(resolve(ROOT, file))).digest("hex")])));
 const report = {kind: "focused-conformance-regression", notCertification: true, tier: "small-1-100", id, execution, suiteDigests: digests,
-  gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(), cases: concurrentHistoryCases.map(c => c.name), implementations: [] as unknown[]};
+  gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(), cases: focusedCases.map(c => c.name), implementations: [] as unknown[]};
 const save = () => writeFile(resolve(output, "report.json"), JSON.stringify(report, null, 2) + "\n");
 let stage: RunStage = {implementation: "A", phase: "build"};
 try {
@@ -30,8 +32,8 @@ try {
     stage = {implementation: implementation.name, phase: "startup"}; let runtime = await startHosted("conformance", persistence, bundles);
     const sessions: Session[] = [];
     try {
-      for (const [index, test] of concurrentHistoryCases.entries()) {
-        stage = {implementation: implementation.name, phase: "warm", caseName: test.name}; const s = new Session(runtime, `conformance-histories-${index}`); sessions.push(s);
+      for (const [index, test] of focusedCases.entries()) {
+        stage = {implementation: implementation.name, phase: "warm", caseName: test.name}; const s = new Session(runtime, `conformance-focused-${index}`); sessions.push(s);
         const result = {name: test.name, graph: s.graph, warm: "not-run", cold: "not-run", outcomes: s.outcomes}; results.push(result);
         try {await test.run(s); assert.ok(s.model.log.length <= 100); await auditAuthorities(s); await checkAllLookups(s); await s.verify(); result.warm = "pass";}
         catch (error) {result.warm = "fail"; execution.stop(stage, error); throw error;}

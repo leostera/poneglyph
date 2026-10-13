@@ -36,6 +36,12 @@ export function shardAuthority(storage: DurableObjectStorage, layout: AuthorityL
   const identity = storage.sql.exec("SELECT graph_id, prefix FROM shard_identity").toArray()[0] ?? null;
   return {prepared, unpublished, cachedProofPending, rows, identity};
 }
+export function participantStage(storage: DurableObjectStorage, txId: string) {
+  const identity = storage.sql.exec("SELECT graph_id, prefix, role FROM shard_identity").toArray()[0] ?? null;
+  const transactions = storage.sql.exec("SELECT tx_id, payload_hash, status FROM shard_transactions WHERE tx_id = ?", txId).toArray();
+  const facts = storage.sql.exec("SELECT tx_id, tx_index, source, entity, field, value_json, retraction FROM fact_log WHERE tx_id = ? ORDER BY tx_index LIMIT 1001", txId).toArray();
+  return {identity, transactions, facts}; // Synchronous SELECT only; no proof/recovery invocation.
+}
 export function ownerWitness(storage: DurableObjectStorage, txId: string) {
   const rows = storage.sql.exec(`SELECT tx_id, payload_hash, ticket_seq, directory_epoch, phase, commit_seq, created_at_ms
     FROM tree_reservations WHERE tx_id = ?`, txId).toArray();

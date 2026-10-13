@@ -3,8 +3,9 @@ import { GraphCoordinatorDO, GraphShardDO, shardObjectName, coordinatorObjectNam
 
 import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
 import {WriteBarrier} from "./write-barrier.js";
+import {ApplyGate} from "./apply-gate.js";
 import {authorityActors, authorityLayout, ownerActorName} from "./authority-placement.js";
-import {coordinatorAuthority, shardAuthority, ownerWitness, type AuthorityRole} from "./authority-sql.js";
+import {coordinatorAuthority, shardAuthority, ownerWitness, participantStage, type AuthorityRole} from "./authority-sql.js";
 import {parseReply} from "../response-evidence.js";
 import {parseAuthorityIdentities} from "./authority-controls.js";
 
@@ -16,6 +17,12 @@ export class InspectionCoordinatorDO extends GraphCoordinatorDO {
 }
 export class InspectionShardDO extends GraphShardDO {
   authorityStatus(after: number) {return shardAuthority(this.ctx.storage, authorityLayout, after);}
+  participantStage(txId: string) {return participantStage(this.ctx.storage, txId);}
+  private readonly applyGate = new ApplyGate();
+  applyGateStatus() {return this.applyGate.status();}
+  armApplyGate(input: unknown) {return this.applyGate.arm(input);}
+  clearApplyGate() {return this.applyGate.clear();}
+  releaseApplyGate() {return this.applyGate.release();}
   private readonly incarnation = crypto.randomUUID();
   lifecycleStatus() {return {objectId: this.ctx.id.toString(), incarnation: this.incarnation};}
   terminateActor() {this.ctx.abort("conformance actual native actor reset");}
@@ -35,7 +42,7 @@ export class InspectionShardDO extends GraphShardDO {
   }
   readFaultStatus() {return {mode: this.readFault, hits: this.faultHits, successfulScans: this.successfulScans};}
   override async fetch(request: Request): Promise<Response> {
-    return this.writeBarrier.intercept(request, () => this.fetchWithReadFault(request));
+    return this.applyGate.intercept(request, () => this.writeBarrier.intercept(request, () => this.fetchWithReadFault(request)));
   }
   private async fetchWithReadFault(request: Request): Promise<Response> {
     const mode = this.readFault;
@@ -83,6 +90,26 @@ export default {
       if (!graph || !prefix.ok || prefix.value.length !== __E2E_OWNER_DEPTH__ || !id || authorityLayout.publication !== "owner_released") return new Response("invalid owner witness request", {status: 400});
       const ids = parseAuthorityIdentities([id]);
       return Response.json(await env.GRAPH_COORDINATORS.getByName(ownerActorName(graph, prefix.value)).ownerWitness(ids[0]!));
+    }
+    if (url.pathname === "/__e2e/participant-stage" || url.pathname === "/__e2e/apply-gate") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
+      if (!graph || !prefix.ok || prefix.value.length < __E2E_OWNER_DEPTH__) return new Response("invalid participant identity", {status: 400});
+      const stub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix.value));
+      try {
+        if (url.pathname === "/__e2e/participant-stage") {
+          if (request.method !== "GET") return new Response("inspection requires GET", {status: 405});
+          const ids = parseAuthorityIdentities([url.searchParams.get("txId")]);
+          return Response.json(await stub.participantStage(ids[0]!));
+        }
+        if (request.method === "GET") return Response.json(await stub.applyGateStatus());
+        if (request.method !== "POST") return new Response("control requires POST", {status: 405});
+        const action = url.searchParams.get("action");
+        if (action === "arm") return Response.json(await stub.armApplyGate(await request.json()));
+        if (action === "clear") return Response.json(await stub.clearApplyGate());
+        if (action === "release") return Response.json(await stub.releaseApplyGate());
+      } catch (error) {return Response.json({error: String(error)}, {status: 400});}
+      return new Response("invalid apply-gate action", {status: 400});
     }
     if (url.pathname === "/__e2e/shard-authority") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
