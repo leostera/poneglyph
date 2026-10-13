@@ -1,3 +1,5 @@
+import {correctnessBudgets} from "../contract.js";
+
 export type WritePhase = "prepared" | "applied";
 export type BarrierConfig = Readonly<{phase: WritePhase; txId: string}>;
 export type BarrierStatus =
@@ -45,7 +47,7 @@ function matchesPhase(path: string, phase: WritePhase) {
 export class WriteBarrier {
   private current: BarrierStatus = {state: "idle"};
   private waiting: Waiting | undefined;
-  constructor(private readonly holdMs = 10_000) {}
+  constructor(private readonly holdMs: number = correctnessBudgets.replyBarrierSafetyMs) {}
   status(): BarrierStatus {return structuredClone(this.current);}
   arm(input: unknown) {
     const config = parseBarrierConfig(input);

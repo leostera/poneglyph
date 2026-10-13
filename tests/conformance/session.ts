@@ -3,13 +3,14 @@ import { startLocal, type LocalRuntime } from "./runtime.js";
 import type { FactInput } from "@leostera/poneglyph";
 import { Model, equalBag, type Evidence, type Query } from "./model.js";
 import {parseInspectionPage} from "./inspection-page.js";
+import {correctnessBudgets} from "./contract.js";
 
 export class Session {
   readonly queries: Query[] = [];
   readonly outcomes: unknown[] = [];
   readonly related: Session[] = [];
   constructor(readonly runtime: LocalRuntime, readonly graph: string, readonly model = new Model()) {}
-  async request(operation: object, app = 0, options = {timeoutMs: 30_000}) {
+  async request(operation: object, app = 0, options: {timeoutMs: number} = {timeoutMs: correctnessBudgets.requestMs}) {
     let response: Response;
     try {
       response = await fetch(this.runtime.endpoints[app]!, {method: "POST", headers: {authorization: `Bearer ${this.runtime.token}`}, body: JSON.stringify({graph: this.graph, ...operation}), signal: AbortSignal.timeout(options.timeoutMs)});
@@ -27,8 +28,8 @@ export class Session {
     // Catalog names are labels; the public contract requires a URI identity.
     const txId = `tx:${name}`;
     let result = await this.request({action: "write", txId, facts}, app);
-    for (let attempt = 1; result.body["retryable"] === true && result.status !== expected && attempt < 16; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 5)); result = await this.request({action: "write", txId, facts}, app);
+    for (let attempt = 1; result.body["retryable"] === true && result.status !== expected && attempt < correctnessBudgets.writeAttempts; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, correctnessBudgets.retryBackoffMs)); result = await this.request({action: "write", txId, facts}, app);
     }
     assert.equal(result.status, expected, `write ${txId}: ${JSON.stringify(result.body)}`);
     if (expected === 200) {

@@ -94,10 +94,10 @@ export class Model {
     return query.filter ? rows.filter(query.filter) : rows;
   }
   verifyEvidence(evidence: Evidence) {
-    const content = (row: Record<string, unknown>) => ({source: row["source"], entity: row["entity"], field: row["field"], value: JSON.parse(String(row["value_json"])), retraction: Boolean(row["retraction"])});
-    equalBag(evidence.fact_log.map(row => ({txId: row["tx_id"], index: row["tx_index"], fact: content(row)})), this.log, "durable exact ordered transaction membership");
+    const content = (row: Record<string, unknown>, retraction: boolean) => ({source: row["source"], entity: row["entity"], field: row["field"], value: JSON.parse(String(row["value_json"])), retraction});
+    equalBag(evidence.fact_log.map(row => ({txId: row["tx_id"], index: row["tx_index"], fact: content(row, parseRetraction(row["retraction"]))})), this.log, "durable exact ordered transaction membership");
     assert.equal(new Set(evidence.fact_log.map(row => row["fact_id"])).size, evidence.fact_log.length, "unique durable fact identities");
-    equalBag(evidence.active_facts.map(row => ({txId: row["tx_id"], fact: {...content(row), retraction: false}})),
+    equalBag(evidence.active_facts.map(row => ({txId: row["tx_id"], fact: content(row, false)})),
       [...this.active.values()].map(({txId, fact}) => ({txId, fact})), "active source-qualified assertion membership");
     const values = [...this.active.values()].flatMap(({fact, txId}) => items(fact.value).map((item, index) => ({source: fact.source, entity: fact.entity, field: fact.field, txId, index, item, key: JSON.stringify(item), binding: scalar(item)})));
     equalBag(evidence.active_values.map(row => ({source: row["source"], entity: row["entity"], field: row["field"], txId: row["tx_id"], index: row["value_index"], item: JSON.parse(String(row["value_json"])), key: row["value_key"], binding: {type: row["datalog_type"], value: row["datalog_value"]}})), values, "complete active value/Datalog membership");
@@ -115,6 +115,11 @@ export class Model {
       assert.equal(stable(JSON.parse(String(row["value_json"]))), stable(members[index]), "index member belongs to its exact fact");
     }
   }
+}
+function parseRetraction(input: unknown): boolean {
+  if (input === 0) return false;
+  if (input === 1) return true;
+  throw new Error("durable retraction flag must be exactly SQL integer 0 or 1");
 }
 export const variable = (name: string): Term => ({variable: name});
 export const constant = (value: string, type: "string" | "integer" = "string"): Term => ({constant: {type, value}});

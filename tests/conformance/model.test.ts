@@ -31,6 +31,19 @@ test("ordered retraction and retry preserve append-only membership", () => {
   model.commit("tx", [f, {...f, retraction: true}, f]); model.commit("tx", [f, {...f, retraction: true}, f]);
   assert.equal(model.log.length, 3); assert.equal(model.active.size, 1);
 });
+test("hand-calculated overlapping entity transactions permit two whole projections, not mixed fields", () => {
+  const left = [fact("test:a", {type: "text", value: "left"}, "test:first"), fact("test:a", {type: "text", value: "left"}, "test:second")];
+  const right = [fact("test:a", {type: "text", value: "right"}, "test:first"), fact("test:a", {type: "text", value: "right"}, "test:second")];
+  const leftThenRight = new Model(), rightThenLeft = new Model();
+  leftThenRight.commit("tx:left", left); leftThenRight.commit("tx:right", right);
+  rightThenLeft.commit("tx:right", right); rightThenLeft.commit("tx:left", left);
+  const expected = ["left", "right"].map(value => ({Entity: {type: "string", value: "test:a"}, Value: {type: "string", value}}));
+  equalBag(leftThenRight.query(relation("test:first")), expected, "hand-calculated active evidence with right projection winner");
+  equalBag(rightThenLeft.query(relation("test:first")), expected, "hand-calculated active evidence with left projection winner");
+  assert.deepEqual(Object.fromEntries(leftThenRight.projections.get("test:a")!), {"test:first": {type: "text", value: "right"}, "test:second": {type: "text", value: "right"}});
+  assert.deepEqual(Object.fromEntries(rightThenLeft.projections.get("test:a")!), {"test:first": {type: "text", value: "left"}, "test:second": {type: "text", value: "left"}});
+  assert.equal(leftThenRight.active.size, 4); assert.equal(rightThenLeft.active.size, 4);
+});
 test("hand-calculated scalar encodings and Unicode canonical map ordering", () => {
   assert.deepEqual(scalar({type: "null"}), {type: "string", value: "null"});
   assert.deepEqual(scalar({type: "number", value: "-9223372036854775808"}), {type: "integer", value: "-9223372036854775808"});
@@ -44,12 +57,24 @@ const corruptions: [string, (e: Evidence) => void][] = [
   ["missing active assertion", e => e.active_facts.pop()],
   ["missing index row", e => e.active_values.pop()],
   ["wrong index type", e => {e.active_values[0]!["datalog_type"] = "integer";}],
+  ["untyped false retraction", e => {e.fact_log[0]!["retraction"] = "";}],
   ["wrong canonical index key", e => {e.active_values[0]!["value_key"] = "{}";}],
   ["wrong projection", e => {e.entity_versions[0]!["fields_json"] = "{}";}],
   ["orphan active reference", e => {e.active_facts[0]!["fact_id"] = "missing";}],
 ];
 for (const [name, mutate] of corruptions) test(`checker sensitivity: ${name}`, () => {
   const {model, evidence} = golden(); mutate(evidence); assert.throws(() => model.verifyEvidence(evidence));
+});
+test("checker sensitivity: truthy SQL retraction corruption is not boolean-coerced", () => {
+  const {model, evidence} = golden();
+  model.commit("retract", [fact("test:a", {type: "text", value: "hello"}, "test:value", "agent:one", true)]);
+  evidence.fact_log.push({...evidence.fact_log[0]!, fact_id: "f2", tx_id: "retract", retraction: 1});
+  evidence.active_facts = []; evidence.active_values = []; evidence.entity_versions = [];
+  model.verifyEvidence(evidence);
+  for (const flag of [2, -1, true, "1", null, undefined]) {
+    evidence.fact_log[1]!["retraction"] = flag;
+    assert.throws(() => model.verifyEvidence(evidence));
+  }
 });
 test("public comparison catches omission, duplicate and changed type", () => {
   const expected = golden().model.query(relation("test:value"));
