@@ -37,6 +37,45 @@ jobs:
         working-directory: poneglyph
         run: pnpm build
 
+  small-data-conformance:
+    name: Small-data read/write conformance (all implementations)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: |
+            poneglyph/pnpm-lock.yaml
+            tests/conformance/pnpm-lock.yaml
+      - name: Build packaged client and install conformance dependencies
+        run: |
+          pnpm --dir poneglyph install --frozen-lockfile
+          pnpm --dir poneglyph build:package
+          pnpm --dir tests/conformance install --frozen-lockfile
+      - name: Check conformance types and all-implementation small tier
+        run: |
+          pnpm --dir tests/conformance typecheck
+          pnpm --dir tests/conformance test:small
+      - name: Retain correctness reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: small-data-conformance-reports
+          path: tests/conformance/results/
+      - name: Retain failed-run persistence and bundles
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: small-data-conformance-diagnostics
+          path: tests/conformance/.artifacts/
+          include-hidden-files: true
+
   formal-models:
     name: PlusCal/TLA+ model checking
     runs-on: ubuntu-latest

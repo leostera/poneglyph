@@ -1,0 +1,100 @@
+{
+  "kind": "supplemental-controlled-correctness",
+  "productCorrection": "322a1af",
+  "results": [
+    {
+      "implementation": "A",
+      "passed": 41,
+      "failed": 0,
+      "skipped": 0,
+      "log": "A.log.gz",
+      "uncompressedSha256": "105f69e543d625b2762a6e9d2ec4bd572bc5fd9883c88d9634f10916f9ce52dc"
+    },
+    {
+      "implementation": "B1",
+      "passed": 33,
+      "failed": 0,
+      "skipped": 0,
+      "log": "B1.log.gz",
+      "uncompressedSha256": "85113bc34b5cdc5a4684a4373fa4f4be827baf3a3e458e4db175277533b250d1"
+    },
+    {
+      "implementation": "C",
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0,
+      "log": "C.log.gz",
+      "uncompressedSha256": "b83cee1fb92fbe383d17864f4f52d9c1b614ff403018b5bda1c2cbd0dd0ac89c"
+    },
+    {
+      "implementation": "D",
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0,
+      "log": "D.log.gz",
+      "uncompressedSha256": "0dcd9e888f6be7e14a2f11793320d09549f00bc2be7afe6c141eed0f6dd2c6c1"
+    },
+    {
+      "implementation": "E",
+      "passed": 42,
+      "failed": 0,
+      "skipped": 0,
+      "log": "E.log.gz",
+      "uncompressedSha256": "b2756469920ef80a1aaa927dc33e01f5930bcd511cabe0cd715dfb679df60025"
+    },
+    {
+      "implementation": "F",
+      "passed": 45,
+      "failed": 0,
+      "skipped": 0,
+      "log": "F.log.gz",
+      "uncompressedSha256": "3329ebafa0331956625c4ec2bcb259576f9c64b85ef7635a27602f82cd6f64e5"
+    },
+    {
+      "implementation": "G",
+      "passed": 62,
+      "failed": 0,
+      "skipped": 0,
+      "log": "G.log.gz",
+      "uncompressedSha256": "0c9bc0fae84a0cd3e7ffbec7eea9793a2c833d6144900c390c4b381b16f20b34"
+    },
+    {
+      "implementation": "H",
+      "passed": 75,
+      "failed": 0,
+      "skipped": 0,
+      "log": "H.log.gz",
+      "uncompressedSha256": "470b7057c95131998066592109c9e8f73d1f699ddafb6f45ba15a603981dee4f"
+    },
+    {
+      "implementation": "I",
+      "passed": 72,
+      "failed": 0,
+      "skipped": 0,
+      "log": "I.log.gz",
+      "uncompressedSha256": "6df003f86187f0700ac43b3483c247450f392c267329fe19e651b1b171a95872"
+    },
+    {
+      "implementation": "J",
+      "passed": 70,
+      "failed": 0,
+      "skipped": 0,
+      "log": "J.log.gz",
+      "uncompressedSha256": "be454c94da483329e3d732ccfd86fd96f0ba5541ff2de69fd7b094985efd90cb"
+    },
+    {
+      "implementation": "K",
+      "passed": 76,
+      "failed": 0,
+      "skipped": 0,
+      "log": "K.log.gz",
+      "uncompressedSha256": "b0a54b08b25b8169f65db5ab77cdbca46471c3dd61e8ea0bffa49bb4fc1c3eff"
+    }
+  ],
+  "limitations": [
+    "Includes 28 shared pure tests per implementation; totals are not distinct E2E case counts.",
+    "Initial G run accidentally included A-only private fixtures; twelve fixture-selection failures are retained separately, not claimed to be G product defects.",
+    "No benchmark or performance comparison."
+  ],
+  "selection": "poneglyph/vitest.correctness.config.ts with PONEGLYPH_CORRECTNESS_IMPLEMENTATION; production selector unchanged"
+}
