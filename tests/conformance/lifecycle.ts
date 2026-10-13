@@ -11,7 +11,7 @@ import {correctnessBudgets} from "./contract.js";
 
 type Reply = Awaited<ReturnType<Session["request"]>>;
 async function control(s: Session, prefix: string, action: "fingerprint" | "abort") {
-  const database = await s.runtime.mf.getWorker("database");
+  const database = s.runtime.database;
   const url = new URL("https://control.internal/__e2e/lifecycle");
   url.searchParams.set("graph", s.graph); url.searchParams.set("prefix", prefix);
   const response = await database.fetch(url, {method: action === "abort" ? "POST" : "GET", headers: {authorization: `Bearer ${s.runtime.token}`}, signal: AbortSignal.timeout(correctnessBudgets.controlRequestMs)});

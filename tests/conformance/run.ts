@@ -4,8 +4,8 @@ import {mkdir, readFile, writeFile} from "node:fs/promises";
 import {resolve} from "node:path";
 import {createHash} from "node:crypto";
 import {buildConformance, implementations, ROOT} from "./build.js";
-import {startLocal} from "./runtime.js";
-import {restart, Session} from "./session.js";
+import {startHosted} from "./process-runtime.js";
+import {Session} from "./session.js";
 import {checkAllLookups, smallCases} from "./small.js";
 import {archiveReport} from "./archive.js";
 import {auditAuthorities} from "./authority-audit.js";
@@ -19,7 +19,7 @@ assert.ok(smallCases.length > 0); assert.equal(new Set(smallCases.map(test => te
 const id = new Date().toISOString().replaceAll(":", "-");
 const output = resolve(ROOT, "results", id), artifacts = resolve(ROOT, ".artifacts", id);
 await mkdir(output, {recursive: true});
-const files = ["contract.ts", "contract.test.ts", "build.ts", "build-identity.test.ts", "runtime.ts", "model.ts", "model.test.ts", "inspection-page.ts", "inspection-page.test.ts", "read-faults.ts", "read-fault.test.ts", "write-phases.ts", "splits.ts", "lifecycle.ts", "actor-fingerprint.ts", "actor-fingerprint.test.ts", "authority-audit.ts", "authority-evidence.ts", "authority-evidence.test.ts", "owner-witness.ts", "owner-witness.test.ts", "transaction-digest.ts", "transaction-digest.test.ts", "worker/authority-placement.ts", "worker/authority-sql.ts", "worker/authority-controls.ts", "write-barrier.test.ts", "response-evidence.ts", "response-evidence.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "worker/read-fault.ts", "worker/write-barrier.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
+const files = ["contract.ts", "contract.test.ts", "build.ts", "build-identity.test.ts", "runtime.ts", "process-runtime.ts", "process-host.ts", "process-group.ts", "process-group.test.ts", "crashes.ts", "model.ts", "model.test.ts", "inspection-page.ts", "inspection-page.test.ts", "read-faults.ts", "read-fault.test.ts", "write-phases.ts", "splits.ts", "lifecycle.ts", "actor-fingerprint.ts", "actor-fingerprint.test.ts", "authority-audit.ts", "authority-evidence.ts", "authority-evidence.test.ts", "owner-witness.ts", "owner-witness.test.ts", "transaction-digest.ts", "transaction-digest.test.ts", "worker/authority-placement.ts", "worker/authority-sql.ts", "worker/authority-controls.ts", "write-barrier.test.ts", "response-evidence.ts", "response-evidence.test.ts", "session.ts", "small.ts", "run.ts", "worker/application.ts", "worker/database.ts", "worker/read-fault.ts", "worker/write-barrier.ts", "archive.ts", "package.json", "pnpm-lock.yaml"];
 const suiteDigests = Object.fromEntries(await Promise.all(files.map(async path => [path, createHash("sha256").update(await readFile(resolve(ROOT, path))).digest("hex")])));
 const report = {kind: "correctness-conformance", tier: "small-1-100", id,
   gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(),
@@ -27,7 +27,7 @@ const report = {kind: "correctness-conformance", tier: "small-1-100", id,
   runtime: {node: process.version, miniflare: "5.20261006.1-alpha", compatibilityDate: "2026-10-06"},
   suiteDigests, cases: smallCases.map(test => test.name),
   contract: {correctnessBudgets, requiredCoverage, smallTierComplete, statefulSeeds, seedsExecuted: false},
-  limitations: ["Initial small-tier foundation plus actual scan-response faults and prepared/applied reply barriers with atomic public reads; native nested/interrupted-copy split checks and overlapping admitted-identity histories; native actor abort/reconstruction after acknowledgment and held apply; broader write failures/process crash/stale-routing/general-history coverage remains incomplete", "Quiescent disk runtime restart, not abrupt process kill or elapsed retention evidence", "No throughput/latency/performance measurements or promotion decisions"],
+  limitations: ["Initial small-tier foundation plus actual scan-response faults and prepared/applied reply barriers with atomic public reads; native nested/interrupted-copy split checks and overlapping admitted-identity histories; native actor abort/reconstruction after acknowledgment and held apply; broader write failures/process crash/stale-routing/general-history coverage remains incomplete", "Warm cases include actual SIGKILL host/workerd process-group crashes after acknowledgment and held native apply; cold phases remain quiescent disk restarts, not elapsed retention or natural idle eviction", "No throughput/latency/performance measurements or promotion decisions"],
   implementations: [] as unknown[],
 };
 let failures = 0;
@@ -37,7 +37,7 @@ for (const implementation of implementations) {
   const manifest = await buildConformance(implementation, bundles);
   const results: {name: string; warm: string; cold: string; error?: string; coldError?: string; graph: string; facts: number; outcomes: unknown[]}[] = [];
   report.implementations.push({manifest, persistence, results}); await save();
-  let runtime = await startLocal("conformance", persistence, 4, undefined, bundles);
+  let runtime = await startHosted("conformance", persistence, bundles);
   const sessions: Session[] = [];
   try {
     for (const [index, test] of smallCases.entries()) {
@@ -52,7 +52,7 @@ for (const implementation of implementations) {
       result.facts = session.model.log.length;
       console.log(`${implementation.name} ${result.warm} ${test.name}`); await save();
     }
-    runtime = await restart(runtime, persistence, bundles);
+    runtime = await runtime.restart();
     for (const [index, original] of sessions.entries()) {
       // Keep the independent oracle/input history; never rebuild it from SQL.
       const coldOutcomes: unknown[] = [];
@@ -70,7 +70,7 @@ for (const implementation of implementations) {
       Object.assign(results[index]!, {coldOutcomes});
       console.log(`${implementation.name} cold-${results[index]!.cold} ${results[index]!.name}`); await save();
     }
-  } finally {await runtime.mf.dispose(); await save();}
+  } finally {await runtime.close(); await save();}
 }
 await archiveReport(resolve(output, "report.json"));
 console.log(`Correctness report: ${resolve(output, "summary.json")}; ${failures} failed checks. Persistence retained: ${artifacts}`);

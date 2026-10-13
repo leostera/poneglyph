@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { startLocal, type LocalRuntime } from "./runtime.js";
+import type {LocalRuntime} from "./runtime.js";
 import type { FactInput } from "@leostera/poneglyph";
 import { Model, equalBag, type Evidence, type Query } from "./model.js";
 import {parseInspectionPage} from "./inspection-page.js";
@@ -78,7 +78,7 @@ export class Session {
   }
 }
 export async function inspect(runtime: LocalRuntime, graph: string): Promise<Evidence> {
-  const database = await runtime.mf.getWorker("database");
+  const database = runtime.database;
   const evidence: Evidence = {fact_log: [], active_facts: [], active_values: [], entity_versions: []};
   const pending = [""], visited = new Set<string>();
   while (pending.length) {
@@ -98,8 +98,4 @@ export async function inspect(runtime: LocalRuntime, graph: string): Promise<Evi
     }
   }
   return evidence;
-}
-export async function restart(runtime: LocalRuntime, persistence: string, bundles: string) {
-  const {graphId, token} = runtime; await runtime.mf.dispose();
-  return startLocal(graphId, persistence, 4, token, bundles);
 }

@@ -8,7 +8,7 @@ import {correctnessBudgets} from "./contract.js";
 type AuditRequest = (path: string, parameters: Record<string, string>, body?: object) => Promise<unknown>;
 
 async function recordedRequest(s: Session): Promise<AuditRequest> {
-  const database = await s.runtime.mf.getWorker("database");
+  const database = s.runtime.database;
   return async (path, parameters, body) => {
     const url = new URL(`https://audit.internal/__e2e/${path}`);
     for (const [key, value] of Object.entries({graph: s.graph, ...parameters})) url.searchParams.set(key, value);

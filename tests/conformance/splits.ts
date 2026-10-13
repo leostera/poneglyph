@@ -22,7 +22,7 @@ const join: Query = {
   atoms: [{field: "test:links", entity: variable("Entity"), value: variable("Mid")}, {field: "test:values", entity: variable("Mid"), value: variable("Value")}],
 };
 async function split(s: Session, prefix: string, stopAfterPages?: number) {
-  const database = await s.runtime.mf.getWorker("database");
+  const database = s.runtime.database;
   const url = new URL("https://control.internal/__e2e/split");
   url.searchParams.set("graph", s.graph); url.searchParams.set("prefix", prefix);
   if (stopAfterPages !== undefined) url.searchParams.set("stopAfterPages", String(stopAfterPages));

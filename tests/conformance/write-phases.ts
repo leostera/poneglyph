@@ -22,7 +22,7 @@ export async function observed<T>(s: Session, label: string, run: () => Promise<
   }
 }
 export async function barrier(s: Session, prefix: string, action?: "arm" | "release" | "clear", config?: BarrierConfig): Promise<BarrierStatus> {
-  const database = await s.runtime.mf.getWorker("database");
+  const database = s.runtime.database;
   const url = new URL("https://control.internal/__e2e/write-barrier");
   url.searchParams.set("graph", s.graph); url.searchParams.set("prefix", prefix);
   if (action) url.searchParams.set("action", action);

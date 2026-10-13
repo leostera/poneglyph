@@ -8,7 +8,7 @@ import {parseInspectionPage} from "./inspection-page.js";
 // Placement discovery is only for targeting a transport fault. It never supplies
 // expected facts/answers; the reference model still comes from submitted input.
 export async function entityLeaf(s: Session, entity: string) {
-  const database = await s.runtime.mf.getWorker("database"), pending = [""], seen = new Set<string>();
+  const database = s.runtime.database, pending = [""], seen = new Set<string>();
   while (pending.length) {
     const prefix = pending.shift()!; assert.ok(!seen.has(prefix), "fault discovery directory cycle"); seen.add(prefix); assert.ok(seen.size <= 511, "bounded fault discovery");
     const url = new URL("https://control.internal/__e2e/inspect");
@@ -23,7 +23,7 @@ export async function entityLeaf(s: Session, entity: string) {
   throw new Error("control cannot find the actual entity participant");
 }
 async function control(s: Session, prefix: string, mode?: ReadFaultMode) {
-  const database = await s.runtime.mf.getWorker("database"), url = new URL("https://control.internal/__e2e/read-fault");
+  const database = s.runtime.database, url = new URL("https://control.internal/__e2e/read-fault");
   url.searchParams.set("graph", s.graph); url.searchParams.set("prefix", prefix);
   const response = await database.fetch(url, {method: mode === undefined ? "GET" : "POST", headers: {authorization: `Bearer ${s.runtime.token}`}, ...(mode === undefined ? {} : {body: JSON.stringify(mode)})});
   assert.equal(response.status, 200);
