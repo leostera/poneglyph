@@ -12,8 +12,27 @@ export class Session {
   readonly related: Session[] = [];
   readonly acknowledgedSequences = new Map<string, number>();
   readonly submittedTransactionIds = new Set<string>();
+  private stopping = false;
+  private readonly inFlight = new Set<Promise<unknown>>();
+  private track<T>(work: () => Promise<T>): Promise<T> {
+    const pending = work(); this.inFlight.add(pending);
+    return pending.finally(() => this.inFlight.delete(pending));
+  }
+  async drain() {
+    this.stopping = true; // Stop new retries, not already admitted effects.
+    const results = await Promise.allSettled([...this.inFlight]);
+    this.outcomes.push({event: "fail-fast-caller-drain", calls: results.length,
+      failed: results.filter(result => result.status === "rejected").map(result => String(result.reason))});
+  }
   constructor(readonly runtime: LocalRuntime, readonly graph: string, readonly model = new Model()) {}
-  async request(operation: object, app = 0, options: {timeoutMs: number} = {timeoutMs: correctnessBudgets.requestMs}) {
+  request(operation: object, app = 0, options: {timeoutMs: number} = {timeoutMs: correctnessBudgets.requestMs}) {
+    return this.track(() => this.performRequest(operation, app, options));
+  }
+  private async performRequest(operation: object, app: number, options: {timeoutMs: number}) {
+    if (this.stopping) {
+      this.outcomes.push({event: "request-not-issued", operation, app, reason: "fail-fast-stop"});
+      throw new Error("conformance stopped before issuing this request");
+    }
     const invokedAt = new Date().toISOString();
     const input: unknown = Reflect.get(operation, "body") ?? operation;
     if (input && typeof input === "object") {
@@ -38,11 +57,14 @@ export class Session {
       throw error; // Body/parse failures are uncertain too; never silently retry.
     }
   }
-  async write(name: string, facts: readonly FactInput[], expected = 200, app = 0) {
+  write(name: string, facts: readonly FactInput[], expected = 200, app = 0) {
+    return this.track(() => this.performWrite(name, facts, expected, app));
+  }
+  private async performWrite(name: string, facts: readonly FactInput[], expected: number, app: number) {
     // Catalog names are labels; the public contract requires a URI identity.
     const txId = `tx:${name}`;
     let result = await this.request({action: "write", txId, facts}, app);
-    for (let attempt = 1; result.body["retryable"] === true && result.status !== expected && attempt < correctnessBudgets.writeAttempts; attempt++) {
+    for (let attempt = 1; result.body["retryable"] === true && result.status !== expected && attempt < correctnessBudgets.writeAttempts && !this.stopping; attempt++) {
       await new Promise(resolve => setTimeout(resolve, correctnessBudgets.retryBackoffMs)); result = await this.request({action: "write", txId, facts}, app);
     }
     assert.equal(result.status, expected, `write ${txId}: ${JSON.stringify(result.body)}`);
