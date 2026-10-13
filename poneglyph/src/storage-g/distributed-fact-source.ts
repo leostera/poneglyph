@@ -4,8 +4,7 @@ import { treeForKey, type TreeSnapshot } from "./forest.js";
 import { virtualKeyForEntity } from "./keys.js";
 import { parseUri } from "../domain/identifiers.js";
 import type { GraphId } from "../domain/graph-id.js";
-import { isRecord } from "../domain/result.js";
-import { parseDatalogValue } from "../datalog/value.js";
+import { readTupleStream, QueryScanBudgetExceeded } from "../datalog/scan-stream.js";
 import {
   MAX_QUERY_SCAN_BYTES,
   MAX_QUERY_SHARD_REQUESTS,
@@ -100,7 +99,7 @@ export class DistributedFactSource implements FactSource {
       throw openFailure;
     }
 
-    const iterators = responses.map(({ body }) => readTupleStream(body, this.metrics, signal)[Symbol.asyncIterator]());
+    const iterators = responses.map(({ body }) => readTupleStream(body, this.metrics, {maxBytes: MAX_QUERY_SCAN_BYTES, maxTuples: MAX_QUERY_TUPLES, maxRowBytes: MAX_TRANSACTION_BYTES}, signal)[Symbol.asyncIterator]());
     const pending = new Map<number, Promise<Readonly<{ index: number; next: IteratorResult<FactTuple> }>>>();
     for (const [index, iterator] of iterators.entries()) {
       pending.set(index, iterator.next().then((next) => ({ index, next })));
@@ -150,83 +149,5 @@ export class DistributedFactSource implements FactSource {
     this.metrics.directoryRequests += route.directoryHops;
     this.entityRoutes.set(entity.value, route.address);
     return [route.address];
-  }
-}
-
-async function* readTupleStream(
-  body: ReadableStream<Uint8Array>,
-  metrics: QueryMetrics,
-  signal: AbortSignal | undefined,
-): AsyncGenerator<FactTuple> {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffered = "";
-  let finished = false;
-
-  try {
-    while (true) {
-      if (signal?.aborted) throw abortError(signal);
-      const chunk = await reader.read();
-      if (chunk.done) {
-        finished = true;
-        buffered += decoder.decode();
-        if (buffered.length > 0) yield parseTupleLine(buffered, metrics);
-        return;
-      }
-
-      metrics.bytesRead += chunk.value.byteLength;
-      if (metrics.bytesRead > MAX_QUERY_SCAN_BYTES) throw new QueryScanBudgetExceeded("query scan byte budget exceeded");
-      buffered += decoder.decode(chunk.value, { stream: true });
-      if (buffered.length > MAX_TRANSACTION_BYTES && !buffered.includes("\n")) {
-        throw new QueryScanBudgetExceeded("a shard emitted a tuple larger than the row budget");
-      }
-
-      while (true) {
-        const newline = buffered.indexOf("\n");
-        if (newline < 0) break;
-        const line = buffered.slice(0, newline);
-        buffered = buffered.slice(newline + 1);
-        if (line.length > 0) yield parseTupleLine(line, metrics);
-      }
-    }
-  } finally {
-    if (!finished) {
-      try {
-        await reader.cancel();
-      } catch {
-        // The producing Durable Object may already have closed its stream.
-      }
-    }
-    reader.releaseLock();
-  }
-}
-
-function parseTupleLine(line: string, metrics: QueryMetrics): FactTuple {
-  let input: unknown;
-  try {
-    input = JSON.parse(line) as unknown;
-  } catch {
-    throw new Error("shard emitted invalid NDJSON");
-  }
-  if (!isRecord(input)) throw new Error("shard emitted an invalid fact tuple");
-  const entity = parseUri(input["entity"], "tuple.entity");
-  const value = parseDatalogValue(input["value"], "tuple.value");
-  if (!entity.ok || !value.ok) throw new Error("shard emitted an invalid fact tuple");
-  metrics.tuplesRead += 1;
-  if (metrics.tuplesRead > MAX_QUERY_TUPLES) throw new QueryScanBudgetExceeded("query tuple budget exceeded");
-  return Object.freeze({
-    entity: Object.freeze({ type: "string", value: entity.value }),
-    value: value.value,
-  });
-}
-
-function abortError(signal: AbortSignal): Error {
-  return signal.reason instanceof Error ? signal.reason : new DOMException("Query aborted", "AbortError");
-}
-
-export class QueryScanBudgetExceeded extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "QueryScanBudgetExceeded";
   }
 }

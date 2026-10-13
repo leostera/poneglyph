@@ -7,7 +7,8 @@ import { OwnerWrites, OwnerWriteError } from "./owner-writes.js";
 import { isRecord } from "../domain/result.js";
 import { evaluateDatalog, QueryResultLimitExceeded } from "../datalog/evaluator.js";
 import { parseDatalogQuery } from "../datalog/parser.js";
-import { DistributedFactSource, QueryScanBudgetExceeded } from "./distributed-fact-source.js";
+import { DistributedFactSource } from "./distributed-fact-source.js";
+import { QueryScanBudgetExceeded } from "../datalog/scan-stream.js";
 import {
   MAX_QUERY_RESPONSE_BYTES,
   MAX_QUERY_RESULTS,

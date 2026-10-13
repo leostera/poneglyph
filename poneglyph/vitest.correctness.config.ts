@@ -16,7 +16,7 @@ const controlled: Record<string, string[]> = {
 // These are supplemental implementation-private fixtures, NOT the shared E2E
 // suite. A-only global-coordinator SQL/split fixtures are invalid against G.
 // Keep their selection explicit; tests/conformance always runs every backend.
-const shared = ["client", "fact-model", "datalog", "capacity", "schema-compatibility"];
+const shared = ["client", "fact-model", "datalog", "scan-stream", "capacity", "schema-compatibility"];
 export default mergeConfig(base, {
   resolve: {alias: [{find: /^.*database-implementation\.js$/, replacement: fileURLToPath(new URL(`./src/${implementations[name]}/implementation.ts`, import.meta.url))}]},
   test: {include: [...shared, ...controlled[name]!].map(file => `tests/${file}.test.ts`)},

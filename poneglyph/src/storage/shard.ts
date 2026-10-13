@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { parseFactValue, type FactValue } from "../domain/fact-value.js";
 import { compareUnicodeScalars } from "../domain/string-order.js";
+import { scanCompletionLine } from "../datalog/scan-stream.js";
 import { parseFactId, parseTransactionId, parseUri } from "../domain/identifiers.js";
 import { parseGraphId } from "../domain/graph-id.js";
 import { isRecord } from "../domain/result.js";
@@ -235,6 +236,7 @@ export class GraphShardDO extends DurableObject<Env> {
     const encoder = new TextEncoder();
     let cursor: Readonly<{ entity: string; factId: string; valueIndex: number }> | undefined;
     let closed = false;
+    let emittedTuples = 0;
     const body = new ReadableStream<Uint8Array>({
       pull: (controller) => {
         if (closed) return;
@@ -257,6 +259,7 @@ export class GraphShardDO extends DurableObject<Env> {
         ).toArray();
         if (rows.length === 0) {
           closed = true;
+          controller.enqueue(encoder.encode(scanCompletionLine(emittedTuples)));
           controller.close();
           return;
         }
@@ -268,6 +271,7 @@ export class GraphShardDO extends DurableObject<Env> {
           return JSON.stringify({ entity: row.entity, value: value.value }) + "\n";
         }).join("");
         controller.enqueue(encoder.encode(chunk));
+        emittedTuples += rows.length;
       },
       cancel: () => { closed = true; },
     });
