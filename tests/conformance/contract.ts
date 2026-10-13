@@ -7,7 +7,7 @@ export const requiredCoverage = Object.freeze([
   {family: "public-client-boundary", remaining: ["all client write entrypoints, generated IDs, malformed receipts and abort-before/during-send"]},
   {family: "identity-concurrency", remaining: ["overlapping/disjoint entity and source histories, retraction races, tickets and bounded legal-history enumeration"]},
   {family: "write-failures-recovery", remaining: ["before admission, reservation, prepare, decision, local witness, participant application, publication/release and recovery interruption"]},
-  {family: "routing-migration", remaining: ["forced/nested splits, copy/page replay, interrupted cutover, stale/retired routes and pinned work/leases"]},
+  {family: "routing-migration", remaining: ["copy/page digest replay, abrupt interruption during migration/cutover, stale/retired generations/epochs and pinned work/leases"]},
   {family: "native-lifecycle", remaining: ["actual abrupt process-group crash and actor eviction distinct from quiescent restart"]},
   {family: "limits-maintenance", remaining: ["below/at/above all declared bounds, synthetic expiry/quota/pinning, explicit bounded recovery"]},
   {family: "stateful-100k", remaining: ["32 fixed stateful seeds, streamed 100k append/churn, exhaustive bounded public reads and durable reconciliation"]},
