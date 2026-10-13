@@ -1,0 +1,25 @@
+{
+  "kind": "shared-contract-oracle-checkpoint",
+  "gitRevision": "b483e1d",
+  "checksPassed": 40,
+  "failed": 0,
+  "skipped": 0,
+  "log": "oracle.log.gz",
+  "rawSha256": "a1e65a83130feff66c95e3e43b7de10a6775d4af97406ee833c2e9f6941e0209",
+  "gzipSha256": "5f1ec847008bb8ee36fe5a3d0997bbcadaeb26516ad2179f4be4c5ffe0dfd085",
+  "sourceDigests": {
+    "contract.ts": "41f7e9fddf1279c5eb5c095300e27688457d7ffd5bccbad19a5e368dbcfca069",
+    "contract.test.ts": "7e24fc3237c52b5cb8915f49f078b1160356f9e15e225323cb19e2e7476b1d1f",
+    "model.ts": "84b7699b40bb242ab3e8649a815120643be4ad5a1c4a58e191882999a0c85e12",
+    "model.test.ts": "b737a1e1cf247590e2557b5cbe6947cb2a732aa856807f46853191f6cbbbc76f",
+    "worker/write-barrier.ts": "0126ed4b837d38d7d9efc3df679189ddeb5a9e083b7b55af153fe239d70066ea",
+    "write-barrier.test.ts": "b690996053de00c5aa336670f9bbf24eb84073c4bdbcedccb8deaeae2a2d799c",
+    "write-phases.ts": "2217f97328c395f4c0e7dd837707471457c387aad84ecb98f7fea4efe5dbc5de",
+    "run.ts": "4a1467589187953311fb1d82f006df137f556008d492752a3a4e5a8a1d40857c"
+  },
+  "limitations": [
+    "Contract and initial native adapters finalized; all declared remaining families are mandatory and incomplete",
+    "32 fixed seeds recorded, not executed",
+    "58-case matrix was interrupted by outer execution deadline; not a passing all-implementation run"
+  ]
+}
