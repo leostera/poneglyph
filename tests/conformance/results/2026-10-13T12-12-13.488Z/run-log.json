@@ -1,0 +1,8 @@
+{
+  "kind": "lossless-native-runtime-log",
+  "file": "run.log.gz",
+  "rawSha256": "432ce9c9f6f9f06e00aacbea3c22c5e9934355a81345a1f968d64c3bcd38f8a5",
+  "gzipSha256": "be78f458788a28b63f8b52be0a84c3ee0fc5e3409dbee7feca5afc8c0744590b",
+  "command": "caffeinate -i -s pnpm --dir tests/conformance test:small",
+  "outerDeadlineSeconds": 3600
+}

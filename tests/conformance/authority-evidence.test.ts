@@ -29,8 +29,13 @@ test("terminal decisions preserve typed identity, graph, sequence and strict bou
   assert.equal(parseCoordinatorAuthority({...healthy, rows: [{...healthy.rows[0], phase: "aborted", commit_seq: 0}]}, 0)[0]?.phase, "aborted");
 });
 test("participant preparation and release/publication obligations fail closed", () => {
-  parseShardAuthority({prepared: 0, unpublished: 0});
-  for (const body of [{prepared: 1, unpublished: 0}, {prepared: 0, unpublished: 1}, {prepared: "0", unpublished: 0}, {prepared: 0}, {}, {prepared: -1, unpublished: 0}]) assert.throws(() => parseShardAuthority(body));
+  const valid = {prepared: 0, unpublished: 0, cachedProofPending: 0, rows: [], identity: null};
+  parseShardAuthority(valid, "test", "0000", 0);
+  // A pending cached pruning proof is not actual owner release/publication;
+  // the separate exact-witness checker must establish those obligations.
+  parseShardAuthority({...valid, cachedProofPending: 1}, "test", "0000", 0);
+  for (const patch of [{prepared: 1}, {unpublished: 1}, {prepared: "0"}, {cachedProofPending: "0"}, {prepared: -1}, {identity: {graph_id: "wrong", prefix: "0000"}}]) assert.throws(() => parseShardAuthority({...valid, ...patch}, "test", "0000", 0));
+  assert.throws(() => parseShardAuthority({}, "test", "0000", 0));
 });
 test("authority roles and identities are parsed before state inspection", () => {
   assert.deepEqual(parseAuthorityActors([{name: "graph:test", role: "graph"}]), [{name: "graph:test", role: "graph"}]);

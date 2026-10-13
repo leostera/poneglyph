@@ -3,6 +3,7 @@ import type {Session} from "./session.js";
 import {parseInspectionPage} from "./inspection-page.js";
 import {parseAuthorityActors, parseCoordinatorAuthority, parseShardAuthority, type AuthorityActor, type Terminal} from "./authority-evidence.js";
 import {transactionDigest} from "./transaction-digest.js";
+import {parseParticipantWitness, verifyOwnerWitness} from "./owner-witness.js";
 import {correctnessBudgets} from "./contract.js";
 type AuditRequest = (path: string, parameters: Record<string, string>, body?: object) => Promise<unknown>;
 
@@ -56,17 +57,35 @@ function verifyAcknowledged(s: Session, canonical: ReadonlyMap<string, Terminal>
   }
   for (const [txId, terminal] of canonical) if (terminal.phase === "complete") assert.ok(s.model.transactions.has(txId), `committed operation not reconciled with caller history: ${txId}`);
 }
-async function inspectParticipants(ownerDepth: number, request: AuditRequest) {
-  const queue = [""], visited = new Set<string>();
+async function inspectParticipants(graph: string, ownerDepth: number, canonical: ReadonlyMap<string, Terminal>, request: AuditRequest) {
+  const queue = [""], visited = new Set<string>(), ownerSnapshots = new Map<string, unknown>();
   while (queue.length) {
     const prefix = queue.shift()!; assert.ok(!visited.has(prefix) && visited.size < 511, "bounded authority directory"); visited.add(prefix);
     const page = parseInspectionPage(await request("inspect", {prefix, table: "fact_log", after: "0"}), prefix, 0);
     if (page.kind === "router") queue.push(...page.children);
-    if (prefix.length >= ownerDepth) parseShardAuthority(await request("shard-authority", {prefix}));
+    if (prefix.length < ownerDepth) continue;
+    let after = 0, pages = 0, seenRows = 0;
+    while (true) {
+      assert.ok(++pages <= Math.ceil(correctnessBudgets.authorityRowsPerActor / correctnessBudgets.authorityPageRows) + 1, "finite participant authority pages");
+      const rows = parseShardAuthority(await request("shard-authority", {prefix, after: String(after)}), graph, prefix, after);
+      seenRows += rows.length; assert.ok(seenRows <= correctnessBudgets.authorityRowsPerActor, "bounded participant outcomes");
+      for (const row of rows) {
+        const witness = parseParticipantWitness(row, graph, prefix, ownerDepth), key = JSON.stringify([witness.ownerPrefix, witness.txId]);
+        const decision = canonical.get(witness.txId); assert.ok(decision, "participant outcome has its canonical decision");
+        assert.equal(witness.payloadHash, decision.payloadHash, "participant digest binds the canonical payload");
+        assert.equal(witness.decision, decision.phase === "complete" ? "committed" : "aborted", "participant decision agrees with its exact canonical authority");
+        if (!ownerSnapshots.has(key)) ownerSnapshots.set(key, await request("owner-witness", {prefix: witness.ownerPrefix, txId: witness.txId}));
+        // Validate every tuple, even cached-release=1; a later ticket/watermark
+        // and an uncopied pruning flag cannot establish this identity's outcome.
+        verifyOwnerWitness(ownerSnapshots.get(key), witness);
+      }
+      if (!rows.length) break; after = rows.at(-1)!.cursor;
+    }
   }
 }
 export async function auditAuthorities(s: Session) {
   const request = await recordedRequest(s), actors = await collectActors(s, request);
-  verifyAcknowledged(s, await inspectCanonical(s.graph, actors, request));
-  await inspectParticipants(actors.some(actor => actor.role === "owner") ? 4 : 0, request);
+  const canonical = await inspectCanonical(s.graph, actors, request);
+  verifyAcknowledged(s, canonical);
+  await inspectParticipants(s.graph, actors.some(actor => actor.role === "owner") ? 4 : 0, canonical, request);
 }

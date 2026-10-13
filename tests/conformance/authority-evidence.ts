@@ -36,11 +36,17 @@ export function parseCoordinatorAuthority(input: unknown, after: number) {
   });
   return rows;
 }
-export function parseShardAuthority(input: unknown) {
+export function parseShardAuthority(input: unknown, graph: string, prefix: string, after: number) {
   const body = parseReply(input);
-  assert.deepEqual(Object.keys(body).sort(), ["prepared", "unpublished"], "complete participant obligation counters");
-  for (const name of ["prepared", "unpublished"]) {
+  assert.deepEqual(Object.keys(body).sort(), ["cachedProofPending", "identity", "prepared", "rows", "unpublished"], "complete participant authority evidence");
+  for (const name of ["prepared", "unpublished", "cachedProofPending"]) {
     const value = body[name]; assert.ok(typeof value === "number" && Number.isSafeInteger(value) && value >= 0, `SQL participant counter ${name}`);
-    assert.equal(value, 0, `unresolved participant obligation ${name}`);
+    if (name !== "cachedProofPending") assert.equal(value, 0, `unresolved participant obligation ${name}`);
   }
+  const page = parseInspectionPage({children: [], rows: body["rows"]}, prefix, after);
+  assert.equal(page.kind, "leaf"); if (page.kind !== "leaf") throw new Error("participant authority cannot route");
+  if (body["identity"] !== null) {
+    const identity = parseReply(body["identity"]); assert.equal(identity["graph_id"], graph); assert.equal(identity["prefix"], prefix);
+  } else assert.equal(page.rows.length, 0, "outcomes require an actual shard identity");
+  return page.rows;
 }

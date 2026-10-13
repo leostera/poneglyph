@@ -22,11 +22,24 @@ export function coordinatorAuthority(storage: DurableObjectStorage, layout: Auth
   const rows = storage.sql.exec(`SELECT rowid AS cursor, tx_id, phase, payload_hash, commit_seq, ${graphBinding} FROM ${table} WHERE rowid > ? ORDER BY rowid LIMIT 128`, after).toArray();
   return {state, counts: {pendingGraph, pendingCandidate, pendingReservations, locks, pendingTopology, activeLeases, invalidPublications}, rows};
 }
-export function shardAuthority(storage: DurableObjectStorage, layout: AuthorityLayout) {
+export function shardAuthority(storage: DurableObjectStorage, layout: AuthorityLayout, after: number) {
   const count = (sql: string) => storage.sql.exec<{count: number}>(sql).one().count;
   const prepared = count("SELECT COUNT(*) AS count FROM shard_transactions WHERE status NOT IN ('committed', 'cancelled')");
-  const unpublished = layout.publication === "none" ? 0 : count(layout.publication === "atomic_published"
-    ? "SELECT COUNT(*) AS count FROM shard_transactions WHERE decision_kind = 'atomic' AND atomic_published != 1"
-    : "SELECT COUNT(*) AS count FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND owner_released != 1");
-  return {prepared, unpublished};
+  const unpublished = layout.publication === "atomic_published" ? count("SELECT COUNT(*) AS count FROM shard_transactions WHERE decision_kind = 'atomic' AND atomic_published != 1") : 0;
+  // owner_released is a cached pruning proof, not the owner's actual lock/publication
+  // state. I deliberately fills it in maintenance; inspect exact owner witnesses.
+  const retainedProofs = layout.publication === "owner_released";
+  const cachedProofPending = retainedProofs ? count("SELECT COUNT(*) AS count FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND owner_released != 1") : 0;
+  const rows = retainedProofs ? storage.sql.exec(`SELECT rowid AS cursor, tx_id, payload_hash, status, decision_kind, created_at_ms,
+    decision_context_json, atomic_commit_seq, atomic_statement_ms, atomic_generation, atomic_directory_epoch, owner_released
+    FROM shard_transactions WHERE rowid > ? AND status IN ('committed', 'cancelled') ORDER BY rowid LIMIT 128`, after).toArray() : [];
+  const identity = storage.sql.exec("SELECT graph_id, prefix FROM shard_identity").toArray()[0] ?? null;
+  return {prepared, unpublished, cachedProofPending, rows, identity};
+}
+export function ownerWitness(storage: DurableObjectStorage, txId: string) {
+  const rows = storage.sql.exec(`SELECT tx_id, payload_hash, ticket_seq, directory_epoch, phase, commit_seq, created_at_ms
+    FROM tree_reservations WHERE tx_id = ?`, txId).toArray();
+  const state = storage.sql.exec("SELECT visible_seq FROM graph_state WHERE singleton = 1").one();
+  const locks = storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM entity_write_locks WHERE tx_id = ?", txId).one().count;
+  return {rows, state, locks};
 }

@@ -27,6 +27,7 @@ export async function buildConformance(implementation: Implementation, output: s
     await writeFile(placement, `import {coordinatorObjectName} from ${JSON.stringify(resolve(directory, "keys.ts"))};
 import {TREE_PREFIXES, treeCoordinatorName, transactionCoordinatorName} from ${JSON.stringify(resolve(directory, "forest.ts"))};
 export const authorityLayout = ${JSON.stringify(layout)};
+export function ownerActorName(graph, prefix) {return treeCoordinatorName(graph, prefix);}
 export async function authorityActors(graph, txIds) {
   const ledgers = [...new Set(await Promise.all(txIds.map(tx => transactionCoordinatorName(graph, tx))))];
   return [{name: coordinatorObjectName(graph), role: "graph"},
