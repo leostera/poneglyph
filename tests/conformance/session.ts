@@ -5,9 +5,12 @@ import { Model, equalBag, type Evidence, type Query } from "./model.js";
 import {parseInspectionPage} from "./inspection-page.js";
 import {correctnessBudgets} from "./contract.js";
 import {parseReply, errorEvidence} from "./response-evidence.js";
+import {QueryCatalogue} from "./query-catalogue.js";
 
 export class Session {
-  readonly queries: Query[] = [];
+  private readonly catalogue = new QueryCatalogue();
+  get queries(): readonly Query[] {return this.catalogue.queries;}
+  inheritQueries(queries: readonly Query[]) {this.catalogue.inherit(queries);}
   readonly outcomes: unknown[] = [];
   readonly related: Session[] = [];
   readonly acknowledgedSequences = new Map<string, number>();
@@ -83,7 +86,7 @@ export class Session {
     assert.equal(result.status, 200, `query ${query.source}: ${JSON.stringify(result.body)}`);
     assert.ok(Array.isArray(result.body["rows"]), "complete parsed query response");
     equalBag(result.body["rows"], this.model.query(query), `public query ${query.source}`);
-    if (remember) this.queries.push(query);
+    if (remember) this.catalogue.remember(query);
   }
   async verify() {
     for (const query of this.queries) await this.query(query, false);

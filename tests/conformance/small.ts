@@ -7,6 +7,7 @@ import {writePhaseCases} from "./write-phases.js";
 import {splitCases} from "./splits.js";
 import {lifecycleCases} from "./lifecycle.js";
 import {crashCases} from "./crashes.js";
+import {concurrentHistoryCases} from "./concurrent-histories.js";
 export type Case = {name: string; run: (session: Session) => Promise<void>};
 export const fact = (entity: string, value: Value, field = "test:value", source = "agent:one", retraction = false): FactInput => ({source, entity, field, value, retraction});
 const text = (value: string): Value => ({type: "text", value});
@@ -120,6 +121,7 @@ export const smallCases: Case[] = [
   ...splitCases,
   ...lifecycleCases,
   ...crashCases,
+  ...concurrentHistoryCases,
 ];
 
 export async function checkAllLookups(s: Session) {
