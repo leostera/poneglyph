@@ -4,6 +4,7 @@ import type { FactInput } from "@leostera/poneglyph";
 import { Model, equalBag, type Evidence, type Query } from "./model.js";
 import {parseInspectionPage} from "./inspection-page.js";
 import {correctnessBudgets} from "./contract.js";
+import {parseReply, errorEvidence} from "./response-evidence.js";
 
 export class Session {
   readonly queries: Query[] = [];
@@ -11,18 +12,24 @@ export class Session {
   readonly related: Session[] = [];
   constructor(readonly runtime: LocalRuntime, readonly graph: string, readonly model = new Model()) {}
   async request(operation: object, app = 0, options: {timeoutMs: number} = {timeoutMs: correctnessBudgets.requestMs}) {
-    let response: Response;
+    const invokedAt = new Date().toISOString();
+    this.outcomes.push({event: "request-invoked", operation, app, invokedAt});
+    let response: Response | undefined;
+    let text: string | undefined;
+    let phase: "opening" | "reading-body" | "parsing-reply" = "opening";
     try {
       response = await fetch(this.runtime.endpoints[app]!, {method: "POST", headers: {authorization: `Bearer ${this.runtime.token}`}, body: JSON.stringify({graph: this.graph, ...operation}), signal: AbortSignal.timeout(options.timeoutMs)});
+      phase = "reading-body";
+      text = await response.text();
+      phase = "parsing-reply";
+      const body = parseReply(JSON.parse(text));
+      this.outcomes.push({operation, app, status: response.status, body, invokedAt, recordedAt: new Date().toISOString()});
+      return {status: response.status, body};
     } catch (error) {
-      this.outcomes.push({operation, app, status: "unknown", error: String(error), cause: error instanceof Error ? String(error.cause) : undefined});
-      throw error; // Record uncertainty; do not hide it with an implicit retry.
+      this.outcomes.push({operation, app, status: "unknown", phase, responseStatus: response?.status, text,
+        error: String(error), diagnostic: errorEvidence(error), invokedAt, recordedAt: new Date().toISOString()});
+      throw error; // Body/parse failures are uncertain too; never silently retry.
     }
-    const text = await response.text();
-    let body: Record<string, unknown>;
-    try {body = JSON.parse(text);} catch {throw new Error(`invalid response ${response.status}: ${text}`);}
-    this.outcomes.push({operation, app, status: response.status, body});
-    return {status: response.status, body};
   }
   async write(name: string, facts: readonly FactInput[], expected = 200, app = 0) {
     // Catalog names are labels; the public contract requires a URI identity.

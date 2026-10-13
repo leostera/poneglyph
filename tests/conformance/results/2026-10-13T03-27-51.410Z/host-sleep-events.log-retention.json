@@ -1,0 +1,6 @@
+{
+  "kind": "lossless-diagnostic-log",
+  "file": "host-sleep-events.log.gz",
+  "rawSha256": "80db7efd36ebe3d77e4fa9c047d8ade9e09aa205ae54de3646df5e44567a191a",
+  "gzipSha256": "009e5fa178dc942d08ab21be8a7abef2f3eb96f6b191b14af023e23ec1425c4c"
+}

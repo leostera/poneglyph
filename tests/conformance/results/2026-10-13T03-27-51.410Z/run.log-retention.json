@@ -1,0 +1,6 @@
+{
+  "kind": "lossless-diagnostic-log",
+  "file": "run.log.gz",
+  "rawSha256": "0646ee09ed1b6bce170dadc4dddeab173a1fa0648606cedb3ac043ff5d174372",
+  "gzipSha256": "ad34eabdcadea99f4890ee21536ee43885d60900498a209d296103e101c22621"
+}

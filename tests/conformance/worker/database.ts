@@ -1,5 +1,5 @@
 import original, { TodoHubDO } from "../../../poneglyph/src/worker.js";
-import { GraphCoordinatorDO, GraphShardDO, shardObjectName, parseVirtualPrefix } from "../../../poneglyph/src/database-implementation.js";
+import { GraphCoordinatorDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../../poneglyph/src/database-implementation.js";
 
 import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
 import {WriteBarrier} from "./write-barrier.js";
@@ -49,6 +49,20 @@ interface InspectionEnv extends Env {GRAPH_COORDINATORS: DurableObjectNamespace<
 export default {
   async fetch(request: Request, env: InspectionEnv) {
     const url = new URL(request.url);
+    if (url.pathname === "/__e2e/split") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      if (request.method !== "POST") return new Response("split requires POST", {status: 405});
+      const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
+      const stop = url.searchParams.get("stopAfterPages");
+      const pages = stop === null ? undefined : Number(stop);
+      if (!graph || !prefix.ok || (pages !== undefined && (!Number.isSafeInteger(pages) || pages < 1))) return new Response("invalid split control", {status: 400});
+      // Native migration only: force requests an actual small-data split, not
+      // synthetic accounting/capacity or a SQL seed/repair path.
+      return env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(graph)).fetch("https://coordinator.internal/_split", {
+        method: "POST", headers: {"content-type": "application/json"},
+        body: JSON.stringify({graphId: graph, prefix: prefix.value, force: true, ...(pages === undefined ? {} : {stopAfterPages: pages})}),
+      });
+    }
     if (url.pathname === "/__e2e/write-barrier") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
