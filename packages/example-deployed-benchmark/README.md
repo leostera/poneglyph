@@ -8,4 +8,6 @@ bun run --cwd packages/example-deployed-benchmark check
 bun run --cwd packages/example-deployed-benchmark run
 ```
 
-Manual `run` reads `PONEGLYPH_CLOUDFLARE_URL`, `PONEGLYPH_TODO_PASSPHRASE` and bounded workload settings. This is not the canonical write-path harness or performance certification. See [RFD0004](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#isolated-cloudflare-procedure-and-detailed-evidence) and [RFD0005](../../docs/rfds/RFD0005-write-path-experiment.md).
+Named write workloads require committed replies; first failure stops new callbacks and drains admitted work. Transport is not silently retried, and no physical participant count is inferred from HTTP replies.
+
+Manual `run` requires an explicit, credential-free `PONEGLYPH_CLOUDFLARE_URL`, `PONEGLYPH_TODO_PASSPHRASE` and bounded workload settings. This is not the canonical write-path harness or performance certification. See [RFD0004](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#isolated-cloudflare-procedure-and-detailed-evidence) and [RFD0005](../../docs/rfds/RFD0005-write-path-experiment.md).

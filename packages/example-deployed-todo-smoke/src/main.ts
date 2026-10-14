@@ -4,11 +4,15 @@ export type Socket = {
   once(event: "open", listener: () => void): Socket;
   once(event: "error", listener: (error: Error) => void): Socket;
   once(event: "message", listener: (data: string | Uint8Array | ArrayBuffer) => void): Socket;
+  once(event: "close", listener: () => void): Socket;
+  removeListener(event: "message", listener: (data: string | Uint8Array | ArrayBuffer) => void): Socket;
+  removeListener(event: "error", listener: (error: Error) => void): Socket;
+  removeListener(event: "close", listener: () => void): Socket;
   once(event: "unexpected-response", listener: (_request: unknown, response: { statusCode?: number; resume(): void }) => void): Socket;
   close(): void;
   terminate(): void;
 };
-type SocketConstructor = new (url: string, options: Readonly<{ headers: Record<string, string> }>) => Socket;
+type SocketConstructor = new (url: string, options: Readonly<{ headers: Record<string, string>; handshakeTimeout?: number }>) => Socket;
 const WebSocketClient = createRequire(import.meta.url)("ws") as SocketConstructor;
 export async function main(environment: NodeJS.ProcessEnv = process.env): Promise<void> {
   const target = environment["PONEGLYPH_CLOUDFLARE_URL"];
@@ -58,10 +62,16 @@ export async function main(environment: NodeJS.ProcessEnv = process.env): Promis
   const taskId = created["taskId"];
   if (typeof taskId !== "string") throw new Error("task creation did not return taskId");
   const firstClient = await connect(wsUrl.toString(), cookie, endpoint.origin);
-  const secondClient = await connect(wsUrl.toString(), cookie, endpoint.origin);
+  let secondClient: Socket | undefined;
+  const pending: Promise<Record<string, unknown>>[] = [];
   try {
+    secondClient = await connect(wsUrl.toString(), cookie, endpoint.origin);
     const firstMessage = nextMessage(firstClient);
     const secondMessage = nextMessage(secondClient);
+    pending.push(firstMessage, secondMessage);
+    // Observe failures immediately while HTTP is in flight; retain the original
+    // promises for assertions and drain them even if the move request fails.
+    for (const message of pending) void message.catch(() => {});
     const moved = await postJson(`${baseUrl}/api/todo/tasks/${taskId}/move`, { toList: "todo:list:done" }, cookie);
     const commitSeq = moved["commitSeq"];
     const txId = moved["txId"];
@@ -101,12 +111,13 @@ export async function main(environment: NodeJS.ProcessEnv = process.env): Promis
     }, null, 2));
   } finally {
     firstClient.terminate();
-    secondClient.terminate();
+    secondClient?.terminate();
+    await Promise.allSettled(pending);
   }
 }
 
 async function connect(url: string, cookie: string, origin: string): Promise<Socket> {
-  const socket = new WebSocketClient(url, { headers: { Cookie: cookie, Origin: origin } });
+  const socket = new WebSocketClient(url, { headers: { Cookie: cookie, Origin: origin }, handshakeTimeout: 10_000 });
   await new Promise<void>((resolve, reject) => {
     socket.once("open", resolve);
     socket.once("error", reject);
@@ -134,19 +145,27 @@ async function rejectedSocketStatus(url: string, headers: Record<string, string>
 
 export async function nextMessage(socket: Socket): Promise<Record<string, unknown>> {
   return await new Promise<Record<string, unknown>>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("timed out waiting for a TODO WebSocket invalidation")), 10_000);
-    socket.once("message", (data) => {
+    const cleanup = () => {
       clearTimeout(timer);
+      socket.removeListener("message", received);
+      socket.removeListener("error", failed);
+      socket.removeListener("close", closed);
+    };
+    const failed = (error: Error) => { cleanup(); reject(error); };
+    const closed = () => failed(new Error("TODO WebSocket closed before its invalidation"));
+    const received = (data: string | Uint8Array | ArrayBuffer) => {
+      cleanup();
       try {
-        const text = typeof data === "string" ? data : data instanceof ArrayBuffer
-          ? Buffer.from(data).toString("utf8") : Buffer.from(data).toString("utf8");
+        const text = typeof data === "string" ? data : Buffer.from(data instanceof ArrayBuffer ? new Uint8Array(data) : data).toString("utf8");
         const message: unknown = JSON.parse(text);
         if (!isRecord(message)) throw new Error("WebSocket message was not an object");
         resolve(message);
-      } catch (error) {
-        reject(error);
-      }
-    });
+      } catch (error) { reject(error); }
+    };
+    const timer = setTimeout(() => failed(new Error("timed out waiting for a TODO WebSocket invalidation")), 10_000);
+    socket.once("message", received);
+    socket.once("error", failed);
+    socket.once("close", closed);
   });
 }
 

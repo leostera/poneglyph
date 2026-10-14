@@ -8,4 +8,4 @@ bun run --cwd packages/example-onepiece-load check
 bun run --cwd packages/example-onepiece-load run
 ```
 
-Manual `run` uses the cached `tests/fixtures/cache/` corpus or `PONEGLYPH_ONEPIECE_XML`, starts the canonical package's local Worker and applies bounded batches. Its hand-authored lore fixtures and lossy historical title normalization are not the canonical benchmark corpus or independent conformance oracle. See [RFD0004's recorded workloads](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#recorded-local-operating-workloads-2026-10-11).
+Manual `run` uses the cached `tests/fixtures/cache/` corpus or `PONEGLYPH_ONEPIECE_XML`, starts the canonical package's local Worker and applies bounded batches. Exact percent-encoded titles avoid identity collisions. Uncertain delivery is not silently retried; incomplete-load persistence is retained. Hand-authored lore fixtures remain separate from the canonical benchmark corpus and independent conformance oracle. See [RFD0004's recorded workloads](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#recorded-local-operating-workloads-2026-10-11).

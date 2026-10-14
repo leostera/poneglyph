@@ -12,6 +12,9 @@ test("TODO invalidation decoding accepts UTF-8 object messages", async () => {
   const event = { type: "invalidate", graphId: "todo-shared-2026", txId: "test:move", commitSeq: 7 };
   client.emit("message", Buffer.from(JSON.stringify(event)));
   assert.deepEqual(await pending, event);
+  assert.equal(client.listenerCount("message"), 0);
+  assert.equal(client.listenerCount("error"), 0);
+  assert.equal(client.listenerCount("close"), 0);
 });
 
 test("TODO invalidation decoding rejects malformed JSON and non-object frames", async () => {
@@ -19,6 +22,17 @@ test("TODO invalidation decoding rejects malformed JSON and non-object frames", 
     const client = socket(), pending = nextMessage(client);
     client.emit("message", frame);
     await assert.rejects(pending);
+  }
+});
+
+test("socket close/error settles the original waiter and removes every owned listener", async () => {
+  for (const event of ["error", "close"] as const) {
+    const client = socket(), pending = nextMessage(client), error = new Error("original socket error");
+    client.emit(event, error);
+    await assert.rejects(pending, event === "error" ? error : /closed before/);
+    assert.equal(client.listenerCount("message"), 0);
+    assert.equal(client.listenerCount("error"), 0);
+    assert.equal(client.listenerCount("close"), 0);
   }
 });
 

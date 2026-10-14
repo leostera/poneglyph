@@ -1,6 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { createRequire } from "node:module";
 import { createReadStream } from "node:fs";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -8,17 +7,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 
-type WikiXmlParser = {
-  on(event: "error", listener: (error: Error) => void): WikiXmlParser;
-  on(event: "opentag" | "closetag", listener: (tag: Readonly<{ name: string }>) => void): WikiXmlParser;
-  on(event: "text" | "cdata", listener: (text: string) => void): WikiXmlParser;
-  write(chunk: string): WikiXmlParser;
-  close(): WikiXmlParser;
-};
-type SaxesParserConstructor = new (options: { xmlns: boolean }) => WikiXmlParser;
-const { SaxesParser } = createRequire(import.meta.url)("saxes") as {
-  SaxesParser: SaxesParserConstructor;
-};
+import { SaxesParser } from "saxes";
+import { createDatabase } from "@leostera/poneglyph";
 
 type TaggedValue =
   | Readonly<{ type: "text"; value: string }>
@@ -38,17 +28,20 @@ type MutablePage = { title: string; namespace: string; text: string; sawText: bo
 type Capture = { tag: string; field: "title" | "namespace" | "text"; value: string };
 type WikiPage = Readonly<{ title: string; namespace: string; text: string }>;
 type QueryDefinition = Readonly<{ name: string; source: string; expectedRows?: number; minimumRows?: number }>;
-type WorkerResponse = Record<string, unknown>;
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const PONEGLYPH_DIR = resolve(ROOT, "packages/poneglyph");
 const DEFAULT_XML_PATH = resolve(ROOT, "tests/fixtures/cache/onepiece-pages-current.xml");
 const DEFAULT_ARCHIVE_PATH = resolve(ROOT, "tests/fixtures/cache/onepiece_pages_current.xml.7z");
-const DUMP_PATH = process.env["PONEGLYPH_ONEPIECE_XML"] ?? DEFAULT_XML_PATH;
-const ARCHIVE_PATH = process.env["PONEGLYPH_ONEPIECE_ARCHIVE"] ??
-  (DUMP_PATH === DEFAULT_XML_PATH ? DEFAULT_ARCHIVE_PATH : `${DUMP_PATH}.7z`);
-const MAX_PAGES = readNonNegativeInteger(process.env["PONEGLYPH_ONEPIECE_MAX_PAGES"], 5_000);
-const QUERY_REPETITIONS = readPositiveInteger(process.env["PONEGLYPH_ONEPIECE_QUERIES"], 20);
+export function loadConfiguration(environment: NodeJS.ProcessEnv = process.env) {
+  const dumpPath = environment["PONEGLYPH_ONEPIECE_XML"] ?? DEFAULT_XML_PATH;
+  return {
+    dumpPath,
+    archivePath: environment["PONEGLYPH_ONEPIECE_ARCHIVE"] ?? (dumpPath === DEFAULT_XML_PATH ? DEFAULT_ARCHIVE_PATH : `${dumpPath}.7z`),
+    maxPages: readNonNegativeInteger(environment["PONEGLYPH_ONEPIECE_MAX_PAGES"], 5_000),
+    queryRepetitions: readPositiveInteger(environment["PONEGLYPH_ONEPIECE_QUERIES"], 20),
+  };
+}
 const FACTS_PER_BATCH = 500;
 const BATCH_JSON_BUDGET = 800_000;
 const encoder = new TextEncoder();
@@ -108,27 +101,29 @@ const QUERIES: readonly QueryDefinition[] = [
 ];
 
 export async function main(): Promise<void> {
-  const file = await stat(DUMP_PATH).catch(() => undefined);
+  const { dumpPath, archivePath, maxPages, queryRepetitions } = loadConfiguration();
+  const file = await stat(dumpPath).catch(() => undefined);
   if (file === undefined || !file.isFile()) {
     throw new Error(
-      `One Piece XML is missing at ${DUMP_PATH}; run tests/fixtures/download_onepiece_fandom.sh ` +
+      `One Piece XML is missing at ${dumpPath}; run tests/fixtures/download_onepiece_fandom.sh ` +
       "or set PONEGLYPH_ONEPIECE_XML",
     );
   }
 
-  const datasetHash = await sha256File(DUMP_PATH);
-  const archiveFile = await stat(ARCHIVE_PATH).catch(() => undefined);
-  const archiveHash = archiveFile === undefined ? undefined : await sha256File(ARCHIVE_PATH);
+  const datasetHash = await sha256File(dumpPath);
+  const archiveFile = await stat(archivePath).catch(() => undefined);
+  const archiveHash = archiveFile === undefined ? undefined : await sha256File(archivePath);
   const graphId = `onepiece-local-${randomUUID().slice(0, 8)}`;
   const persistenceDir = await mkdtemp(resolve(tmpdir(), "poneglyph-onepiece-local-"));
   const worker = startLocalWorker(persistenceDir);
+  let complete = false;
 
   try {
     const baseUrl = await waitForWorker(graphId, worker);
     let batchNumber = 0;
     let factsQueued = 0;
     const loadStarted = performance.now();
-    const ingest = await ingestDump(DUMP_PATH, MAX_PAGES, async (facts) => {
+    const ingest = await ingestDump(dumpPath, maxPages, async (facts) => {
       batchNumber += 1;
       factsQueued += facts.length;
       await writeBatch(baseUrl, graphId, batchNumber, facts);
@@ -136,16 +131,16 @@ export async function main(): Promise<void> {
     });
     const loadElapsedMs = performance.now() - loadStarted;
 
-    const results = await runQueries(baseUrl, graphId, batchNumber);
+    const results = await runQueries(baseUrl, graphId, queryRepetitions);
     const report = {
       runtime: "local workerd",
       graphId,
       dataset: {
-        path: DUMP_PATH,
+        path: dumpPath,
         xmlBytes: file.size,
         xmlSha256: datasetHash,
         ...(archiveFile === undefined ? {} : { archiveBytes: archiveFile.size, archiveSha256: archiveHash }),
-        maxPages: MAX_PAGES === 0 ? "all" : MAX_PAGES,
+        maxPages: maxPages === 0 ? "all" : maxPages,
         pagesLoaded: ingest.pages,
         factsCommitted: ingest.facts,
         transactions: batchNumber,
@@ -154,13 +149,15 @@ export async function main(): Promise<void> {
         elapsedMs: rounded(loadElapsedMs),
         factsPerSecond: rounded(ingest.facts / (loadElapsedMs / 1_000)),
       },
-      queryRepetitions: QUERY_REPETITIONS,
+      queryRepetitions,
       queries: results,
     };
     console.log(JSON.stringify(report, null, 2));
+    complete = true;
   } finally {
     await stopLocalWorker(worker.process);
-    await rm(persistenceDir, { recursive: true, force: true });
+    if (complete) await rm(persistenceDir, { recursive: true, force: true });
+    else console.error(JSON.stringify({ kind: "incomplete-local-load", graphId, persistenceDir, xmlSha256: datasetHash, delivery: "unknown-or-rejected; retain original receipt/error" }));
   }
 }
 
@@ -309,16 +306,8 @@ function makeFact(entity: string, field: string, value: TaggedValue, source = "f
 }
 
 function pageEntity(title: string): string {
-  return `wiki:onepiece:page:${slugUriComponent(title)}`;
-}
-
-function slugUriComponent(value: string): string {
-  let output = "";
-  for (const character of value) {
-    if (/[a-z0-9]/i.test(character)) output += character.toLowerCase();
-    else if (character === " " || character === "_" || character === "-" || character === ":" || character === "/") output += "-";
-  }
-  return output.length === 0 ? "untitled" : output;
+  // Exact title bytes are identity: lossy slugs merge case/punctuation/Unicode.
+  return `wiki:onepiece:page:${encodeURIComponent(title)}`;
 }
 
 function* wikiLinks(text: string, prefix: string): Generator<string> {
@@ -343,51 +332,19 @@ function isCharacterCategory(category: string): boolean {
     !category.includes("Template");
 }
 
-async function writeBatch(baseUrl: string, graphId: string, sequence: number, facts: readonly InputFact[]): Promise<void> {
-  const batch = {
-    txId: `poneglyph:tx:onepiece-local:${graphId}:${sequence}`,
-    facts,
-  };
-  const request = JSON.stringify(batch);
-  if (encoder.encode(request).byteLength > 1_000_000) throw new Error(`transaction ${sequence} exceeds 1 MB`);
-
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    let response: Response;
-    try {
-      response = await fetch(`${baseUrl}/v1/graphs/${graphId}/transactions`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: request,
-      });
-    } catch (error) {
-      if (attempt === 4) throw error;
-      await sleep(250 * (attempt + 1));
-      continue;
-    }
-
-    if (response.status === 200) {
-      const result = await response.json() as unknown;
-      if (!isRecord(result) || result["txId"] !== batch.txId || result["status"] !== "committed" || result["commitSeq"] !== sequence) {
-        throw new Error(`transaction ${sequence} returned an unexpected outcome: ${JSON.stringify(result)}`);
-      }
-      return;
-    }
-    const detail = await response.text();
-    if (response.status !== 423 && response.status < 500) {
-      throw new Error(`transaction ${sequence} rejected (${response.status}): ${detail}`);
-    }
-    if (attempt === 4) throw new Error(`transaction ${sequence} did not commit: ${response.status} ${detail}`);
-    await sleep(250 * (attempt + 1));
-  }
+export async function writeBatch(baseUrl: string, graphId: string, sequence: number, facts: readonly InputFact[], fetcher: typeof fetch = fetch): Promise<void> {
+  const txId = `poneglyph:tx:onepiece-local:${graphId}:${sequence}`;
+  if (encoder.encode(JSON.stringify({ txId, facts })).byteLength > 1_000_000) throw new Error(`transaction ${sequence} exceeds 1 MB`);
+  const graph = createDatabase({ url: baseUrl, fetch: fetcher }).defineGraph({ id: graphId });
+  // Sequence numbers name inputs; they are not a graph-global commit clock.
+  // Unknown delivery is surfaced with its original identity, never auto-retried.
+  await graph.transact(facts, { txId });
 }
 
-async function runQueries(baseUrl: string, graphId: string, expectedSnapshotSeq: number): Promise<readonly Record<string, unknown>[]> {
+async function runQueries(baseUrl: string, graphId: string, queryRepetitions: number): Promise<readonly Record<string, unknown>[]> {
   const results: Record<string, unknown>[] = [];
   for (const definition of QUERIES) {
     const first = await executeQuery(baseUrl, graphId, definition.source);
-    if (first.snapshotSeq !== expectedSnapshotSeq) {
-      throw new Error(`${definition.name} read snapshot ${first.snapshotSeq}; expected ${expectedSnapshotSeq}`);
-    }
     verifyQueryRows(definition.name, first.rows);
     if (definition.expectedRows !== undefined && first.rows.length !== definition.expectedRows) {
       throw new Error(`${definition.name} returned ${first.rows.length} rows; expected exactly ${definition.expectedRows}`);
@@ -400,7 +357,7 @@ async function runQueries(baseUrl: string, graphId: string, expectedSnapshotSeq:
     }
 
     const timings: number[] = [];
-    for (let index = 0; index < QUERY_REPETITIONS; index += 1) {
+    for (let index = 0; index < queryRepetitions; index += 1) {
       const started = performance.now();
       const repeated = await executeQuery(baseUrl, graphId, definition.source);
       timings.push(performance.now() - started);
@@ -463,26 +420,8 @@ function bindingString(row: unknown, variable: string): string {
   return binding["value"];
 }
 
-async function executeQuery(baseUrl: string, graphId: string, query: string): Promise<Readonly<{
-  rows: readonly unknown[];
-  metrics: WorkerResponse["metrics"];
-  snapshotSeq: number;
-}>> {
-  const response = await fetch(`${baseUrl}/v1/graphs/${graphId}/query`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ query }),
-  });
-  const body: unknown = await response.json();
-  if (!response.ok || !isRecord(body)) {
-    throw new Error(`query rejected (${response.status}): ${JSON.stringify(body)}`);
-  }
-  const rows = body["rows"];
-  const snapshotSeq = body["snapshotSeq"];
-  if (!Array.isArray(rows) || typeof snapshotSeq !== "number" || !Number.isSafeInteger(snapshotSeq)) {
-    throw new Error("query response is missing rows or a valid snapshot sequence");
-  }
-  return { rows, metrics: body["metrics"], snapshotSeq };
+async function executeQuery(baseUrl: string, graphId: string, query: string) {
+  return createDatabase({ url: baseUrl }).defineGraph({ id: graphId }).query(query);
 }
 
 async function waitForWorker(graphId: string, worker: LocalWorker): Promise<string> {
