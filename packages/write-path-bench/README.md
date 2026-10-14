@@ -25,6 +25,8 @@ From the repository root:
 bun install --frozen-lockfile
 bun run typecheck
 bun run --cwd packages/write-path-bench test
+# Optional local One Piece semantic overlay; this is not a hosted import:
+bun run --cwd packages/write-path-bench prepare:enrichment
 # Only after explicit authorization to run a benchmark:
 bun run --cwd packages/write-path-bench prepare:corpus
 bun run --cwd packages/write-path-bench preflight
@@ -32,6 +34,8 @@ BENCH_FACTS=100000 BENCH_WORKERS=4 bun run --cwd packages/write-path-bench run:l
 ```
 
 `prepare:corpus` uses the cached `tests/fixtures/cache/onepiece-pages-current.xml`, or accepts an XML path as its first argument. It prepares ordinary facts locally; there is no database import API. Exact percent-encoded titles prevent the old extractor's lossy-slug collisions. The manifest records all pages processed, the 8-category/16-link extraction caps, and omission of full wiki text. No hand-authored domain facts are mixed into the corpus.
+
+`prepare:enrichment` is a separate, optional **local-only** pass over the pinned XML dump. It emits opaque page-ID/kind UIDs, names/aliases, provenance, and only the explicitly supported template/category relations into a digest-pinned `.data/onepiece-enrichment-vN-*` directory. It never writes to the hosted graph. See [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md#semantic-identity-enrichment-and-observed-schema-direction-2026-10-14) for extraction limits and the current evidence. Review all issues and generated facts before proposing any separate import plan.
 
 An authorized benchmark attempts **the same first 100,000 corpus facts in every scenario** against the canonical implementation. Correctness hardening precedes new performance runs. Scaling to 1,000,000 remains a separate explicit decision. The complete prepared corpus contains **1,530,195 facts from 296,624 pages**. `preflight` is informational; it does not write data, shrink batches, skip scenarios, or prevent the runner from exercising database defects.
 

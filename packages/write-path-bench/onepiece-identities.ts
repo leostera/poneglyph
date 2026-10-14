@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 /** MediaWiki page IDs are source locators, not public One Piece entity identities. */
 declare const wikiPageIdBrand: unique symbol;
 export type WikiPageId = string & { readonly [wikiPageIdBrand]: true };
-export type OnePieceEntityKind = "character" | "crew" | "ship" | "organization" | "role";
+export type OnePieceEntityKind = "entity" | "character" | "crew" | "ship" | "organization" | "role";
 export type WikiPageIdParseResult =
   | Readonly<{ ok: true; value: WikiPageId }>
   | Readonly<{ ok: false; error: Readonly<{ path: string; message: string }> }>;

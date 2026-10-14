@@ -5,6 +5,7 @@
   "scripts": {
     "build": "node --import tsx build.ts",
     "prepare:corpus": "node --import tsx corpus.ts",
+    "prepare:enrichment": "node --import tsx prepare-enrichment.ts",
     "preflight": "node --import tsx preflight.ts",
     "test": "node --import tsx --test --test-concurrency=1 tests/*.test.ts",
     "typecheck": "tsc --noEmit",
