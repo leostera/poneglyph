@@ -1,0 +1,150 @@
+{
+  "formatVersion": 1,
+  "checkedAt": "2026-10-14T14:04:12.413Z",
+  "scope": "hostname/routing and Access configuration verification; no database redeploy/seeding or authenticated MCP query",
+  "sourceRevision": "17f5d47",
+  "worker": "playground-poneglyph-leostera-dev",
+  "versionId": "9644b38a-ce2e-462d-b36f-1265a7c65e47",
+  "deploymentId": "f6c509dd-d7eb-4655-93ce-085a17ab231d",
+  "bundleSha256": "5a6387cdd28efd70636336647bd9962daacfe854cd46225e07e53d30a4a095fa",
+  "configuredDomains": [
+    "onepiece.poneglyph.dev"
+  ],
+  "domains": [
+    {
+      "id": "5417a10edc3dae34869715b2c5cbe4656dbbfc59",
+      "hostname": "onepiece.poneglyph.dev",
+      "zone_id": "bd1d94715e75b8076340909dec1681f4",
+      "service": "playground-poneglyph-leostera-dev",
+      "enabled": true,
+      "previews_enabled": false
+    }
+  ],
+  "dns": [
+    {
+      "id": "7e1fc2884f1749c405f94b7ba800f568",
+      "type": "AAAA",
+      "name": "onepiece.poneglyph.dev",
+      "content": "100::",
+      "proxied": true
+    }
+  ],
+  "dnsObservations": {
+    "systemLookup": {
+      "error": "ENOTFOUND"
+    },
+    "configuredResolver": {
+      "result": [
+        "104.21.31.168",
+        "172.67.178.174"
+      ]
+    }
+  },
+  "bindingsBefore": [
+    {
+      "name": "MCP_RATE_LIMITER",
+      "namespace_id": "2026101401",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      },
+      "type": "ratelimit"
+    },
+    {
+      "environment": "production",
+      "name": "PONEGLYPH",
+      "service": "poneglyph-service-worker",
+      "type": "service"
+    }
+  ],
+  "bindingsAfter": [
+    {
+      "name": "MCP_RATE_LIMITER",
+      "namespace_id": "2026101401",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      },
+      "type": "ratelimit"
+    },
+    {
+      "environment": "production",
+      "name": "PONEGLYPH",
+      "service": "poneglyph-service-worker",
+      "type": "service"
+    }
+  ],
+  "builtService": {
+    "type": "worker",
+    "worker": "poneglyph-service-worker",
+    "props": {
+      "clientId": "playground"
+    }
+  },
+  "subdomain": {
+    "enabled": false,
+    "previews_enabled": false
+  },
+  "access": {
+    "appId": "17e9e6e4-edf9-4fdc-bead-b8575669dcb4",
+    "destinations": [
+      {
+        "type": "worker",
+        "worker_id": "6df1a5832f6a44129e5986f60898054c"
+      }
+    ],
+    "policyId": "d5717f04-bc01-46d5-bc7f-e62020de9537",
+    "reusable": true,
+    "decision": "allow",
+    "include": [
+      {
+        "cloudflare_account_member": {
+          "account_id": "0f436d2aabf1f872be90b8dd9d5715e6"
+        }
+      }
+    ],
+    "allowedIdps": [
+      "4cae3344-b5e5-479e-8b2f-d3ca8322d9cb"
+    ],
+    "sessionDuration": "1h",
+    "autoRedirectToIdentity": true,
+    "optionsPreflightBypass": false,
+    "emailPinAllowed": false
+  },
+  "anonymousProbes": [
+    {
+      "path": "/",
+      "method": "GET",
+      "networkError": "ENOTFOUND"
+    },
+    {
+      "path": "/mcp",
+      "method": "POST",
+      "networkError": "ENOTFOUND"
+    },
+    {
+      "path": "/mcp",
+      "method": "OPTIONS",
+      "networkError": "ENOTFOUND"
+    }
+  ],
+  "validation": {
+    "frozenInstall": true,
+    "rootCheck": true,
+    "rootBuild": true,
+    "testsPassed": 213,
+    "optInBenchmarkSkipped": 1,
+    "fullConformanceRun": false
+  },
+  "limitations": {
+    "systemDnsCurrentlyFails": true,
+    "localCacheFlushDidNotResolveEarlierProbe": true,
+    "anonymousAccessRedirectVerified": false,
+    "authenticatedLoginVerified": false,
+    "authenticatedNonmemberDenialVerified": false,
+    "authenticatedMcpVerified": false,
+    "currentServicePopulationVerified": false,
+    "corpusLoadVerified": false,
+    "corporateGatewayPolicyChanged": false
+  }
+}
