@@ -8,7 +8,7 @@ using graph = await env.PONEGLYPH.getGraph({ graphId: "onepiece" });
 
 The reusable MCP package manages that graph's per-tool lifetime. The private `packages/poneglyph-worker` service enforces the playground principal's read-only graph grant; writes are denied independently of the MCP tool list. No database actors/HTTP client adapter live in this site.
 
-The current hostname is `onepiece.poneglyph.dev`. Only a tiny **synthetic smoke fixture, not an imported wiki corpus**, is authorized; this hostname check does not establish the current service's population or completed ingestion. The original dedicated database's private fixture reads are not authenticated MCP success on the generic service. [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md) records exact deployment/cutover state and limitations.
+The current hostname is `onepiece.poneglyph.dev`. Authenticated MCP works through `cloudflared access curl`. The user has authorized importing the **first 29,662 normalized XML pages (10%, rounded down)**, with all their 204,183 metadata facts. This is not the full corpus, full article text or extracted lore. The original dedicated database is retained; its synthetic fixture is not migrated. [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md) records exact deployment/cutover state and limitations.
 
 ## Offline development
 
@@ -23,6 +23,14 @@ bun run --cwd sites/playground.poneglyph.leostera.dev build
 Root build/check/test includes the service, adapter and site. Node hosts native tests against real canonical SQLite actors with six synthetic facts, not cloud resources/corpus data. `dev` uses the referenced service locally with ignored persistence. `dev:seed` is an explicit authenticated remote operator mode, pinned to `127.0.0.1:8878`; it never runs in default gates. Verify the owned listener before calling it. `/seed` submits only the fixed manifest in `src/test-facts.ts`; `/verify` executes three fixed private reads. Neither is part of the public deployment.
 
 `bun run deploy` builds dependencies and deploys the central private service before the public Worker. A new service means fresh namespaces, not automatic migration; never mistake seeding a distinct service for reconciliation against the old database. Keep uncertain original IDs/payloads and stop instead of silently retrying. Deployment/full corpus ingestion/deletion remain explicit operations requiring authorization.
+
+## Approved bounded import
+
+`POST /import` is the only write-route exception. It requires runtime-verified Access for the existing account-member app; client-supplied Access headers do not authenticate. A separate `PONEGLYPH_IMPORT` binding uses the `playground-importer` principal. MCP keeps the original read-only binding and two read-only tools. Browser Origins and OPTIONS are rejected, without public authentication exceptions.
+
+The compiled `src/import-plan.json` permits only the exact SHA-256-pinned payloads under `.artifacts/import/pages10/`, for two days. No arbitrary graph/facts, retractions, new IDs or remaining 90% can be submitted. Source provenance is `wiki:onepiece:dump:<XML SHA-256>`, not the historical normalized file's fixture label. All namespaces are retained; whole pages stay together in 413 transactions of at most 500 facts/800,000 bytes. Canonical write/participant/accounting limits are unchanged. Approximate import admission is separate: namespace 2026101403, 60/minute per edge IP/location, not a financial cap.
+
+`bun run import:prepare` is an explicit offline preparation command that verifies the full normalized file hash/counts and refuses to replace an existing plan. `bun run import:run` is an explicit hosted operation through the existing Cloudflare login. It fsyncs original identities before dispatch and complete receipts after acknowledgment, uses serial backpressure and never retries automatically. Uncertain delivery stops the load; retain the exact batch and reconcile that original ID/service/graph within retention. Successful receipts do not themselves verify every projected query answer. Default gates never invoke either command.
 
 ## Connecting an agent
 

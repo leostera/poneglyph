@@ -9,6 +9,8 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 import { DATASET, MCP_URL, PUBLIC_HOST } from "../src/dataset.js";
 import { RATE_LIMIT } from "../src/rate-limit.js";
 import { COMPATIBILITY_DATE, GRAPH_ID } from "../src/runtime.js";
+import { IMPORT_ACCESS_AUDIENCE, IMPORT_RATE_LIMIT } from "../src/import-contract.js";
+import { body as importBody, entity as importedEntity, txId as importTxId, fixturePlan } from "./import-fixture.js";
 
 const site = resolve(import.meta.dirname, "..");
 const luffy = "wiki:onepiece:page:Monkey%20D.%20Luffy";
@@ -29,15 +31,20 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
   try {
     await build({ absWorkingDir: site, entryPoints: { playground: "src/index.ts", database: "../../packages/poneglyph-worker/src/index.ts", operator: "src/operator.ts" },
       outdir: directory, outExtension: { ".js": ".mjs" }, bundle: true, format: "esm", platform: "browser",
-      target: "es2024", conditions: ["workerd", "worker", "browser"], external: ["cloudflare:*", "node:*"], });
+      target: "es2024", conditions: ["workerd", "worker", "browser"], external: ["cloudflare:*", "node:*"],
+      plugins: [{ name: "tiny-offline-import-plan", setup(builder) {
+        builder.onLoad({ filter: /\/src\/import-plan\.json$/ }, () => ({ contents: JSON.stringify(fixturePlan()), loader: "json" }));
+      } }], });
     const manifest = (contents: string) => ({ mainModule: "index.mjs", modules: { "index.mjs": { type: "esm" as const, contents } } });
     const playground = manifest(await readFile(resolve(directory, "playground.mjs"), "utf8"));
     runtime = new Miniflare({ port: 0, host: "127.0.0.1", resourcePersistencePath: resolve(directory, "state"),
       telemetry: { enabled: false }, log: new Log(LogLevel.WARN), workers: [
-        { config: { name: "playground", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
-          env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground" } }, MCP_RATE_LIMITER: { type: "rate-limit", ...RATE_LIMIT } } } },
+        { dev: { access: { aud: IMPORT_ACCESS_AUDIENCE, identity: { email: "member@example.test" } } },
+          config: { name: "playground", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
+          env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground" } }, MCP_RATE_LIMITER: { type: "rate-limit", ...RATE_LIMIT },
+            PONEGLYPH_IMPORT: { type: "worker", worker: "database", props: { clientId: "playground-importer" } }, IMPORT_RATE_LIMITER: { type: "rate-limit", ...IMPORT_RATE_LIMIT } } } },
         { config: { name: "database", manifest: manifest(await readFile(resolve(directory, "database.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
-          env: { GRAPH_COORDINATORS: { type: "durable-object", worker: "database", exportName: "GraphCoordinatorDO" }, GRAPH_SHARDS: { type: "durable-object", worker: "database", exportName: "GraphShardDO" }, GRAPH_GRANTS: { type: "json", value: { playground: { onepiece: ["read"] }, "playground-loader": { onepiece: ["read", "write"] } } } },
+          env: { GRAPH_COORDINATORS: { type: "durable-object", worker: "database", exportName: "GraphCoordinatorDO" }, GRAPH_SHARDS: { type: "durable-object", worker: "database", exportName: "GraphShardDO" }, GRAPH_GRANTS: { type: "json", value: { playground: { onepiece: ["read"] }, "playground-loader": { onepiece: ["read", "write"] }, "playground-importer": { onepiece: ["read", "write"] } } } },
           exports: { GraphCoordinatorDO: { type: "durable-object", storage: "sqlite" }, GraphShardDO: { type: "durable-object", storage: "sqlite" } } } },
         { config: { name: "operator", manifest: manifest(await readFile(resolve(directory, "operator.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
           env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground-loader" } } } } },
@@ -82,6 +89,21 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
       assert.equal((await active.dispatchFetch(`https://${hostname}/mcp`, { method: "POST", body: "{}" })).status, 403);
     }
 
+    const importOptions = { method: "POST", headers: { "content-type": "application/json" }, body: importBody };
+    // Direct service invocation cannot propagate Access, even for this Worker.
+    const directSite = await active.getWorker("playground");
+    const noIdentity = await directSite.fetch(`https://${PUBLIC_HOST}/import`, importOptions);
+    assert.equal(noIdentity.status, 401); await noIdentity.text();
+    // HTTP ingress receives the explicitly simulated trusted Access context.
+    const imported = await active.dispatchFetch(`https://${PUBLIC_HOST}/import`, importOptions);
+    assert.equal(imported.status, 200);
+    const importReceipt = await imported.json();
+    assert.ok(typeof importReceipt === "object" && importReceipt !== null && "txId" in importReceipt && "facts" in importReceipt);
+    assert.equal(importReceipt.txId, importTxId);
+    assert.equal(importReceipt.facts, 2);
+    const replay = await active.dispatchFetch(`https://${PUBLIC_HOST}/import`, importOptions);
+    assert.deepEqual(await replay.json(), importReceipt);
+
     await client.connect(new StreamableHTTPClientTransport(new URL(MCP_URL), { fetch: async (input, init) => {
       const request = new Request(input, init);
       // Local Miniflare does not emulate the account-members-only Access app.
@@ -89,6 +111,10 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
       request.headers.set("origin", "https://any-agent.example");
       return testResponse(await active.dispatchFetch(request.url, { method: request.method, headers: Object.fromEntries(request.headers), body: request.method === "POST" ? await request.text() : undefined }));
     } }));
+    const importedRead = await client.callTool({ name: "query", arguments: { query: `wiki:page:title(${JSON.stringify(importedEntity)}, Title), wiki:page:namespace(${JSON.stringify(importedEntity)}, Namespace)` } });
+    assert.notEqual(importedRead.isError, true);
+    assert.ok("content" in importedRead && importedRead.content[0]?.type === "text");
+    assert.deepEqual(JSON.parse(importedRead.content[0].text).rows, [{ Title: { type: "string", value: "Import Boundary Fixture" }, Namespace: { type: "integer", value: "0" } }]);
     const listed = await client.listTools();
     assert.deepEqual(listed.tools.map(tool => tool.name).sort(), ["describe_dataset", "query"]);
     // Two concurrent requests must not share a connected MCP server/transport.

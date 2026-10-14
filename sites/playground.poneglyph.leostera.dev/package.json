@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "cf dev --persist-to .artifacts/dev",
     "dev:seed": "cf dev --mode seed --persist-to .artifacts/operator",
+    "import:prepare": "node --import tsx scripts/prepare-import.ts",
+    "import:run": "node --import tsx scripts/run-import.ts",
     "build": "bun run typecheck && cf build",
     "deploy": "bun run --cwd ../.. build:package && bun run --cwd ../../packages/poneglyph-worker deploy && bun run typecheck && cf deploy",
     "typecheck": "cf workers types && tsc --noEmit",

@@ -6,7 +6,7 @@ export const MCP_URL = `https://${PUBLIC_HOST}/mcp`;
 // This describes the existing normalized corpus, not proof of a completed load.
 export const DATASET = Object.freeze({
   name: "One Piece Wiki graph playground",
-  currentDataNote: "Initial deployment uses a tiny synthetic smoke fixture, not an imported wiki corpus. Names/categories/links and byte counts in that fixture are test data, not verified wiki extraction.",
+  currentDataNote: "The current private service has an approved import plan for the first 10% of normalized XML pages, not the full wiki. This static schema does not certify delivery or completeness; consult retained import receipts and query evidence. Historical synthetic smoke fixtures are not verified wiki extraction.",
   graphId: GRAPH_ID,
   source: "One Piece Fandom MediaWiki XML dump",
   access: { authentication: "Cloudflare Access; membership in the owner's Cloudflare account enforced at the Worker ingress", readOnly: true, requestsPerIpPerLocationPerMinute: RATE_LIMIT.simple.limit, rateLimitAccuracy: "approximate; not a global accounting/spend cap", requestBytes: 65536, batching: "not supported", on429: "Wait according to the HTTP Retry-After header. The server never retries automatically." },

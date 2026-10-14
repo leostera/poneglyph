@@ -4,6 +4,7 @@
     "lib": ["es2024", "DOM", "DOM.Iterable"],
     "module": "preserve",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "types": ["node"],
     "strict": true,
     "noEmit": true,
@@ -12,5 +13,5 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true
   },
-  "include": ["src", "test", "cloudflare.config.ts", ".cloudflare/types"]
+  "include": ["src", "test", "scripts", "cloudflare.config.ts", ".cloudflare/types"]
 }

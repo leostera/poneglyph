@@ -18,6 +18,7 @@ export const serviceWorker = {
     GRAPH_GRANTS: bindings.json({
       playground: { onepiece: ["read"] },
       "playground-loader": { onepiece: ["read", "write"] },
+      "playground-importer": { onepiece: ["read", "write"] },
     } satisfies GraphGrants),
   },
   exports: {

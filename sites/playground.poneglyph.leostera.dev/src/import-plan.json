@@ -1,0 +1,2906 @@
+{
+  "version": 1,
+  "graphId": "onepiece",
+  "service": "poneglyph-service-worker",
+  "corpusSha256": "e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064",
+  "xmlSha256": "1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084",
+  "source": "wiki:onepiece:dump:1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084",
+  "totalPages": 296624,
+  "selectedPages": 29662,
+  "selectedFacts": 204183,
+  "openedAt": "2026-10-14T14:28:49.090Z",
+  "expiresAt": "2026-10-16T14:28:49.090Z",
+  "batches": [
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:0",
+      "sha256": "b7d5d608d90a44c22593a6d13befd75cf3edff773c0fc09918beceaa70a52773",
+      "facts": 482,
+      "pages": 32,
+      "bytes": 115417
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:1",
+      "sha256": "d09ee5e2ec275c237f96e5442190bd21ede1220c72666430a4ba76b96c81bec0",
+      "facts": 483,
+      "pages": 30,
+      "bytes": 115349
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:2",
+      "sha256": "4d958c045918ee1a9d121c4e9894e09bef7a740187eab6787807eef86077b93a",
+      "facts": 492,
+      "pages": 27,
+      "bytes": 116954
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:3",
+      "sha256": "b2b8beb71c05706fa88fb13ac721c9d77279adc8793738f01c0162c35559124f",
+      "facts": 499,
+      "pages": 28,
+      "bytes": 120288
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:4",
+      "sha256": "144e359e2da844bbebbd1a8cd1ca8743cd96ea23e534bf4d129079ef82f78013",
+      "facts": 474,
+      "pages": 19,
+      "bytes": 110757
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:5",
+      "sha256": "92812bb9270364f86b03d055cbe66b298d15eed97e7bba5fa8290ad5af106053",
+      "facts": 498,
+      "pages": 38,
+      "bytes": 119208
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:6",
+      "sha256": "8685fb236e1d4325ee691eed3cb3597c90a89dae23003708f8b5ed212deb5dab",
+      "facts": 491,
+      "pages": 36,
+      "bytes": 114103
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:7",
+      "sha256": "a494a0476d33a08bf6c5d35910369f7abfc2990f481eda334dade369c9fecb39",
+      "facts": 488,
+      "pages": 23,
+      "bytes": 114386
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:8",
+      "sha256": "044745ad560060e4eb793902763fd2ec691a6107101e370624da462309992290",
+      "facts": 496,
+      "pages": 55,
+      "bytes": 117353
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:9",
+      "sha256": "2c2a387a4332cc839f627432a163b3aea90f816ea8091413a5125c0b9fe89a08",
+      "facts": 488,
+      "pages": 36,
+      "bytes": 113649
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:10",
+      "sha256": "6963bb3e10530e759ef52f7647cb704bdc5d367070766f0558ddeea5b1357f15",
+      "facts": 492,
+      "pages": 46,
+      "bytes": 119147
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:11",
+      "sha256": "33166a9b83da4f63ddfb5af26ebd80074b62790ecd04c9c3c2071f16138671c5",
+      "facts": 486,
+      "pages": 26,
+      "bytes": 113893
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:12",
+      "sha256": "807dbb5ae87aa78d9c2da8f6aee21370cb6b5b632fae3c4dfbcb71fc3edf3063",
+      "facts": 499,
+      "pages": 29,
+      "bytes": 119015
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:13",
+      "sha256": "85c8b01c96a0605910ce33bed8ffe6a684ab8c92ac6ee86d7acdfbaace92fba8",
+      "facts": 481,
+      "pages": 32,
+      "bytes": 112537
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:14",
+      "sha256": "aa1575f75476d3b9747658bad74fe8d8d22bdecd15c09823f8e800aaf7769912",
+      "facts": 485,
+      "pages": 39,
+      "bytes": 115719
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:15",
+      "sha256": "35f3e017e07486f34c9ee4136d825735e2cd395af5095fc72f46f5928d08cbff",
+      "facts": 497,
+      "pages": 38,
+      "bytes": 122196
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:16",
+      "sha256": "528f5b170776062cdf94d286ce13d0169ea690424516790b8e00bf6f75e2e985",
+      "facts": 496,
+      "pages": 54,
+      "bytes": 126782
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:17",
+      "sha256": "c601d33a2082aecfd73814963686af7518f9de7bd42f17f1ed1c63c5184fb16a",
+      "facts": 482,
+      "pages": 42,
+      "bytes": 122684
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:18",
+      "sha256": "989cbad436fe5584ce17d808d51d598c1d2fe366d59514136d54e38cd9c4cf0b",
+      "facts": 498,
+      "pages": 61,
+      "bytes": 125207
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:19",
+      "sha256": "26ddb4530f0a0659984cce09241395cdf5a39537fd77386e62e196f094ca347b",
+      "facts": 488,
+      "pages": 30,
+      "bytes": 116233
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:20",
+      "sha256": "3a494d5f402498e8090a8725263f3b970e510a7aa228bac5108158f41b4ebee1",
+      "facts": 499,
+      "pages": 45,
+      "bytes": 124882
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:21",
+      "sha256": "b1fb5ec49c49c52fa60062f1ffcd6d6225a441f30db7d00549cb1a802e608594",
+      "facts": 497,
+      "pages": 25,
+      "bytes": 122044
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:22",
+      "sha256": "43fb33531b0aed4332feabd5971bfa986518d0ae04496a8bfc3322b60c1d713d",
+      "facts": 494,
+      "pages": 30,
+      "bytes": 120040
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:23",
+      "sha256": "6c22090be038e76cb83add4b9ce219f36004a2ce958a09d629dc942b756ebf62",
+      "facts": 486,
+      "pages": 33,
+      "bytes": 116186
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:24",
+      "sha256": "94151b1770d95a6d55be55a8b2e60b65c5947a9fffbeaef45e86b53eef8f9691",
+      "facts": 487,
+      "pages": 29,
+      "bytes": 113166
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:25",
+      "sha256": "94f5383808e8bd66cc80a5375a82dec78bd03c7416ad2154b3cf8be1bf3e2dbf",
+      "facts": 493,
+      "pages": 26,
+      "bytes": 113658
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:26",
+      "sha256": "a9ce82953ff0322144da201e6231aea25f173f2a4a52e35b3c43cec03ad5409a",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 113397
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:27",
+      "sha256": "4e04d0f674fbd98e5b3d72ba52488d97c40e8644c61eec27afcab6a1eba45708",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 113286
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:28",
+      "sha256": "355ad2f2016a8833654a9b96d5ce9c3b65c35400df3b17b471c8c86f09f2e253",
+      "facts": 490,
+      "pages": 27,
+      "bytes": 112752
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:29",
+      "sha256": "cfd1c35d627e61d35696daa7408a3091cd0095e79cbc38670bd57fc62b645e98",
+      "facts": 478,
+      "pages": 33,
+      "bytes": 111968
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:30",
+      "sha256": "30ee312eb4367eb134b2aba362355a062526a2f5cd7a0d0b2d3cd8424342607f",
+      "facts": 486,
+      "pages": 37,
+      "bytes": 117354
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:31",
+      "sha256": "4ea8ba9b41df5331ad1aebb21c74ed98663cea9ec008a796b789c072c4dc0c90",
+      "facts": 490,
+      "pages": 32,
+      "bytes": 115542
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:32",
+      "sha256": "8bc623419c5b7973bb8f9f4fb23e5228dfbe71a6b0cfba99e790402e705c84ee",
+      "facts": 487,
+      "pages": 20,
+      "bytes": 110836
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:33",
+      "sha256": "c76a40b69651d441471ffbff60e6794454d42916613809de044dbdd2b4b19578",
+      "facts": 480,
+      "pages": 25,
+      "bytes": 113304
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:34",
+      "sha256": "a4d0b563baedd0d27f9fe3c7c58a2e99d17b48254387dd76c25775ae9ddf86fb",
+      "facts": 488,
+      "pages": 24,
+      "bytes": 113431
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:35",
+      "sha256": "9be429d4e4499dd7c722dcd5315161f9c4c775cc30d1ca6ac2df10d4168a4472",
+      "facts": 500,
+      "pages": 33,
+      "bytes": 117098
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:36",
+      "sha256": "67a6d3a1d0e9af328315125aad5e040af31c85a942e65425deb9921863bd2876",
+      "facts": 482,
+      "pages": 34,
+      "bytes": 113564
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:37",
+      "sha256": "a3ba4f52aacb8ea59f38e6bc03340142b7ca0da67b9287667b067cc271e85943",
+      "facts": 499,
+      "pages": 46,
+      "bytes": 122905
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:38",
+      "sha256": "244d33e41ea97bbf3124135b62416db455541e995760d7498473c1f860b4374d",
+      "facts": 497,
+      "pages": 48,
+      "bytes": 122569
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:39",
+      "sha256": "0919db05028f8b7c9f3b8bdfbcdd24aac4d2dc8cc532b78704b6277450d640e4",
+      "facts": 489,
+      "pages": 51,
+      "bytes": 117887
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:40",
+      "sha256": "c025f6e118662b6d49919a730bf0c8261b99fc11b0266effe2385245da0d8680",
+      "facts": 488,
+      "pages": 57,
+      "bytes": 120282
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:41",
+      "sha256": "0c9a31558ba0bb3aed39e708fecd82b48b92f7e08d6be7cb20728b4c95a77437",
+      "facts": 492,
+      "pages": 67,
+      "bytes": 119748
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:42",
+      "sha256": "5fff037eb9417b80b7ea24f9ef2a85ba6faf89a8b9f5351d33c6fb2881ba8f12",
+      "facts": 491,
+      "pages": 56,
+      "bytes": 118599
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:43",
+      "sha256": "ca0da7e5359d1ca509ca0021a0c69ec970f8452f4a733618efc5dccb2e900141",
+      "facts": 500,
+      "pages": 78,
+      "bytes": 121858
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:44",
+      "sha256": "5dbc4da9d7520030f58fcac602b556c0137e666f293c511bb9ac6c650774817c",
+      "facts": 500,
+      "pages": 40,
+      "bytes": 114842
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:45",
+      "sha256": "1d24074c7a9499525a81c824ef6dc1ed6c64c58c966d60ca528d2cbafda9888c",
+      "facts": 492,
+      "pages": 68,
+      "bytes": 117188
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:46",
+      "sha256": "37329e8f802d56b060de310c571f68480942acf5b36d39b320ed65091a951fc4",
+      "facts": 498,
+      "pages": 42,
+      "bytes": 120502
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:47",
+      "sha256": "8b2133daed8e6c924bc61667d79129dd4ac33dda738b9f720775760c4150e260",
+      "facts": 499,
+      "pages": 42,
+      "bytes": 117177
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:48",
+      "sha256": "9b5aa04ce25f7e8626fd15fb650943fbee837279ab1cc2a05cc48c4dc793cb76",
+      "facts": 483,
+      "pages": 38,
+      "bytes": 114185
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:49",
+      "sha256": "0f1a404133474ac9f770d88f072caadc9c017c0caba80bf3d12a31574488ca22",
+      "facts": 497,
+      "pages": 40,
+      "bytes": 118236
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:50",
+      "sha256": "6af7b8a502dff1943212f261ef746ba5f24485e31c7c7325e0d08ffbc305b4ee",
+      "facts": 491,
+      "pages": 42,
+      "bytes": 116421
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:51",
+      "sha256": "cfd30ed695c873a6fd82d2441eeab65b3d9d94e5dcab83fadd2393cbe12d7518",
+      "facts": 484,
+      "pages": 53,
+      "bytes": 115088
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:52",
+      "sha256": "803dff865ee4026bcbd8659015da3f27d427583c4ac1328598c26c4ec28dc666",
+      "facts": 499,
+      "pages": 53,
+      "bytes": 119855
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:53",
+      "sha256": "340a40927b8193e9e17b87b5f75bda913b03f1c8d9ad79dd1504fb60894df288",
+      "facts": 498,
+      "pages": 54,
+      "bytes": 123196
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:54",
+      "sha256": "b480e412035cb85490a488ead305d43c09183e3f524e37048bffa09da102ec6b",
+      "facts": 498,
+      "pages": 43,
+      "bytes": 120478
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:55",
+      "sha256": "2b805b54e932150855b3f703c9efc4171fccaf9a6b5446166ec23c7b3d63936e",
+      "facts": 499,
+      "pages": 52,
+      "bytes": 123010
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:56",
+      "sha256": "1b5161fed89cfc69d7261ee73fff4a851868105e0250eaeea6e5d320318cc44d",
+      "facts": 494,
+      "pages": 61,
+      "bytes": 122363
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:57",
+      "sha256": "86c1f5cda09c4279123edb23ffde2695e2d0b871af1efef8673486dbf62e711c",
+      "facts": 486,
+      "pages": 45,
+      "bytes": 120607
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:58",
+      "sha256": "3b945e5787b33dc6e33a96eace2268c2727abdbe7e585a51089e64ad445e8177",
+      "facts": 490,
+      "pages": 37,
+      "bytes": 116601
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:59",
+      "sha256": "0f4cb61340420241c0899b912b5489c5f19b77d91a0504801d785778db368f44",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114475
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:60",
+      "sha256": "18158cb4404b081a4f434d7de79403470a8727bf63f0374c8f3cfb099b281fff",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114425
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:61",
+      "sha256": "920e2d9067252dd7e84db2e90d008fa9dcc9fe1c6ae3b5cf2079bceba752916d",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114512
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:62",
+      "sha256": "e0e6e08234b646d997d55a9424f9c0d36b9917487cadf8250e69746d10d3667d",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114461
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:63",
+      "sha256": "6243792a2f9074d2f1e3860fe5ba00fa57737fdd59c074aab6057f1912cd1d34",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114405
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:64",
+      "sha256": "504400d964d4a4f9df1bf1388d3bd7a210795efc88939d8f06f59183781d30df",
+      "facts": 498,
+      "pages": 27,
+      "bytes": 115058
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:65",
+      "sha256": "7e72cb69f47aa49c44feb6ce69619ae514515bcc4acf996c0cb8b8674bace7d8",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 113805
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:66",
+      "sha256": "632c1fcf2d8e645790bcf75945909b641951d9f76cc4b3c026bb873c90e60095",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114191
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:67",
+      "sha256": "e38aaed80d19230906beae36b457b2c3f149127a61b5b5d42371bd8255677686",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114261
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:68",
+      "sha256": "a2caac0cf070f14bfde7a2e363e46d4240276272fb7be5e00f1b6362d2b0b9ad",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114198
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:69",
+      "sha256": "e21a2043234801803e0da037ff775a89c0ec8947d03727181996f152c6bfbf13",
+      "facts": 481,
+      "pages": 48,
+      "bytes": 118318
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:70",
+      "sha256": "20211934bf248effde7cc13a1230fccefbdb2042dbddea197a179e52cbbcdeda",
+      "facts": 496,
+      "pages": 60,
+      "bytes": 121390
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:71",
+      "sha256": "1f60e4d5f39bae84428e30b585c6e443c339d993b3133546b5df3e4df589bb0d",
+      "facts": 500,
+      "pages": 48,
+      "bytes": 122789
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:72",
+      "sha256": "533cdf8952659a8d9c896da25e266fab96df6017f0d070ee226dbb3d84ceea1e",
+      "facts": 491,
+      "pages": 58,
+      "bytes": 120560
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:73",
+      "sha256": "00d9f333dd8be97e0c1a2289b77831206008ba9433939e9a1f34ef395e3ae265",
+      "facts": 481,
+      "pages": 61,
+      "bytes": 121729
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:74",
+      "sha256": "849c731b958c6837e53bde4669abd15cca47c588f206a4b6321914f19964867e",
+      "facts": 497,
+      "pages": 57,
+      "bytes": 121152
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:75",
+      "sha256": "53c8812a429d7013b12501c5e940cd03d6a627c460d27a3731a197428588dd9b",
+      "facts": 486,
+      "pages": 51,
+      "bytes": 120733
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:76",
+      "sha256": "851ba02cd47d8cfc31e87aff1fb41545af6321a096776d4545113cb127c35e09",
+      "facts": 494,
+      "pages": 61,
+      "bytes": 125594
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:77",
+      "sha256": "6c3d4adce70aa3b1aa3bcf38771d2fb3b1be8767a662644b222a64740da4ed68",
+      "facts": 482,
+      "pages": 55,
+      "bytes": 118899
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:78",
+      "sha256": "77660a896476276bbf0504689ce52596fe3cf44d8d19346ce880d8b1e8722c12",
+      "facts": 493,
+      "pages": 55,
+      "bytes": 121716
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:79",
+      "sha256": "9f35008f25bbb3eda4b1866082b35b72588b1cbd2e3409946e1a61fd1ee1ff38",
+      "facts": 499,
+      "pages": 47,
+      "bytes": 120148
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:80",
+      "sha256": "572c5bb0fbaaf26dc0684e644fa6f51d6837b340a8abdfcd16e77ebd8d14a888",
+      "facts": 497,
+      "pages": 56,
+      "bytes": 120738
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:81",
+      "sha256": "85d5142a2695b080241dbfbd97d6f768ab675a20badebe90bc99edde4e56d3c1",
+      "facts": 497,
+      "pages": 51,
+      "bytes": 122868
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:82",
+      "sha256": "50d92b06c14317f027056a5e4d98ccb0df560b800c804d65bffd2b6841fe24fb",
+      "facts": 489,
+      "pages": 50,
+      "bytes": 119947
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:83",
+      "sha256": "583cfdc29c8e0308c7cc99d157787167a997f44fc765001c883945ff5dbf7d1e",
+      "facts": 493,
+      "pages": 36,
+      "bytes": 118868
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:84",
+      "sha256": "67c0459e9271b261782679c0028f352d53db01a8f280dfdb088da9de2b2cb322",
+      "facts": 490,
+      "pages": 45,
+      "bytes": 120527
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:85",
+      "sha256": "58b6b4574cc5a7b0e72339c6a61ed707b2afd89a4399e779a555d243f8d20fb3",
+      "facts": 489,
+      "pages": 59,
+      "bytes": 120778
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:86",
+      "sha256": "25e2da95cfc7933ae0749955757d28cbd8cc536c8438430a211b239447e2b870",
+      "facts": 486,
+      "pages": 42,
+      "bytes": 117763
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:87",
+      "sha256": "0058cff5c7267ab0df8b1c07bf1517b6939d57174541668bbf9ffa94d770ea97",
+      "facts": 500,
+      "pages": 51,
+      "bytes": 123212
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:88",
+      "sha256": "d6d4eb42abd5c13c396cc082a8f8fa4ef5bfecc457d07ceefe4fe50c6a84f3de",
+      "facts": 490,
+      "pages": 67,
+      "bytes": 120309
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:89",
+      "sha256": "db3e6b42e24e5c0431dbe8d6652c40bba0cee2107a149301b2156594fcd5100e",
+      "facts": 482,
+      "pages": 35,
+      "bytes": 116276
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:90",
+      "sha256": "2dfcdb7143b261944d414773815c77469ce34f9403f93d7c9c50e3a80c9cdeb6",
+      "facts": 498,
+      "pages": 39,
+      "bytes": 116415
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:91",
+      "sha256": "7f0638c17bc6708c33c7a53dc3c87e85fc5c08571603ef8f6a9bd67703b0f7e4",
+      "facts": 495,
+      "pages": 28,
+      "bytes": 114217
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:92",
+      "sha256": "594486c28fe497658ad4ec29682eda6973604d6de7a36ef878620cf6dde56563",
+      "facts": 497,
+      "pages": 25,
+      "bytes": 115189
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:93",
+      "sha256": "924b3d9a076b4fea52c03421d62f5982eccbdecde18dedd34aed380fa4cfc336",
+      "facts": 489,
+      "pages": 46,
+      "bytes": 114801
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:94",
+      "sha256": "3f7d304dae0ea10a554f0af4b2a6199ff3a396ea91b64be7bb2d99f8a09e425d",
+      "facts": 493,
+      "pages": 44,
+      "bytes": 117312
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:95",
+      "sha256": "b334fb4518d60383b2ffb61ca1552139f21c04eccc3f73199b53075a676e0520",
+      "facts": 481,
+      "pages": 42,
+      "bytes": 114335
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:96",
+      "sha256": "f45b8fe4c02053cd95d279b65eede1d50ba783d4efbff730c64e992ec45b6e87",
+      "facts": 482,
+      "pages": 34,
+      "bytes": 118887
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:97",
+      "sha256": "4a6e7752c60d07b96cfbe1ec24dd345eff503160d50fa626638824e8f52c8da2",
+      "facts": 500,
+      "pages": 48,
+      "bytes": 118532
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:98",
+      "sha256": "5f2d19a2a0cc314dca9b8a27c52ddcac7f1d5750fffa0eaa467c0340148b7986",
+      "facts": 492,
+      "pages": 36,
+      "bytes": 115984
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:99",
+      "sha256": "6680369f4d4feca0785314d290ce7214e6e18bb6b5e628fb7f54bf0f339160ec",
+      "facts": 496,
+      "pages": 45,
+      "bytes": 119962
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:100",
+      "sha256": "094b385997a207f1f4d1043370cd921b6996b43a629d6d9f6f833358d7cb44bb",
+      "facts": 496,
+      "pages": 26,
+      "bytes": 115066
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:101",
+      "sha256": "cb2440476ddec5a5fbe66a4d1a8aa5e182fe52ed4cb160f9175b3b5a7b9698d7",
+      "facts": 489,
+      "pages": 44,
+      "bytes": 116632
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:102",
+      "sha256": "b6725bb79e8f465fda7ff5697a7e65bd674eee072480e77b16ee531a619559f4",
+      "facts": 496,
+      "pages": 51,
+      "bytes": 118580
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:103",
+      "sha256": "23dce5fa026bd5c6fe2887c193b3364489905668a9adeac9cb95c5c72eb4c2e4",
+      "facts": 498,
+      "pages": 51,
+      "bytes": 121765
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:104",
+      "sha256": "2b863d4f6f7b794b57c87133c2540ee25613b9d8c392c06d8da2ca68830d7007",
+      "facts": 493,
+      "pages": 54,
+      "bytes": 121004
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:105",
+      "sha256": "64825bce4b2f8c315a5aebc6660e76a57742c97b30bdabd5fbf355e4339865ff",
+      "facts": 499,
+      "pages": 47,
+      "bytes": 120340
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:106",
+      "sha256": "3ff5f0e511969012e5fc69479727781e4c46ae9e3923220cc953f4d5ba73adfd",
+      "facts": 495,
+      "pages": 55,
+      "bytes": 124196
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:107",
+      "sha256": "ea3336fa09f9ea3c981e0b8ae35ea4baed283fae7f68a1d4525af708b6224929",
+      "facts": 499,
+      "pages": 56,
+      "bytes": 126594
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:108",
+      "sha256": "5f40e1652176c252257d5c7ba332517a64b126011af84813c7c86414012c946a",
+      "facts": 498,
+      "pages": 53,
+      "bytes": 124721
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:109",
+      "sha256": "3262502aa90756fd455069783c38d855579f079489a03588871db2475533a521",
+      "facts": 497,
+      "pages": 69,
+      "bytes": 123634
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:110",
+      "sha256": "6dffea7683ebe6349847729a43fa55765728b25a455c852b6b051f50c7c44163",
+      "facts": 497,
+      "pages": 69,
+      "bytes": 121654
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:111",
+      "sha256": "1ed056648ec5bc96092c710dbdd545f67f47407d992a87b7565d6efb7b31fac4",
+      "facts": 499,
+      "pages": 70,
+      "bytes": 124602
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:112",
+      "sha256": "4feddec3def0de857815fff28e012e44a8fe6a64bf92bb20c8c29dd851d46700",
+      "facts": 494,
+      "pages": 72,
+      "bytes": 122819
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:113",
+      "sha256": "b6f9c101167f10323feedd5f0ff64a7662ff6d707b9365087c0570ae400e7d82",
+      "facts": 487,
+      "pages": 71,
+      "bytes": 120490
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:114",
+      "sha256": "52f50e2bf2f0635f5f02d14104d0317c39971935ffa7d620c6b32107015cc244",
+      "facts": 498,
+      "pages": 47,
+      "bytes": 119297
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:115",
+      "sha256": "1b6564ae2c81f1c7dee08725011702788e4dca607095189b3425e92e8664f71f",
+      "facts": 483,
+      "pages": 60,
+      "bytes": 117267
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:116",
+      "sha256": "03f337fd5cda9e4e53052681c65dd50b7119b38d086c4d8ff6fe3a0e94b0898a",
+      "facts": 500,
+      "pages": 54,
+      "bytes": 121132
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:117",
+      "sha256": "d27eaa1f70d944be94ae9e9d4d474915ed0768366936cb6e83170dfe7bae7c3c",
+      "facts": 497,
+      "pages": 71,
+      "bytes": 121649
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:118",
+      "sha256": "8c2ad61bc0a0f8a3966aa2bfecb9e93eab8597652057ce724760892fc6f3061a",
+      "facts": 497,
+      "pages": 59,
+      "bytes": 124476
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:119",
+      "sha256": "81a0cdf6f6bb855d822ec57e1d6c5de63df9abc2d73580a1ed37b799dca3fab8",
+      "facts": 499,
+      "pages": 62,
+      "bytes": 121520
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:120",
+      "sha256": "78ee712c8771158523738b6a35631cc8b528a7be2271a6f515ca5ac22de71179",
+      "facts": 490,
+      "pages": 62,
+      "bytes": 121830
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:121",
+      "sha256": "17a485d47927e7116af0850975e5a300d0a444fff70ce614eeab46a7e2d66888",
+      "facts": 493,
+      "pages": 50,
+      "bytes": 121249
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:122",
+      "sha256": "90b37bbf0fe3d5927736966c96dd8d79580699367fb4a5a47e4fb25bfbcb1fd1",
+      "facts": 484,
+      "pages": 45,
+      "bytes": 116923
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:123",
+      "sha256": "16920207f9b5ef084e3e427c510bb80a2b6e9ebd432b4e0a54dcfffe32def94d",
+      "facts": 494,
+      "pages": 29,
+      "bytes": 114819
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:124",
+      "sha256": "0d5a3887e3b815cb50b78fedce54282cddb8ecd85239d83df6f9d4ea4cfe6c6a",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 115075
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:125",
+      "sha256": "24c682cbe5dbe3e19e864cc78a9e63755e8bcef4cad01c56a9a954c5c371ae62",
+      "facts": 483,
+      "pages": 26,
+      "bytes": 112284
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:126",
+      "sha256": "593b5368b23b9a4bd6df85bab7ce2774a6d2399104efff917ac7c443c8b840d1",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114019
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:127",
+      "sha256": "4a94c59e9b004566f753716d9d1dd7b815d6fda116eaf9d81fb2b8956f25e0af",
+      "facts": 496,
+      "pages": 29,
+      "bytes": 114972
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:128",
+      "sha256": "9adecc61effb00ab67e323d6f7f1ab9c7f0c3356e994d555999b556451147b80",
+      "facts": 500,
+      "pages": 35,
+      "bytes": 117323
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:129",
+      "sha256": "265835890adf030e154c92785c17a07c0cd12a0028bd2d2b73dd16ccdbea24e0",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114233
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:130",
+      "sha256": "ee29388c50ab783f4272b07ee8393d821da925ec06a4ee660a7bd35bc3c52b5f",
+      "facts": 494,
+      "pages": 26,
+      "bytes": 114980
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:131",
+      "sha256": "a36202bc9b7c80fc9ec2d52b596905d4056f6fbac8ecb6195e421cb46a70ad9b",
+      "facts": 497,
+      "pages": 26,
+      "bytes": 116192
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:132",
+      "sha256": "10905d6a65ec5fbebe79d558cf915fa3bf0622974cbeb1c06e47713340ecd0b0",
+      "facts": 497,
+      "pages": 26,
+      "bytes": 115016
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:133",
+      "sha256": "b3c2c93b755a5a305af96dcbdc470e79ee86ef099a0bddeeaa12b081ffd36ee1",
+      "facts": 493,
+      "pages": 26,
+      "bytes": 114650
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:134",
+      "sha256": "ede2fe620ef849537264d0462c170b4b9801857385e34d2916d1982105a5e8a7",
+      "facts": 485,
+      "pages": 41,
+      "bytes": 114170
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:135",
+      "sha256": "f612c5fb29cb405953b9dad90a9509a781fda44ecf50003ac8f93ca7cd2ee4d6",
+      "facts": 500,
+      "pages": 60,
+      "bytes": 125861
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:136",
+      "sha256": "f8c9bcb4215ff771c87a4801620d90b95ee47ac38534279cd781c4343a7dd2ca",
+      "facts": 496,
+      "pages": 52,
+      "bytes": 118877
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:137",
+      "sha256": "eee7dd6dc8cdea66f981d803f03b19c703855cb18753120db510947a9a7d7d4f",
+      "facts": 482,
+      "pages": 40,
+      "bytes": 114691
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:138",
+      "sha256": "07e91eb52263b54af8f5ba748156f176963bd425b01692b5da07c90c9cd97b9d",
+      "facts": 499,
+      "pages": 62,
+      "bytes": 126759
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:139",
+      "sha256": "11a98996994ffe190ec2a83eb7b3edb812f532ecb37d3320e830cf357ba3705f",
+      "facts": 496,
+      "pages": 69,
+      "bytes": 123487
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:140",
+      "sha256": "965a5c7f33bd31fedfec182e855a6b1b11de1792217c9be02178dd62505cc90b",
+      "facts": 498,
+      "pages": 81,
+      "bytes": 124619
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:141",
+      "sha256": "89ba8a3dbb0705cc1738436c5651571bacf2052017655c287d76783213e23484",
+      "facts": 490,
+      "pages": 78,
+      "bytes": 120317
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:142",
+      "sha256": "3afe716b58ba771ddd9b02bd36a72b5394e56721ce7ccddd35c393718f8fd627",
+      "facts": 497,
+      "pages": 80,
+      "bytes": 125935
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:143",
+      "sha256": "ad6cbdec92f5f48dac3d9d044500c1b404b3dd457d454d7a4a3d3b81037cf6a0",
+      "facts": 498,
+      "pages": 83,
+      "bytes": 123330
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:144",
+      "sha256": "c7b8a3ac5b75cd305a7d2107d0119764a3e04b827d5670799ffb4df7b64c067f",
+      "facts": 496,
+      "pages": 82,
+      "bytes": 122604
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:145",
+      "sha256": "4f36ea114ab21fa6b723d30c7f97f16f1864fa595a223e82dea908e033a5f511",
+      "facts": 500,
+      "pages": 54,
+      "bytes": 120453
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:146",
+      "sha256": "9694ee16f8758c7d6edbe36f8ab32f9d0a06f40fa1c9b416adea87ad792f9c92",
+      "facts": 495,
+      "pages": 66,
+      "bytes": 121955
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:147",
+      "sha256": "71af57780598d7c0ef3ae9a1228372d10b6a772644f4072bffd0cb3e4c15d481",
+      "facts": 500,
+      "pages": 85,
+      "bytes": 122898
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:148",
+      "sha256": "21566eb704c4e9e5329f0902b2d3be37bd8caeb92ff3770b732245e1d6ee8ae3",
+      "facts": 498,
+      "pages": 88,
+      "bytes": 123099
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:149",
+      "sha256": "c4d24404ac7b93e274dc7f22da293fb177184795c655a606ebe01db30d714531",
+      "facts": 497,
+      "pages": 84,
+      "bytes": 123412
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:150",
+      "sha256": "3aca47b3ba7d445b67c6a56becc19bc4d2c2f421bdc3f33bf5365795d55db4bc",
+      "facts": 500,
+      "pages": 85,
+      "bytes": 124472
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:151",
+      "sha256": "6572621a1ae47aa80749300427ec99d6f053ac6f3d6f49cc34eaba1b6d4c7e5a",
+      "facts": 497,
+      "pages": 85,
+      "bytes": 123324
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:152",
+      "sha256": "d1da677562d0c8eb524c9d5485b07221da6126976b7043134c85d96133ca2e4c",
+      "facts": 497,
+      "pages": 75,
+      "bytes": 123026
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:153",
+      "sha256": "5763eaed6c71462b95e094eb3412e2d1f4ba36d9b17b9306a239d24af633835a",
+      "facts": 500,
+      "pages": 87,
+      "bytes": 123274
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:154",
+      "sha256": "31eb1c21af39b26d426a0f227e92414786a3e6c8d21dfa7820d57e52dfa14ee1",
+      "facts": 500,
+      "pages": 77,
+      "bytes": 122504
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:155",
+      "sha256": "e765c8ca64654c0560fcfc95229eec2b1819ad5acf61cb897b1cc1a6d83be4a3",
+      "facts": 496,
+      "pages": 84,
+      "bytes": 122158
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:156",
+      "sha256": "a4f19fdc0da014bb86e4d9276b96bc604bd75d7d3931491975d6795f5e361672",
+      "facts": 497,
+      "pages": 78,
+      "bytes": 123844
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:157",
+      "sha256": "9ee22a3c950d509f84a909943a3b29e4be6c709b97fde0e673d1d2065b77bd1c",
+      "facts": 495,
+      "pages": 76,
+      "bytes": 122123
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:158",
+      "sha256": "65ca42d34a58342c2401a5dde146411a85f75344ca253632cb1be2efe735c2cf",
+      "facts": 496,
+      "pages": 82,
+      "bytes": 122440
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:159",
+      "sha256": "05e2b207f2fc79e01a3c80509699adcfccc4ff8baa06f3bf9ba1f72c1b14a477",
+      "facts": 497,
+      "pages": 84,
+      "bytes": 123405
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:160",
+      "sha256": "4860f54db2ceac65b49e9f8c34ca2394fa3667f3dc23f74a5b166ac6eb8e21e9",
+      "facts": 497,
+      "pages": 89,
+      "bytes": 122865
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:161",
+      "sha256": "3c3f57a5ea612af52972b762687a4b664b4e72f64d8c408a634807988db0d528",
+      "facts": 496,
+      "pages": 82,
+      "bytes": 122693
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:162",
+      "sha256": "295137add5b6a3f7d63d4431eeb0cbf11df8f1f2ea718d4011494a072536398f",
+      "facts": 500,
+      "pages": 77,
+      "bytes": 124006
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:163",
+      "sha256": "72c5b65a7e53376d027f41edcb21802cacf06aab6568ea81571308e6d60941dd",
+      "facts": 500,
+      "pages": 69,
+      "bytes": 121409
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:164",
+      "sha256": "45cf85a44c204f02d9179d0eef091917d87c3bc5a56cfc3694eb7e5d8b4728a1",
+      "facts": 497,
+      "pages": 81,
+      "bytes": 122300
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:165",
+      "sha256": "43341bcf1285de46fbc010f0d48f11b95b862bc73ce2140301c279919e625e63",
+      "facts": 495,
+      "pages": 80,
+      "bytes": 124511
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:166",
+      "sha256": "742a61d646c76d38acddc5824a64a37c004e720cd906195d02e0bbf22012717d",
+      "facts": 500,
+      "pages": 41,
+      "bytes": 118082
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:167",
+      "sha256": "c1bb5494a4d60fe870d8d5699c0f5c170d73bbe4aaed842deb2bc7ef9965d3b3",
+      "facts": 500,
+      "pages": 70,
+      "bytes": 122310
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:168",
+      "sha256": "5c7912dc83581a6c5def360a8337bf32e8ec0095ef6e3f7cc1d9f3b5a8ce985f",
+      "facts": 495,
+      "pages": 71,
+      "bytes": 121188
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:169",
+      "sha256": "30bd2c1813f0e9dc4799df5faeb8f9ec92491f1b8c9469dc59cb6b5d106436cf",
+      "facts": 496,
+      "pages": 82,
+      "bytes": 122327
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:170",
+      "sha256": "6ef9ad2e03d9b9dcd0051fed3185680e331914ebf0e2bcf7145415fdea0cfdb6",
+      "facts": 498,
+      "pages": 71,
+      "bytes": 121381
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:171",
+      "sha256": "d08409a4fe32b50e8f65923af3a2a3e7005af86539a9b69d41b9acc2a818ae43",
+      "facts": 485,
+      "pages": 82,
+      "bytes": 121098
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:172",
+      "sha256": "b3ae3ade086faa83d8871857d7900c547ec5fb8c47b3bf684ca170e634c0b8ea",
+      "facts": 496,
+      "pages": 68,
+      "bytes": 120912
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:173",
+      "sha256": "a5673cafa4c9c7c8b43f97bc1da85a2c66014b804b5cd61ccfc39eb1ce5de3b4",
+      "facts": 498,
+      "pages": 69,
+      "bytes": 123963
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:174",
+      "sha256": "797fb36dc3c4c3627a6a7ccdcc2c3ecb95f1f79bf71513a7b2575fdc4190ce92",
+      "facts": 499,
+      "pages": 79,
+      "bytes": 122590
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:175",
+      "sha256": "c31d826080374b36a9df836897bd703608d1e396d574c02d5e66eb0223dbe9be",
+      "facts": 495,
+      "pages": 67,
+      "bytes": 120314
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:176",
+      "sha256": "dab959aa66463e50c573d8372cc1b2d8677ae04f23f9849a3917ac50c4984be1",
+      "facts": 499,
+      "pages": 77,
+      "bytes": 123747
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:177",
+      "sha256": "7a869a2fe269291dcebb6b897fcc9816560bc4fced8962de6dc312fc0b1f60f7",
+      "facts": 498,
+      "pages": 74,
+      "bytes": 120910
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:178",
+      "sha256": "9c1c02e5d67a022ccd57d41fe1aff7af5622c909bcff6813e4098db44594d1df",
+      "facts": 498,
+      "pages": 79,
+      "bytes": 126779
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:179",
+      "sha256": "df3532a3aac27db7af747e94ec5a261a95c5d354947d6db8254b5e975db5ca61",
+      "facts": 498,
+      "pages": 77,
+      "bytes": 121474
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:180",
+      "sha256": "af256dfda674425b89293b01b5971816f45f23935af7e10a88d27f392e4b137a",
+      "facts": 497,
+      "pages": 73,
+      "bytes": 120258
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:181",
+      "sha256": "ee16eb1148a29f5ff5c0e8031da28914dc14cc58a1b9cc5d66a05f733acded7a",
+      "facts": 499,
+      "pages": 91,
+      "bytes": 123628
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:182",
+      "sha256": "6770e2ae115442f13c2c20908df8c3676db0b17dbc84847ff2a0a079d3dc78d1",
+      "facts": 491,
+      "pages": 74,
+      "bytes": 120168
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:183",
+      "sha256": "73b86aba44ede4a0f65d06d9a249beedeb7091303f381bade7236730d266b7bc",
+      "facts": 496,
+      "pages": 57,
+      "bytes": 118216
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:184",
+      "sha256": "7947bcce680a85d7c99dd1612d43c61529fc710487a3ce9fa407a353b0a7cf89",
+      "facts": 484,
+      "pages": 34,
+      "bytes": 113138
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:185",
+      "sha256": "b366950a22adffd3a545a949252c1e4409b29161e8ab058c2698876f882aca5f",
+      "facts": 499,
+      "pages": 51,
+      "bytes": 119731
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:186",
+      "sha256": "c6d9213a21cf005768990a4abd13c01ae3be722db087fd130f56642d0138e6b7",
+      "facts": 495,
+      "pages": 77,
+      "bytes": 121908
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:187",
+      "sha256": "8e791ee42e8d254d249e55c737a16b8a844c47da8af8ab54412bd7c91846ab61",
+      "facts": 500,
+      "pages": 91,
+      "bytes": 122077
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:188",
+      "sha256": "fe499fe37274b69e4784d1f5416d8934514ea6c365166d2cd491b81ff5e0de5b",
+      "facts": 500,
+      "pages": 82,
+      "bytes": 122204
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:189",
+      "sha256": "c4706156fe6c82dfda03811e7f00e0132eee9c594c38403a3e0de444da412114",
+      "facts": 493,
+      "pages": 74,
+      "bytes": 120214
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:190",
+      "sha256": "991b5c7021354e3f8b2f0d8cbaa081ed96bc5d388d919a456239bf807c80610a",
+      "facts": 500,
+      "pages": 71,
+      "bytes": 122709
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:191",
+      "sha256": "adfa6946a6301d135e7f8b31ab944164e32997314281130e2f96b94bda418c1c",
+      "facts": 500,
+      "pages": 70,
+      "bytes": 121605
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:192",
+      "sha256": "a38aaec6ec9ffdaf2b10883112d9071d9ccc9484e575c4a2ae21b8ec9823e6b9",
+      "facts": 498,
+      "pages": 87,
+      "bytes": 123045
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:193",
+      "sha256": "ec276b921552f53c781daaff33bd21c99cb0bd151c8973ac581cf01716bbdbd1",
+      "facts": 496,
+      "pages": 76,
+      "bytes": 123549
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:194",
+      "sha256": "d4da9725efaab8943dd39b63873a9507bf3db9213b531b071b10fb71d2c85487",
+      "facts": 500,
+      "pages": 99,
+      "bytes": 124671
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:195",
+      "sha256": "0cd597f78e5de9180c27a59cabbaf673661103bfde83e7dc9d693352d3fc8e8e",
+      "facts": 499,
+      "pages": 85,
+      "bytes": 123189
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:196",
+      "sha256": "3afce6f66cc7f9622cdf7ef3bd884e15ffc3d552bf335d5533c248594e2865f5",
+      "facts": 497,
+      "pages": 85,
+      "bytes": 122196
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:197",
+      "sha256": "142ccd8e33ee0c23dc092723938f70fcf7667e6517966e36439cd7d0163337df",
+      "facts": 497,
+      "pages": 78,
+      "bytes": 123146
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:198",
+      "sha256": "844d7b318c3c41dc74fef9c533033829d3f0e5a3c938dea9b792654b93344290",
+      "facts": 496,
+      "pages": 83,
+      "bytes": 122761
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:199",
+      "sha256": "e6df61429560fe279477de02591556fd3ea43dd32500e9a1a44d11aa9fc17826",
+      "facts": 495,
+      "pages": 79,
+      "bytes": 126382
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:200",
+      "sha256": "07c8038dbaee45a9dea533e867774145d8004b41e60460e3cd577f819ec60d77",
+      "facts": 486,
+      "pages": 83,
+      "bytes": 120197
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:201",
+      "sha256": "33fc812295c812fcc5843d87714ffdfe909ddb06a9eb5726b071f25d5d814b57",
+      "facts": 499,
+      "pages": 78,
+      "bytes": 122086
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:202",
+      "sha256": "450d33a444ce5ba3180a3e8967945063f8a005bce17f3845ee551fb8ba9c4182",
+      "facts": 495,
+      "pages": 81,
+      "bytes": 122033
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:203",
+      "sha256": "b6ef3dced6beb0a2732cefe3c101a673034b22875fdb5ef5331efa71da8893f2",
+      "facts": 497,
+      "pages": 86,
+      "bytes": 122689
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:204",
+      "sha256": "0d22f671df5ac0ae8f89ed0e28ff3c31dd83cdc053ee543a032215c4f7f5c82b",
+      "facts": 497,
+      "pages": 87,
+      "bytes": 122689
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:205",
+      "sha256": "ce69d9e95f6182d56b99539a253de14b85ab047761f4bd2dd68cf7832867b120",
+      "facts": 496,
+      "pages": 79,
+      "bytes": 121192
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:206",
+      "sha256": "e0c938e6b2f866238bbaf41b8027bd748afc1804ec3cca9ed5836af49e21a6d7",
+      "facts": 497,
+      "pages": 82,
+      "bytes": 122433
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:207",
+      "sha256": "5c825cc98e4db1707a5c046f3fc059f7722c644960226fdac1bb65978eccaf2c",
+      "facts": 500,
+      "pages": 81,
+      "bytes": 122145
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:208",
+      "sha256": "d04671c3e6810f5877927eda113d7b430ef6eadffd389026ed6fd29dc7211e9e",
+      "facts": 496,
+      "pages": 86,
+      "bytes": 122301
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:209",
+      "sha256": "c517b2ab4398aaeffdad6762fc0698b389945316585fa591ae7812b6203e5ec3",
+      "facts": 496,
+      "pages": 82,
+      "bytes": 124106
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:210",
+      "sha256": "47818a28001efd69c4f56d142771e94772614e6dcca4c1c614d634d13ff7d888",
+      "facts": 500,
+      "pages": 82,
+      "bytes": 126691
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:211",
+      "sha256": "386bff58bcd340caa4b0b8466a4a0a4ee3863eff2957cdf69ea922f99e8b745e",
+      "facts": 498,
+      "pages": 79,
+      "bytes": 124364
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:212",
+      "sha256": "c90200f5127b6bbed2d94ba50c03ee3f654ff9a7dff86017728b453ff3a492a4",
+      "facts": 499,
+      "pages": 91,
+      "bytes": 124427
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:213",
+      "sha256": "eb0392f77cce7fb737a4d0e3ed5661bc48b18762bf6659f23d677a497dfd963b",
+      "facts": 495,
+      "pages": 92,
+      "bytes": 122733
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:214",
+      "sha256": "33fb7912a94710cc66822f3a48276a090baf4ec1d7cc7088915124e326114ad9",
+      "facts": 497,
+      "pages": 91,
+      "bytes": 123016
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:215",
+      "sha256": "ec4b2e36d73ff51e4a3b86c588152bb6f364e1a18657c3932c65bd25b0a242d9",
+      "facts": 499,
+      "pages": 91,
+      "bytes": 123877
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:216",
+      "sha256": "eaf900c92c44168f54f0f1eb6208f50d200ddd4bdc6d476019549aa73c3c8657",
+      "facts": 494,
+      "pages": 96,
+      "bytes": 123525
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:217",
+      "sha256": "b820e405690b8cfbe21ced1583f2aab56fd227a1b5bf45854c312fbf5213d019",
+      "facts": 495,
+      "pages": 99,
+      "bytes": 122953
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:218",
+      "sha256": "d22b96b834d12dc547e5f9fe5c0b696163339e6666d93e51ae4e8c7b6d4e5879",
+      "facts": 495,
+      "pages": 88,
+      "bytes": 123028
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:219",
+      "sha256": "36d4c31d664672a1cc75b5d09494b516deda89e171566627ce54c81493cb3cb9",
+      "facts": 496,
+      "pages": 95,
+      "bytes": 123501
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:220",
+      "sha256": "4a8cc687d1eea479808fc95865a9e595f426013e37617e3e869669d58535327f",
+      "facts": 497,
+      "pages": 84,
+      "bytes": 123440
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:221",
+      "sha256": "149b91623c73afa55671586c08b2988f33206ff0255f2d6896ced4f82c1b1968",
+      "facts": 497,
+      "pages": 93,
+      "bytes": 124218
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:222",
+      "sha256": "b420643b019c4f005fef366fcc57e0d5614384c8a23daebfabd572c315412b70",
+      "facts": 497,
+      "pages": 94,
+      "bytes": 124230
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:223",
+      "sha256": "b91b7744be4bcecad4ee9c01a448b8dcbf43d52f3b009cf7b8801984e605264c",
+      "facts": 495,
+      "pages": 66,
+      "bytes": 120779
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:224",
+      "sha256": "35ee4048e1b924e93a9dee94b9c9f635f1f5486534473efb876f8f335189a3a8",
+      "facts": 496,
+      "pages": 87,
+      "bytes": 123571
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:225",
+      "sha256": "29029e2337912157d0673a038d51642fb79a2663620fa7a9adafc0c18397dbde",
+      "facts": 483,
+      "pages": 77,
+      "bytes": 118577
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:226",
+      "sha256": "130091dfa9ffb839542344f32671483054d19a246de6a5d77b74fa76ea2658c5",
+      "facts": 497,
+      "pages": 65,
+      "bytes": 124146
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:227",
+      "sha256": "facefd052548dce743f744499ac300f38c87fb419cfecf695c5c956154207e7d",
+      "facts": 498,
+      "pages": 91,
+      "bytes": 123634
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:228",
+      "sha256": "1a16de4f9e3d4445cc9313fa41ffea67f7521fdbc400fba1eb882b0ea76dd205",
+      "facts": 499,
+      "pages": 82,
+      "bytes": 122570
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:229",
+      "sha256": "ce34f88205bac1f02a0eced31cdcac7a7690a24331dc32c933b0f78d2e040cd9",
+      "facts": 497,
+      "pages": 64,
+      "bytes": 119654
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:230",
+      "sha256": "fd7c452aa34261b1e32d6207f7442e5b91a75af93a859ff37bb0a3a1bb478a9a",
+      "facts": 500,
+      "pages": 87,
+      "bytes": 123935
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:231",
+      "sha256": "a06f7c032f9c527f5912df8f8928aaa19e495e77f7daa40ce6d54d996c93d0c8",
+      "facts": 496,
+      "pages": 88,
+      "bytes": 122773
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:232",
+      "sha256": "7eff270d1ba9f117795a4089ea6a578352104da5515918828ce2c2815c361ca1",
+      "facts": 498,
+      "pages": 85,
+      "bytes": 122034
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:233",
+      "sha256": "7190177dd106bdab885b6bba8f49ea831dbb35b3542bccb536588db71b3cbd72",
+      "facts": 499,
+      "pages": 81,
+      "bytes": 127004
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:234",
+      "sha256": "3bc91c857edd017ff8046f18ca078544ff3f987d265a5ee8d91868cb379b4282",
+      "facts": 498,
+      "pages": 85,
+      "bytes": 124312
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:235",
+      "sha256": "ec4ce2297821e56cc55e975a209932e40ddb68809f580da0fa14228097bc6f8f",
+      "facts": 500,
+      "pages": 62,
+      "bytes": 122085
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:236",
+      "sha256": "2fae71d14b488f9ff8f716bf8c8a2acc1893ee57494fa5e302d196b189c99851",
+      "facts": 497,
+      "pages": 77,
+      "bytes": 121280
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:237",
+      "sha256": "440d0f1bf4f5c7c18ba7228d3544920fcaf9571cf38ae06f3cfc94486d78c294",
+      "facts": 500,
+      "pages": 83,
+      "bytes": 124526
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:238",
+      "sha256": "910ff0f22ce9f016ad4c58c66db40f719881a8acfb6887ebeb34c5b21aea8cf3",
+      "facts": 498,
+      "pages": 89,
+      "bytes": 124876
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:239",
+      "sha256": "332dd4f5de8db9e725073c726f6f5e8160666b451bba4ea6c18e2d8dda00e1f2",
+      "facts": 499,
+      "pages": 88,
+      "bytes": 124215
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:240",
+      "sha256": "925ee45e8a562b75431814ed30296796510255d7e71ee4fed2f5729325cb1195",
+      "facts": 500,
+      "pages": 81,
+      "bytes": 124345
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:241",
+      "sha256": "86b88dbb92f113436cf7e848875d5a9e99120351218d095d7497eaf230dcb3bf",
+      "facts": 498,
+      "pages": 72,
+      "bytes": 122898
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:242",
+      "sha256": "6f018901ed70ec95f809a1a329c6b45b0fabb64df71c2a31c406186300030b5c",
+      "facts": 485,
+      "pages": 84,
+      "bytes": 120205
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:243",
+      "sha256": "a3a277dae22f8ac578dd695bfc9a416037f68c5fa7bbea129d3df2b556d309a0",
+      "facts": 495,
+      "pages": 83,
+      "bytes": 124534
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:244",
+      "sha256": "c6d67ddf038c2d9442e79436e97e7ca89d198e3262c8f586d5c55a5cd58afde1",
+      "facts": 496,
+      "pages": 70,
+      "bytes": 122083
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:245",
+      "sha256": "e127541220893b38a84a09dcec38decabc8b479e18577ec3a149ae6bce1540de",
+      "facts": 497,
+      "pages": 85,
+      "bytes": 123659
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:246",
+      "sha256": "dbf179bd8586897dbf6995f50ba19d55f0035dd9d990010040846c4ce5eab8f2",
+      "facts": 498,
+      "pages": 88,
+      "bytes": 123469
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:247",
+      "sha256": "b98d5cb5055f65a36b5a8e992eb32dd7f183a4e30bf8d201b396197b0b37cee9",
+      "facts": 498,
+      "pages": 88,
+      "bytes": 122961
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:248",
+      "sha256": "6151e4f4580ae55fcec1e62790cddd6c472068e429c4a10dcf712568d9cc41ef",
+      "facts": 500,
+      "pages": 83,
+      "bytes": 124678
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:249",
+      "sha256": "7fa809af348731ca3a83ec7a4506694297b5f35f7cb819dfb5eee1c56d0a9711",
+      "facts": 500,
+      "pages": 83,
+      "bytes": 124068
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:250",
+      "sha256": "8fffb03d20cee3ecf5c74bdc275510148fc2e7e1676bd6422ba0939ccfa099d5",
+      "facts": 500,
+      "pages": 90,
+      "bytes": 123977
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:251",
+      "sha256": "af4792cb3925f97616670255f10e4ed4a9505c820e12d886559253d7154866b4",
+      "facts": 495,
+      "pages": 89,
+      "bytes": 125950
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:252",
+      "sha256": "1eee1caaa353913fa1baa207d39900964823cb3348dd9460d051883d61362757",
+      "facts": 486,
+      "pages": 73,
+      "bytes": 119710
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:253",
+      "sha256": "e5cde6f2d1916dc98eb9579d1908d94dbf0972658295aa0106e3311a80fa4051",
+      "facts": 500,
+      "pages": 82,
+      "bytes": 125242
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:254",
+      "sha256": "816a92b1096e8df8e41503534c8284ffef329e7668b55ce8ad23ed7c35d851cd",
+      "facts": 499,
+      "pages": 88,
+      "bytes": 127258
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:255",
+      "sha256": "922af4583451b3c24ddb3a8b0b16dda99b86a0f486b772d9a58a209f59aa7bfb",
+      "facts": 491,
+      "pages": 94,
+      "bytes": 124668
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:256",
+      "sha256": "7549f04ca8a33f457671675911b35b29b64457af9d3e10a7478e00fa7dabc554",
+      "facts": 495,
+      "pages": 80,
+      "bytes": 122994
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:257",
+      "sha256": "79a58a269c915db1254e1afa5232bd090b7c72c720b200cc6f28455d07a318bb",
+      "facts": 500,
+      "pages": 91,
+      "bytes": 127187
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:258",
+      "sha256": "db282e9bbf2dd621c20d85a2d166b9f3d9f582ecc0d665c8ea169d29d5453daa",
+      "facts": 485,
+      "pages": 82,
+      "bytes": 120811
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:259",
+      "sha256": "c90144830c64cb558a4ab27b417b566a4bd1c9c2c03ba5ebe1a2727a4c446144",
+      "facts": 499,
+      "pages": 77,
+      "bytes": 125895
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:260",
+      "sha256": "259f0fdd265151eb747c0d63c38fec943d56dbf3ceadf40f68403a429ba70b59",
+      "facts": 498,
+      "pages": 88,
+      "bytes": 125350
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:261",
+      "sha256": "e1fcba29ed5f7c94f1065febaa59b0a1d898f5b173366d580b9e01be5a2b684d",
+      "facts": 499,
+      "pages": 69,
+      "bytes": 124492
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:262",
+      "sha256": "97ca032691a65d1561327886c24458364cc33df405224d3d2320154c7f2f440f",
+      "facts": 497,
+      "pages": 90,
+      "bytes": 124770
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:263",
+      "sha256": "bcdb446229015eda2a88dd3bb026fec662725921048a9003af505450724001bd",
+      "facts": 497,
+      "pages": 82,
+      "bytes": 124516
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:264",
+      "sha256": "fd3a4ca4c971bf5d710de18d8eb463039a02dc7c8c56290eb8bcd4b63adf0bf2",
+      "facts": 494,
+      "pages": 87,
+      "bytes": 124386
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:265",
+      "sha256": "e1bcb450179a17fe3fcee0abbab66a78b2d31f7a12908065d13b4d1a4964b029",
+      "facts": 498,
+      "pages": 69,
+      "bytes": 123190
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:266",
+      "sha256": "5183fd421008f17fb627528222ddc6134ad3f9c06d180471be4edff8d8f36034",
+      "facts": 500,
+      "pages": 85,
+      "bytes": 123637
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:267",
+      "sha256": "2131a66a4031832c92d8607a10eb2125d0d23209cd94c19d7a4eceef4700fcc7",
+      "facts": 499,
+      "pages": 81,
+      "bytes": 125939
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:268",
+      "sha256": "bc12f62f7f460c9eb4f2726bf13c43dbf26bb16675c9365a52372475e44d0459",
+      "facts": 498,
+      "pages": 86,
+      "bytes": 126098
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:269",
+      "sha256": "428787f4f5d9303b60767eb6300a559d77d027c20702b8aadfa84db43b2d0f78",
+      "facts": 497,
+      "pages": 90,
+      "bytes": 124811
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:270",
+      "sha256": "4373eebe761555f1e25fa1082e0a1337defec7125c1d0ae31f7fbe32f4a52ef8",
+      "facts": 499,
+      "pages": 106,
+      "bytes": 129017
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:271",
+      "sha256": "54dd3231e0ea83cacefaac797527ad557461e0e27017ff201cafa3f313f1efa1",
+      "facts": 497,
+      "pages": 97,
+      "bytes": 126195
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:272",
+      "sha256": "3a9789109ecdb4b1519b0110a35dce8a77194ca2104533a008c79b8772595bcb",
+      "facts": 499,
+      "pages": 88,
+      "bytes": 122188
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:273",
+      "sha256": "8b2c2f844b4b99a47b3c57dca3314d9d96176c045eae339a84f3713195de1160",
+      "facts": 499,
+      "pages": 92,
+      "bytes": 133320
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:274",
+      "sha256": "654f3de77205df694975ea41b7a107cd2f46eb6cb23f5c003916f2feab725d5c",
+      "facts": 498,
+      "pages": 94,
+      "bytes": 127813
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:275",
+      "sha256": "8dd9826c4d525bf510d3638579e8f232184144656f21a94a4670cf8b6fca1d47",
+      "facts": 499,
+      "pages": 77,
+      "bytes": 124951
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:276",
+      "sha256": "e6370a322628ccfc91088fae778db94f5fa06870f1b9d6d3e4c84831b248e398",
+      "facts": 500,
+      "pages": 82,
+      "bytes": 131973
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:277",
+      "sha256": "a866dcb66f70bb53c3d221b1189d22f141e5b45eed67c6b77a9bb0eeb2e1e968",
+      "facts": 499,
+      "pages": 88,
+      "bytes": 125946
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:278",
+      "sha256": "885daf511cb97e98b036192a67054a4afa00fcbe2b59df4cc48f42606824e06c",
+      "facts": 500,
+      "pages": 86,
+      "bytes": 126264
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:279",
+      "sha256": "1ca7c9afec4a875c1e745ea754b29b5dae1726bf8caac268ef4b111184977999",
+      "facts": 496,
+      "pages": 86,
+      "bytes": 126286
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:280",
+      "sha256": "ba054ce0d98758ed116ce80267e6dd065d317cac55c44d0968ff607c66b2841c",
+      "facts": 495,
+      "pages": 75,
+      "bytes": 123280
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:281",
+      "sha256": "223ed824a90f2bbba819a5978875f17fda463005de07a2620655b305f3ee6f80",
+      "facts": 499,
+      "pages": 92,
+      "bytes": 124916
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:282",
+      "sha256": "3a45a8857b8e223777a700a30dfb02c24eeb525110cc0994cc9be488e998f42f",
+      "facts": 499,
+      "pages": 85,
+      "bytes": 126360
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:283",
+      "sha256": "c5077ff42ace24c0e5941f3e31fad1e243b6d99575862c9730eec2f1e234b175",
+      "facts": 493,
+      "pages": 81,
+      "bytes": 126481
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:284",
+      "sha256": "7153663d0d53571b563406d6394e50c40a757cdc04f20ef4211671936d27dfd1",
+      "facts": 500,
+      "pages": 79,
+      "bytes": 129142
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:285",
+      "sha256": "401170e985293d1c73ac0c2db8e8bf7cb329582e20d33998e32d6d2d61c7568a",
+      "facts": 499,
+      "pages": 87,
+      "bytes": 124283
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:286",
+      "sha256": "361f9e1988e7b8bc334094a9959d4a46776e2c07d7e509134ce44721029a99e2",
+      "facts": 495,
+      "pages": 80,
+      "bytes": 124264
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:287",
+      "sha256": "d7e20f7d8d05d1c46c122d0e878d8b1fe1120aa69a8c01ebdd54c1f14b3fa8f7",
+      "facts": 499,
+      "pages": 93,
+      "bytes": 129776
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:288",
+      "sha256": "bcffb296726744efd2d11d6c7349ff2e567ac37a3b4f69a2e884d46cb053785b",
+      "facts": 499,
+      "pages": 92,
+      "bytes": 130040
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:289",
+      "sha256": "94c003620e7d1870606e2417230e36122902f4f87601cfcd3ecd91f528dab7ad",
+      "facts": 500,
+      "pages": 92,
+      "bytes": 130812
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:290",
+      "sha256": "b2af53dff6a200847335c4201fb58b25152287c21773580eac5d819c6328b913",
+      "facts": 496,
+      "pages": 98,
+      "bytes": 129112
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:291",
+      "sha256": "37f3fcc0cbbafd63a63e79e81d51f8026dee8ce509ff20aaa3ca6d7c85a14ecf",
+      "facts": 500,
+      "pages": 93,
+      "bytes": 125920
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:292",
+      "sha256": "b558a02314a8d36a0db99800afcb6f11bc36f58949b4cb2ed4265f824b7c20a7",
+      "facts": 499,
+      "pages": 88,
+      "bytes": 126158
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:293",
+      "sha256": "031d9a4085a927fabce8dd46b2a566230ae6a1d9494d604d664d1f4058865fbc",
+      "facts": 500,
+      "pages": 91,
+      "bytes": 123968
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:294",
+      "sha256": "428fdb93b2e4e2c8a45a0796f53095109dc59a77cd276002b990ffe5864267a7",
+      "facts": 497,
+      "pages": 98,
+      "bytes": 123497
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:295",
+      "sha256": "f12300f9bba4d265a02040aa1b11c80f08b82f29f8b9336a61b5fba062fe4bc7",
+      "facts": 498,
+      "pages": 94,
+      "bytes": 129299
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:296",
+      "sha256": "a1b1db540898fe99890495ffc5149eca6f5351c030df356fc94db48cd2c87ed1",
+      "facts": 498,
+      "pages": 93,
+      "bytes": 126058
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:297",
+      "sha256": "2dd781573c06a6a48cd24e24e1ba3dacf414560b9475ce15ac6c295eda801d62",
+      "facts": 498,
+      "pages": 88,
+      "bytes": 126745
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:298",
+      "sha256": "7d254fd5baa2e6b7b2ad98898f43db3e6a63a5c048be9a97df1a58d6311674d4",
+      "facts": 500,
+      "pages": 78,
+      "bytes": 124115
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:299",
+      "sha256": "f17f52ab9a2202af5fb65446caacc9f1f7865469381322d24ab0c27363cfcef3",
+      "facts": 497,
+      "pages": 80,
+      "bytes": 126562
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:300",
+      "sha256": "34dff54afcd4a67d1efdf6a18be77bdc082124446a89eaacedfe38512446e6eb",
+      "facts": 500,
+      "pages": 88,
+      "bytes": 130110
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:301",
+      "sha256": "96fc661938adefd69f42b9193765df623d87f9e2bfd98b5dc730f4509d31fd0a",
+      "facts": 482,
+      "pages": 86,
+      "bytes": 120826
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:302",
+      "sha256": "3e7c9db86186e4cdcd19ce205b4aa0e9fcf1621c81d1c08bb329991a1f7b6a00",
+      "facts": 484,
+      "pages": 64,
+      "bytes": 119189
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:303",
+      "sha256": "d48ca637f3e9ed9dde4560224328f59f682ecc0122ff0c1171b4f02a837a0ca0",
+      "facts": 499,
+      "pages": 76,
+      "bytes": 126988
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:304",
+      "sha256": "2103a577baaceffb596252da2f6e034c5b51cacc2c9d68d4baf7e86fe7bcac0f",
+      "facts": 499,
+      "pages": 74,
+      "bytes": 128211
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:305",
+      "sha256": "d1011b81c25782474c9015f169a831aa94a5478ddbf5e8dcafbc34ddb813795f",
+      "facts": 499,
+      "pages": 95,
+      "bytes": 128247
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:306",
+      "sha256": "25afb0a73617b9ef8c46d22955c73144ba8775ec6f38ed0fc65caf0fce297abd",
+      "facts": 496,
+      "pages": 77,
+      "bytes": 124531
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:307",
+      "sha256": "de4ff5a8d147ec36664647b40bb12898289904fcbfd1f76262519e7870ce70fe",
+      "facts": 499,
+      "pages": 90,
+      "bytes": 124757
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:308",
+      "sha256": "83081b5a227af371e8215042a94d2049759051d421e4e22b4f6cdebc4a034b77",
+      "facts": 495,
+      "pages": 71,
+      "bytes": 126234
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:309",
+      "sha256": "7f8e5c35267615ab5bea43680e5d950e5b525f48181b8e029ac7f188504072fc",
+      "facts": 499,
+      "pages": 75,
+      "bytes": 125296
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:310",
+      "sha256": "21034dc738e73527546152881f68b0c43cc2b17b05cf1f138f04f432a23ffa08",
+      "facts": 492,
+      "pages": 58,
+      "bytes": 121050
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:311",
+      "sha256": "59ea13f3dc133c874ab0df3a1464f8717e058666d351e166662872a7ddeb16c0",
+      "facts": 495,
+      "pages": 69,
+      "bytes": 122145
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:312",
+      "sha256": "ce4a2550797ec8745cd14ad8d1d24d4c4bfcc2a8ed8aa522987b0da5a76b44b1",
+      "facts": 491,
+      "pages": 62,
+      "bytes": 121369
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:313",
+      "sha256": "1fe93d875bb2c7d1e2094aba28f0bbbdc3718feec3beca4dd3a4f8a5a8d284e1",
+      "facts": 485,
+      "pages": 76,
+      "bytes": 122694
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:314",
+      "sha256": "89c7051470d477279fe5dd3d5adfc66b2a999f2de18beff8c149666e23e5a98a",
+      "facts": 496,
+      "pages": 63,
+      "bytes": 120859
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:315",
+      "sha256": "4419d7e6cceda9edad1c8d3720373290d3eec033adc4d07aea27554a1c37cb3d",
+      "facts": 499,
+      "pages": 92,
+      "bytes": 126714
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:316",
+      "sha256": "958ab7784acd13a074766e1ba5e62846d5e23c600fe2dde6ce857b85931e1f3f",
+      "facts": 499,
+      "pages": 86,
+      "bytes": 125146
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:317",
+      "sha256": "b37710d39cba53f880796fd224293d571c553e0131fcecf233f33fc5bdce9161",
+      "facts": 493,
+      "pages": 74,
+      "bytes": 121892
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:318",
+      "sha256": "447e178d1d8b415ffa9eca6bbffd9e441f423d4665f79ea150925bc7c54c19ca",
+      "facts": 500,
+      "pages": 79,
+      "bytes": 124559
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:319",
+      "sha256": "47426c8f59fb91ec0e0485bf57155058c862bdbdf29d5d4cce541c9741404e9c",
+      "facts": 500,
+      "pages": 76,
+      "bytes": 128686
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:320",
+      "sha256": "ef5c89d7b1f19162c3d3374f81183965baceebd1b37dd77321c5f0517f473731",
+      "facts": 495,
+      "pages": 75,
+      "bytes": 124169
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:321",
+      "sha256": "4ed0417ef7126a41779d282a1cc2e92eea0955338f561897d275b67fee6ec86a",
+      "facts": 498,
+      "pages": 76,
+      "bytes": 123048
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:322",
+      "sha256": "d3230bd278778647ba4fcb7c4a8ff18913aa1adf827a014d54c062a3e49d6f3e",
+      "facts": 496,
+      "pages": 85,
+      "bytes": 123628
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:323",
+      "sha256": "029b38c33c73cd7abc7b6bc11cc21287d4bd94441edc760c56b0ae151be7ccaa",
+      "facts": 499,
+      "pages": 92,
+      "bytes": 122642
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:324",
+      "sha256": "dff70e54dcc9297d2ce24785d33b616a9db98a2d4ac3a56f0298421b93a70ee2",
+      "facts": 496,
+      "pages": 90,
+      "bytes": 125023
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:325",
+      "sha256": "d0d8cf0bf5de37efe3c9eb7ccbd9733dd0228a0d05f5796cb22490675ca5bd95",
+      "facts": 496,
+      "pages": 77,
+      "bytes": 122852
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:326",
+      "sha256": "0d6e0956524645984b49e1d7e8ca223f3ef260e081fc9ffb69eef27292bb2078",
+      "facts": 499,
+      "pages": 84,
+      "bytes": 124959
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:327",
+      "sha256": "c1ef4c1a29f5491639259fbaf4a36e51577db85f491c312ddb2573a9bc38cc06",
+      "facts": 500,
+      "pages": 66,
+      "bytes": 123056
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:328",
+      "sha256": "1d28055abe2cc80a2f893af11c76d84db8f918bf1e80d4b6f9a135fb63796a88",
+      "facts": 498,
+      "pages": 85,
+      "bytes": 122919
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:329",
+      "sha256": "f209af94753cce7d12e95da64e8fd411f13e92b65ebda6d094c30f25d6434392",
+      "facts": 496,
+      "pages": 77,
+      "bytes": 128014
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:330",
+      "sha256": "0fed7d4a77f72e1eefa661224644596e38f1c2ee66cb028e571d84fbd0d9936e",
+      "facts": 500,
+      "pages": 73,
+      "bytes": 122782
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:331",
+      "sha256": "e969c6abb85c20bdd8db2099a0c84fe00ceb2aff021d49613224b3567c0407a3",
+      "facts": 498,
+      "pages": 66,
+      "bytes": 122005
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:332",
+      "sha256": "561a860ae6a1865a93ae754ea0a75988c0774747d29201f31b483d2dcb372af2",
+      "facts": 497,
+      "pages": 84,
+      "bytes": 123915
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:333",
+      "sha256": "635289f96515e58a7af682574f1795e8505c7501fc45ff997477521a9af09da4",
+      "facts": 498,
+      "pages": 87,
+      "bytes": 126903
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:334",
+      "sha256": "9b6c7d3c45704e7d889aad5188b91b22588959aa7af80b010960a0ac4856695f",
+      "facts": 495,
+      "pages": 104,
+      "bytes": 132147
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:335",
+      "sha256": "f8f9c402aa2bbce8c53921f0ffb2315963941a71b1880cd4e89a020d422c8ab4",
+      "facts": 500,
+      "pages": 107,
+      "bytes": 130039
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:336",
+      "sha256": "670ccdbae019555fe0fd34be1257b5ff8a77f6b5a28b627f6091cd5d6bc52266",
+      "facts": 492,
+      "pages": 89,
+      "bytes": 133207
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:337",
+      "sha256": "2689127b4f3f413b64996f498a174122435bed43cb2037b831713d630ccbd9ac",
+      "facts": 498,
+      "pages": 85,
+      "bytes": 131725
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:338",
+      "sha256": "fbf1fb769e8bbbba5242da8b9c8f3d6913c9794585495c3e833cec22ea086a0a",
+      "facts": 497,
+      "pages": 95,
+      "bytes": 127344
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:339",
+      "sha256": "312a820daa764173a3eca7673e6bcffd0786b48df78166b73e14c37c8d9182df",
+      "facts": 491,
+      "pages": 91,
+      "bytes": 127981
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:340",
+      "sha256": "51afa51b0ea405f783d9a53084143d633871229456657d0390ce38c072e0c363",
+      "facts": 498,
+      "pages": 89,
+      "bytes": 126174
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:341",
+      "sha256": "465646c82047d29c4245de863f3ee641f5dcfc76e3736921b3c548f885eca955",
+      "facts": 500,
+      "pages": 84,
+      "bytes": 127978
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:342",
+      "sha256": "851cadff1bfb969b8c7f3d1542a96f7619b99297a9d2634cfaf57808b1335c79",
+      "facts": 499,
+      "pages": 97,
+      "bytes": 129392
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:343",
+      "sha256": "ad72a93eb419f694fa201b2985e7743e453b3d0d447c10dde1628efa30af5227",
+      "facts": 499,
+      "pages": 98,
+      "bytes": 137458
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:344",
+      "sha256": "d013b0ecbd42f42ca2fae50c43668a3c4e27887589712637478498cfaa65bafb",
+      "facts": 498,
+      "pages": 88,
+      "bytes": 129937
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:345",
+      "sha256": "f9e81085897970439b6f8f366ae486849c8f9b462bc40392181ae4d046df51fe",
+      "facts": 495,
+      "pages": 101,
+      "bytes": 131556
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:346",
+      "sha256": "ecb43a0bec38f67bdd05be01ebd92e20714fe5103eb40caf8f1ac508d773e21c",
+      "facts": 497,
+      "pages": 105,
+      "bytes": 131743
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:347",
+      "sha256": "a5fc929e82fecdb51064df8ed900008443f8399ecbbe3e5aab42498fbd989aaa",
+      "facts": 500,
+      "pages": 118,
+      "bytes": 142394
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:348",
+      "sha256": "b73b5b4d2dbff25eaac984ab2ce4e292986938528df9ab878376e6b8ab89c335",
+      "facts": 496,
+      "pages": 86,
+      "bytes": 125012
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:349",
+      "sha256": "b406ada7875ce7ad8de0e813413eacabce101992e69471cb6959080b4c826108",
+      "facts": 496,
+      "pages": 101,
+      "bytes": 130459
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:350",
+      "sha256": "0ad6cc37c4ef846cd9e9104a878dc8e4cf7782bba8e2a85fca2152fef1925e11",
+      "facts": 499,
+      "pages": 97,
+      "bytes": 132486
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:351",
+      "sha256": "0e8a0e022f5cccfc4862b883cabfc7aebe6c4263aa1d8baf30e62ab06a6ec177",
+      "facts": 495,
+      "pages": 91,
+      "bytes": 130526
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:352",
+      "sha256": "bc29df32df07ac5272a4169865e19789dc3601b57ad0c01e06f45cb804e2f635",
+      "facts": 495,
+      "pages": 92,
+      "bytes": 129054
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:353",
+      "sha256": "791df8ba6cf9ad6e73e671482c61e685c3cd52108d8950ccd4f9006eded63d3d",
+      "facts": 498,
+      "pages": 91,
+      "bytes": 131009
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:354",
+      "sha256": "a203672861aa4f33f8adae331d468c4cbb80ac8f7e98edc3771893f4f77d2802",
+      "facts": 499,
+      "pages": 69,
+      "bytes": 130633
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:355",
+      "sha256": "5f800eb5adf8a63d18c75a532c1172a5c30d07791a411bf1d861cb9a0968917d",
+      "facts": 500,
+      "pages": 85,
+      "bytes": 132830
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:356",
+      "sha256": "57ff7a11486690f82e101ca54c6abdeb617f982c53a24e29aa6d86fdfc1857e2",
+      "facts": 496,
+      "pages": 91,
+      "bytes": 132123
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:357",
+      "sha256": "6d04f9fbf326078b96da8e013f2745e7826513da95b1b961f6f813af2e2a37b6",
+      "facts": 500,
+      "pages": 105,
+      "bytes": 139507
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:358",
+      "sha256": "008f17461858bb9ce2cf5738f3a6cd336824ac503589f5f12aa99e490380997c",
+      "facts": 500,
+      "pages": 112,
+      "bytes": 140614
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:359",
+      "sha256": "972d4e54ec12e17424b4a6dc28f583efb01fdf90b15e0698e90da8b3c1a766d2",
+      "facts": 496,
+      "pages": 115,
+      "bytes": 142392
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:360",
+      "sha256": "9205dc8720c9fa045e505cde557ac868ac57d4d65cdf6d273d622c5a12c887b8",
+      "facts": 500,
+      "pages": 95,
+      "bytes": 137195
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:361",
+      "sha256": "b90916616cfefe8ab0063dde4ca2a0d9b8c2dcbbaa6e5c28414dbe8818e88136",
+      "facts": 499,
+      "pages": 121,
+      "bytes": 144604
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:362",
+      "sha256": "fecd4b83ea1f48bcc1f87b131202804cf3b23a152f0c3330265085bd0a69047f",
+      "facts": 498,
+      "pages": 101,
+      "bytes": 138087
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:363",
+      "sha256": "12bfc6e17078b453b65b8ad9f145c425f7ed70904693001c1ed3bd7df3b05603",
+      "facts": 489,
+      "pages": 109,
+      "bytes": 137361
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:364",
+      "sha256": "9aba77096b057dc327eca9942974a25ffa6c2ead9d9a08246028c4d75d0baece",
+      "facts": 495,
+      "pages": 95,
+      "bytes": 133609
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:365",
+      "sha256": "3ee52d6f9af8a56c79246b1e6d0e01a1937bfb5eba2ab7ab38b3482460833b3f",
+      "facts": 493,
+      "pages": 101,
+      "bytes": 135081
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:366",
+      "sha256": "c2a438f4c5a5b5e36bfd29b1e377544e0737c9632306394533ebe79c8aed6ccf",
+      "facts": 499,
+      "pages": 112,
+      "bytes": 143823
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:367",
+      "sha256": "ab5c24178629deabd7b8c678174972445ba11fd55920d2592d0c164e41e44433",
+      "facts": 500,
+      "pages": 110,
+      "bytes": 138407
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:368",
+      "sha256": "726389b9e1976e5db62b6914c84ababa777d56e8188878927944fe4c1f66d571",
+      "facts": 498,
+      "pages": 93,
+      "bytes": 134216
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:369",
+      "sha256": "2cafc3eadd1cda62f6c7f2b750be4c3dfd48ca1e621deea9408bcd76e0d192ea",
+      "facts": 498,
+      "pages": 112,
+      "bytes": 137810
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:370",
+      "sha256": "ad02b50f8bec714c678b4742da3585fe08c740b44c3e8481fd0e5350f46609f4",
+      "facts": 485,
+      "pages": 104,
+      "bytes": 137835
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:371",
+      "sha256": "afbedc6b04f8bce7b493f3ea3ff38b3625c58509e30ddddc3ba83719c7362313",
+      "facts": 499,
+      "pages": 94,
+      "bytes": 132431
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:372",
+      "sha256": "3a66f1f3b96f47107dbb42b2f71a9e16c34cf9a6aa3b9ece98512d39aebd3558",
+      "facts": 499,
+      "pages": 106,
+      "bytes": 136781
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:373",
+      "sha256": "ced250fd3fbdf2bba014fb39d526733b097164fd8db1b51595812c43c6b0b92f",
+      "facts": 500,
+      "pages": 96,
+      "bytes": 136545
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:374",
+      "sha256": "3be36db2d3ef66799804bab96b0f6ba861fa527a652b461614cba507edfb7208",
+      "facts": 498,
+      "pages": 109,
+      "bytes": 141683
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:375",
+      "sha256": "be7d761b2f72cefd808a62790405230721c30b52d1689e1e0c0c7734e361f518",
+      "facts": 493,
+      "pages": 90,
+      "bytes": 129966
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:376",
+      "sha256": "a0b5b26aa5efd48f2be79a8f6f6415ffd8c548cced6118d7146957e001641e07",
+      "facts": 489,
+      "pages": 94,
+      "bytes": 137728
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:377",
+      "sha256": "990e017a98828bd44d017cd6e8e445375086d88cf9a6917f47c05d35213bf26e",
+      "facts": 494,
+      "pages": 41,
+      "bytes": 121069
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:378",
+      "sha256": "f6d31ccd843c4e60729477603ca9ea2ee5ab1033db6274c4ea1f7af1b98fc376",
+      "facts": 500,
+      "pages": 82,
+      "bytes": 134518
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:379",
+      "sha256": "ac37b662844ce0dbc767d96e4eb28c011164df96eae02e4235bb71168d486565",
+      "facts": 497,
+      "pages": 107,
+      "bytes": 135439
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:380",
+      "sha256": "20c029146106f01d31e9ad49c64058d58d9a391afa564ec590d7e4ac2eb85ff4",
+      "facts": 498,
+      "pages": 95,
+      "bytes": 132791
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:381",
+      "sha256": "28b7b5865e0ad77abbb61a4d200557dd43a7716193665a3c205133d4dfd60ddd",
+      "facts": 498,
+      "pages": 86,
+      "bytes": 133116
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:382",
+      "sha256": "98092fc903f7c6ee6031b64a63f42e9d1f54154d9692b9cdb96ee859521ca646",
+      "facts": 497,
+      "pages": 105,
+      "bytes": 142681
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:383",
+      "sha256": "49ff322e71909f18e55818c2d57b8d9cd144ec8fc7c4d74cf0195abf7a807444",
+      "facts": 491,
+      "pages": 89,
+      "bytes": 130777
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:384",
+      "sha256": "77d9a620e771969833ba6d8a8ae874f6a6907d991b81041dfa8e23da32b35cd0",
+      "facts": 497,
+      "pages": 119,
+      "bytes": 148165
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:385",
+      "sha256": "1153562e60b9f77a42342d48dbf2dac150d721ea4aa2ddee859b0bde64f8b925",
+      "facts": 496,
+      "pages": 108,
+      "bytes": 144321
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:386",
+      "sha256": "c515eb69607c613126cb1bfd9a922fd50ee449312a4347d4b05da4e5053ee66c",
+      "facts": 500,
+      "pages": 124,
+      "bytes": 154511
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:387",
+      "sha256": "65f7b463f5e878f7a3685d45f3f348a123d665d4e39d5d14f256748d256d1e10",
+      "facts": 498,
+      "pages": 90,
+      "bytes": 139634
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:388",
+      "sha256": "e44780c8ae4fb64a06294e0ff03e4952f94723ac6f3667a3c611a7c1e276da24",
+      "facts": 499,
+      "pages": 94,
+      "bytes": 144919
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:389",
+      "sha256": "d3d5f87ea44b5c203d37ea906255d5c870614c38cb4fce3a46515d7ea0f04855",
+      "facts": 500,
+      "pages": 127,
+      "bytes": 167713
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:390",
+      "sha256": "ffc39225e4fe5d2eb0bf4971efd26692a245b7e812f730f2f0234cd4b0c8df4c",
+      "facts": 499,
+      "pages": 101,
+      "bytes": 138124
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:391",
+      "sha256": "9f0e70732b5e5d4fdc1b43a3640dd042c1c15b026a51deae42f2b96617448e74",
+      "facts": 498,
+      "pages": 97,
+      "bytes": 138357
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:392",
+      "sha256": "d7d3d54653a730176a1773fbcf0a02817eeb336bc97cda85866e11a8281b49f6",
+      "facts": 498,
+      "pages": 112,
+      "bytes": 145705
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:393",
+      "sha256": "b0c955348b2739e0b93472dc3c415aadca11266dc860250df199476174b3c564",
+      "facts": 500,
+      "pages": 103,
+      "bytes": 143632
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:394",
+      "sha256": "1e1fc694c952a43ecd92b2cd77bd21e39f94fece4cc5ffacd8963c7bc5050269",
+      "facts": 496,
+      "pages": 112,
+      "bytes": 143774
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:395",
+      "sha256": "d2aa3960fea402147e2d4998595f18f98a75fbb4e8fffcee3a610c4a48692a7e",
+      "facts": 500,
+      "pages": 103,
+      "bytes": 136659
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:396",
+      "sha256": "de0e56e77f159920d7fdbf159854c54b18fca20bf4f93ae76526306f71e287a9",
+      "facts": 499,
+      "pages": 82,
+      "bytes": 130125
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:397",
+      "sha256": "1f60f2cdd9a653352f04e8bc50c5b0bcb601851fc68e677657b31beb93b29e64",
+      "facts": 500,
+      "pages": 115,
+      "bytes": 144824
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:398",
+      "sha256": "302d97e2792171c485168374cb410f5b589a928a1477c592ce0e1f69e851de75",
+      "facts": 500,
+      "pages": 102,
+      "bytes": 143421
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:399",
+      "sha256": "10d2548fa202248e220e75cbdf588e80436ba09b55a6077adb1e2b51924fe029",
+      "facts": 484,
+      "pages": 77,
+      "bytes": 129407
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:400",
+      "sha256": "61447ab7fe8a3885195a895c4206f340923e5e4801be3d23ab59cf6e005d5f26",
+      "facts": 500,
+      "pages": 100,
+      "bytes": 138717
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:401",
+      "sha256": "3dd9a7b141f22645618908e59537c66f981c8b12885686217f87e3387521c7e0",
+      "facts": 495,
+      "pages": 100,
+      "bytes": 134486
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:402",
+      "sha256": "69409f8525a965aad9a439985de0710592a3272d8603a43d7aba1cbaddc5ec34",
+      "facts": 496,
+      "pages": 119,
+      "bytes": 152490
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:403",
+      "sha256": "2d7af9e63dc016485372d19b1e6a6f57be87e2c3683204a7a53d3c7896c719a7",
+      "facts": 499,
+      "pages": 126,
+      "bytes": 152250
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:404",
+      "sha256": "5a38e650be576f99cb2f7b88cbc72ae754433d4cf67cabea2686faab0a34346a",
+      "facts": 496,
+      "pages": 113,
+      "bytes": 149936
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:405",
+      "sha256": "10b3d89eed631568cd9413410db17ec8ffbb64f771ac025ed081dee438403f47",
+      "facts": 496,
+      "pages": 103,
+      "bytes": 146225
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:406",
+      "sha256": "4493354c798bbc1e3bcf0f0b3386f81dfcc253d4ebb9ce990913bd6c7df71bf8",
+      "facts": 500,
+      "pages": 101,
+      "bytes": 142955
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:407",
+      "sha256": "ddddead50362ec1e6dbd5f14196f43f0f6dbf61cef22a5333a52af9070927076",
+      "facts": 500,
+      "pages": 124,
+      "bytes": 153511
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:408",
+      "sha256": "9ab29b5ce8c13e80790cecd2bd8a908f6646e0d4621811cb682e368bf6333553",
+      "facts": 500,
+      "pages": 137,
+      "bytes": 170764
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:409",
+      "sha256": "dc8df6b2367a20f1a2453fc734dbc428c278dffeba81a257a6f8ce868bf78a64",
+      "facts": 500,
+      "pages": 126,
+      "bytes": 161899
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:410",
+      "sha256": "75eb1d59ba8fde349c5f793a332827bfdb07708714ddcacf8710755a7f06c7f2",
+      "facts": 499,
+      "pages": 122,
+      "bytes": 164583
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:411",
+      "sha256": "e069038519d34ec6ce5f938cb90350b5f5af8c4169aa3172e477fcd7bf8f53f0",
+      "facts": 500,
+      "pages": 125,
+      "bytes": 162352
+    },
+    {
+      "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:pages10:412",
+      "sha256": "4c118f88a2f9a8c001e3b500ecaa13d8c51035e4191425e2c66f4bd9a4db9624",
+      "facts": 73,
+      "pages": 20,
+      "bytes": 22528
+    }
+  ]
+}

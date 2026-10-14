@@ -6,6 +6,8 @@ import { serviceWorker } from "@leostera/poneglyph-worker/config";
 export const playgroundBindings = {
   PONEGLYPH: bindings.worker({ worker: serviceWorker, props: { clientId: "playground" } }),
   MCP_RATE_LIMITER: bindings.rateLimit({ namespace: "2026101401", simple: { limit: 30, period: 60 } }),
+  PONEGLYPH_IMPORT: bindings.worker({ worker: serviceWorker, props: { clientId: "playground-importer" } }),
+  IMPORT_RATE_LIMITER: bindings.rateLimit({ namespace: "2026101403", simple: { limit: 60, period: 60 } }),
 };
 export const seedBindings = {
   PONEGLYPH: bindings.worker({ worker: serviceWorker, props: { clientId: "playground-loader" }, dev: { remote: true } }),
