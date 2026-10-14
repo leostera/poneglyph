@@ -6,8 +6,12 @@ import { promisify } from "node:util";
 import { setTimeout as sleep } from "node:timers/promises";
 import { parseApprovedBatch, parseImportPlan } from "../src/import-contract.js";
 
-const segment = process.argv[2] ?? "pages10";
-if (segment !== "pages10" && segment !== "remainder90") throw new Error("Choose pages10 or remainder90");
+const args = process.argv.slice(2);
+const segment = args.find(arg => arg === "pages10" || arg === "remainder90") ?? "pages10";
+if (args.some(arg => arg !== segment && !arg.startsWith("--max-batches="))) throw new Error("Unexpected import runner argument");
+const batchLimitArgument = args.find(arg => arg.startsWith("--max-batches="));
+const batchLimit = batchLimitArgument === undefined ? undefined : Number(batchLimitArgument.slice("--max-batches=".length));
+if (batchLimit !== undefined && (!Number.isSafeInteger(batchLimit) || batchLimit <= 0)) throw new Error("--max-batches must be a positive integer");
 const directory = resolve(import.meta.dirname, `../.artifacts/import/${segment}`);
 const stored = await readFile(resolve(directory, "manifest.json"), "utf8");
 const planFile = segment === "pages10" ? "import-plan.json" : `import-plan-${segment}.json`;
@@ -25,11 +29,13 @@ for (const line of history.trim().split("\n").filter(Boolean)) {
   else throw new Error("Invalid journal phase");
 }
 if (lastPhase) throw new Error(`Unresolved original batch ${next}: explicit same-ID reconciliation is required, no automatic retry`);
+if (batchLimit !== undefined && batchLimit > plan.batches.length) throw new Error("--max-batches exceeds the approved plan length");
+const stopAt = Math.min(plan.batches.length, next + (batchLimit ?? plan.batches.length));
 const journal = await open(journalPath, "a");
 const run = promisify(execFile);
 let completed = false;
 try {
-  for (; next < plan.batches.length; next++) {
+  for (; next < stopAt; next++) {
     const batch = plan.batches[next];
     const file = resolve(directory, `${next}.json`);
     const bytes = await readFile(file);
@@ -65,8 +71,9 @@ try {
     console.log(JSON.stringify({ batch: next, batches: plan.batches.length, facts: batch.facts, commitSeq: response.commitSeq }));
     if (next + 1 < plan.batches.length) await sleep(1100); // serial backpressure, separate 60/min import bucket
   }
-  completed = true;
+  completed = next === plan.batches.length;
 } finally { await journal.close(); }
+if (!completed) console.log(JSON.stringify({ status: "paused-at-acknowledged-boundary", nextBatch: next, totalBatches: plan.batches.length }));
 if (completed) {
   const journalHash = createHash("sha256").update(await readFile(journalPath)).digest("hex");
   const result = { at: new Date().toISOString(), service: plan.service, graphId: plan.graphId, selectedPages: plan.selectedPages, selectedFacts: plan.selectedFacts,
