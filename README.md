@@ -40,13 +40,14 @@ This is a Bun workspace. Install **Bun 1.4.2** and **Node.js 26**: Bun manages d
 | [`packages/poneglyph`](packages/poneglyph/) | Library, client and canonical database Worker |
 | [`packages/conformance`](packages/conformance/) | Independent correctness oracle and disk-backed E2E harness |
 | [`packages/write-path-bench`](packages/write-path-bench/) | Private write-path benchmark harness |
+| `packages/example-*` | Six individually built, typechecked and offline-tested examples |
 
 One root `bun.lock` pins dependencies. Private harnesses link the library with `workspace:*`, consuming its built package exports. From the repository root:
 
 ```sh
 bun install --frozen-lockfile
-bun run check          # all package types and unit/adapter tests; no load benchmark
-bun run build          # portable package + local Worker bundle
+bun run check          # all package types, unit/adapter tests and offline example tests
+bun run build          # portable package + local Worker + all six example bundles
 bun run test:focused   # focused warm/cold E2E regressions
 # bun run test:small   # explicit full 68-case warm/cold checkpoint
 ```
@@ -66,11 +67,10 @@ bun run dev
 Use the local URL printed by `bun run dev` as `PONEGLYPH_URL`, then run the typed client example in a second terminal:
 
 ```sh
-cd packages/poneglyph
-PONEGLYPH_URL=http://127.0.0.1:5173 bun run example:client
+PONEGLYPH_URL=http://127.0.0.1:5173 bun run --cwd packages/example-client-quickstart run
 ```
 
-The example uses `createDatabase`, defines a graph-scoped handle, writes facts with a caller-provided idempotency key, and runs a Datalog query. The Worker API also supports a point entity read at `/v1/graphs/{graphId}/entities?uri=...`. Graph IDs use lowercase letters, digits, and hyphens. Query results include the committed snapshot sequence.
+Each example has its own `build`, `typecheck`, `check`, `test` and explicit `run` command. The default workspace gates never run the cloud smoke/load entrypoints. The quickstart uses `createDatabase`, defines a graph-scoped handle, writes facts with a caller-provided idempotency key, and runs a Datalog query. The Worker API also supports a point entity read at `/v1/graphs/{graphId}/entities?uri=...`. Graph IDs use lowercase letters, digits, and hyphens. Query results include the committed snapshot sequence.
 
 There is one storage implementation under `packages/poneglyph/src/storage/`, promoted from G. Each graph has a request facade, sixteen entity-owner roots and sixteen pooled transaction ledgers. Conflicting entities and topology changes are fenced; independent owners may progress concurrently. Queries use a leased owner vector—not one graph-global commit order. This is still experimental: neither universal correctness nor full-delivery/hosted performance is established. See [the canonical implementation decision](docs/rfds/RFD0005-write-path-experiment.md#current-direction-one-implementation-2026-10-14). Multiple graph IDs remain separate graphs, not transparent partitions.
 

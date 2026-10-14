@@ -19,6 +19,73 @@
         "typescript": "5.9.3",
       },
     },
+    "packages/example-capacity-simulation": {
+      "name": "@poneglyph/example-capacity-simulation",
+      "dependencies": {
+        "@leostera/poneglyph": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "25.6.0",
+        "esbuild": "0.28.2",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+      },
+    },
+    "packages/example-client-quickstart": {
+      "name": "@poneglyph/example-client-quickstart",
+      "dependencies": {
+        "@leostera/poneglyph": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "25.6.0",
+        "esbuild": "0.28.2",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+      },
+    },
+    "packages/example-deployed-benchmark": {
+      "name": "@poneglyph/example-deployed-benchmark",
+      "devDependencies": {
+        "@types/node": "25.6.0",
+        "esbuild": "0.28.2",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+      },
+    },
+    "packages/example-deployed-smoke": {
+      "name": "@poneglyph/example-deployed-smoke",
+      "devDependencies": {
+        "@types/node": "25.6.0",
+        "esbuild": "0.28.2",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+      },
+    },
+    "packages/example-deployed-todo-smoke": {
+      "name": "@poneglyph/example-deployed-todo-smoke",
+      "dependencies": {
+        "ws": "8.21.0",
+      },
+      "devDependencies": {
+        "@types/node": "25.6.0",
+        "esbuild": "0.28.2",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+      },
+    },
+    "packages/example-onepiece-load": {
+      "name": "@poneglyph/example-onepiece-load",
+      "dependencies": {
+        "@leostera/poneglyph": "workspace:*",
+        "saxes": "6.0.0",
+      },
+      "devDependencies": {
+        "@types/node": "25.6.0",
+        "esbuild": "0.28.2",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+      },
+    },
     "packages/poneglyph": {
       "name": "@leostera/poneglyph",
       "version": "0.1.0",
@@ -27,12 +94,9 @@
         "@cloudflare/vitest-plugin": "1.4.0",
         "@types/node": "25.6.0",
         "cf": "1.0.0-beta.14",
-        "saxes": "6.0.0",
-        "tsx": "^4.23.15",
         "typescript": "5.9.3",
         "vite": "8.3.4",
         "vitest": "4.1.7",
-        "ws": "8.21.0",
       },
     },
     "packages/write-path-bench": {
@@ -203,6 +267,18 @@
     "@oxc-project/types": ["@oxc-project/types@0.153.0", "", {}, "sha512-jSNrRIyvPVLL5E1z/tS5zLAprosGz/FuI1PWwEOz59j3E4TTTzSpqKb/RDGqJhhW0QHYISGXxq582wGx6T11Tw=="],
 
     "@poneglyph/conformance-tests": ["@poneglyph/conformance-tests@workspace:packages/conformance"],
+
+    "@poneglyph/example-capacity-simulation": ["@poneglyph/example-capacity-simulation@workspace:packages/example-capacity-simulation"],
+
+    "@poneglyph/example-client-quickstart": ["@poneglyph/example-client-quickstart@workspace:packages/example-client-quickstart"],
+
+    "@poneglyph/example-deployed-benchmark": ["@poneglyph/example-deployed-benchmark@workspace:packages/example-deployed-benchmark"],
+
+    "@poneglyph/example-deployed-smoke": ["@poneglyph/example-deployed-smoke@workspace:packages/example-deployed-smoke"],
+
+    "@poneglyph/example-deployed-todo-smoke": ["@poneglyph/example-deployed-todo-smoke@workspace:packages/example-deployed-todo-smoke"],
+
+    "@poneglyph/example-onepiece-load": ["@poneglyph/example-onepiece-load@workspace:packages/example-onepiece-load"],
 
     "@poneglyph/write-path-bench": ["@poneglyph/write-path-bench@workspace:packages/write-path-bench"],
 

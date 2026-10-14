@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 const DEFAULT_BASE_URL = "https://poneglyph-scaleout-20261011.poneglyph.leostera.dev";
 const baseUrl = (process.env["PONEGLYPH_CLOUDFLARE_URL"] ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const endpoint = new URL(baseUrl);
   if (endpoint.protocol !== "https:" || !endpoint.hostname.endsWith(".poneglyph.leostera.dev")) {
     throw new Error("deployed validation must use an HTTPS host under *.poneglyph.leostera.dev");
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   }, null, 2));
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
@@ -105,7 +105,9 @@ async function postJson(url: string, body: unknown): Promise<Record<string, unkn
   return result;
 }
 
-void main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.stack ?? error.message : String(error));
-  process.exitCode = 1;
-});
+if (import.meta.main) {
+  void main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

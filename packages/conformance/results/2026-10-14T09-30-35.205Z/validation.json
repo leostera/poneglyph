@@ -1,0 +1,36 @@
+{
+  "kind": "bun-workspace-canonical-correctness-checkpoint",
+  "revision": "781305a985ad8b210fcaea1c6ece295d6964bf09",
+  "bun": "1.4.2",
+  "packageTests": 80,
+  "oracleTests": 76,
+  "benchmarkHarnessTests": 7,
+  "phases": 136,
+  "failures": 0,
+  "actualProcessGroupKills": 3,
+  "persistence": {
+    "state": "closed-raw-retained",
+    "archiveVerified": false,
+    "allHostStartsHaveExits": true,
+    "lastHostExitCode": 0
+  },
+  "historicalEvidenceFilesVerifiedUnchanged": 219,
+  "comprehensiveSmallComplete": false,
+  "logs": [
+    {
+      "name": "run.log",
+      "rawSha256": "176668a730e0278a36b9a54b81b329d139224b32dd3ca189d99b081c6987cb0e",
+      "gzipSha256": "793da01ee6cebbdb54ebfb64ce71e80791476a16fc2701a501b79519b51963c9"
+    },
+    {
+      "name": "workspace-check.log",
+      "rawSha256": "fddd5631fb2ec7e86b36d6b19811d1ab8fba3a46edbf75c5af55c5735bcd63e3",
+      "gzipSha256": "196694b4efebfd63cf9f4c7d6d3d0001c85cb89ea451fe3723f2b10c8f6f1ab8"
+    },
+    {
+      "name": "native-process.log",
+      "rawSha256": "f5f389388f3b41c53c4ff65d8921c91165d0ecbedd8d13fcac9c3de8346e71e7",
+      "gzipSha256": "eb997ee1675f767f157d162742acc2f57d03b5a4a1a7bf0151d4839015b68315"
+    }
+  ]
+}

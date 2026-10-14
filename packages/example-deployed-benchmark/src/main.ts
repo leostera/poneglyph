@@ -8,7 +8,7 @@ const queryCount = boundedInteger("PONEGLYPH_CLOUDFLARE_QUERIES", 10, 2, 100);
 const concurrency = boundedInteger("PONEGLYPH_CLOUDFLARE_CONCURRENCY", 2, 1, 4);
 const transientStatuses = new Set([423, 429, 500, 502, 503, 520, 521, 522, 523, 524, 525, 526, 530]);
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const endpoint = new URL(baseUrl);
   if (endpoint.protocol !== "https:" || !endpoint.hostname.endsWith(".poneglyph.leostera.dev")) {
     throw new Error("Cloudflare benchmark requires HTTPS beneath *.poneglyph.leostera.dev");
@@ -133,7 +133,7 @@ async function fetchWithRetry(url: string, body: string, cookie?: string): Promi
   throw new Error(`request to ${url} failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
 }
 
-async function benchmarkWrites(
+export async function benchmarkWrites(
   count: number,
   parallelism: number,
   run: (index: number) => Promise<JsonResult>,
@@ -212,14 +212,14 @@ function fact(entity: string, field: string, value: Readonly<{ type: "text" | "r
   return { source: "fixture:cloudflare-benchmark", entity, field, value, retraction: false };
 }
 
-function summarize(values: readonly number[]): Readonly<{ p50: number; p95: number; p99: number }> {
+export function summarize(values: readonly number[]): Readonly<{ p50: number; p95: number; p99: number }> {
   const sorted = [...values].sort((a, b) => a - b);
   return { p50: round(percentile(sorted, 0.5)), p95: round(percentile(sorted, 0.95)), p99: round(percentile(sorted, 0.99)) };
 }
 function percentile(sorted: readonly number[], fraction: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * fraction) - 1)] ?? 0;
 }
-function boundedInteger(name: string, fallback: number, minimum: number, maximum: number): number {
+export function boundedInteger(name: string, fallback: number, minimum: number, maximum: number): number {
   const raw = process.env[name];
   if (raw === undefined) return fallback;
   const parsed = Number(raw);
@@ -230,7 +230,9 @@ function round(value: number): number { return Math.round(value * 100) / 100; }
 function delay(milliseconds: number): Promise<void> { return new Promise((resolve) => setTimeout(resolve, milliseconds)); }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 
-void main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.stack ?? error.message : String(error));
-  process.exitCode = 1;
-});
+if (import.meta.main) {
+  void main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

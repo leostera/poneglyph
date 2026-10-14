@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 
-type Socket = {
+export type Socket = {
   once(event: "open", listener: () => void): Socket;
   once(event: "error", listener: (error: Error) => void): Socket;
   once(event: "message", listener: (data: string | Uint8Array | ArrayBuffer) => void): Socket;
@@ -9,12 +9,12 @@ type Socket = {
   terminate(): void;
 };
 type SocketConstructor = new (url: string, options: Readonly<{ headers: Record<string, string> }>) => Socket;
-const WebSocketClient = createRequire(new URL("../packages/poneglyph/package.json", import.meta.url))("ws") as SocketConstructor;
+const WebSocketClient = createRequire(import.meta.url)("ws") as SocketConstructor;
 const DEFAULT_BASE_URL = "https://poneglyph-scaleout-20261011.poneglyph.leostera.dev";
 const baseUrl = (process.env["PONEGLYPH_CLOUDFLARE_URL"] ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
 const passphrase = process.env["PONEGLYPH_TODO_PASSPHRASE"];
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const endpoint = new URL(baseUrl);
   if (endpoint.protocol !== "https:" || !endpoint.hostname.endsWith(".poneglyph.leostera.dev")) {
     throw new Error("deployed TODO validation requires HTTPS beneath *.poneglyph.leostera.dev");
@@ -133,7 +133,7 @@ async function rejectedSocketStatus(url: string, headers: Record<string, string>
   });
 }
 
-async function nextMessage(socket: Socket): Promise<Record<string, unknown>> {
+export async function nextMessage(socket: Socket): Promise<Record<string, unknown>> {
   return await new Promise<Record<string, unknown>>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("timed out waiting for a TODO WebSocket invalidation")), 10_000);
     socket.once("message", (data) => {
@@ -170,11 +170,13 @@ async function postJson(url: string, body: unknown, cookie: string): Promise<Rec
   return value;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-void main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.stack ?? error.message : String(error));
-  process.exitCode = 1;
-});
+if (import.meta.main) {
+  void main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

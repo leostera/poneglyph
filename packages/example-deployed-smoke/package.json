@@ -1,0 +1,13 @@
+{
+  "name": "@poneglyph/example-deployed-smoke",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --packages=external --outdir=dist",
+    "typecheck": "tsc --noEmit",
+    "test": "bun run build && node --import tsx --test test/*.test.ts",
+    "check": "bun run typecheck && bun run test",
+    "run": "node --import tsx src/main.ts"
+  },
+  "devDependencies": {"@types/node": "25.6.0", "esbuild": "0.28.2", "tsx": "4.23.15", "typescript": "5.9.3"}
+}

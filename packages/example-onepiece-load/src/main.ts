@@ -16,7 +16,7 @@ type WikiXmlParser = {
   close(): WikiXmlParser;
 };
 type SaxesParserConstructor = new (options: { xmlns: boolean }) => WikiXmlParser;
-const { SaxesParser } = createRequire(new URL("../packages/poneglyph/package.json", import.meta.url))("saxes") as {
+const { SaxesParser } = createRequire(import.meta.url)("saxes") as {
   SaxesParser: SaxesParserConstructor;
 };
 
@@ -40,8 +40,8 @@ type WikiPage = Readonly<{ title: string; namespace: string; text: string }>;
 type QueryDefinition = Readonly<{ name: string; source: string; expectedRows?: number; minimumRows?: number }>;
 type WorkerResponse = Record<string, unknown>;
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const PONEGLYPH_DIR = resolve(ROOT, "poneglyph");
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const PONEGLYPH_DIR = resolve(ROOT, "packages/poneglyph");
 const DEFAULT_XML_PATH = resolve(ROOT, "tests/fixtures/cache/onepiece-pages-current.xml");
 const DEFAULT_ARCHIVE_PATH = resolve(ROOT, "tests/fixtures/cache/onepiece_pages_current.xml.7z");
 const DUMP_PATH = process.env["PONEGLYPH_ONEPIECE_XML"] ?? DEFAULT_XML_PATH;
@@ -107,7 +107,7 @@ const QUERIES: readonly QueryDefinition[] = [
   },
 ];
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const file = await stat(DUMP_PATH).catch(() => undefined);
   if (file === undefined || !file.isFile()) {
     throw new Error(
@@ -164,7 +164,7 @@ async function main(): Promise<void> {
   }
 }
 
-async function ingestDump(
+export async function ingestDump(
   path: string,
   maxPages: number,
   write: (facts: readonly InputFact[]) => Promise<void>,
@@ -259,7 +259,7 @@ async function ingestDump(
   return { pages: pageCount, facts: factCount };
 }
 
-function pageFacts(page: WikiPage): readonly InputFact[] {
+export function pageFacts(page: WikiPage): readonly InputFact[] {
   const entity = pageEntity(page.title);
   const facts: InputFact[] = [
     makeFact(entity, "wiki:page:title", { type: "text", value: page.title }),
@@ -570,14 +570,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function readPositiveInteger(value: string | undefined, fallback: number): number {
+export function readPositiveInteger(value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 1) throw new Error("expected a positive integer environment value");
   return parsed;
 }
 
-function readNonNegativeInteger(value: string | undefined, fallback: number): number {
+export function readNonNegativeInteger(value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error("expected a non-negative integer environment value");
@@ -593,7 +593,9 @@ function rounded(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-void main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.stack ?? error.message : String(error));
-  process.exitCode = 1;
-});
+if (import.meta.main) {
+  void main().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.stack ?? error.message : String(error));
+    process.exitCode = 1;
+  });
+}
