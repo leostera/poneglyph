@@ -29,7 +29,7 @@ export async function main(): Promise<void> {
   }
 
   const singleGraph = `cf-bench-${randomUUID().slice(0, 12)}`;
-  const singleWrites = await benchmarkWrites(transactionCount, concurrency, async (index) => {
+  const singleWrites = await benchmarkWrites({ transactions: transactionCount, concurrency, factsPerTransaction: 3, entitiesPerTransaction: 2 }, async (index) => {
     const left = `bench:cloudflare:left:${index}`;
     const right = `bench:cloudflare:right:${index}`;
     return await postJson(`${baseUrl}/v1/graphs/${singleGraph}/transactions`, {
@@ -40,7 +40,7 @@ export async function main(): Promise<void> {
         fact(right, "bench:value", { type: "text", value: `value-${index}` }),
       ],
     });
-  }, 3, 2);
+  });
   const singleQueries = await benchmarkQueries(singleGraph, queryCount, concurrency, undefined, [
     { shape: "full-scan", query: "bench:value(Entity, Value)" },
     { shape: "join", query: "bench:edge(From, To), bench:value(To, Value)" },
@@ -57,11 +57,11 @@ export async function main(): Promise<void> {
     taskIds.push(created.body["taskId"]);
   }
 
-  const crossShardMoves = await benchmarkWrites(transactionCount, concurrency, async (index) => {
+  const crossShardMoves = await benchmarkWrites({ transactions: transactionCount, concurrency, factsPerTransaction: 4, entitiesPerTransaction: 3 }, async (index) => {
     const taskId = taskIds[index];
     if (taskId === undefined) throw new Error("missing validation task id");
     return await postJson(`${baseUrl}/api/todo/tasks/${taskId}/move`, { toList: "todo:list:done" }, cookie);
-  }, 4, 3);
+  });
   const todoQueries = await benchmarkQueries("todo-shared-2026", queryCount, concurrency, cookie, [
     { shape: "todo-membership-scan", query: "todo:task-list(Task, List)" },
     { shape: "todo-task-join", query: "todo:task-list(Task, \"todo:list:done\"), schema:name(Task, Title)" },
@@ -133,38 +133,43 @@ async function fetchWithRetry(url: string, body: string, cookie?: string): Promi
   throw new Error(`request to ${url} failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
 }
 
-export async function benchmarkWrites(
-  count: number,
-  parallelism: number,
-  run: (index: number) => Promise<JsonResult>,
-  factsPerTransaction: number,
-  entitiesPerTransaction: number,
-): Promise<Record<string, unknown>> {
+export type WriteWorkload = Readonly<{
+  transactions: number;
+  concurrency: number;
+  factsPerTransaction: number;
+  entitiesPerTransaction: number;
+}>;
+
+export async function benchmarkWrites(workload: WriteWorkload, run: (index: number) => Promise<JsonResult>) {
+  for (const [name, value] of Object.entries(workload)) {
+    if (!Number.isSafeInteger(value) || value < 1) throw new RangeError(`${name} must be a positive integer`);
+  }
   const latencies: number[] = [];
   let next = 0;
+  let failure: { error: unknown } | undefined;
   const started = performance.now();
-  await Promise.all(Array.from({ length: Math.min(parallelism, count) }, async () => {
-    while (true) {
+  await Promise.all(Array.from({ length: Math.min(workload.concurrency, workload.transactions) }, async () => {
+    while (failure === undefined && next < workload.transactions) {
       const index = next++;
-      if (index >= count) return;
       const start = performance.now();
-      const result = await run(index);
-      latencies.push(performance.now() - start);
-      if (result.body["status"] !== undefined && result.body["status"] !== "committed") {
-        throw new Error(`transaction was not committed: ${JSON.stringify(result.body)}`);
+      try {
+        const result = await run(index);
+        if (result.body["status"] !== "committed") throw new Error(`transaction was not committed: ${JSON.stringify(result.body)}`);
+        latencies.push(performance.now() - start);
+      } catch (error) {
+        failure ??= { error };
       }
     }
   }));
+  // Drain every already-admitted callback before surfacing the original failure.
+  if (failure !== undefined) throw failure.error;
   const elapsedSeconds = (performance.now() - started) / 1_000;
   return {
-    transactions: count,
-    factsPerTransaction,
-    entitiesPerTransaction,
-    concurrency: parallelism,
+    ...workload,
     elapsedSeconds: round(elapsedSeconds),
-    transactionsPerSecond: round(count / elapsedSeconds),
-    factsPerSecond: round(count * factsPerTransaction / elapsedSeconds),
-    entitiesPerSecond: round(count * entitiesPerTransaction / elapsedSeconds),
+    transactionsPerSecond: round(workload.transactions / elapsedSeconds),
+    factsPerSecond: round(workload.transactions * workload.factsPerTransaction / elapsedSeconds),
+    entitiesPerSecond: round(workload.transactions * workload.entitiesPerTransaction / elapsedSeconds),
     latencyMs: summarize(latencies),
   };
 }
