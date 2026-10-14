@@ -1,0 +1,72 @@
+{
+  "kind": "historical-selected-controlled-gates",
+  "notSharedConformance": true,
+  "results": [
+    {
+      "implementation": "A",
+      "passed": 51,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "B1",
+      "passed": 43,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "C",
+      "passed": 50,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "D",
+      "passed": 50,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "E",
+      "passed": 52,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "F",
+      "passed": 55,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "G",
+      "passed": 72,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "H",
+      "passed": 85,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "I",
+      "passed": 82,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "J",
+      "passed": 80,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "implementation": "K",
+      "passed": 86,
+      "failed": 0,
+      "pending": 0
+    }
+  ]
+}
