@@ -6,9 +6,12 @@ import { promisify } from "node:util";
 import { setTimeout as sleep } from "node:timers/promises";
 import { parseApprovedBatch, parseImportPlan } from "../src/import-contract.js";
 
-const directory = resolve(import.meta.dirname, "../.artifacts/import/pages10");
+const segment = process.argv[2] ?? "pages10";
+if (segment !== "pages10" && segment !== "remainder90") throw new Error("Choose pages10 or remainder90");
+const directory = resolve(import.meta.dirname, `../.artifacts/import/${segment}`);
 const stored = await readFile(resolve(directory, "manifest.json"), "utf8");
-if (stored !== await readFile(resolve(import.meta.dirname, "../src/import-plan.json"), "utf8")) throw new Error("Operator and compiled approved plans disagree");
+const planFile = segment === "pages10" ? "import-plan.json" : `import-plan-${segment}.json`;
+if (stored !== await readFile(resolve(import.meta.dirname, `../src/${planFile}`), "utf8")) throw new Error("Operator and compiled approved plans disagree");
 const plan = parseImportPlan(JSON.parse(stored));
 if (Date.now() >= Date.parse(plan.expiresAt)) throw new Error("Import window expired; do not mint replacement IDs");
 const journalPath = resolve(directory, "journal.ndjson");

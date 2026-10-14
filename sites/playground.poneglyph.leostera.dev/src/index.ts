@@ -5,7 +5,7 @@ import { connectionPage } from "./page.js";
 import { DATASET, PUBLIC_HOST } from "./dataset.js";
 import { admitMcpRequest } from "./rate-limit.js";
 import { GRAPH_ID } from "./runtime.js";
-import approvedPlan from "./import-plan.json";
+import approvedPlan from "./import-plan-remainder90.json";
 import { parseImportPlan } from "./import-contract.js";
 import { createImportHandler } from "./import.js";
 

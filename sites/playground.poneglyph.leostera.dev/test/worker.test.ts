@@ -33,7 +33,7 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
       outdir: directory, outExtension: { ".js": ".mjs" }, bundle: true, format: "esm", platform: "browser",
       target: "es2024", conditions: ["workerd", "worker", "browser"], external: ["cloudflare:*", "node:*"],
       plugins: [{ name: "tiny-offline-import-plan", setup(builder) {
-        builder.onLoad({ filter: /\/src\/import-plan\.json$/ }, () => ({ contents: JSON.stringify(fixturePlan()), loader: "json" }));
+        builder.onLoad({ filter: /\/src\/import-plan-remainder90\.json$/ }, () => ({ contents: JSON.stringify(fixturePlan()), loader: "json" }));
       } }], });
     const manifest = (contents: string) => ({ mainModule: "index.mjs", modules: { "index.mjs": { type: "esm" as const, contents } } });
     const playground = manifest(await readFile(resolve(directory, "playground.mjs"), "utf8"));

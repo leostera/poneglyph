@@ -90,6 +90,16 @@ test("RPC/disposal failures remain unknown, without retry or invented abort", as
   assert.doesNotMatch(JSON.stringify(result), /private disconnected/); assert.equal(attempts, 1);
 });
 
+test("remainder plan covers exactly the complement and has independent transaction identities", () => {
+  const original = fixturePlan();
+  const remainder = parseImportPlan({ ...original, version: 2, segment: "remainder90", selectedPages: 9, selectedFacts: 10,
+    batches: [{ txId: `wiki:import:${original.corpusSha256}:remainder90:0`, sha256: "c".repeat(64), facts: 10, pages: 9, bytes: 128 }] });
+  assert.equal(remainder.segment, "remainder90");
+  assert.equal(remainder.selectedPages, remainder.totalPages - Math.floor(remainder.totalPages / 10));
+  assert.throws(() => parseImportPlan({ ...remainder, selectedPages: 1 }));
+  assert.throws(() => parseImportPlan({ ...remainder, batches: [{ ...remainder.batches[0], txId }] }));
+});
+
 test("independent approved parser retains complete typed payload and refuses altered transaction identity", async () => {
   const parsed = await parseApprovedBatch(new TextEncoder().encode(body), fixturePlan());
   assert.equal(parsed.batch.txId, txId); assert.deepEqual(parsed.batch.facts[1].value, { type: "number", value: "0" });
