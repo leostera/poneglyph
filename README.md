@@ -41,13 +41,14 @@ This is a Bun workspace. Install **Bun 1.4.2** and **Node.js 26**: Bun manages d
 | [`packages/conformance`](packages/conformance/) | Independent correctness oracle and disk-backed E2E harness |
 | [`packages/write-path-bench`](packages/write-path-bench/) | Private write-path benchmark harness |
 | `examples/*` | Six individually built, typechecked and offline-tested examples |
+| [`sites/playground.poneglyph.leostera.dev`](sites/playground.poneglyph.leostera.dev/) | Public read-only, rate-limited Agents SDK MCP playground (local prototype; deployment/corpus load pending) |
 
 One root `bun.lock` pins dependencies. Private harnesses link the library with `workspace:*`, consuming its built package exports. From the repository root:
 
 ```sh
 bun install --frozen-lockfile
-bun run check          # all package types, unit/adapter tests and offline example tests
-bun run build          # portable package + local Worker + all six example bundles
+bun run check          # all workspace types, unit/adapter/example/site tests
+bun run build          # portable package + Workers + all example/site builds
 bun run test:focused   # focused warm/cold E2E regressions
 # bun run test:small   # explicit full 68-case warm/cold checkpoint
 ```

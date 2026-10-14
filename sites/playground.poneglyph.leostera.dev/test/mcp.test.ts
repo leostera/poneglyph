@@ -1,0 +1,115 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { createMcpHandler } from "agents/mcp/server";
+import { createServer, type GraphReader } from "../src/mcp.js";
+import { createGraphReader } from "../src/reader.js";
+import { DATASET, MCP_URL } from "../src/dataset.js";
+
+const metrics = { scanCalls: 1, shardRequests: 1, tuplesRead: 2, bytesRead: 128, directoryRequests: 1 };
+const answer = { rows: [{ Value: { type: "integer", value: "9223372036854775807" } }, { Value: { type: "integer", value: "9223372036854775807" } }], snapshotSeq: 7, metrics };
+
+async function withClient(reader: GraphReader, run: (client: Client) => Promise<void>) {
+  const handler = createMcpHandler(() => createServer(reader), { corsOptions: false });
+  const client = new Client({ name: "offline-playground-test", version: "1" });
+  try {
+    await client.connect(new StreamableHTTPClientTransport(new URL(MCP_URL), {
+      fetch: (input, init) => handler.fetch(new Request(input, init)),
+    }));
+    await run(client);
+  } finally { await client.close(); }
+}
+
+function toolPayload(result: Awaited<ReturnType<Client["callTool"]>>) {
+  assert.ok("content" in result);
+  assert.equal(result.content.length, 1);
+  const first = result.content[0];
+  assert.ok(first?.type === "text");
+  return JSON.parse(first.text);
+}
+
+function fakeGraph(fetcher: Pick<Fetcher, "fetch">["fetch"]) {
+  return createGraphReader({ fetch: fetcher });
+}
+
+test("only anonymous read tools are advertised; dataset guidance is explicit", async () => {
+  await withClient(fakeGraph(async () => { throw new Error("schema must not contact storage"); }), async client => {
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map(tool => tool.name).sort(), ["describe_dataset", "query"]);
+    for (const tool of tools) assert.equal(tool.annotations?.readOnlyHint, true);
+    const result = await client.callTool({ name: "describe_dataset", arguments: {} });
+    assert.deepEqual(toolPayload(result), DATASET);
+  });
+});
+
+test("complete typed rows, duplicates, int64, snapshot and metrics survive MCP", async () => {
+  let calls = 0;
+  await withClient(fakeGraph(async (input, init) => {
+    calls++;
+    assert.equal(String(input), "https://database.internal/v1/graphs/onepiece/query");
+    assert.equal(init?.method, "POST");
+    assert.deepEqual(JSON.parse(String(init?.body)), { query: "wiki:page:text_bytes(Page, Value)" });
+    return Response.json(answer);
+  }), async client => {
+    const result = await client.callTool({ name: "query", arguments: { query: "wiki:page:text_bytes(Page, Value)" } });
+    assert.notEqual(result.isError, true);
+    assert.deepEqual(toolPayload(result), answer);
+  });
+  assert.equal(calls, 1);
+});
+
+test("malformed Datalog fails before storage; tool arguments cannot select a graph or backend", async () => {
+  let calls = 0;
+  await withClient(fakeGraph(async () => { calls++; return Response.json(answer); }), async client => {
+    const result = await client.callTool({ name: "query", arguments: { query: "SELECT * FROM facts" } });
+    assert.equal(result.isError, true);
+    assert.equal(toolPayload(result).error.code, "invalid_query");
+    for (const extra of [{ graphId: "another-graph" }, { url: "https://attacker.example" }, { limit: 1 }]) {
+      const rejected = await client.callTool({ name: "query", arguments: { query: "wiki:page:title(Page, Title)", ...extra } });
+      assert.equal(rejected.isError, true);
+    }
+  });
+  assert.equal(calls, 0);
+});
+
+test("database budget and busy errors remain errors, not partial or empty successes", async () => {
+  for (const status of [413, 429]) {
+    await withClient(fakeGraph(async () => Response.json({ error: "query budget or admission rejected", retryable: status === 429 }, { status })), async client => {
+      const result = await client.callTool({ name: "query", arguments: { query: "wiki:page:title(Page, Title)" } });
+      assert.equal(result.isError, true);
+      const payload = toolPayload(result);
+      assert.equal(payload.error.code, "query_rejected");
+      assert.equal(payload.error.status, status);
+      assert.equal("rows" in payload, false);
+    });
+  }
+});
+
+test("transport failure is surfaced once, without retry or leaking backend details", async () => {
+  let calls = 0;
+  await withClient(fakeGraph(async () => { calls++; throw new Error("private backend credential must never appear"); }), async client => {
+    const result = await client.callTool({ name: "query", arguments: { query: "wiki:page:title(Page, Title)" } });
+    assert.equal(result.isError, true);
+    assert.equal(toolPayload(result).error.code, "backend_unavailable");
+    assert.doesNotMatch(JSON.stringify(result), /private backend credential/);
+  });
+  assert.equal(calls, 1);
+});
+
+test("malformed successful backend replies never become valid MCP answers", async () => {
+  for (const invalid of [{ ...answer, metrics: {} }, { ...answer, rows: [{ Value: { type: "integer", value: "not-an-integer" } }] }]) {
+    await withClient(fakeGraph(async () => Response.json(invalid)), async client => {
+      const result = await client.callTool({ name: "query", arguments: { query: "wiki:page:title(Page, Title)" } });
+      assert.equal(result.isError, true);
+      assert.equal(toolPayload(result).error.code, "invalid_backend_response");
+    });
+  }
+});
+
+test("playground response budget fails without slicing rows", async () => {
+  await withClient(fakeGraph(async () => Response.json({ ...answer, rows: [{ Value: { type: "string", value: "x".repeat(2_000_001) } }] })), async client => {
+    const result = await client.callTool({ name: "query", arguments: { query: "wiki:page:title(Page, Title)" } });
+    assert.equal(result.isError, true);
+    assert.equal(toolPayload(result).error.code, "response_budget_exceeded");
+  });
+});
