@@ -30,6 +30,10 @@ This runs all **68 declared cases** against one fresh disk-backed production com
 
 The current cases still do **not** complete comprehensive small coverage; broader admission/decision/publication/release, topology/client/retention controls and later stateful/boundary/100k tiers remain pending. The independent oracle and declared limits are unchanged by the one-implementation cutover.
 
+## Latest canonical checkpoint
+
+[2026-10-14T07-14-58.060Z](results/2026-10-14T07-14-58.060Z/summary.json), revision `7bd9678`: **68 warm + 68 cold checks / 136 phases**, zero failures or unexecuted phases; **80 package tests** and **76 oracle/adapter tests** pass. The only package skip is the opt-in benchmark. Includes three actual process-group crashes and exact recovery. Public-request trace: **192.978 seconds**, an execution diagnostic—not a throughput comparison. Logs/hashes and closed raw persistence are retained. This passes the current gate; comprehensive-small coverage and larger tiers remain unfinished.
+
 ## Retained evidence
 
 Results contain source/bundle/runtime identities, actual answers, caller outcomes and native lifecycle evidence. Certification reports use `formatVersion: 2` and must contain exactly `poneglyph`. The archiver reads older all-eleven reports only as historical evidence—not selectable implementations. Focused reports remain separately labelled.
