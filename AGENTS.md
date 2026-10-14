@@ -32,7 +32,7 @@ Architectural decisions should align with [RFD0003](docs/rfds/RFD0003-cloudflare
 ## Workspace
 
 - Use Bun 1.4.2 from the repository root: `bun install --frozen-lockfile`, `bun run check`, `bun run build`.
-- All maintained JS/TS packages live under `packages/`: `poneglyph`, `conformance`, `write-path-bench`, and six private `example-*` packages. Private harnesses consume `@leostera/poneglyph` through `workspace:*` and its built exports, not copied file packages.
+- Libraries and validation harnesses live under `packages/`: `poneglyph`, `conformance`, and `write-path-bench`. The six private example packages live under `examples/<name>/`; both directories belong to the root Bun workspace. Private harnesses consume `@leostera/poneglyph` through `workspace:*` and its built exports, not copied file packages.
 - Each example owns its entrypoint/dependencies and has `build`, `typecheck`, `check`, offline `test`, and explicit `run` scripts. Root build/check/test include every example sequentially and fail on errors; never execute cloud smoke tests, corpus loads or benchmarks as a default test hook.
 - Keep one root `bun.lock`; do not introduce nested package-manager lockfiles. Node 26 remains required for Cloudflare/Vitest/Miniflare and `node:sqlite` tooling. Bun owns installation/script orchestration, not the Workers runtime.
 - `bun run test:focused` is the development E2E loop; `bun run test:small` is an explicit full68-case checkpoint. Never replace these with Bun's built-in test runner or start benchmark loads implicitly.

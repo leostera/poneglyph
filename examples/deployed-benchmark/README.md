@@ -3,9 +3,9 @@
 Private package retaining the historical bounded cloud sample. `build`, `typecheck`, `check` and `test` are offline; tests use pure parameter/percentile helpers and fake write callbacks. No benchmark load is started by the workspace gates.
 
 ```sh
-bun run --cwd packages/example-deployed-benchmark check
+bun run --cwd examples/deployed-benchmark check
 # Only after explicit approval of the target, workload and cost budget:
-bun run --cwd packages/example-deployed-benchmark run
+bun run --cwd examples/deployed-benchmark run
 ```
 
 Named write workloads require committed replies; first failure stops new callbacks and drains admitted work. Transport is not silently retried, and no physical participant count is inferred from HTTP replies.

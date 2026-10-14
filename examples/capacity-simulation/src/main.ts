@@ -1,4 +1,4 @@
-import { simulateCapacityEnvelope } from "../../poneglyph/src/storage/capacity-simulation.js";
+import { simulateCapacityEnvelope } from "../../../packages/poneglyph/src/storage/capacity-simulation.js";
 
 export async function simulate(logicalBytes = 1_000_000_000_000, syntheticEntities = 10_000) {
   const result = await simulateCapacityEnvelope(logicalBytes, syntheticEntities);

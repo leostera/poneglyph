@@ -5,21 +5,7 @@
     "": {
       "name": "poneglyph-workspace",
     },
-    "packages/conformance": {
-      "name": "@poneglyph/conformance-tests",
-      "dependencies": {
-        "@leostera/poneglyph": "workspace:*",
-      },
-      "devDependencies": {
-        "@cloudflare/workers-types": "5.20261011.1",
-        "@types/node": "25.6.0",
-        "esbuild": "0.28.2",
-        "miniflare": "5.20261006.1-alpha",
-        "tsx": "4.23.15",
-        "typescript": "5.9.3",
-      },
-    },
-    "packages/example-capacity-simulation": {
+    "examples/capacity-simulation": {
       "name": "@poneglyph/example-capacity-simulation",
       "dependencies": {
         "@leostera/poneglyph": "workspace:*",
@@ -31,7 +17,7 @@
         "typescript": "5.9.3",
       },
     },
-    "packages/example-client-quickstart": {
+    "examples/client-quickstart": {
       "name": "@poneglyph/example-client-quickstart",
       "dependencies": {
         "@leostera/poneglyph": "workspace:*",
@@ -43,7 +29,7 @@
         "typescript": "5.9.3",
       },
     },
-    "packages/example-deployed-benchmark": {
+    "examples/deployed-benchmark": {
       "name": "@poneglyph/example-deployed-benchmark",
       "devDependencies": {
         "@types/node": "25.6.0",
@@ -52,7 +38,7 @@
         "typescript": "5.9.3",
       },
     },
-    "packages/example-deployed-smoke": {
+    "examples/deployed-smoke": {
       "name": "@poneglyph/example-deployed-smoke",
       "dependencies": {
         "@leostera/poneglyph": "workspace:*",
@@ -64,7 +50,7 @@
         "typescript": "5.9.3",
       },
     },
-    "packages/example-deployed-todo-smoke": {
+    "examples/deployed-todo-smoke": {
       "name": "@poneglyph/example-deployed-todo-smoke",
       "dependencies": {
         "ws": "8.21.0",
@@ -76,7 +62,7 @@
         "typescript": "5.9.3",
       },
     },
-    "packages/example-onepiece-load": {
+    "examples/onepiece-load": {
       "name": "@poneglyph/example-onepiece-load",
       "dependencies": {
         "@leostera/poneglyph": "workspace:*",
@@ -85,6 +71,20 @@
       "devDependencies": {
         "@types/node": "25.6.0",
         "esbuild": "0.28.2",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+      },
+    },
+    "packages/conformance": {
+      "name": "@poneglyph/conformance-tests",
+      "dependencies": {
+        "@leostera/poneglyph": "workspace:*",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "5.20261011.1",
+        "@types/node": "25.6.0",
+        "esbuild": "0.28.2",
+        "miniflare": "5.20261006.1-alpha",
         "tsx": "4.23.15",
         "typescript": "5.9.3",
       },
@@ -271,17 +271,17 @@
 
     "@poneglyph/conformance-tests": ["@poneglyph/conformance-tests@workspace:packages/conformance"],
 
-    "@poneglyph/example-capacity-simulation": ["@poneglyph/example-capacity-simulation@workspace:packages/example-capacity-simulation"],
+    "@poneglyph/example-capacity-simulation": ["@poneglyph/example-capacity-simulation@workspace:examples/capacity-simulation"],
 
-    "@poneglyph/example-client-quickstart": ["@poneglyph/example-client-quickstart@workspace:packages/example-client-quickstart"],
+    "@poneglyph/example-client-quickstart": ["@poneglyph/example-client-quickstart@workspace:examples/client-quickstart"],
 
-    "@poneglyph/example-deployed-benchmark": ["@poneglyph/example-deployed-benchmark@workspace:packages/example-deployed-benchmark"],
+    "@poneglyph/example-deployed-benchmark": ["@poneglyph/example-deployed-benchmark@workspace:examples/deployed-benchmark"],
 
-    "@poneglyph/example-deployed-smoke": ["@poneglyph/example-deployed-smoke@workspace:packages/example-deployed-smoke"],
+    "@poneglyph/example-deployed-smoke": ["@poneglyph/example-deployed-smoke@workspace:examples/deployed-smoke"],
 
-    "@poneglyph/example-deployed-todo-smoke": ["@poneglyph/example-deployed-todo-smoke@workspace:packages/example-deployed-todo-smoke"],
+    "@poneglyph/example-deployed-todo-smoke": ["@poneglyph/example-deployed-todo-smoke@workspace:examples/deployed-todo-smoke"],
 
-    "@poneglyph/example-onepiece-load": ["@poneglyph/example-onepiece-load@workspace:packages/example-onepiece-load"],
+    "@poneglyph/example-onepiece-load": ["@poneglyph/example-onepiece-load@workspace:examples/onepiece-load"],
 
     "@poneglyph/write-path-bench": ["@poneglyph/write-path-bench@workspace:packages/write-path-bench"],
 

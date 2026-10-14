@@ -7,7 +7,7 @@
     "bun": ">=1.4.2",
     "node": ">=26"
   },
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "examples/*"],
   "trustedDependencies": ["esbuild", "workerd"],
   "scripts": {
     "dev": "bun run --cwd packages/poneglyph dev",
@@ -20,6 +20,6 @@
     "check": "bun run typecheck && bun run test:unit",
     "test:focused": "bun run --cwd packages/poneglyph workers:types && bun run build:package && bun run --cwd packages/conformance typecheck && bun run --cwd packages/conformance test:focused",
     "test:small": "bun run --cwd packages/poneglyph workers:types && bun run build:package && bun run --cwd packages/conformance typecheck && bun run --cwd packages/conformance test:small",
-    "test:capacity": "bun run --cwd packages/example-capacity-simulation run"
+    "test:capacity": "bun run --cwd examples/capacity-simulation run"
   }
 }

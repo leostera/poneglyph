@@ -40,7 +40,7 @@ This is a Bun workspace. Install **Bun 1.4.2** and **Node.js 26**: Bun manages d
 | [`packages/poneglyph`](packages/poneglyph/) | Library, client and canonical database Worker |
 | [`packages/conformance`](packages/conformance/) | Independent correctness oracle and disk-backed E2E harness |
 | [`packages/write-path-bench`](packages/write-path-bench/) | Private write-path benchmark harness |
-| `packages/example-*` | Six individually built, typechecked and offline-tested examples |
+| `examples/*` | Six individually built, typechecked and offline-tested examples |
 
 One root `bun.lock` pins dependencies. Private harnesses link the library with `workspace:*`, consuming its built package exports. From the repository root:
 
@@ -67,7 +67,7 @@ bun run dev
 Use the local URL printed by `bun run dev` as `PONEGLYPH_URL`, then run the typed client example in a second terminal:
 
 ```sh
-PONEGLYPH_URL=http://127.0.0.1:5173 bun run --cwd packages/example-client-quickstart run
+PONEGLYPH_URL=http://127.0.0.1:5173 bun run --cwd examples/client-quickstart run
 ```
 
 Each example has its own `build`, `typecheck`, `check`, `test` and explicit `run` command. The default workspace gates never run the cloud smoke/load entrypoints. The quickstart uses `createDatabase`, defines a graph-scoped handle, writes facts with a caller-provided idempotency key, and runs a Datalog query. The Worker API also supports a point entity read at `/v1/graphs/{graphId}/entities?uri=...`. Graph IDs use lowercase letters, digits, and hyphens. Query results include the committed snapshot sequence.

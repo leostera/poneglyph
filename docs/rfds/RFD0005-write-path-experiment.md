@@ -691,7 +691,7 @@ Build `bench/write-path/` as a repeatable application-level benchmark of Ponegly
 
 The current TypeScript implementation has expandable 256-bit entity-prefix routing, local fact/index projections, and one `GraphCoordinatorDO` per graph. The coordinator serializes graph write decisions and publishes a global visibility sequence; storage sharding does not distribute this authority. [RFD0004](./RFD0004-expandable-cloudflare-sharding.md) describes that implementation and its bounded evidence.
 
-The existing [One Piece harness](../../packages/example-onepiece-load/src/main.ts) starts a local Worker and writes serialized batches of up to 500 facts directly to its HTTP endpoint. The existing [local benchmark](../../packages/poneglyph/tests/throughput-bench.test.ts) also bypasses the public client and caps concurrency at 16. Neither is the desired application-client-database experiment at 1,000 concurrent calls.
+The existing [One Piece harness](../../examples/onepiece-load/src/main.ts) starts a local Worker and writes serialized batches of up to 500 facts directly to its HTTP endpoint. The existing [local benchmark](../../packages/poneglyph/tests/throughput-bench.test.ts) also bypasses the public client and caps concurrency at 16. Neither is the desired application-client-database experiment at 1,000 concurrent calls.
 
 At the start of the experiment, the working-tree [client](../../packages/poneglyph/src/client.ts) offered `state`, `transact`, and `query`, not `stateFacts`. The benchmark implementation adds `stateFacts` as a client entrypoint to the unchanged baseline transaction path. It accepts injected `fetch`, caller-provided transaction IDs, and does not retry automatically. Its receipt includes `commitSeq`. The baseline must include the reviewed working-tree code, not silently substitute the last committed revision; capture the source actually built.
 
@@ -1219,7 +1219,7 @@ The cloud gate remains closed pending the remaining protocol/driver/deployment s
 - [RFD0003: Cloudflare-native graph database](./RFD0003-cloudflare-native-graph-database.md)
 - [RFD0004: Expandable, capacity-bounded sharding](./RFD0004-expandable-cloudflare-sharding.md)
 - [Current client](../../packages/poneglyph/src/client.ts), [package](../../packages/poneglyph/package.json), and [limits](../../packages/poneglyph/src/storage/constants.ts)
-- [Existing corpus workload](../../packages/example-onepiece-load/src/main.ts), [local benchmark](../../packages/poneglyph/tests/throughput-bench.test.ts), and [bounded operational evidence](./RFD0004-expandable-cloudflare-sharding.md#isolated-cloudflare-procedure-and-detailed-evidence)
+- [Existing corpus workload](../../examples/onepiece-load/src/main.ts), [local benchmark](../../packages/poneglyph/tests/throughput-bench.test.ts), and [bounded operational evidence](./RFD0004-expandable-cloudflare-sharding.md#isolated-cloudflare-procedure-and-detailed-evidence)
 - [Miniflare](https://developers.cloudflare.com/workers/testing/miniflare/) and [Workers Vitest integration](https://developers.cloudflare.com/workers/testing/vitest-integration/)
 - [SQLite-backed DO storage](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/), [limits](https://developers.cloudflare.com/durable-objects/platform/limits/), and [pricing](https://developers.cloudflare.com/durable-objects/platform/pricing/)
 - [Worker service bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/) and [observability](https://developers.cloudflare.com/workers/observability/)
