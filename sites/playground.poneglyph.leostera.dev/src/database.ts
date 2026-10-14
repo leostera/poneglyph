@@ -1,6 +1,6 @@
 import { dispatchGraphRequest } from "../../../packages/poneglyph/src/storage/implementation.js";
 import type { StorageEnv } from "../../../packages/poneglyph/src/storage/environment.js";
-import { GRAPH_ID } from "./dataset.js";
+import { GRAPH_ID } from "./runtime.js";
 
 // The same canonical runtime as production; no testing subclasses or backend fork.
 export { GraphCoordinatorDO, GraphShardDO } from "../../../packages/poneglyph/src/storage/implementation.js";

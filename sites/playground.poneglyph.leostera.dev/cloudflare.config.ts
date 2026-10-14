@@ -2,8 +2,6 @@ import { bindings, defineConfig, exports } from "cf/config";
 import * as playground from "./src/index.ts" with { type: "cf-worker" };
 import * as database from "./src/database.ts" with { type: "cf-worker" };
 import * as operator from "./src/operator.ts" with { type: "cf-worker" };
-import { RATE_LIMIT } from "./src/rate-limit.ts";
-import { COMPATIBILITY_DATE } from "./src/runtime.ts";
 
 const databaseName = "poneglyph-onepiece-playground-db";
 const databaseBindings = {
@@ -12,7 +10,9 @@ const databaseBindings = {
 };
 export const playgroundBindings = {
   PONEGLYPH: bindings.worker({ worker: databaseName }),
-  MCP_RATE_LIMITER: bindings.rateLimit(RATE_LIMIT),
+  // Keep config-time values here: cf's dev module runner cannot serve modules
+  // also imported during config evaluation. The live binding owns admission.
+  MCP_RATE_LIMITER: bindings.rateLimit({ namespace: "2026101401", simple: { limit: 30, period: 60 } }),
 };
 export const seedBindings = {
   PONEGLYPH: bindings.worker({ worker: databaseName, dev: { remote: true } }),
@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
   return {
     worker: {
       name: databaseMode ? databaseName : seedMode ? "poneglyph-playground-local-operator" : "playground-poneglyph-leostera-dev",
-      compatibilityDate: COMPATIBILITY_DATE,
+      compatibilityDate: "2026-10-13",
       compatibilityFlags: ["nodejs_compat"],
       entrypoint: databaseMode ? database : seedMode ? operator : playground,
       workersDev: false,

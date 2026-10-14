@@ -7,9 +7,9 @@ import { build } from "esbuild";
 import { Miniflare, Log, LogLevel } from "miniflare";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createDatabase } from "@leostera/poneglyph";
-import { DATASET, GRAPH_ID, MCP_URL } from "../src/dataset.js";
+import { DATASET, MCP_URL } from "../src/dataset.js";
 import { RATE_LIMIT } from "../src/rate-limit.js";
-import { COMPATIBILITY_DATE } from "../src/runtime.js";
+import { COMPATIBILITY_DATE, GRAPH_ID } from "../src/runtime.js";
 
 const site = resolve(import.meta.dirname, "..");
 const luffy = "wiki:onepiece:page:Monkey%20D.%20Luffy";

@@ -1,6 +1,5 @@
 import { RATE_LIMIT } from "./rate-limit.js";
-
-export const GRAPH_ID = "onepiece";
+import { GRAPH_ID } from "./runtime.js";
 export const PUBLIC_HOST = "playground.poneglyph.leostera.dev";
 export const MCP_URL = `https://${PUBLIC_HOST}/mcp`;
 
