@@ -16,7 +16,7 @@ type WikiXmlParser = {
   close(): WikiXmlParser;
 };
 type SaxesParserConstructor = new (options: { xmlns: boolean }) => WikiXmlParser;
-const { SaxesParser } = createRequire(new URL("../poneglyph/package.json", import.meta.url))("saxes") as {
+const { SaxesParser } = createRequire(new URL("../packages/poneglyph/package.json", import.meta.url))("saxes") as {
   SaxesParser: SaxesParserConstructor;
 };
 

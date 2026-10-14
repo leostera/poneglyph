@@ -15,22 +15,20 @@ local HTTP driver -> gateway -> 1..32 application Workers
 
 All applications use one graph in one database per trial. The gateway selects application services locally; it is not a new database coordinator. Production coordinator/shard write methods are inherited unchanged. The benchmark subclasses add read-only audit methods, reachable only by a token-protected local entrypoint. They must not be exposed on a public cloud route.
 
-The client is a pinned `file:` package dependency containing the built package exports, not a direct import of database internals. `stateFacts` is an added client method delegating to the existing transaction protocol. No faster baseline storage path was introduced. The existing `state` method is retained.
+The client is a `workspace:*` dependency consuming the built package exports, not a direct import of database internals. `stateFacts` is an added client method delegating to the existing transaction protocol. No faster baseline storage path was introduced. The existing `state` method is retained.
 
 ## Reproduce locally
 
 From the repository root:
 
 ```sh
-cd poneglyph
-pnpm run build:package
-cd ../bench/write-path
-pnpm install
-pnpm run typecheck
-pnpm test
-pnpm run prepare:corpus
-pnpm run preflight
-BENCH_FACTS=100000 BENCH_WORKERS=4 pnpm run run:local
+bun install --frozen-lockfile
+bun run typecheck
+bun run --cwd packages/write-path-bench test
+# Only after explicit authorization to run a benchmark:
+bun run --cwd packages/write-path-bench prepare:corpus
+bun run --cwd packages/write-path-bench preflight
+BENCH_FACTS=100000 BENCH_WORKERS=4 bun run --cwd packages/write-path-bench run:local
 ```
 
 `prepare:corpus` uses the cached `tests/fixtures/cache/onepiece-pages-current.xml`, or accepts an XML path as its first argument. It prepares ordinary facts locally; there is no database import API. Exact percent-encoded titles prevent the old extractor's lossy-slug collisions. The manifest records all pages processed, the 8-category/16-link extraction caps, and omission of full wiki text. No hand-authored domain facts are mixed into the corpus.
@@ -59,6 +57,8 @@ IDs are unique per run/scenario/batch. Retries retain the exact ID/payload. A co
 Delivery streams the prepared facts with only the outstanding batches in memory. Verification uses a disk-backed SQLite reference/response ledger, then walks the actual fact-store leaves and checks every persisted fact against its transaction's expected fact range. Both pre-/post-restart audits are bounded by page size, not an in-memory copy of the corpus. Latency samples are retained for exact percentiles. The benchmark's local ledger is verification bookkeeping, not part of Poneglyph or an import API. The pre-fix report identifies the unchanged implementation it measured. Subsequent authorized bug fixes are a separately identified revision; transaction/retention/capacity limits remain unchanged; the canonical pooled-ledger/independent-owner architecture is identified by actual bundle inputs.
 
 ## Saved evidence
+
+Historical reports moved intact from `bench/write-path/` and retain their original paths/source identities/digests. New manifests hash the root `bun.lock` and workspace manifest. Bun manages the workspace; Node remains required for Miniflare, process-group hosts and the `node:sqlite` ledger. Changing layout does not count as rerunning historical measurements.
 
 After a completed matrix, `results/<run-id>/final.json` retains the source/artifact/dataset identity, final metrics, outcome classifications, and pre-/post-restart audits. During execution, per-case reports and temporary SQLite state are available. After all runtimes and ledgers close, the final aggregate is saved before removing raw trial storage, snapshots, reference ledgers, journals, bundles, and progress samples. Console logs are managed separately. No auth tokens or corpus request bodies are saved in the final report. Incomplete runs must never be treated as successful loads.
 

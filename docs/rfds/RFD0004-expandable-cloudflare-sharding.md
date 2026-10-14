@@ -194,16 +194,16 @@ POST /v1/graphs/{graphId}/query         { "query": "..." }
 GET  /v1/graphs/{graphId}/entities?uri=wiki%3Acrew%3Astraw-hats
 ```
 
-Transaction drafts contain source/entity/field URIs, a tagged value such as `{ "type": "reference", "value": "wiki:person:luffy" }`, and explicit `retraction` at the HTTP boundary. Graph IDs are lowercase slugs of at most 64 characters. Shared parsers return typed `ParseResult` values rather than silently coercing malformed input. Parsing facts or queries alone persists nothing. See [`src/client.ts`](../../poneglyph/src/client.ts), [`src/index.ts`](../../poneglyph/src/index.ts), and [`client-quickstart.ts`](../../examples/client-quickstart.ts).
+Transaction drafts contain source/entity/field URIs, a tagged value such as `{ "type": "reference", "value": "wiki:person:luffy" }`, and explicit `retraction` at the HTTP boundary. Graph IDs are lowercase slugs of at most 64 characters. Shared parsers return typed `ParseResult` values rather than silently coercing malformed input. Parsing facts or queries alone persists nothing. See [`src/client.ts`](../../packages/poneglyph/src/client.ts), [`src/index.ts`](../../packages/poneglyph/src/index.ts), and [`client-quickstart.ts`](../../examples/client-quickstart.ts).
 
 ### Package construction and publishing gates
 
-The scoped name is used because the unscoped npm name is taken. The [package manifest](../../poneglyph/package.json) sets public access, runs local checks in `prepublishOnly`, and builds ESM JavaScript/declarations into `dist/` in `prepack`. These settings are not publication authorization.
+The scoped name is used because the unscoped npm name is taken. The [package manifest](../../packages/poneglyph/package.json) sets public access, runs local checks in `prepublishOnly`, and builds ESM JavaScript/declarations into `dist/` in `prepack`. These settings are not publication authorization.
 
 ```sh
-cd poneglyph
-pnpm install
-pnpm run build:package
+bun install --frozen-lockfile
+bun run build:package
+cd packages/poneglyph
 npm pack --dry-run
 ```
 
@@ -234,21 +234,30 @@ The hibernatable `TodoHubDO` receives an invalidation only after commit acknowle
 
 ## Local operating and review gates
 
-Node.js 26 and pnpm 12 are required. `poneglyph/cloudflare.config.ts` is the sole deployment/runtime config; `vite.config.ts` registers the Cloudflare Vite plugin, and `vitest.config.ts` configures local Miniflare/SQLite tests without a Wrangler config. Compatibility date is `2026-10-06`; the recorded types identify `workerd@1.20261006.1`. Keep the cf CLI, plugin, and compatibility date aligned. The CLI delegates bundling to Vite; Wrangler is not a direct configuration/dependency, although test tooling may have internal dependencies.
+### Bun workspace layout (2026-10-14)
+
+The maintained TypeScript packages now live under `packages/`: `poneglyph` (library/client/database Worker), `conformance` (independent correctness harness) and `write-path-bench` (private performance harness). One private root workspace manifest and `bun.lock` replace three independent pnpm installations. Bun1.4.2 owns dependency installation and script orchestration; Node26 still runs Cloudflare/Vitest/Miniflare tooling, process-group hosts and the `node:sqlite` reference ledger. Do not force these through `bun --bun` or substitute Bun's built-in test runner.
+
+The private harnesses depend on `@leostera/poneglyph` via `workspace:*`, consuming its built exports rather than copied `file:` packages. Root typecheck/check scripts build the portable package before consumers and generate Worker types first. The publishable package name/version/exports, storage schema7/routing8, object names, limits and protocols are unchanged; the root and harnesses stay private. Existing pnpm resolutions were merged and migrated into the root Bun lock rather than intentionally upgrading dependencies. Only the existing esbuild/workerd lifecycle scripts are explicitly trusted. No dependency/package-management layout migration authorizes publication, deployment, benchmarking or namespace conversion.
+
+Archived reports/bundles/persistence move intact with their harness packages. Their recorded revisions, paths and hashes remain immutable, even where old absolute paths no longer exist. Updated documentation links locate the relocated evidence; moving it is not native recovery or rerunning an experiment. Newly built harness identities hash the root workspace manifest and lockfile. Git retains the original paths at their historical revisions.
+
+`packages/poneglyph/cloudflare.config.ts` is the sole deployment/runtime config; `vite.config.ts` registers the Cloudflare Vite plugin, and `vitest.config.ts` configures local Miniflare/SQLite tests without a Wrangler config. Compatibility date is `2026-10-06`; the recorded types identify `workerd@1.20261006.1`. Keep the cf CLI, plugin, and compatibility date aligned. The CLI delegates bundling to Vite; Wrangler is not a direct configuration/dependency, although test tooling may have internal dependencies.
 
 ```sh
-cd poneglyph
-pnpm install --frozen-lockfile
-pnpm check                              # type generation, strict TS, Vitest
-pnpm test:capacity
-pnpm bench:local
-pnpm build
-pnpm exec cf deploy --dry-run
-pnpm exec cf deploy --mode cleanup --dry-run
-pnpm dev                                # optional local Vite/workerd server
+# Repository root:
+bun install --frozen-lockfile
+bun run check                           # all workspace types + unit/adapter suites
+bun run build                           # portable package + local Worker bundle
+bun run test:focused                     # focused warm/cold E2E regressions
+# bun run test:small                     # deliberate full 68-case checkpoint
+# bun run test:capacity                  # optional synthetic accounting, no payload writes
+bun run dev                             # optional local Vite/workerd server
 ```
 
-Tests use fresh graph IDs and no account resources. `pnpm test:onepiece` is the separate legacy local corpus/query gate described below, not the concurrent comparison. The formal gate uses `TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check.sh` from the repository root. Normal/cleanup dry runs, model checks, and workload tests are historical validations unless explicitly rerun for the revision under review; do not report them as freshly executed merely because documentation moved.
+Cloudflare's cf CLI may warn that auto-configuration is limited when it sees no lockfile inside the package directory; the explicit config still builds successfully. Keep the one root lockfile—do not add a nested lockfile to suppress the warning. Use `bun run --cwd packages/poneglyph <script>` for package-specific commands.
+
+Tests use fresh graph IDs and no account resources. `bun run --cwd packages/poneglyph test:onepiece` is the separate legacy local corpus/query gate described below, not the concurrent comparison. The formal gate uses `TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check.sh` from the repository root. Normal/cleanup dry runs, model checks, and workload tests are historical validations unless explicitly rerun for the revision under review; do not report them as freshly executed merely because documentation moved.
 
 The corrected revision's latest recorded `pnpm check` passed 39 tests, one optional benchmark skipped, and its write-path harness passed six tests. RFD0005 records four 100k cases passing admitted-write fact/index/transaction and restart audits but failing full delivery. The earlier pre-client operating snapshot had 28 passing tests and one skipped. These scoped checks are not universal implementation proofs; the corrected revision was not deployed to Cloudflare.
 

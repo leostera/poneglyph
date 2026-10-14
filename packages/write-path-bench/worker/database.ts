@@ -1,5 +1,5 @@
-import original, { TodoHubDO } from "../../../poneglyph/src/worker.js";
-import { BenchCoordinatorDO, BenchShardDO, coordinatorObjectName, shardObjectName, parseVirtualPrefix } from "../../../poneglyph/src/storage/implementation.js";
+import original, { TodoHubDO } from "../../poneglyph/src/worker.js";
+import { BenchCoordinatorDO, BenchShardDO, coordinatorObjectName, shardObjectName, parseVirtualPrefix } from "../../poneglyph/src/storage/implementation.js";
 
 // Only SUT-specific read-only SQL wiring varies; workload and audit obligations
 // remain in the same driver/ledger/verifier for the canonical implementation.

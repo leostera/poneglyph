@@ -58,7 +58,7 @@ A generated transaction ID is used when `txId` is omitted. `stateFacts` (also av
 
 `query` accepts the Worker-supported Datalog **source string** and validates it locally before sending it. Query objects/builders are not currently a public request format. `defineGraph({ id })` validates an ID and creates a local graph-scoped client handle; it does not register a graph or persist a schema. The Worker has no graph catalog/schema-enforcement endpoint yet, so this API intentionally does not accept a `schema` option.
 
-The Worker has one canonical storage implementation, promoted from G: a graph facade, sixteen entity-owner roots and sixteen pooled transaction ledgers. Conflicting writes are fenced while independent owners can progress concurrently; reads pin a leased owner vector. The public numeric `snapshotSeq` is not a graph-global serialization promise. Older storage schemas are not automatically imported: use fresh namespaces unless already using the same schema7/routing8 format. Multiple graph IDs remain separate graphs, not transparent partitions. See [RFD0005's current implementation contract](../docs/rfds/RFD0005-write-path-experiment.md#current-direction-one-implementation-2026-10-14) and the [operating procedures](../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#local-operating-and-review-gates).
+The Worker has one canonical storage implementation, promoted from G: a graph facade, sixteen entity-owner roots and sixteen pooled transaction ledgers. Conflicting writes are fenced while independent owners can progress concurrently; reads pin a leased owner vector. The public numeric `snapshotSeq` is not a graph-global serialization promise. Older storage schemas are not automatically imported: use fresh namespaces unless already using the same schema7/routing8 format. Multiple graph IDs remain separate graphs, not transparent partitions. See [RFD0005's current implementation contract](../../docs/rfds/RFD0005-write-path-experiment.md#current-direction-one-implementation-2026-10-14) and the [operating procedures](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#local-operating-and-review-gates).
 
 The client accepts `headers` and an injectable `fetch` function in `createDatabase` configuration for application authentication, testing, or a Worker service-binding adapter. Protect the Worker endpoint at the application boundary; configuring a client header does not itself add authentication to the prototype Worker.
 
@@ -90,9 +90,10 @@ Parsers return typed `ParseResult` values rather than silently coercing malforme
 The package name is scoped because the unscoped npm name `poneglyph` is already taken. `publishConfig.access` is set to `public`; `prepublishOnly` runs the local package checks and `prepack` builds ESM JavaScript and TypeScript declarations into `dist/` before packing.
 
 ```sh
-cd poneglyph
-pnpm install
-pnpm run build:package
+# From the repository root:
+bun install --frozen-lockfile
+bun run build:package
+cd packages/poneglyph
 npm pack --dry-run
 npm publish --access public
 ```

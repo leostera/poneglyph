@@ -21,13 +21,21 @@ Architectural decisions should align with [RFD0003](docs/rfds/RFD0003-cloudflare
 
 ## Working rules
 
-- The current TypeScript branch has **one** storage implementation, promoted from G and maintained directly in `poneglyph/src/storage/`. Do not recreate implementation selectors, parallel candidates or all-backend tournaments. See RFD0005's current direction; older experiment sections and reports are historical evidence.
+- The current TypeScript branch has **one** storage implementation, promoted from G and maintained directly in `packages/poneglyph/src/storage/`. Do not recreate implementation selectors, parallel candidates or all-backend tournaments. See RFD0005's current direction; older experiment sections and reports are historical evidence.
 - Harden that implementation against the independent conformance oracle before new benchmark loads. Use focused regressions during development; full tier runs are explicit certification checkpoints, not a default command after every edit.
 - Commit often, commit eagerly, and use conventional commit messages.
 - Prefer small, explicit architectural steps over broad speculative refactors.
 - Preserve append-only semantics in new designs. Do not introduce mutable source-of-truth entity tables as the primary model.
 - Treat facts as durable truth, entities as derived views, and projections as replayable workers.
 - Keep Cloudflare resource changes isolated beneath `*.poneglyph.leostera.dev`; run local gates before deploying and clean up only resources created for validation.
+
+## Workspace
+
+- Use Bun 1.4.2 from the repository root: `bun install --frozen-lockfile`, `bun run check`, `bun run build`.
+- All maintained JS/TS packages live under `packages/`: `poneglyph`, `conformance`, and `write-path-bench`. Private harnesses consume `@leostera/poneglyph` through `workspace:*` and its built exports, not copied file packages.
+- Keep one root `bun.lock`; do not introduce nested package-manager lockfiles. Node 26 remains required for Cloudflare/Vitest/Miniflare and `node:sqlite` tooling. Bun owns installation/script orchestration, not the Workers runtime.
+- `bun run test:focused` is the development E2E loop; `bun run test:small` is an explicit full68-case checkpoint. Never replace these with Bun's built-in test runner or start benchmark loads implicitly.
+- Do not rewrite historical report identities, digests or absolute paths when relocating evidence. Read archived paths relative to their recorded revision; current evidence locations follow the workspace tree.
 
 ## Documentation
 

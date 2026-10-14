@@ -14,7 +14,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/leostera/poneglyph.git",
-    "directory": "poneglyph"
+    "directory": "packages/poneglyph"
   },
   "bugs": {
     "url": "https://github.com/leostera/poneglyph/issues"
@@ -41,19 +41,20 @@
     "dev": "cf dev",
     "typecheck": "tsc --noEmit",
     "build:package": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
-    "prepack": "npm run build:package",
-    "prepublishOnly": "pnpm run check",
+    "prepack": "bun run build:package",
+    "prepublishOnly": "bun run check",
     "test": "vitest run --bail 1",
-    "check": "pnpm workers:types && pnpm typecheck && pnpm test",
-    "build": "pnpm workers:types && pnpm typecheck && cf build",
-    "deploy": "pnpm workers:types && pnpm typecheck && cf deploy",
+    "check": "bun run workers:types && bun run typecheck && bun run test",
+    "build": "bun run workers:types && bun run typecheck && cf build",
+    "deploy": "bun run workers:types && bun run typecheck && cf deploy",
     "workers:types": "cf workers types",
-    "test:capacity": "tsx ../examples/capacity-simulation.ts",
-    "test:onepiece": "tsx ../examples/onepiece-load.ts",
+    "example:client": "tsx ../../examples/client-quickstart.ts",
+    "test:capacity": "tsx ../../examples/capacity-simulation.ts",
+    "test:onepiece": "tsx ../../examples/onepiece-load.ts",
     "bench:local": "PONEGLYPH_RUN_BENCH=1 vitest run tests/throughput-bench.test.ts --reporter=verbose",
-    "bench:cloudflare": "tsx ../examples/deployed-benchmark.ts",
-    "test:deployed": "tsx ../examples/deployed-smoke.ts",
-    "test:deployed:todo": "tsx ../examples/deployed-todo-smoke.ts"
+    "bench:cloudflare": "tsx ../../examples/deployed-benchmark.ts",
+    "test:deployed": "tsx ../../examples/deployed-smoke.ts",
+    "test:deployed:todo": "tsx ../../examples/deployed-todo-smoke.ts"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",

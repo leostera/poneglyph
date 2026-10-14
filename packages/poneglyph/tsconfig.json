@@ -18,5 +18,5 @@
     "noPropertyAccessFromIndexSignature": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "../examples/**/*.ts", "vitest.config.ts", "vitest.correctness.config.ts", "cloudflare.config.ts", ".cloudflare/types/**/*.d.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "../../examples/**/*.ts", "vitest.config.ts", "cloudflare.config.ts", ".cloudflare/types/**/*.d.ts"]
 }

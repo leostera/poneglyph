@@ -1,5 +1,5 @@
-import original, { TodoHubDO } from "../../../poneglyph/src/worker.js";
-import { GraphCoordinatorDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../../poneglyph/src/storage/implementation.js";
+import original, { TodoHubDO } from "../../poneglyph/src/worker.js";
+import { GraphCoordinatorDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../poneglyph/src/storage/implementation.js";
 
 import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
 import {WriteBarrier} from "./write-barrier.js";
@@ -9,7 +9,7 @@ import {coordinatorAuthority, shardAuthority, ownerWitness, participantStage, ty
 import {parseReply} from "../response-evidence.js";
 import {parseAuthorityIdentities} from "./authority-controls.js";
 
-import {TREE_DEPTH} from "../../../poneglyph/src/storage/forest.js";
+import {TREE_DEPTH} from "../../poneglyph/src/storage/forest.js";
 export {TodoHubDO};
 export class InspectionCoordinatorDO extends GraphCoordinatorDO {
   authorityStatus(role: AuthorityRole, after: number) {return coordinatorAuthority(this.ctx.storage, role, after);}

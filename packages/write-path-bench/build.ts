@@ -22,7 +22,7 @@ export async function buildWorkers() {
       sources.set(path, createHash("sha256").update(bytes).digest("hex"));
     }
   }
-  for (const file of ["build.ts", "database-identity.ts", "run.ts", "driver.ts", "ledger.ts", "stream-audit.ts", "final-result.ts", "runtime.ts", "corpus.ts", "scenarios.ts", "package.json", "pnpm-lock.yaml"]) {
+  for (const file of ["build.ts", "database-identity.ts", "run.ts", "driver.ts", "ledger.ts", "stream-audit.ts", "final-result.ts", "runtime.ts", "corpus.ts", "scenarios.ts", "package.json", "../../package.json", "../../bun.lock"]) {
     sources.set(file, createHash("sha256").update(await readFile(resolve(ROOT, file))).digest("hex"));
   }
   const manifest = {
@@ -33,7 +33,7 @@ export async function buildWorkers() {
     bundleDigests: Object.fromEntries(await Promise.all(["application", "database"].map(async name =>
       [name, createHash("sha256").update(await readFile(resolve(output, `${name}.mjs`))).digest("hex")]))),
     runtime: { miniflare: "5.20261006.1-alpha", compatibilityDate: "2026-10-06", node: process.version },
-    clientPackage: "@leostera/poneglyph@0.1.0 (local packed file dependency)",
+    clientPackage: "@leostera/poneglyph@0.1.0 (workspace package exports)",
   };
   await writeFile(resolve(output, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   return manifest;

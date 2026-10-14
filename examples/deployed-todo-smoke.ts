@@ -9,7 +9,7 @@ type Socket = {
   terminate(): void;
 };
 type SocketConstructor = new (url: string, options: Readonly<{ headers: Record<string, string> }>) => Socket;
-const WebSocketClient = createRequire(new URL("../poneglyph/package.json", import.meta.url))("ws") as SocketConstructor;
+const WebSocketClient = createRequire(new URL("../packages/poneglyph/package.json", import.meta.url))("ws") as SocketConstructor;
 const DEFAULT_BASE_URL = "https://poneglyph-scaleout-20261011.poneglyph.leostera.dev";
 const baseUrl = (process.env["PONEGLYPH_CLOUDFLARE_URL"] ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
 const passphrase = process.env["PONEGLYPH_TODO_PASSPHRASE"];

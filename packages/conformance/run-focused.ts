@@ -17,7 +17,7 @@ assert.equal(process.argv.length, 2, "focused shared regression has no selection
 const id = `focused-controls-${new Date().toISOString().replaceAll(":", "-")}`, output = resolve(ROOT, "results", id), artifacts = resolve(ROOT, ".artifacts", id);
 await mkdir(output, {recursive: true});
 const execution = new RunControl();
-const files = ["run-focused.ts", "partial-apply.ts", "participant-stage.ts", "worker/apply-gate.ts", "run.ts", "run-control.ts", "build.ts", "runtime.ts", "process-runtime.ts", "process-host.ts", "session.ts", "model.ts", "query-catalogue.ts", "legal-history.ts", "concurrent-histories.ts", "authority-audit.ts", "owner-witness.ts"];
+const files = ["run-focused.ts", "partial-apply.ts", "participant-stage.ts", "worker/apply-gate.ts", "run.ts", "run-control.ts", "build.ts", "runtime.ts", "process-runtime.ts", "process-host.ts", "session.ts", "model.ts", "query-catalogue.ts", "legal-history.ts", "concurrent-histories.ts", "authority-audit.ts", "owner-witness.ts", "package.json", "../../package.json", "../../bun.lock"];
 const digests = Object.fromEntries(await Promise.all(files.map(async file => [file, createHash("sha256").update(await readFile(resolve(ROOT, file))).digest("hex")])));
 const report = {kind: "focused-conformance-regression", notCertification: true, tier: "small-1-100", id, execution, suiteDigests: digests,
   gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(), cases: focusedCases.map(c => c.name), implementations: [] as unknown[]};

@@ -1,4 +1,4 @@
-import { simulateCapacityEnvelope } from "../poneglyph/src/storage/capacity-simulation.ts";
+import { simulateCapacityEnvelope } from "../packages/poneglyph/src/storage/capacity-simulation.ts";
 
 const logicalBytes = Number(process.argv[2] ?? "1000000000000");
 const syntheticEntities = Number(process.argv[3] ?? "10000");

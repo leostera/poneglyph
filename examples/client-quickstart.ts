@@ -1,4 +1,4 @@
-import { createDatabase, type FactInput } from "../poneglyph/src/index.js";
+import { createDatabase, type FactInput } from "../packages/poneglyph/src/index.js";
 
 const url = process.env["PONEGLYPH_URL"];
 if (url === undefined || url.length === 0) {
