@@ -4,7 +4,7 @@ import {execFileSync} from "node:child_process";
 import {mkdir, readFile, writeFile} from "node:fs/promises";
 import {resolve} from "node:path";
 import {createHash} from "node:crypto";
-import {buildConformance, implementations, ROOT} from "./build.js";
+import {buildConformance, implementation, ROOT} from "./build.js";
 import {startHosted} from "./process-runtime.js";
 import {Session} from "./session.js";
 import {concurrentHistoryCases} from "./concurrent-histories.js";
@@ -22,11 +22,11 @@ const digests = Object.fromEntries(await Promise.all(files.map(async file => [fi
 const report = {kind: "focused-conformance-regression", notCertification: true, tier: "small-1-100", id, execution, suiteDigests: digests,
   gitRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(), cases: focusedCases.map(c => c.name), implementations: [] as unknown[]};
 const save = () => writeFile(resolve(output, "report.json"), JSON.stringify(report, null, 2) + "\n");
-let stage: RunStage = {implementation: "A", phase: "build"};
+let stage: RunStage = {implementation: implementation.name, phase: "build"};
 try {
-  for (const implementation of implementations) {
+  {
     execution.requireRunning(); stage = {implementation: implementation.name, phase: "build"};
-    const bundles = resolve(artifacts, implementation.name, "bundles"), persistence = resolve(artifacts, implementation.name, "persistence"), manifest = await buildConformance(implementation, bundles);
+    const bundles = resolve(artifacts, implementation.name, "bundles"), persistence = resolve(artifacts, implementation.name, "persistence"), manifest = await buildConformance(bundles);
     const results: {name: string; graph: string; warm: string; cold: string; outcomes: unknown[]; coldOutcomes?: unknown[]}[] = [];
     report.implementations.push({manifest, persistence, results}); await save();
     stage = {implementation: implementation.name, phase: "startup"}; let runtime = await startHosted("conformance", persistence, bundles);

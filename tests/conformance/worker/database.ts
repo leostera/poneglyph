@@ -1,22 +1,22 @@
 import original, { TodoHubDO } from "../../../poneglyph/src/worker.js";
-import { GraphCoordinatorDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../../poneglyph/src/database-implementation.js";
+import { GraphCoordinatorDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../../poneglyph/src/storage/implementation.js";
 
 import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
 import {WriteBarrier} from "./write-barrier.js";
 import {ApplyGate} from "./apply-gate.js";
-import {authorityActors, authorityLayout, ownerActorName} from "./authority-placement.js";
+import {authorityActors, ownerActorName} from "./authority-placement.js";
 import {coordinatorAuthority, shardAuthority, ownerWitness, participantStage, type AuthorityRole} from "./authority-sql.js";
 import {parseReply} from "../response-evidence.js";
 import {parseAuthorityIdentities} from "./authority-controls.js";
 
-declare const __E2E_OWNER_DEPTH__: number;
+import {TREE_DEPTH} from "../../../poneglyph/src/storage/forest.js";
 export {TodoHubDO};
 export class InspectionCoordinatorDO extends GraphCoordinatorDO {
-  authorityStatus(role: AuthorityRole, after: number) {return coordinatorAuthority(this.ctx.storage, authorityLayout, role, after);}
+  authorityStatus(role: AuthorityRole, after: number) {return coordinatorAuthority(this.ctx.storage, role, after);}
   ownerWitness(txId: string) {return ownerWitness(this.ctx.storage, txId);}
 }
 export class InspectionShardDO extends GraphShardDO {
-  authorityStatus(after: number) {return shardAuthority(this.ctx.storage, authorityLayout, after);}
+  authorityStatus(after: number) {return shardAuthority(this.ctx.storage, after);}
   participantStage(txId: string) {return participantStage(this.ctx.storage, txId);}
   private readonly applyGate = new ApplyGate();
   applyGateStatus() {return this.applyGate.status();}
@@ -55,7 +55,7 @@ export class InspectionShardDO extends GraphShardDO {
   }
   async inspection(prefix: string, table: string, after: number) {
     // B1+ have sixteen virtual owner roots; these upper nodes contain no data.
-    if (prefix.length < __E2E_OWNER_DEPTH__) return {children: [`${prefix}0`, `${prefix}1`], rows: []};
+    if (prefix.length < TREE_DEPTH) return {children: [`${prefix}0`, `${prefix}1`], rows: []};
     const identity = this.ctx.storage.sql.exec<{role: string; child_zero_prefix: string; child_one_prefix: string}>("SELECT * FROM shard_identity").toArray()[0];
     if (identity?.role === "router") return {children: [identity.child_zero_prefix, identity.child_one_prefix], rows: []};
     const current = table === "fact_log" ? "" : " AND valid_to_seq IS NULL";
@@ -87,14 +87,14 @@ export default {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
       const id = url.searchParams.get("txId");
-      if (!graph || !prefix.ok || prefix.value.length !== __E2E_OWNER_DEPTH__ || !id || authorityLayout.publication !== "owner_released") return new Response("invalid owner witness request", {status: 400});
+      if (!graph || !prefix.ok || prefix.value.length !== TREE_DEPTH || !id) return new Response("invalid owner witness request", {status: 400});
       const ids = parseAuthorityIdentities([id]);
       return Response.json(await env.GRAPH_COORDINATORS.getByName(ownerActorName(graph, prefix.value)).ownerWitness(ids[0]!));
     }
     if (url.pathname === "/__e2e/participant-stage" || url.pathname === "/__e2e/apply-gate") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
-      if (!graph || !prefix.ok || prefix.value.length < __E2E_OWNER_DEPTH__) return new Response("invalid participant identity", {status: 400});
+      if (!graph || !prefix.ok || prefix.value.length < TREE_DEPTH) return new Response("invalid participant identity", {status: 400});
       const stub = env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix.value));
       try {
         if (url.pathname === "/__e2e/participant-stage") {
@@ -115,7 +115,7 @@ export default {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       const graph = url.searchParams.get("graph"), prefix = parseVirtualPrefix(url.searchParams.get("prefix") ?? "");
       const after = Number(url.searchParams.get("after") ?? 0);
-      if (!graph || !prefix.ok || prefix.value.length < __E2E_OWNER_DEPTH__ || !Number.isSafeInteger(after) || after < 0) return new Response("invalid physical authority identity", {status: 400});
+      if (!graph || !prefix.ok || prefix.value.length < TREE_DEPTH || !Number.isSafeInteger(after) || after < 0) return new Response("invalid physical authority identity", {status: 400});
       return Response.json(await env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix.value)).authorityStatus(after));
     }
     if (url.pathname === "/__e2e/lifecycle") {

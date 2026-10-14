@@ -43,7 +43,7 @@
     "build:package": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
     "prepack": "npm run build:package",
     "prepublishOnly": "pnpm run check",
-    "test": "vitest run",
+    "test": "vitest run --bail 1",
     "check": "pnpm workers:types && pnpm typecheck && pnpm test",
     "build": "pnpm workers:types && pnpm typecheck && cf build",
     "deploy": "pnpm workers:types && pnpm typecheck && cf deploy",

@@ -1,4 +1,6 @@
 import type { GraphId } from "../domain/graph-id.js";
+import type { StorageEnv as Env } from "./environment.js";
+import { treeForKey, TREE_DEPTH } from "./forest.js";
 import { isRecord } from "../domain/result.js";
 import {
   MAX_DIRECTORY_DEPTH,
@@ -47,7 +49,7 @@ export async function resolveKeyLeaf(
   key: VirtualKey,
   directoryEpoch: number,
 ): Promise<RoutedLeaf> {
-  let prefix: VirtualPrefix = "" as VirtualPrefix;
+  let prefix: VirtualPrefix = treeForKey(key);
   for (let hop = 0; hop < MAX_DIRECTORY_LOOKUP_HOPS; hop += 1) {
     const node = await readDirectoryNode(env, graphId, prefix, directoryEpoch, key);
     if (node.kind === "leaf" || directoryEpoch < node.splitEpoch) {
@@ -69,8 +71,9 @@ export async function listShardLeaves(
   env: Env,
   graphId: GraphId,
   directoryEpoch: number,
+  root: VirtualPrefix = "" as VirtualPrefix,
 ): Promise<DirectoryListing> {
-  const pending: VirtualPrefix[] = ["" as VirtualPrefix];
+  const pending: VirtualPrefix[] = [root];
   const leaves: LeafAddress[] = [];
   let directoryHops = 0;
 
@@ -141,7 +144,7 @@ function parseDirectoryNode(input: unknown, expectedPrefix: VirtualPrefix): Dire
 
   const splitEpoch = input["splitEpoch"];
   const rawChildren = input["children"];
-  if (!Number.isSafeInteger(splitEpoch) || typeof splitEpoch !== "number" || splitEpoch < 1 || !Array.isArray(rawChildren) || rawChildren.length !== 2) {
+  if (!Number.isSafeInteger(splitEpoch) || typeof splitEpoch !== "number" || splitEpoch < (expectedPrefix.length < TREE_DEPTH ? 0 : 1) || !Array.isArray(rawChildren) || rawChildren.length !== 2) {
     throw new DirectoryRouteError(502, "directory returned invalid split metadata");
   }
   const left = parseVirtualPrefix(rawChildren[0]);

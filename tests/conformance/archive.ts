@@ -9,7 +9,13 @@ import {parseReply} from "./response-evidence.js";
 type CaseResult = {name: string; warm: string; cold: string; error?: string; coldError?: string; facts: number; graph: string};
 type ArchivedRun = Record<string, unknown> & {kind: string; id: string; tier: string; gitRevision: string; runtime: unknown; suiteDigests: unknown; limitations: unknown;
   cases: string[]; implementations: {manifest: Record<string, unknown> & {implementation: string}; persistence: string; results: CaseResult[]}[]};
-const names = ["A", "B1", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
+// Historical evidence remains readable, but it cannot masquerade as a new
+// single-implementation gate. This is report-format compatibility, not routing.
+const historicalNames = ["A", "B1", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
+function plannedNames(report: ArchivedRun) {
+  assert.ok(report["formatVersion"] === undefined || report["formatVersion"] === 2, "known conformance report format");
+  return report["formatVersion"] === 2 ? ["poneglyph"] : historicalNames;
+}
 function string(input: unknown): string {assert.ok(typeof input === "string"); return input;}
 export function parseArchivedRun(input: unknown): ArchivedRun {
   const body = parseReply(input), cases = body["cases"], implementations = body["implementations"];
@@ -28,10 +34,11 @@ export function parseArchivedRun(input: unknown): ArchivedRun {
     })};
 }
 export function validateTraversal(report: ArchivedRun) {
+  const names = plannedNames(report);
   const execution = report["execution"] === undefined ? undefined : parseReply(report["execution"]);
   const stopped = execution?.["policy"] === "fail-fast" && execution["status"] === "stopped";
   const observed = report.implementations.map(i => i.manifest.implementation);
-  assert.deepEqual(observed, stopped ? names.slice(0, observed.length) : names, "ordered all-backend traversal or explicit failed prefix");
+  assert.deepEqual(observed, stopped ? names.slice(0, observed.length) : names, "complete declared composition or explicit failed prefix");
   assert.ok(observed.length <= names.length);
   if (execution) {
     assert.equal(execution["policy"], "fail-fast");
@@ -81,6 +88,7 @@ export async function archiveReport(path: string) {
   const compressed = gzipSync(original, {level: 9}); assert.deepEqual(gunzipSync(compressed), original);
   const archive = `${path}.gz`; await writeFile(archive, compressed);
   assert.deepEqual(gunzipSync(await readFile(archive)), original, "retained archive verification");
+  const names = plannedNames(report);
   const executedPhases = report.implementations.reduce((count, i) => count + i.results.reduce((n, r) => n + Number(r.warm === "pass" || r.warm === "fail") + Number(r.cold === "pass" || r.cold === "fail"), 0), 0);
   const summary = {...report, plannedImplementations: names, executedPhases, unexecutedPhases: names.length * report.cases.length * 2 - executedPhases, evidence: {file: "report.json.gz", uncompressedSha256: digest(original), compressedSha256: digest(compressed)},
     implementations: report.implementations.map(i => ({manifest: i.manifest, persistence: i.persistence,

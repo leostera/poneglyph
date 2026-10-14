@@ -1,7 +1,7 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { coordinatorObjectName } from "../src/storage/keys.js";
+import {transactionCoordinatorName} from "../src/storage/forest.js";
 import { TODO_GRAPH_ID, TODO_LISTS } from "../src/todo_demo/service.js";
 
 const origin = "https://poneglyph.test";
@@ -87,12 +87,12 @@ describe("authenticated reactive TODO demo", () => {
     const visibleBody: unknown = await visible.json();
     expect(visibleBody).toMatchObject({ snapshotSeq: moveResult["commitSeq"], tasks: [{ id: taskId, title: "Review the storage invariants", list: TODO_LISTS.done }] });
 
-    const metadata = await runInDurableObject(env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(TODO_GRAPH_ID)), (_instance, state) =>
-      state.storage.sql.exec<{ participants_json: string }>(
-        "SELECT participants_json FROM graph_transactions WHERE tx_id = ?", moveResult["txId"],
-      ).one().participants_json,
-    );
-    expect(JSON.parse(metadata)).toHaveLength(2);
+    const metadata = await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(TODO_GRAPH_ID, moveResult["txId"])), (_instance, state) =>
+      state.storage.sql.exec<{plan_json: string}>("SELECT plan_json FROM candidate_transactions WHERE tx_id = ?", moveResult["txId"]).one().plan_json);
+    const plan: unknown = JSON.parse(metadata);
+    if (!isRecord(plan) || !Array.isArray(plan["participants"])) throw new Error("missing committed participant plan");
+    expect(plan["participants"].length).toBeGreaterThanOrEqual(2);
+    expect(plan["participants"].length).toBeLessThanOrEqual(3);
     firstClient.close();
     secondClient.close();
   });

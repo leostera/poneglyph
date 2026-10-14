@@ -1,29 +1,39 @@
 # Correctness conformance tests
 
-**Not a benchmark.** These tests check public reads/writes, exact durable membership and restart behavior. They do not measure throughput/latency or make performance promotion decisions.
+**Not a benchmark.** Public read/write tests use an independent oracle, exact typed binding multisets, projections, complete durable membership and real disk-backed recovery. There is one production implementation under `poneglyph/src/storage/`, promoted from G; no backend selectors or alternative bundles remain. See [RFD0005's current direction](../../docs/rfds/RFD0005-write-path-experiment.md#current-direction-one-implementation-2026-10-14).
 
-The authoritative design, tier-first traversal and remaining coverage are in [RFD0005's conformance section](../../docs/rfds/RFD0005-write-path-experiment.md#implementation-neutral-e2e-correctness-suite-design-proposal).
+## Development loop
 
 ```sh
-pnpm --dir poneglyph install --frozen-lockfile
 pnpm --dir poneglyph build:package
 pnpm --dir tests/conformance install --frozen-lockfile
 pnpm --dir tests/conformance typecheck
+pnpm --dir tests/conformance test:oracle
+pnpm --dir tests/conformance test:focused
+```
+
+The focused runner uses the actual production composition and the same shared assertions. Its default four cases cover three bounded legal concurrent histories plus a causal partial-participant process crash/recovery, warm/cold. It is explicitly **not full-tier certification**. The canonical package's controlled storage/schema/retention/client/TODO tests run normally, without an implementation selection flag:
+
+```sh
+pnpm --dir poneglyph test
+```
+
+## Certification checkpoint
+
+Only run the complete gate at an explicit coverage/repair checkpoint:
+
+```sh
 pnpm --dir tests/conformance test:small
 ```
 
-`test:small` first runs independent oracle golden/sensitivity tests, then runs the same small-data cases serially against **all A/B1/C–K implementations**, with statically selected bundles and fresh per-implementation SQLite persistence. No backend selection/skipping arguments are accepted. It verifies queries, entity projections and paged fact/index evidence, restarts the disk-backed runtime and repeats public reads/audits. **Fail-fast:** the first unexpected assertion/runtime failure stops later cases/backends, drains existing callers without starting new retries, closes the runtime and retains failed-prefix evidence. Expected injected errors must still satisfy their scenario assertions. After a repair, rerun the whole shared tier; an unexecuted tail is not passing or skipped coverage.
+This runs all **68 declared cases** against one fresh disk-backed production composition, warm and after full restart. It does not silently select cases. Fail-fast stops new cases/retries, drains admitted callers, closes the runtime and retains causal failures/cleanup diagnostics. Expected injected errors must satisfy their assertions. Unknown transport is never fabricated as abort or acknowledged delivery. A failed or unexecuted tail is not passing coverage.
 
-Results include `results/<run>/summary.json` and a lossless `report.json.gz` with caller operations, actual public answers, failures and source/bundle/runtime identities. Persistence/bundles remain in `.artifacts/<run>/` or a verified lossless `.artifacts/<run>.tar.gz`. Archived runs have `persistence-retention.json.gz` recording every file's original size/SHA256 and the archive hash; duplicate raw directories are removed only after decompressed-file verification. Restore an archived snapshot into `.artifacts/` with `tar -xzf .artifacts/<run>.tar.gz -C .artifacts` from this directory (do not overwrite an existing run). Unsuccessful runs remain evidence; a later passing run does not erase them.
+The current cases still do **not** complete comprehensive small coverage; broader admission/decision/publication/release, topology/client/retention controls and later stateful/boundary/100k tiers remain pending. The independent oracle and declared limits are unchanged by the one-implementation cutover.
 
-Latest checkpoint: [`2026-10-13T17-31-49.598Z`](results/2026-10-13T17-31-49.598Z/summary.json), revision `aabfafc`, passed **64 warm and 64 cold phase checks per implementation** (**1,408 total**) and **60 oracle/adapter/sensitivity unit checks**, with complete fail-fast execution, no unexecuted phases and successful terminal archival. The new warm cases record **22 actual SIGKILL host/workerd process-group crashes**, after acknowledgment and held native apply, followed by exact durable reconstruction/replay. Original lost callers remain unknown; later original-identity replay receipts are separate delivery evidence. Earlier transport-stop and report-finalization failures remain retained as failed evidence; later passes do not erase them. Final warm/cold checks now include canonical outcome/digest/receipt reconciliation and exact pending-authority/owner-witness audits; I's deferred pruning-proof cache is not confused with actual owner release. Warm cases include five actual shard-response faults, native prepared/applied reply barriers, overlapping admitted-identity histories, two nested splits, interrupted native copy/resume and actual actor reset/reconstruction after acknowledgment and while a verified apply reply is held. Cold phases replay healthy public reads/audits after full disk runtime restart, not reinjection of in-flight controls. [Selected controlled gates](results/controlled-completed-scans/summary.json) also pass for every implementation. Details, failed/interrupted baselines and bounded evidence are in the RFD; later green runs do not erase earlier transport failures.
+## Retained evidence
 
-Fast development regression: `pnpm --dir tests/conformance test:focused` runs three legal concurrent-history cases plus the new causally verified partial-participant process-crash recovery case across all eleven, warm/cold, with independent complete history alternatives and exact audits. [Focused evidence](results/focused-controls-2026-10-13T19-06-31.498Z/summary.json) passes 88 phases and 74 unit checks; it is **not full-tier certification**. The complete small matrix now has 68 cases and must rerun at the next shared coverage checkpoint. Duplicate final-replay specifications are removed, but every explicit historical read and all distinct cold query specifications still execute and compare their exact typed multisets.
+Results contain source/bundle/runtime identities, actual answers, caller outcomes and native lifecycle evidence. Certification reports use `formatVersion: 2` and must contain exactly `poneglyph`. The archiver reads older all-eleven reports only as historical evidence—not selectable implementations. Focused reports remain separately labelled.
 
-This is an initial small-tier foundation, **not the complete proposed suite**. Write failures across admission/decision/publication/release, broader abrupt-process recovery stages, actor/finalization failure stages, stale/mixed migration phases and general bounded concurrency histories still need shared coverage before advancing to larger data tiers. Existing implementation-private fixtures are supplemental; for example:
+Historical final all-eleven gate: [2026-10-13T19-14-06.137Z](results/2026-10-13T19-14-06.137Z/summary.json), **1,496 phases**, **74 oracle checks**, **33 actual process-group kills**. [Historical focused evidence](results/focused-controls-2026-10-13T19-06-31.498Z/summary.json) passed 88 phases. These passes do not erase earlier transport, resource, adapter, interrupted or finalization failures, and do not certify the renamed production bundle without new validation.
 
-```sh
-PONEGLYPH_CORRECTNESS_IMPLEMENTATION=G pnpm --dir poneglyph exec vitest run --config vitest.correctness.config.ts
-```
-
-That configuration explicitly selects applicable private fixtures plus shared pure tests. It does not replace or filter the all-implementation public E2E matrix.
+Full reports are losslessly retained as `report.json.gz`; persistence/bundles remain under `.artifacts/<run>/` or a verified `.artifacts/<run>.tar.gz`. `persistence-retention.json.gz` records file sizes/hashes and archive verification. Raw duplicates are removed only after decompressed verification and unchanged-original recheck. Restore from this directory with `tar -xzf .artifacts/<run>.tar.gz -C .artifacts`, never overwriting an existing run. Archival is not product replay or elapsed-retention/hosted-durability proof.

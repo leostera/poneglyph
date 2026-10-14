@@ -20,6 +20,7 @@ test("fail-fast drains the original caller without issuing another retry or fabr
   await assert.rejects(session.request({action: "write", txId: "tx:not-issued", facts: []}), /before issuing/);
   assert.equal(requests, 1);
 });
+// Frozen historical report format, not a runnable backend matrix.
 const actors = ["A", "B1", "C", "D", "E", "F", "G", "H", "I", "J", "K"];
 const row = (name: string, warm = "pass", cold = "pass") => ({name, warm, cold, graph: "test", facts: 1});
 function report(execution: object, implementations: object[]) {
@@ -67,4 +68,24 @@ test("startup/build failure and full completion have distinct terminal evidence"
   const complete = new RunControl(); complete.complete(); validateTraversal(report(complete, actors.map(name => actor(name))));
   assert.throws(() => validateTraversal(report(complete, [actor("A")])));
   assert.throws(() => parseArchivedRun({cases: [1], implementations: []}));
+});
+test("single-implementation report format requires the canonical composition and exact failure prefix", () => {
+  const complete = new RunControl(); complete.complete();
+  const sole = (control: RunControl, rows: object[]) => parseArchivedRun({...report(control, rows), formatVersion: 2});
+  validateTraversal(sole(complete, [actor("poneglyph")]));
+  assert.throws(() => validateTraversal(sole(complete, actors.map(name => actor(name)))));
+  assert.throws(() => validateTraversal(sole(complete, [actor("G")])));
+  const stopped = new RunControl(); stopped.stop({implementation: "poneglyph", phase: "warm", caseName: "one"}, "defect");
+  validateTraversal(sole(stopped, [actor("poneglyph", [row("one", "fail", "not-run")])]));
+  assert.throws(() => validateTraversal(sole(stopped, [actor("poneglyph", [row("one", "fail", "not-run"), row("two", "pass", "not-run")])])));
+});
+test("single-implementation terminal report archives four phases without historical traversal", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "conformance-sole-terminal-"));
+  try {
+    const control = new RunControl(), body = parseArchivedRun({...report(control, [actor("poneglyph")]), formatVersion: 2});
+    const path = join(directory, "report.json"), save = () => writeFile(path, JSON.stringify(body));
+    await persistCompletion(control, save); await archiveReport(path);
+    const summary = JSON.parse(await readFile(join(directory, "summary.json"), "utf8"));
+    assert.deepEqual(summary.plannedImplementations, ["poneglyph"]); assert.equal(summary.executedPhases, 4); assert.equal(summary.unexecutedPhases, 0);
+  } finally {await rm(directory, {recursive: true, force: true});}
 });

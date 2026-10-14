@@ -1,10 +1,10 @@
 import { parseGraphId } from "./domain/graph-id.js";
 import type { FetchNamespace } from "./storage-namespace.js";
 import { jsonResponse } from "./storage/http.js";
-import { dispatchGraphRequest } from "./database-implementation.js";
+import { dispatchGraphRequest } from "./storage/implementation.js";
 import { handleTodoRequest } from "./todo_demo/worker.js";
 
-export { GraphCoordinatorDO, GraphShardDO } from "./database-implementation.js";
+export { GraphCoordinatorDO, GraphShardDO } from "./storage/implementation.js";
 export { TodoHubDO } from "./todo_demo/hub.js";
 
 export default {

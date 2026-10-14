@@ -1,6 +1,6 @@
-# Write-path experiment
+# Write-path benchmark
 
-Implements the **Version A / current-code local baseline** from [RFD0005](../../docs/rfds/RFD0005-write-path-experiment.md). Cloud execution and Version B are not implemented or measured yet. The final pre-fix measurement is retained separately from the corrected implementation. The cloud gate is **closed pending the remaining protocol/driver/deployment safety gates**; database errors are recorded, not repaired by the benchmark.
+Benchmarks the **one canonical Poneglyph implementation**, promoted from G, under [RFD0005's current direction](../../docs/rfds/RFD0005-write-path-experiment.md#current-direction-one-implementation-2026-10-14). There is no backend tournament or selector. Historical A/B1/C–K comparisons and failed deliveries remain separately identified evidence, not runnable alternatives or certification of the current bundle. Benchmark loads remain paused until the correctness checkpoint is satisfied; cloud execution remains unauthorized. Fix defects between runs, never adapt a running workload or count unknown commits as acknowledgments.
 
 Detailed harness parameters, extraction/audit scope, retention policy, and both final measurement tables are reflected in [RFD0005](../../docs/rfds/RFD0005-write-path-experiment.md#implementation-and-evidence-reset-2026-10-11). This README remains the runnable entry point.
 
@@ -35,7 +35,7 @@ BENCH_FACTS=100000 BENCH_WORKERS=4 pnpm run run:local
 
 `prepare:corpus` uses the cached `tests/fixtures/cache/onepiece-pages-current.xml`, or accepts an XML path as its first argument. It prepares ordinary facts locally; there is no database import API. Exact percent-encoded titles prevent the old extractor's lossy-slug collisions. The manifest records all pages processed, the 8-category/16-link extraction caps, and omission of full wiki text. No hand-authored domain facts are mixed into the corpus.
 
-The iteration comparison attempts **the same first 100,000 corpus facts in every scenario**. Only after a candidate demonstrates repeatably better throughput and correct durable writes/recovery should the comparison scale back to 1,000,000. The complete prepared corpus contains **1,530,195 facts from 296,624 pages**. `preflight` is informational; it does not write data, shrink batches, skip scenarios, or prevent the runner from exercising database defects.
+An authorized benchmark attempts **the same first 100,000 corpus facts in every scenario** against the canonical implementation. Correctness hardening precedes new performance runs. Scaling to 1,000,000 remains a separate explicit decision. The complete prepared corpus contains **1,530,195 facts from 296,624 pages**. `preflight` is informational; it does not write data, shrink batches, skip scenarios, or prevent the runner from exercising database defects.
 
 The current matrix is concurrent-only. Both concurrency-1 cases are excluded. The user requested a clean restart: all earlier generated reports, archives, journals, SQLite trial state, and logs were deleted; corpus inputs and harness code were kept.
 
@@ -56,7 +56,7 @@ Optional environment variables:
 
 IDs are unique per run/scenario/batch. Retries retain the exact ID/payload. A concurrency slot includes request and retry/backoff time. Successful responses await the real database commit. Unknown outcomes are retained as unknown to the caller and separately reconciled against quiescent storage; an absent transaction at audit time is not silently reported as a successful load.
 
-Delivery streams the prepared facts with only the outstanding batches in memory. Verification uses a disk-backed SQLite reference/response ledger, then walks the actual fact-store leaves and checks every persisted fact against its transaction's expected fact range. Both pre-/post-restart audits are bounded by page size, not an in-memory copy of the corpus. Latency samples are retained for exact percentiles. The benchmark's local ledger is verification bookkeeping, not part of Poneglyph or an import API. The pre-fix report identifies the unchanged implementation it measured. Subsequent authorized bug fixes are a separately identified revision; transaction/retention/capacity limits and the centralized coordinator architecture remain unchanged.
+Delivery streams the prepared facts with only the outstanding batches in memory. Verification uses a disk-backed SQLite reference/response ledger, then walks the actual fact-store leaves and checks every persisted fact against its transaction's expected fact range. Both pre-/post-restart audits are bounded by page size, not an in-memory copy of the corpus. Latency samples are retained for exact percentiles. The benchmark's local ledger is verification bookkeeping, not part of Poneglyph or an import API. The pre-fix report identifies the unchanged implementation it measured. Subsequent authorized bug fixes are a separately identified revision; transaction/retention/capacity limits remain unchanged; the canonical pooled-ledger/independent-owner architecture is identified by actual bundle inputs.
 
 ## Saved evidence
 
@@ -73,7 +73,7 @@ Reports distinguish:
 
 The disk-backed audit walks router/leaf topology and checks the selected scalar assertion corpus. The separate small-fixture auditor supports only an unsplit root. Retraction semantics use dedicated protocol tests rather than pretending the assertion-only corpus audit models them. Public query and retraction/failure/split semantics are also exercised by the package's existing tests; candidate overlapping-writer invariants require additional tests. The SQL-bind regression now requires successful writes, public query results, and restart persistence for batches of 100, 101, and 1,000 distinct entities.
 
-## Current findings / deployment gate
+## Historical findings / deployment gate
 
 See [the result index](results/README.md) for the clean 100k iteration. Earlier measurements have been removed and are not evidence for this restarted comparison.
 
@@ -85,7 +85,7 @@ See [the result index](results/README.md) for the clean 100k iteration. Earlier 
 - Busy responses, retry exhaustion, and transport failures are part of each result. Local generator/runtime limitations must not be mistaken for a cloud DO request-rate ceiling.
 - The baseline retains at most 100,000 transaction outcomes for seven days. At 100k facts the largest transaction count is 50,000, so this iteration does **not** exercise that limit. At 1M the two-fact case needs 500,000 transactions and exposes it. Keep that known limitation for scale-up; never raise it, switch graphs, shrink transactions, or route failed facts through a fallback to make a load pass.
 
-Therefore **no Cloudflare load was deployed**, no cloud performance is claimed, and Version B has not been implemented. Preserve Version A evidence first; any baseline bug fix must be a separately identified revision with new measurements. The architecture amendment required by RFD0005 remains a prerequisite to Version B.
+No Cloudflare load performance is claimed. Historical candidate experiments are closed; any correctness/performance change to the canonical implementation must be a separately identified revision with new validation. Preserve every original outcome and source/corpus identity. No load is automatically started by the cutover.
 
 ## Before cloud execution
 

@@ -38,7 +38,7 @@ jobs:
         run: pnpm build
 
   small-data-conformance:
-    name: Small-data read/write conformance (all implementations)
+    name: Small-data read/write conformance
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -58,7 +58,7 @@ jobs:
           pnpm --dir poneglyph install --frozen-lockfile
           pnpm --dir poneglyph build:package
           pnpm --dir tests/conformance install --frozen-lockfile
-      - name: Check conformance types and all-implementation small tier
+      - name: Check conformance types and canonical small tier
         run: |
           pnpm --dir tests/conformance typecheck
           pnpm --dir tests/conformance test:small

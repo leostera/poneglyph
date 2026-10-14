@@ -1,22 +1,12 @@
-const IMPLEMENTATIONS = [
-  {directory: "storage", identity: "A-central-coordinator-correctness"},
-  {directory: "storage-candidate", identity: "B1-independent-subtrees"},
-  {directory: "storage-c", identity: "C-pooled-coordinator-ledgers"},
-  {directory: "storage-d", identity: "D-narrower-conflict-locks"},
-  {directory: "storage-e", identity: "E-idempotent-local-commit"},
-  {directory: "storage-f", identity: "F-shorter-critical-sections"},
-  {directory: "storage-g", identity: "G-integrated-write-path"},
-  {directory: "storage-h", identity: "H-epoch-fenced-route-cache"},
-  {directory: "storage-i", identity: "I-deferred-outcome-maintenance"},
-  {directory: "storage-j", identity: "J-direct-atomic-admission"},
-  {directory: "storage-k", identity: "K-participant-message-key-reuse"},
-] as const;
-
-// Identity follows actual bundled implementation classes, not a request flag
-// or a label supplied independently of source composition.
+// Derive identity from actual bundled actors, never from a workload flag.
 export function identifyDatabaseImplementation(inputs: readonly string[]): string {
   const paths = inputs.map(path => path.replaceAll("\\", "/"));
-  const matches = IMPLEMENTATIONS.filter(model => paths.some(path => path.endsWith(`/src/${model.directory}/coordinator.ts`)));
-  if (matches.length !== 1) throw new Error("database bundle must contain exactly one known coordinator implementation");
-  return matches[0]!.identity;
+  for (const role of ["coordinator", "shard"]) {
+    const actors = paths.flatMap(path => {
+      const match = new RegExp(`(?:^|/)src/(storage(?:-[^/]+)?)/${role}\\.ts$`).exec(path);
+      return match ? [match[1]!] : [];
+    });
+    if (new Set(actors).size !== 1 || actors[0] !== "storage") throw new Error(`database bundle requires exactly the canonical ${role}`);
+  }
+  return "poneglyph-pooled-owner-write-path";
 }

@@ -51,7 +51,7 @@ PONEGLYPH_URL=http://127.0.0.1:5173 pnpm exec tsx ../examples/client-quickstart.
 
 The example uses `createDatabase`, defines a graph-scoped handle, writes facts with a caller-provided idempotency key, and runs a Datalog query. The Worker API also supports a point entity read at `/v1/graphs/{graphId}/entities?uri=...`. Graph IDs use lowercase letters, digits, and hyphens. Query results include the committed snapshot sequence.
 
-Every graph currently has one coordinator Durable Object. All clients using the same graph ID contend on that coordinator for writes (and use it to begin reads); sharding distributes stored facts but does not distribute the graph's commit sequencer. Cloudflare documents approximately 1,000 requests/second per DO as a soft, workload-dependent limit, not a guaranteed rate or hard ceiling. Actual Poneglyph write throughput must be measured for the workload. Using multiple graph IDs creates separate graphs and changes cross-graph query/transaction semantics; it is not transparent scale-out.
+There is one storage implementation under `poneglyph/src/storage/`, promoted from G. Each graph has a request facade, sixteen entity-owner roots and sixteen pooled transaction ledgers. Conflicting entities and topology changes are fenced; independent owners may progress concurrently. Queries use a leased owner vector—not one graph-global commit order. This is still experimental: neither universal correctness nor full-delivery/hosted performance is established. See [the canonical implementation decision](docs/rfds/RFD0005-write-path-experiment.md#current-direction-one-implementation-2026-10-14). Multiple graph IDs remain separate graphs, not transparent partitions.
 
 ## Deploying to Cloudflare
 

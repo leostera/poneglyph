@@ -21,6 +21,8 @@ Architectural decisions should align with [RFD0003](docs/rfds/RFD0003-cloudflare
 
 ## Working rules
 
+- The current TypeScript branch has **one** storage implementation, promoted from G and maintained directly in `poneglyph/src/storage/`. Do not recreate implementation selectors, parallel candidates or all-backend tournaments. See RFD0005's current direction; older experiment sections and reports are historical evidence.
+- Harden that implementation against the independent conformance oracle before new benchmark loads. Use focused regressions during development; full tier runs are explicit certification checkpoints, not a default command after every edit.
 - Commit often, commit eagerly, and use conventional commit messages.
 - Prefer small, explicit architectural steps over broad speculative refactors.
 - Preserve append-only semantics in new designs. Do not introduce mutable source-of-truth entity tables as the primary model.

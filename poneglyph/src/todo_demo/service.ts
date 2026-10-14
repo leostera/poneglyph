@@ -21,8 +21,6 @@ export async function handleTodoApi(request: Request, env: Env): Promise<Respons
 }
 
 async function readSnapshot(env: Env): Promise<Response> {
-  const topology = await ensureTodoTopology(env);
-  if (topology !== undefined) return topology;
   const query = await runQuery(env, "todo:task-list(Task, List), schema:name(Task, Title)");
   if (!query.ok) return query.response;
   const tasks: Readonly<{ id: string; title: string; list: string }>[] = [];
@@ -53,9 +51,6 @@ async function createTask(request: Request, env: Env): Promise<Response> {
   if (typeof title !== "string" || title.trim().length === 0 || title.trim().length > 200 || !isTodoList(list)) {
     return jsonResponse({ error: "title (1–200 characters) and a supported list are required" }, 400);
   }
-  const topology = await ensureTodoTopology(env);
-  if (topology !== undefined) return topology;
-
   const taskId = crypto.randomUUID();
   const task = `todo:task:${taskId}`;
   const transaction = await commitFacts(env, [
@@ -74,9 +69,6 @@ async function moveTask(request: Request, env: Env, taskId: string): Promise<Res
     return jsonResponse({ error: "expected a supported toList" }, 400);
   }
   const toList = input.value["toList"];
-  const topology = await ensureTodoTopology(env);
-  if (topology !== undefined) return topology;
-
   const task = `todo:task:${taskId}`;
   const current = await runQuery(env, `todo:task-list("${task}", List)`);
   if (!current.ok) return current.response;
@@ -95,18 +87,6 @@ async function moveTask(request: Request, env: Env, taskId: string): Promise<Res
   if (!transaction.ok) return transaction.response;
   await publishInvalidation(env, transaction, [fromList, toList]);
   return jsonResponse({ taskId, fromList, toList, ...transaction });
-}
-
-async function ensureTodoTopology(env: Env): Promise<Response | undefined> {
-  const coordinator = env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(TODO_GRAPH_ID));
-  const response = await coordinator.fetch("https://coordinator.internal/_split", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ graphId: TODO_GRAPH_ID, prefix: "", force: true }),
-  });
-  if (response.ok) return undefined;
-  const detail = (await response.text()).slice(0, 512);
-  return jsonResponse({ error: `TODO topology is unavailable: ${detail}`, retryable: response.status >= 500 }, response.status);
 }
 
 async function commitFacts(env: Env, facts: readonly unknown[]): Promise<
