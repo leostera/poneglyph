@@ -2,7 +2,22 @@
 
 Reusable read-only MCP tools and stateless HTTP handling for Poneglyph, built with the Cloudflare Agents SDK. This private workspace package has no One Piece dataset, fixed graph, backend binding, hostname or deployment config.
 
-Applications provide a query capability and dataset guidance:
+Applications provide a query capability and dataset guidance. For private Workers RPC, a public application's entire entrypoint can be a composition:
+
+```ts
+export default createPublicPoneglyphMcpWorker<Env>({
+  graphId: "my-graph",
+  service: env => env.PONEGLYPH,
+  admit: (request, env) => admitRequest(request, env.RATE_LIMITER),
+  dataset: DATASET,
+  allowedHostnames: ["my-mcp.example"],
+  homepage: connectionPage,
+});
+```
+
+The helper owns the public read-only HTTP boundary, CORS and request-local MCP; the app owns its fixed graph, service, admission and content. It calls `env.PONEGLYPH.getGraph({ graphId })` lazily inside query-tool execution and disposes the graph after the read settles, including failures. MCP initialization/schema discovery does not acquire a graph. RPC cancellation follows invocation lifetime; an observed signal prevents new reads/discards a canceled answer, without pretending to serialize `AbortSignal` or abort an admitted write.
+
+For HTTP/custom transports, the lower-level composition remains supported:
 
 ```ts
 import { createDatabase } from "@leostera/poneglyph";

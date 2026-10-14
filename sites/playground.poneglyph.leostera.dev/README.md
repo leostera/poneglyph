@@ -1,40 +1,33 @@
 # One Piece MCP playground
 
-A public, anonymous, read-only MCP application built with Cloudflare's Agents SDK and Poneglyph. `/` gives connection instructions; `/mcp` exposes `describe_dataset` and `query`. There is no query editor, hosted chat model, login or API key.
+Tiny read-only MCP application, protected by Cloudflare Access for members of the owner's personal Cloudflare account. Its entrypoint composes `createPublicPoneglyphMcpWorker` with dataset guidance, IP-rate admission and a private `PONEGLYPH` RPC binding. There is no query editor, hosted chat model or separate database API key.
 
-**Local implementation only: not deployed, and no full wiki corpus has been loaded into its dedicated database.** Tests seed six synthetic facts. The intended corpus is the existing normalized wiki metadata/link graph, not full article text or verified lore.
+```ts
+using graph = await env.PONEGLYPH.getGraph({ graphId: "onepiece" });
+```
 
-[Architecture, security, rate limits and rollout](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md).
+The reusable MCP package manages that graph's per-tool lifetime. The private `packages/poneglyph-worker` service enforces the playground principal's read-only graph grant; writes are denied independently of the MCP tool list. No database actors/HTTP client adapter live in this site.
+
+The current hostname is `onepiece.poneglyph.dev`. Only a tiny **synthetic smoke fixture, not an imported wiki corpus**, is authorized; this hostname check does not establish the current service's population or completed ingestion. The original dedicated database's private fixture reads are not authenticated MCP success on the generic service. [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md) records exact deployment/cutover state and limitations.
 
 ## Offline development
 
-From the repository root:
-
 ```sh
+# Repository root:
 bun install --frozen-lockfile
 bun run build:package
 bun run --cwd sites/playground.poneglyph.leostera.dev check
 bun run --cwd sites/playground.poneglyph.leostera.dev build
 ```
 
-Root `bun run check`, `bun run test` and `bun run build` also include the site. Tests use Node and a tiny local Miniflare/SQLite runtime, never cloud resources or the cached wiki dump. The build checks both private database and public MCP modes, leaving the public build output last.
+Root build/check/test includes the service, adapter and site. Node hosts native tests against real canonical SQLite actors with six synthetic facts, not cloud resources/corpus data. `dev` uses the referenced service locally with ignored persistence. `dev:seed` is an explicit authenticated remote operator mode, pinned to `127.0.0.1:8878`; it never runs in default gates. Verify the owned listener before calling it. `/seed` submits only the fixed manifest in `src/test-facts.ts`; `/verify` executes three fixed private reads. Neither is part of the public deployment.
 
-For interactive local development, run `dev:database` and `dev` in separate terminals from this package. Both use ignored `.artifacts/dev` persistence; use the printed local MCP URL, not the undeployed production hostname. The database exposes transactions only on that local/private Worker; the public application never forwards them. Corpus ingestion and verification remain a separate operator step.
+`bun run deploy` builds dependencies and deploys the central private service before the public Worker. A new service means fresh namespaces, not automatic migration; never mistake seeding a distinct service for reconciliation against the old database. Keep uncertain original IDs/payloads and stop instead of silently retrying. Deployment/full corpus ingestion/deletion remain explicit operations requiring authorization.
 
 ## Connecting an agent
 
-Once an approved deployment and verified corpus load exist, use remote MCP / Streamable HTTP at:
-
 ```text
-https://playground.poneglyph.leostera.dev/mcp
+https://onepiece.poneglyph.dev/mcp
 ```
 
-No credentials are required. First call `describe_dataset`, then for example:
-
-```json
-{"query":"wiki:page:title(Page, \"Monkey D. Luffy\"), wiki:page:category(Page, Category)"}
-```
-
-MCP POST requests have an approximate **30/minute per-IP, per-Cloudflare-location** allowance; `429` includes `Retry-After: 60`. Shared IPs share the allowance. Native query budgets still apply, with explicit failures instead of truncated success. Wildcard, credential-free CORS supports browser-based agents.
-
-Deployment scripts are explicit operations, not authorization. Before deployment, verify names/namespace collisions, account/billing limits and corpus size, and preserve the database Worker's lack of public routes, workers.dev and preview URLs. No cloud or full-load action is performed by default scripts.
+Sign in using a Cloudflare account that is a member of the owner's personal account. The Worker-scoped Access app uses only the Cloudflare IdP and an explicit Cloudflare Account Member selector; email-PIN login, email allowlists, Everyone and service-token grants are excluded. Workers.dev and preview URLs remain disabled. Your MCP transport must support Access authentication; browser sign-in alone does not authenticate a separate agent process. Call `describe_dataset` first; fixture data is not verified wiki lore. MCP POSTs have an approximate **30/minute per-IP, per-Cloudflare-location** allowance; `429` includes `Retry-After: 60`. Shared IPs share allowance. Native query budgets remain unchanged, and errors never become truncated successes. The generic handler's wildcard CORS is not an Access exemption or a promise of cross-origin cookie authentication. Local native tests bypass the cloud Access edge; deployment verification must read back the policy and check unauthenticated ingress separately.

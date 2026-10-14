@@ -1,6 +1,6 @@
 import { RATE_LIMIT } from "./rate-limit.js";
 import { GRAPH_ID } from "./runtime.js";
-export const PUBLIC_HOST = "playground.poneglyph.leostera.dev";
+export const PUBLIC_HOST = "onepiece.poneglyph.dev";
 export const MCP_URL = `https://${PUBLIC_HOST}/mcp`;
 
 // This describes the existing normalized corpus, not proof of a completed load.
@@ -9,7 +9,7 @@ export const DATASET = Object.freeze({
   currentDataNote: "Initial deployment uses a tiny synthetic smoke fixture, not an imported wiki corpus. Names/categories/links and byte counts in that fixture are test data, not verified wiki extraction.",
   graphId: GRAPH_ID,
   source: "One Piece Fandom MediaWiki XML dump",
-  access: { authentication: "none", readOnly: true, requestsPerIpPerLocationPerMinute: RATE_LIMIT.simple.limit, rateLimitAccuracy: "approximate; not a global accounting/spend cap", requestBytes: 65536, batching: "not supported", on429: "Wait according to the HTTP Retry-After header. The server never retries automatically." },
+  access: { authentication: "Cloudflare Access; membership in the owner's Cloudflare account enforced at the Worker ingress", readOnly: true, requestsPerIpPerLocationPerMinute: RATE_LIMIT.simple.limit, rateLimitAccuracy: "approximate; not a global accounting/spend cap", requestBytes: 65536, batching: "not supported", on429: "Wait according to the HTTP Retry-After header. The server never retries automatically." },
   entityIdentity: "wiki:onepiece:page:<encodeURIComponent(exact page title)>",
   predicates: [
     { field: "wiki:page:title", value: "text", description: "Exact page title." },

@@ -1,4 +1,3 @@
-import { createDatabase } from "@leostera/poneglyph";
 import type { InferEnv } from "cf/config";
 import type { seedBindings } from "../cloudflare.config.ts";
 import { GRAPH_ID } from "./runtime.js";
@@ -14,7 +13,7 @@ export default {
     const url = new URL(request.url);
     if (!["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) || request.headers.has("origin")) return new Response("Forbidden", { status: 403 });
     if (!["/seed", "/verify"].includes(url.pathname) || request.method !== "POST" || request.headers.get("content-type") !== "application/json") return new Response("Not found", { status: 404 });
-    const graph = createDatabase({ url: "https://database.internal", graphId: GRAPH_ID, fetch: (input, init) => env.PONEGLYPH.fetch(input, init) });
+    using graph = await env.PONEGLYPH.getGraph({ graphId: GRAPH_ID });
     if (url.pathname === "/verify") {
       // Three fixed SELECT-only checks through the authenticated binding, not
       // an alternate public MCP URL or caller-controlled query interface.

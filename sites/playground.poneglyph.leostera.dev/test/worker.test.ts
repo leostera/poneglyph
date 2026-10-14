@@ -6,8 +6,7 @@ import test from "node:test";
 import { build } from "esbuild";
 import { Miniflare, Log, LogLevel } from "miniflare";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { createDatabase } from "@leostera/poneglyph";
-import { DATASET, MCP_URL } from "../src/dataset.js";
+import { DATASET, MCP_URL, PUBLIC_HOST } from "../src/dataset.js";
 import { RATE_LIMIT } from "../src/rate-limit.js";
 import { COMPATIBILITY_DATE, GRAPH_ID } from "../src/runtime.js";
 
@@ -28,7 +27,7 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
   let runtime: Miniflare | undefined;
   const client = new Client({ name: "native-playground-test", version: "1" });
   try {
-    await build({ absWorkingDir: site, entryPoints: { playground: "src/index.ts", database: "src/database.ts" },
+    await build({ absWorkingDir: site, entryPoints: { playground: "src/index.ts", database: "../../packages/poneglyph-worker/src/index.ts", operator: "src/operator.ts" },
       outdir: directory, outExtension: { ".js": ".mjs" }, bundle: true, format: "esm", platform: "browser",
       target: "es2024", conditions: ["workerd", "worker", "browser"], external: ["cloudflare:*", "node:*"], });
     const manifest = (contents: string) => ({ mainModule: "index.mjs", modules: { "index.mjs": { type: "esm" as const, contents } } });
@@ -36,46 +35,57 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
     runtime = new Miniflare({ port: 0, host: "127.0.0.1", resourcePersistencePath: resolve(directory, "state"),
       telemetry: { enabled: false }, log: new Log(LogLevel.WARN), workers: [
         { config: { name: "playground", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
-          env: { PONEGLYPH: { type: "worker", worker: "database" }, MCP_RATE_LIMITER: { type: "rate-limit", ...RATE_LIMIT } } } },
+          env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground" } }, MCP_RATE_LIMITER: { type: "rate-limit", ...RATE_LIMIT } } } },
         { config: { name: "database", manifest: manifest(await readFile(resolve(directory, "database.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
-          env: { GRAPH_COORDINATORS: { type: "durable-object", worker: "database", exportName: "GraphCoordinatorDO" }, GRAPH_SHARDS: { type: "durable-object", worker: "database", exportName: "GraphShardDO" } },
+          env: { GRAPH_COORDINATORS: { type: "durable-object", worker: "database", exportName: "GraphCoordinatorDO" }, GRAPH_SHARDS: { type: "durable-object", worker: "database", exportName: "GraphShardDO" }, GRAPH_GRANTS: { type: "json", value: { playground: { onepiece: ["read"] }, "playground-loader": { onepiece: ["read", "write"] } } } },
           exports: { GraphCoordinatorDO: { type: "durable-object", storage: "sqlite" }, GraphShardDO: { type: "durable-object", storage: "sqlite" } } } },
+        { config: { name: "operator", manifest: manifest(await readFile(resolve(directory, "operator.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
+          env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground-loader" } } } } },
         // Same public entrypoint, deliberately missing DB binding, with one token.
         { config: { name: "rate-limited", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
           env: { MCP_RATE_LIMITER: { type: "rate-limit", namespace: "2026101402", simple: { limit: 1, period: 60 } } } } },
       ] });
     await runtime.ready;
     const active = runtime;
-    const database = await active.getWorker("database");
-    const graph = createDatabase({ url: "https://database.internal", graphId: GRAPH_ID, fetch: async (input, init) => {
-      const request = new Request(input, init);
-      return testResponse(await database.fetch(request.url, { method: request.method, headers: Object.fromEntries(request.headers), body: await request.text() }));
-    } });
-    const receipt = await graph.transact([
-      { source: "fixture:playground", entity: luffy, field: "wiki:page:title", value: { type: "text", value: "Monkey D. Luffy" } },
-      { source: "fixture:playground", entity: luffy, field: "wiki:page:category", value: { type: "text", value: "Pirates" } },
-      { source: "fixture:playground", entity: luffy, field: "wiki:page:link", value: { type: "text", value: "Roronoa Zoro" } },
-      { source: "fixture:playground", entity: luffy, field: "wiki:page:namespace", value: { type: "number", value: "0" } },
-      { source: "fixture:playground", entity: luffy, field: "wiki:page:text_bytes", value: { type: "number", value: "140" } },
-      { source: "fixture:playground", entity: zoro, field: "wiki:page:title", value: { type: "text", value: "Roronoa Zoro" } },
-    ], { txId: "fixture:playground:one" });
-    assert.equal(receipt.status, "committed");
+    const operator = await active.getWorker("operator");
+    for (const [url, init, status] of [
+      ["https://playground.poneglyph.leostera.dev/seed", { method: "POST" }, 403],
+      ["http://127.0.0.1/seed", { method: "POST", headers: { origin: "https://attacker.example", "content-type": "application/json" } }, 403],
+      ["http://127.0.0.1/seed", { method: "GET" }, 404],
+      ["http://127.0.0.1/v1/graphs/another/transactions", { method: "POST" }, 404],
+    ] as const) {
+      const denied = await operator.fetch(url, init); assert.equal(denied.status, status); await denied.text();
+    }
+    const seed = await operator.fetch("http://127.0.0.1/seed", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ graphId: "attacker", txId: "different", facts: [] }) });
+    assert.equal(seed.status, 200);
+    assert.deepEqual(await seed.json(), { txId: "playground:seed:20261014-v1", commitSeq: 1, status: "committed", graphId: GRAPH_ID, facts: 6, dataset: "synthetic-smoke-fixture; not wiki corpus" });
 
-    const home = await active.dispatchFetch("https://playground.poneglyph.leostera.dev/");
+    // Direct native invocation bypasses the cloud Access edge; these assertions
+    // verify exact hostname routing, not hosted authentication.
+    assert.equal(PUBLIC_HOST, "onepiece.poneglyph.dev");
+    assert.equal(MCP_URL, "https://onepiece.poneglyph.dev/mcp");
+    const home = await active.dispatchFetch(`https://${PUBLIC_HOST}/`);
     assert.equal(home.status, 200);
-    assert.match(await home.text(), /https:\/\/playground\.poneglyph\.leostera\.dev\/mcp/);
+    const page = await home.text();
+    assert.ok(page.includes(MCP_URL));
+    assert.match(page, /Private via Cloudflare Access/);
+    assert.doesNotMatch(page, /Public and anonymous/);
+    assert.match(DATASET.access.authentication, /Cloudflare Access/);
     for (const path of ["/v1/graphs/onepiece/transactions", "/v1/graphs/onepiece/query", "/_transact", "/__e2e/inspect", "/todo"]) {
-      assert.equal((await active.dispatchFetch(`https://playground.poneglyph.leostera.dev${path}`, { method: "POST", body: "{}" })).status, 404);
+      assert.equal((await active.dispatchFetch(`https://${PUBLIC_HOST}${path}`, { method: "POST", body: "{}" })).status, 404);
     }
     const preflight = await active.dispatchFetch(MCP_URL, { method: "OPTIONS", headers: { origin: "https://any-agent.example" } });
     assert.equal(preflight.status, 204);
     assert.equal(preflight.headers.get("access-control-allow-origin"), "*");
     assert.equal((await active.dispatchFetch(MCP_URL)).status, 405);
-    assert.equal((await active.dispatchFetch("https://attacker.example/mcp", { method: "POST", body: "{}" })).status, 403);
+    for (const hostname of ["attacker.example", "onepiece.poneglyph.dev.attacker.example", "playground.poneglyph.leostera.dev"]) {
+      assert.equal((await active.dispatchFetch(`https://${hostname}/mcp`, { method: "POST", body: "{}" })).status, 403);
+    }
 
     await client.connect(new StreamableHTTPClientTransport(new URL(MCP_URL), { fetch: async (input, init) => {
       const request = new Request(input, init);
-      // No Authorization, cookie or API key. A browser agent Origin is allowed.
+      // Local Miniflare does not emulate the account-members-only Access app.
+      // Hosted login/authorization must be checked separately.
       request.headers.set("origin", "https://any-agent.example");
       return testResponse(await active.dispatchFetch(request.url, { method: request.method, headers: Object.fromEntries(request.headers), body: request.method === "POST" ? await request.text() : undefined }));
     } }));
