@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { benchmarkWrites, boundedInteger, summarize } from "../src/main.ts";
+import { benchmarkWrites, boundedInteger, summarize, main } from "../src/main.ts";
 
 test("bounded environment parameters reject invalid concurrency instead of widening the workload", () => {
   const name = "PONEGLYPH_EXAMPLE_TEST_BOUND", previous = process.env[name];
@@ -63,6 +63,15 @@ test("invalid workload cannot admit a callback", async () => {
   let issued = 0;
   await assert.rejects(benchmarkWrites({ transactions: 1, concurrency: 0, factsPerTransaction: 3, entitiesPerTransaction: 2 }, async () => { issued++; return { body: {}, response: Response.json({}) }; }), /positive integer/);
   assert.equal(issued, 0);
+});
+
+test("cloud configuration fails before login/writes and transport failures are not retried", async (t) => {
+  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("unknown transport"); });
+  await assert.rejects(main({}), /explicitly approved/);
+  await assert.rejects(main({ PONEGLYPH_CLOUDFLARE_URL: "https://user:secret@approved.poneglyph.leostera.dev", PONEGLYPH_TODO_PASSPHRASE: "test-only" }), /requires HTTPS/);
+  assert.equal(network.mock.callCount(), 0);
+  await assert.rejects(main({ PONEGLYPH_CLOUDFLARE_URL: "https://approved.poneglyph.leostera.dev", PONEGLYPH_TODO_PASSPHRASE: "test-only" }), /unknown transport/);
+  assert.equal(network.mock.callCount(), 1);
 });
 
 test("built benchmark imports without issuing a load", async (t) => {

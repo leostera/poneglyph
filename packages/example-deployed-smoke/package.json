@@ -9,5 +9,6 @@
     "check": "bun run typecheck && bun run test",
     "run": "node --import tsx src/main.ts"
   },
+  "dependencies": {"@leostera/poneglyph": "workspace:*"},
   "devDependencies": {"@types/node": "25.6.0", "esbuild": "0.28.2", "tsx": "4.23.15", "typescript": "5.9.3"}
 }

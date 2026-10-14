@@ -1,16 +1,15 @@
 import { randomUUID } from "node:crypto";
 
-const DEFAULT_BASE_URL = "https://poneglyph-scaleout-20261011.poneglyph.leostera.dev";
-const baseUrl = (process.env["PONEGLYPH_CLOUDFLARE_URL"] ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
-const passphrase = process.env["PONEGLYPH_TODO_PASSPHRASE"];
-const transactionCount = boundedInteger("PONEGLYPH_CLOUDFLARE_TRANSACTIONS", 10, 2, 50);
-const queryCount = boundedInteger("PONEGLYPH_CLOUDFLARE_QUERIES", 10, 2, 100);
-const concurrency = boundedInteger("PONEGLYPH_CLOUDFLARE_CONCURRENCY", 2, 1, 4);
-const transientStatuses = new Set([423, 429, 500, 502, 503, 520, 521, 522, 523, 524, 525, 526, 530]);
-
-export async function main(): Promise<void> {
-  const endpoint = new URL(baseUrl);
-  if (endpoint.protocol !== "https:" || !endpoint.hostname.endsWith(".poneglyph.leostera.dev")) {
+export async function main(environment: NodeJS.ProcessEnv = process.env): Promise<void> {
+  const target = environment["PONEGLYPH_CLOUDFLARE_URL"];
+  if (!target) throw new TypeError("Set PONEGLYPH_CLOUDFLARE_URL to an explicitly approved benchmark target");
+  const endpoint = new URL(target), baseUrl = endpoint.origin;
+  const passphrase = environment["PONEGLYPH_TODO_PASSPHRASE"];
+  const transactionCount = boundedInteger("PONEGLYPH_CLOUDFLARE_TRANSACTIONS", 10, 2, 50, environment);
+  const queryCount = boundedInteger("PONEGLYPH_CLOUDFLARE_QUERIES", 10, 2, 100, environment);
+  const concurrency = boundedInteger("PONEGLYPH_CLOUDFLARE_CONCURRENCY", 2, 1, 4, environment);
+  if (endpoint.protocol !== "https:" || !endpoint.hostname.endsWith(".poneglyph.leostera.dev") ||
+      endpoint.username !== "" || endpoint.password !== "" || endpoint.search !== "" || endpoint.hash !== "" || endpoint.pathname !== "/") {
     throw new Error("Cloudflare benchmark requires HTTPS beneath *.poneglyph.leostera.dev");
   }
   if (typeof passphrase !== "string" || passphrase.length === 0) {
@@ -41,7 +40,7 @@ export async function main(): Promise<void> {
       ],
     });
   });
-  const singleQueries = await benchmarkQueries(singleGraph, queryCount, concurrency, undefined, [
+  const singleQueries = await benchmarkQueries(baseUrl, singleGraph, queryCount, concurrency, undefined, [
     { shape: "full-scan", query: "bench:value(Entity, Value)" },
     { shape: "join", query: "bench:edge(From, To), bench:value(To, Value)" },
   ]);
@@ -62,7 +61,7 @@ export async function main(): Promise<void> {
     if (taskId === undefined) throw new Error("missing validation task id");
     return await postJson(`${baseUrl}/api/todo/tasks/${taskId}/move`, { toList: "todo:list:done" }, cookie);
   });
-  const todoQueries = await benchmarkQueries("todo-shared-2026", queryCount, concurrency, cookie, [
+  const todoQueries = await benchmarkQueries(baseUrl, "todo-shared-2026", queryCount, concurrency, cookie, [
     { shape: "todo-membership-scan", query: "todo:task-list(Task, List)" },
     { shape: "todo-task-join", query: "todo:task-list(Task, \"todo:list:done\"), schema:name(Task, Title)" },
   ]);
@@ -81,24 +80,27 @@ export async function main(): Promise<void> {
       transactionsPerWorkload: transactionCount,
       queryRequestsPerWorkload: queryCount,
       concurrency,
-      singleShard: { factsPerTransaction: 3, entitiesPerTransaction: 2, totalFacts: transactionCount * 3 },
-      crossShardTodoMove: { factsPerTransaction: 4, touchedEntitiesPerTransaction: 3, expectedParticipants: 2, totalFacts: transactionCount * 4 },
-      retryPolicy: "same body/txId for generic transaction retries; TODO route issues a fresh txId per accepted move request",
+      freshGraph: { factsPerTransaction: 3, entitiesPerTransaction: 2, totalFacts: transactionCount * 3 },
+      crossShardTodoMove: { factsPerTransaction: 4, touchedEntitiesPerTransaction: 3, totalFacts: transactionCount * 4 },
+      retryPolicy: "no automatic retries; uncertain delivery requires explicit original-identity reconciliation",
       passphrase: "set in Worker secret; never emitted by this report",
     },
-    singleShard: { writes: singleWrites, queries: singleQueries },
+    freshGraph: { writes: singleWrites, queries: singleQueries },
     crossShardTodo: { writes: crossShardMoves, queries: todoQueries, visibleTaskCount: visibleTasks, snapshotSeq: afterSeq },
     caveats: [
       "Small bounded sample against one temporary Worker and a few Durable Objects; not a capacity or production SLA claim.",
       "Includes public-network, Worker, coordination, storage and response overhead; sample count is intentionally capped at 50 writes and concurrency at 4.",
-      "TODO moves touch both fixed list entities, which are routed to opposite root prefixes after the demo's idempotent root split.",
+      "TODO moves touch both list entities; no physical participant count is inferred from public replies.",
     ],
   }, null, 2));
 }
 
 type JsonResult = Readonly<{ body: Record<string, unknown>; response: Response }>;
 async function postJson(url: string, body: unknown, cookie?: string): Promise<JsonResult> {
-  const response = await fetchWithRetry(url, JSON.stringify(body), cookie);
+  const response = await fetch(url, {
+    method: "POST", headers: { "content-type": "application/json", ...(cookie === undefined ? {} : { cookie }) },
+    body: JSON.stringify(body), signal: AbortSignal.timeout(15_000),
+  });
   const result: unknown = await response.json().catch(() => undefined);
   if (!isRecord(result)) throw new Error(`expected JSON from ${url} (HTTP ${response.status})`);
   if (!response.ok) throw new Error(`HTTP ${response.status} from ${url}: ${JSON.stringify(result)}`);
@@ -111,26 +113,6 @@ async function getJson(url: string, cookie: string): Promise<JsonResult> {
   if (!isRecord(result)) throw new Error(`expected JSON from ${url} (HTTP ${response.status})`);
   if (!response.ok) throw new Error(`HTTP ${response.status} from ${url}: ${JSON.stringify(result)}`);
   return { body: result, response };
-}
-
-async function fetchWithRetry(url: string, body: string, cookie?: string): Promise<Response> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json", ...(cookie === undefined ? {} : { cookie }) },
-        body,
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (!transientStatuses.has(response.status) || attempt === 7) return response;
-      lastError = new Error(`HTTP ${response.status}`);
-    } catch (error) {
-      lastError = error;
-    }
-    await delay(Math.min(250 * (attempt + 1), 1_000));
-  }
-  throw new Error(`request to ${url} failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
 }
 
 export type WriteWorkload = Readonly<{
@@ -175,6 +157,7 @@ export async function benchmarkWrites(workload: WriteWorkload, run: (index: numb
 }
 
 async function benchmarkQueries(
+  baseUrl: string,
   graphId: string,
   count: number,
   parallelism: number,
@@ -224,15 +207,14 @@ export function summarize(values: readonly number[]): Readonly<{ p50: number; p9
 function percentile(sorted: readonly number[], fraction: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * fraction) - 1)] ?? 0;
 }
-export function boundedInteger(name: string, fallback: number, minimum: number, maximum: number): number {
-  const raw = process.env[name];
+export function boundedInteger(name: string, fallback: number, minimum: number, maximum: number, environment: NodeJS.ProcessEnv = process.env): number {
+  const raw = environment[name];
   if (raw === undefined) return fallback;
   const parsed = Number(raw);
   if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) throw new Error(`${name} must be between ${minimum} and ${maximum}`);
   return parsed;
 }
 function round(value: number): number { return Math.round(value * 100) / 100; }
-function delay(milliseconds: number): Promise<void> { return new Promise((resolve) => setTimeout(resolve, milliseconds)); }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 
 if (import.meta.main) {

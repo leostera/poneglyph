@@ -54,6 +54,9 @@
     },
     "packages/example-deployed-smoke": {
       "name": "@poneglyph/example-deployed-smoke",
+      "dependencies": {
+        "@leostera/poneglyph": "workspace:*",
+      },
       "devDependencies": {
         "@types/node": "25.6.0",
         "esbuild": "0.28.2",

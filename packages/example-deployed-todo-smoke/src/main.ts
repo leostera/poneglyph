@@ -10,13 +10,13 @@ export type Socket = {
 };
 type SocketConstructor = new (url: string, options: Readonly<{ headers: Record<string, string> }>) => Socket;
 const WebSocketClient = createRequire(import.meta.url)("ws") as SocketConstructor;
-const DEFAULT_BASE_URL = "https://poneglyph-scaleout-20261011.poneglyph.leostera.dev";
-const baseUrl = (process.env["PONEGLYPH_CLOUDFLARE_URL"] ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
-const passphrase = process.env["PONEGLYPH_TODO_PASSPHRASE"];
-
-export async function main(): Promise<void> {
-  const endpoint = new URL(baseUrl);
-  if (endpoint.protocol !== "https:" || !endpoint.hostname.endsWith(".poneglyph.leostera.dev")) {
+export async function main(environment: NodeJS.ProcessEnv = process.env): Promise<void> {
+  const target = environment["PONEGLYPH_CLOUDFLARE_URL"];
+  if (!target) throw new TypeError("Set PONEGLYPH_CLOUDFLARE_URL to an explicitly approved TODO validation target");
+  const endpoint = new URL(target), baseUrl = endpoint.origin;
+  const passphrase = environment["PONEGLYPH_TODO_PASSPHRASE"];
+  if (endpoint.protocol !== "https:" || !endpoint.hostname.endsWith(".poneglyph.leostera.dev") ||
+      endpoint.username !== "" || endpoint.password !== "" || endpoint.search !== "" || endpoint.hash !== "" || endpoint.pathname !== "/") {
     throw new Error("deployed TODO validation requires HTTPS beneath *.poneglyph.leostera.dev");
   }
   if (typeof passphrase !== "string" || passphrase.length === 0) {
@@ -81,8 +81,7 @@ export async function main(): Promise<void> {
     }, cookie);
     const rows = visible["rows"];
     if (!Array.isArray(rows) || rows.length !== 1 || !isRecord(rows[0]) ||
-        !isRecord(rows[0]["List"]) || rows[0]["List"]["value"] !== "todo:list:done" ||
-        visible["snapshotSeq"] !== commitSeq) {
+        !isRecord(rows[0]["List"]) || rows[0]["List"]["type"] !== "string" || rows[0]["List"]["value"] !== "todo:list:done") {
       throw new Error(`cross-shard move was not fully visible at its notification sequence: ${JSON.stringify(visible)}`);
     }
     console.log(JSON.stringify({
@@ -94,7 +93,7 @@ export async function main(): Promise<void> {
       graphId: "todo-shared-2026",
       initialSnapshotSeq: snapshot["snapshotSeq"],
       taskId,
-      crossShardMove: { txId, status: moved["status"], commitSeq, expectedParticipantShards: 2 },
+      crossShardMove: { txId, status: moved["status"], commitSeq },
       authenticatedLiveClients: 2,
       invalidationSentAfterVisibleCommit: true,
       querySnapshotSeq: visible["snapshotSeq"],

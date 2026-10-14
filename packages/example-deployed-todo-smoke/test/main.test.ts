@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { test } from "node:test";
-import { nextMessage, type Socket } from "../src/main.ts";
+import { main, nextMessage, type Socket } from "../src/main.ts";
 
 function socket(): Socket & EventEmitter {
   return Object.assign(new EventEmitter(), { close() {}, terminate() {} });
@@ -20,6 +20,13 @@ test("TODO invalidation decoding rejects malformed JSON and non-object frames", 
     client.emit("message", frame);
     await assert.rejects(pending);
   }
+});
+
+test("missing target or secret rejects before any cloud request", async (t) => {
+  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("network forbidden"); });
+  await assert.rejects(main({}), /explicitly approved/);
+  await assert.rejects(main({ PONEGLYPH_CLOUDFLARE_URL: "https://approved.poneglyph.leostera.dev" }), /PASSPHRASE/);
+  assert.equal(network.mock.callCount(), 0);
 });
 
 test("built TODO smoke imports without opening a cloud request or socket", async (t) => {
