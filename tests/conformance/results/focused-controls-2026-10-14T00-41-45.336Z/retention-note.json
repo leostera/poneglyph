@@ -1,0 +1,19 @@
+{
+  "kind": "post-run-evidence-packaging",
+  "firstAttempt": {
+    "result": "failed-before-writing-or-removing-any-evidence",
+    "cause": "manual packaging helper looked for native-process.log at the implementation directory instead of its bundles directory",
+    "assertion": "0 !== 1",
+    "reportAndPersistenceUnchanged": true
+  },
+  "correctedAttempt": {
+    "result": "complete",
+    "nativeLogLocation": "poneglyph/bundles/native-process.log",
+    "allHostStartsHaveExits": true,
+    "lastHostExitCode": 0,
+    "gzipRoundTripVerified": true,
+    "rawPersistenceRemoved": false,
+    "persistenceArchiveVerified": false
+  },
+  "suiteResultUnchanged": "complete-focused-regression-not-certification"
+}
