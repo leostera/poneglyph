@@ -1,0 +1,27 @@
+{
+  "name": "@leostera/poneglyph-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable read-only Agents SDK MCP tools and HTTP handler for Poneglyph applications.",
+  "type": "module",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" } },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "check": "bun run typecheck && bun run test"
+  },
+  "dependencies": {
+    "@leostera/poneglyph": "workspace:*",
+    "@modelcontextprotocol/server": "2.3.1",
+    "agents": "0.28.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@types/node": "25.6.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

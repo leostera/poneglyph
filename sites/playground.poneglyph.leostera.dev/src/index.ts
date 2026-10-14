@@ -1,11 +1,9 @@
-import { createMcpHandler } from "agents/mcp/server";
-import { readRequestBody } from "@modelcontextprotocol/server";
+import { createPoneglyphMcpHandler } from "@leostera/poneglyph-mcp";
 import type { InferEnv } from "cf/config";
 import type { playgroundBindings } from "../cloudflare.config.ts";
-import { createServer } from "./mcp.js";
 import { connectionPage } from "./page.js";
 import { createGraphReader } from "./reader.js";
-import { PUBLIC_HOST } from "./dataset.js";
+import { DATASET, PUBLIC_HOST } from "./dataset.js";
 import { admitMcpRequest } from "./rate-limit.js";
 
 type PlaygroundEnv = InferEnv<{ env: typeof playgroundBindings }>;
@@ -25,30 +23,13 @@ export default {
     const denied = await admitMcpRequest(request, env.MCP_RATE_LIMITER);
     if (denied !== undefined) return publicResponse(denied);
     if (env.PONEGLYPH === undefined) return publicResponse(new Response("Database binding is unavailable", { status: 503 }));
-    // Agents 0.28.1's legacy compatibility lane doesn't forward the SDK body
-    // limit. Establish it before either lane classifies/parses an MCP request.
-    const body = await readRequestBody(request, 65_536);
-    if (body.tooLarge) return publicResponse(Response.json({ error: "MCP request body exceeds 65536 bytes" }, { status: 413 }));
-    let parsedBody: unknown;
-    try { parsedBody = JSON.parse(body.text); }
-    catch { return publicResponse(Response.json({ error: "Invalid MCP JSON" }, { status: 400 })); }
-    // One admitted POST must not fan out into many queries via a legacy batch.
-    if (Array.isArray(parsedBody)) return publicResponse(Response.json({ error: "MCP request batching is not supported" }, { status: 400 }));
-    const reader = createGraphReader(env.PONEGLYPH);
-    // Both handler and server are request-local: no shared connected server,
-    // cross-request transport state, or MCP session DO is needed for these tools.
-    const handler = createMcpHandler(() => createServer(reader), {
-      route: "/mcp",
-      maxRequestBodySize: 65_536,
-      maxSubscriptions: 0, // request/response tools only; no public idle streams
-      legacy: "stateless",
+    const handler = createPoneglyphMcpHandler({
+      reader: createGraphReader(env.PONEGLYPH),
+      dataset: DATASET,
+      serverInfo: { name: "poneglyph-onepiece-playground", version: "0.1.0" },
       allowedHostnames: ALLOWED_HOSTS,
-      // Deliberately public, including browser-based agents. Host validation
-      // remains strict; CORS is not authorization and no credentials are needed.
-      allowedOriginHostnames: "*",
-      corsOptions: false,
     });
-    return publicResponse(await handler.fetch(request, { parsedBody }));
+    return publicResponse(await handler.fetch(request));
   },
 } satisfies ExportedHandler<PlaygroundEnv>;
 

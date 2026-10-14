@@ -1,20 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { createMcpHandler } from "agents/mcp/server";
-import { createServer, type GraphReader } from "../src/mcp.js";
-import { createGraphReader } from "../src/reader.js";
-import { DATASET, MCP_URL } from "../src/dataset.js";
+import { createDatabase, type FetchFunction } from "@leostera/poneglyph";
+import { createPoneglyphMcpHandler, type GraphReader } from "../src/index.js";
+const MCP_URL = "https://example.test/mcp";
+const DATASET = { name: "Example graph", graphId: "example", predicates: ["wiki:page:title"] };
 
 const metrics = { scanCalls: 1, shardRequests: 1, tuplesRead: 2, bytesRead: 128, directoryRequests: 1 };
 const answer = { rows: [{ Value: { type: "integer", value: "9223372036854775807" } }, { Value: { type: "integer", value: "9223372036854775807" } }], snapshotSeq: 7, metrics };
 
 async function withClient(reader: GraphReader, run: (client: Client) => Promise<void>) {
-  const handler = createMcpHandler(() => createServer(reader), { corsOptions: false });
+  const handler = createPoneglyphMcpHandler({ reader, dataset: DATASET, allowedHostnames: ["example.test"] });
   const client = new Client({ name: "offline-playground-test", version: "1" });
   try {
     await client.connect(new StreamableHTTPClientTransport(new URL(MCP_URL), {
-      fetch: (input, init) => handler.fetch(new Request(input, init)),
+      fetch: (input, init) => {
+        const request = new Request(input, init);
+        request.headers.set("host", "example.test"); // normally supplied by HTTP transport
+        return handler.fetch(request);
+      },
     }));
     await run(client);
   } finally { await client.close(); }
@@ -28,8 +32,8 @@ function toolPayload(result: Awaited<ReturnType<Client["callTool"]>>) {
   return JSON.parse(first.text);
 }
 
-function fakeGraph(fetcher: Pick<Fetcher, "fetch">["fetch"]) {
-  return createGraphReader({ fetch: fetcher });
+function fakeGraph(fetcher: FetchFunction): GraphReader {
+  return createDatabase({ url: "https://database.internal", graphId: "example", fetch: fetcher });
 }
 
 test("only anonymous read tools are advertised; dataset guidance is explicit", async () => {
@@ -46,7 +50,7 @@ test("complete typed rows, duplicates, int64, snapshot and metrics survive MCP",
   let calls = 0;
   await withClient(fakeGraph(async (input, init) => {
     calls++;
-    assert.equal(String(input), "https://database.internal/v1/graphs/onepiece/query");
+    assert.equal(String(input), "https://database.internal/v1/graphs/example/query");
     assert.equal(init?.method, "POST");
     assert.deepEqual(JSON.parse(String(init?.body)), { query: "wiki:page:text_bytes(Page, Value)" });
     return Response.json(answer);

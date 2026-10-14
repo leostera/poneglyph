@@ -38,6 +38,7 @@ This is a Bun workspace. Install **Bun 1.4.2** and **Node.js 26**: Bun manages d
 | Package | Purpose |
 | --- | --- |
 | [`packages/poneglyph`](packages/poneglyph/) | Library, client and canonical database Worker |
+| [`packages/poneglyph-mcp`](packages/poneglyph-mcp/) | Reusable read-only Agents SDK MCP tools/handler for multiple sites |
 | [`packages/conformance`](packages/conformance/) | Independent correctness oracle and disk-backed E2E harness |
 | [`packages/write-path-bench`](packages/write-path-bench/) | Private write-path benchmark harness |
 | `examples/*` | Six individually built, typechecked and offline-tested examples |

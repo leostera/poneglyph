@@ -5,18 +5,17 @@
   "scripts": {
     "dev": "cf dev --persist-to .artifacts/dev",
     "dev:database": "cf dev --mode database --persist-to .artifacts/dev",
+    "dev:seed": "cf dev --mode seed --persist-to .artifacts/operator",
     "build": "bun run typecheck && cf build --mode database && cf build",
-    "deploy": "cf deploy",
-    "deploy:database": "cf deploy --mode database",
+    "deploy": "bun run deploy:database && cf deploy",
+    "deploy:database": "bun run --cwd ../.. build:package && bun run typecheck && cf deploy --mode database",
     "typecheck": "cf workers types && tsc --noEmit",
     "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
     "check": "bun run typecheck && bun run test"
   },
   "dependencies": {
     "@leostera/poneglyph": "workspace:*",
-    "@modelcontextprotocol/server": "2.3.1",
-    "agents": "0.28.1",
-    "zod": "4.6.7"
+    "@leostera/poneglyph-mcp": "workspace:*"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.3.1",

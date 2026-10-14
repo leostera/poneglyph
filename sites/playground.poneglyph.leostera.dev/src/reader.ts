@@ -1,6 +1,6 @@
 import { createDatabase } from "@leostera/poneglyph";
 import { GRAPH_ID } from "./dataset.js";
-import type { GraphReader } from "./mcp.js";
+import type { GraphReader } from "@leostera/poneglyph-mcp";
 
 export function createGraphReader(service: Pick<Fetcher, "fetch">): GraphReader {
   const graph = createDatabase({
