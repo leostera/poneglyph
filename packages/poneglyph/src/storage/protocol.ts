@@ -27,6 +27,7 @@ export type ScanRequest = Readonly<{
   shardGeneration: number;
   directoryEpoch: number;
   field: string;
+  joinField?: string;
   entity?: DatalogValue;
   value?: DatalogValue;
   snapshotSeq: number;
@@ -118,6 +119,7 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
     shardGeneration: number;
     directoryEpoch: number;
     field: string;
+    joinField?: string;
     snapshotSeq: number;
     leaseExpiresAtMs: number;
     entity?: DatalogValue;
@@ -142,6 +144,12 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
     request.value = value.value;
   }
 
+  if (input["joinField"] !== undefined) {
+    const joinField = parseUri(input["joinField"], "scan.joinField");
+    if (!joinField.ok) return joinField;
+    if (request.value === undefined) return rejected("scan.joinField", "entity join requires a bound input value");
+    request.joinField = joinField.value;
+  }
   return parsed(Object.freeze(request));
 }
 

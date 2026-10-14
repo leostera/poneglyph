@@ -1,4 +1,5 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, tracing } from "cloudflare:workers";
+import { acquireParallelReadCut } from "./read-cut.js";
 import type { StorageEnv as Env } from "./environment.js";
 import { parseFactBatch, type FactBatch, type FactDraft } from "../domain/fact.js";
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
@@ -38,7 +39,7 @@ import { listShardLeaves, resolveEntityLeaf, type LeafAddress } from "./routing.
 import { factAsJson } from "./protocol.js";
 import { ensureCoordinatorSchema } from "./sql.js";
 import { TransactionLedger } from "./ledger.js";
-import { TREE_PREFIXES, TREE_DEPTH, TREE_OUTCOME_LIMIT, treeCoordinatorName, transactionCoordinatorName, treeForKey, type TreeSnapshot } from "./forest.js";
+import { TREE_PREFIXES, TREE_DEPTH, TREE_OUTCOME_LIMIT, treeCoordinatorName, transactionCoordinatorName, treeForKey, parseTreeSnapshot, type TreeSnapshot } from "./forest.js";
 
 type TransactionPhase = "preparing" | "committing" | "cancelling" | "complete" | "aborted";
 
@@ -812,6 +813,10 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
   }
 
   private async runQuery(request: Request, graphId: GraphId): Promise<Response> {
+    return tracing.enterSpan("poneglyph.query", () => this.evaluateQuery(request, graphId));
+  }
+
+  private async evaluateQuery(request: Request, graphId: GraphId): Promise<Response> {
     const raw = await readJsonBody(request, 16_384);
     if (!raw.ok) return jsonResponse({ error: raw.error.message }, 400);
     const body = requestObject(raw.value);
@@ -821,35 +826,31 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     const query = parseDatalogQuery(body.value["query"]);
     if (!query.ok) return jsonResponse({ error: query.error.message, offset: query.error.offset }, 400);
 
-    const cut = await this.acquireReadCut(graphId);
+    const started = Date.now();
+    const cut = await tracing.enterSpan("poneglyph.query.snapshot", () => this.acquireReadCut(graphId));
+    const snapshotMs = Date.now() - started;
     const lease = { snapshotSeq: Math.max(...cut.map(s => s.snapshotSeq)), directoryEpoch: 0,
       expiresAtMs: Math.min(...cut.map(s => s.expiresAtMs)) };
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new DOMException("query time budget exceeded", "TimeoutError")), QUERY_TIMEOUT_MS);
+    const source = new DistributedFactSource(this.env, graphId, lease.snapshotSeq, lease.directoryEpoch, lease.expiresAtMs, undefined, cut);
+    const rows: Record<string, unknown>[] = [];
+    let evaluationMs = 0, releaseMs = 0;
     try {
-      const source = new DistributedFactSource(this.env, graphId, lease.snapshotSeq, lease.directoryEpoch, lease.expiresAtMs, undefined, cut);
-      const rows: Record<string, unknown>[] = [];
-      let responseBytes = 0;
-      for await (const binding of evaluateDatalog(query.value, source, {
-        maxResults: MAX_QUERY_RESULTS,
-        signal: controller.signal,
-      })) {
-        const row = Object.fromEntries(binding.entries());
-        responseBytes += new TextEncoder().encode(JSON.stringify(row)).byteLength + 1;
-        if (responseBytes > MAX_QUERY_RESPONSE_BYTES) throw new CoordinatorError(413, "query response byte budget exceeded");
-        rows.push(row);
-      }
-      const serialized = JSON.stringify({
-        rows,
-        snapshotSeq: lease.snapshotSeq,
-        sequenceScope: "subtree-vector",
-        snapshotVector: cut.map(s => ({ prefix: s.prefix, sequence: s.snapshotSeq, epoch: s.directoryEpoch })),
-        metrics: source.metrics,
+      const evaluationStarted = Date.now();
+      await tracing.enterSpan("poneglyph.query.evaluate", async () => {
+        let responseBytes = 0;
+        for await (const binding of evaluateDatalog(query.value, source, {
+          maxResults: MAX_QUERY_RESULTS,
+          signal: controller.signal,
+        })) {
+          const row = Object.fromEntries(binding.entries());
+          responseBytes += new TextEncoder().encode(JSON.stringify(row)).byteLength + 1;
+          if (responseBytes > MAX_QUERY_RESPONSE_BYTES) throw new CoordinatorError(413, "query response byte budget exceeded");
+          rows.push(row);
+        }
       });
-      if (new TextEncoder().encode(serialized).byteLength > MAX_QUERY_RESPONSE_BYTES) {
-        throw new CoordinatorError(413, "query response byte budget exceeded");
-      }
-      return jsonStringResponse(serialized);
+      evaluationMs = Date.now() - evaluationStarted;
     } catch (error) {
       const status = error instanceof QueryResultLimitExceeded || error instanceof QueryScanBudgetExceeded
         ? 413
@@ -861,8 +862,23 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
       return jsonResponse({ error: errorMessage(error), snapshotSeq: lease.snapshotSeq }, status);
     } finally {
       clearTimeout(timer);
-      await this.releaseReadCut(graphId, cut);
+      const releaseStarted = Date.now();
+      await tracing.enterSpan("poneglyph.query.release", () => this.releaseReadCut(graphId, cut));
+      releaseMs = Date.now() - releaseStarted;
     }
+    source.metrics.timing = {executionMs: Date.now() - started, snapshotMs, evaluationMs, releaseMs};
+    tracing.getActiveSpan()?.setAttribute("poneglyph.query.rows", rows.length);
+    const serialized = JSON.stringify({
+      rows,
+      snapshotSeq: lease.snapshotSeq,
+      sequenceScope: "subtree-vector",
+      snapshotVector: cut.map(s => ({ prefix: s.prefix, sequence: s.snapshotSeq, epoch: s.directoryEpoch })),
+      metrics: source.metrics,
+    });
+    if (new TextEncoder().encode(serialized).byteLength > MAX_QUERY_RESPONSE_BYTES) {
+      throw new CoordinatorError(413, "query response byte budget exceeded");
+    }
+    return jsonStringResponse(serialized);
   }
 
   private async readEntity(request: Request, graphId: GraphId): Promise<Response> {
@@ -1171,26 +1187,25 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
   }
 
   private async acquireReadCut(graphId: GraphId): Promise<TreeSnapshot[]> {
-    const cut: TreeSnapshot[] = [];
-    try {
-      for (const prefix of TREE_PREFIXES) {
-        const response = await this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graphId, prefix)).fetch("https://tree.internal/_tree-read", {
-          method: "POST", body: JSON.stringify({ graphId, prefix }),
-        });
-        if (!response.ok) throw new CoordinatorError(423, "cannot acquire an atomic subtree read cut");
-        cut.push(await response.json() as TreeSnapshot);
-      }
-      return cut;
-    } catch (error) { await this.releaseReadCut(graphId, cut); throw error; }
+    return acquireParallelReadCut(async prefix => {
+      const response = await this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graphId, prefix)).fetch("https://tree.internal/_tree-read", {
+        method: "POST", body: JSON.stringify({ graphId, prefix }),
+      });
+      if (!response.ok) throw new CoordinatorError(423, "cannot acquire an atomic subtree read cut");
+      return parseTreeSnapshot(await response.json(), prefix);
+    }, cut => this.releaseReadCut(graphId, cut));
   }
 
   private async releaseReadCut(graphId: GraphId, cut: readonly TreeSnapshot[]): Promise<void> {
-    await Promise.all(cut.map(async lease => {
+    const released = await Promise.allSettled(cut.map(async lease => {
       const response = await this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graphId, lease.prefix)).fetch("https://tree.internal/_tree-release-read", {
         method: "POST", body: JSON.stringify({ graphId, prefix: lease.prefix, readId: lease.readId }),
       });
       if (!response.ok) console.warn("subtree read release deferred", lease.prefix);
     }));
+    for (const result of released) {
+      if (result.status === "rejected") console.warn("subtree read release delivery unknown; lease expiry remains the fence");
+    }
   }
 
   private writerBusy(txId: string): Response {

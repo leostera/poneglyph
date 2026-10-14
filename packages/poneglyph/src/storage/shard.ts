@@ -54,6 +54,8 @@ type ActiveValueRow = Readonly<{
   value_index: number;
   datalog_type: string;
   datalog_value: string;
+  join_fact_id: string;
+  join_value_index: number;
 }>;
 
 type StoredEntityVersion = Readonly<{
@@ -372,8 +374,9 @@ export class GraphShardDO extends DurableObject<Env> {
       }
     }
     const prepared = this.prepareScan(scan.value);
+    const cursorColumns = ["entity", "fact_id", "value_index", "join_fact_id", "join_value_index"] as const;
     const encoder = new TextEncoder();
-    let cursor: Readonly<{ entity: string; factId: string; valueIndex: number }> | undefined;
+    let cursor: ActiveValueRow | undefined;
     let closed = false;
     let emittedTuples = 0;
     const body = new ReadableStream<Uint8Array>({
@@ -384,14 +387,12 @@ export class GraphShardDO extends DurableObject<Env> {
           controller.error(new ShardProtocolError(410, "read snapshot lease expired"));
           return;
         }
-        const cursorClause = cursor === undefined
-          ? ""
-          : " AND (entity > ? OR (entity = ? AND fact_id > ?) OR (entity = ? AND fact_id = ? AND value_index > ?))";
-        const cursorArgs: (string | number)[] = cursor === undefined
-          ? []
-          : [cursor.entity, cursor.entity, cursor.factId, cursor.entity, cursor.factId, cursor.valueIndex];
+        // Both assertion identities participate in the cursor: equal projected
+        // values from distinct sources must survive SQL page boundaries.
+        const cursorClause = cursor === undefined ? "" : ` AND (${cursorColumns.join(", ")}) > (?, ?, ?, ?, ?)`;
+        const cursorArgs = cursor === undefined ? [] : cursorColumns.map(column => cursor![column]);
         const rows = this.ctx.storage.sql.exec<ActiveValueRow>(
-          `${prepared.sql}${cursorClause} ORDER BY entity, fact_id, value_index LIMIT ?`,
+          `${prepared.sql}${cursorClause} ORDER BY ${cursorColumns.join(", ")} LIMIT ?`,
           ...prepared.args,
           ...cursorArgs,
           SHARD_SCAN_PAGE_SIZE,
@@ -403,7 +404,7 @@ export class GraphShardDO extends DurableObject<Env> {
           return;
         }
         const lastRow = rows.at(-1);
-        if (lastRow !== undefined) cursor = { entity: lastRow.entity, factId: lastRow.fact_id, valueIndex: lastRow.value_index };
+        if (lastRow !== undefined) cursor = lastRow;
         const chunk = rows.map((row) => {
           const value = parseDatalogValue({ type: row.datalog_type, value: row.datalog_value });
           if (!value.ok) throw new ShardProtocolError(500, "stored Datalog tuple is corrupt");
@@ -502,11 +503,10 @@ export class GraphShardDO extends DurableObject<Env> {
     const args: (string | number)[] = [scan.field, scan.snapshotSeq, scan.snapshotSeq];
 
     if (scan.entity !== undefined) {
-      if (scan.entity.type !== "string") return { sql: "SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE 0", args: [] };
+      const empty = {sql: "SELECT entity, fact_id, value_index, datalog_type, datalog_value, fact_id AS join_fact_id, value_index AS join_value_index FROM active_values WHERE 0", args: []};
+      if (scan.entity.type !== "string") return empty;
       const entity = parseUri(scan.entity.value);
-      if (!entity.ok) {
-        return { sql: "SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE 0", args: [] };
-      }
+      if (!entity.ok) return empty;
       clauses.push("entity = ?");
       args.push(entity.value);
     }
@@ -519,8 +519,20 @@ export class GraphShardDO extends DurableObject<Env> {
       args.push(scan.value.type, scan.value.value);
     }
 
+    const filtered = `SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE ${clauses.join(" AND ")}`;
+    if (scan.joinField !== undefined) {
+      return {
+        sql: `SELECT * FROM (
+          SELECT a.entity, a.fact_id, a.value_index, b.fact_id AS join_fact_id, b.value_index AS join_value_index,
+                 b.datalog_type, b.datalog_value
+          FROM (${filtered}) AS a JOIN active_values AS b ON b.entity = a.entity
+          WHERE b.field = ? AND b.valid_from_seq <= ? AND (b.valid_to_seq IS NULL OR b.valid_to_seq > ?)
+        ) WHERE 1`,
+        args: [...args, scan.joinField, scan.snapshotSeq, scan.snapshotSeq],
+      };
+    }
     return {
-      sql: `SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE ${clauses.join(" AND ")}`,
+      sql: `SELECT *, fact_id AS join_fact_id, value_index AS join_value_index FROM (${filtered}) WHERE 1`,
       args,
     };
   }

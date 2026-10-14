@@ -41,17 +41,27 @@ function parseFaultStatus(input: unknown) {
 const modes: ReadFaultMode[] = ["unavailable-before", "malformed", "empty-eof", "record-eof", "record-error"];
 export const readFaultCases: Case[] = modes.map(mode => ({name: `read-fault/${mode}`, async run(s) {
   const entity = "test:stream-entity";
-  await s.write("stream-seed", ["first", "second"].map(value => ({source: "agent:stream", entity, field: "test:stream", value: {type: "text" as const, value}})));
-  const query = relation("test:stream"); await s.query(query);
+  await s.write("stream-seed", [
+    ...["first", "second"].map(value => ({source: "agent:stream", entity, field: "test:stream", value: {type: "text" as const, value}})),
+    {source: "agent:stream", entity, field: "test:title", value: {type: "text", value: "Stream"}},
+  ]);
+  const query = relation("test:stream");
+  const joined = {source: 'test:stream(Entity, "first"), test:title(Entity, Title)', atoms: [
+    {field: "test:stream", entity: {variable: "Entity"}, value: {constant: {type: "string" as const, value: "first"}}},
+    {field: "test:title", entity: {variable: "Entity"}, value: {variable: "Title"}},
+  ]};
+  await s.query(query); await s.query(joined);
   const prefix = await entityLeaf(s, entity); await control(s, prefix, mode);
   try {
-    const result = await s.request({action: "query", query: query.source});
-    const status = await control(s, prefix);
-    assert.equal(status.mode, mode, "exact configured semantic fault");
-    assert.ok(status.hits > 0, "fault must intercept an actual participant request");
-    if (mode !== "unavailable-before") assert.ok(status.successfulScans > 0, "transport fault wraps a real successful shard scan");
-    assert.ok(result.status >= 400, `partial scan must fail closed, not return successful partial rows: ${JSON.stringify(result.body)}`);
-    assert.equal(result.body["rows"], undefined, "failed query cannot expose a successful partial result");
+    for (const source of [query.source, joined.source]) {
+      const result = await s.request({action: "query", query: source});
+      const status = await control(s, prefix);
+      assert.equal(status.mode, mode, "exact configured semantic fault");
+      assert.ok(status.hits > 0, "fault must intercept an actual participant request");
+      if (mode !== "unavailable-before") assert.ok(status.successfulScans > 0, "transport fault wraps a real successful shard scan");
+      assert.ok(result.status >= 400, `partial scan must fail closed, not return successful partial rows: ${JSON.stringify(result.body)}`);
+      assert.equal(result.body["rows"], undefined, "failed query cannot expose a successful partial result");
+    }
   } finally {await control(s, prefix, "none");}
-  await s.query(query); // Removing a test fault is not data repair; truth is intact.
+  await s.query(query); await s.query(joined); // Removing a test fault is not data repair; truth is intact.
 }}));

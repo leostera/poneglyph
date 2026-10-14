@@ -5,6 +5,8 @@ import type { FactValue } from "./domain/fact-value.js";
 import { parseGraphId, type GraphId } from "./domain/graph-id.js";
 import { isRecord, type ParseError } from "./domain/result.js";
 import type { TransactionId } from "./domain/identifiers.js";
+import type { QueryTiming } from "./domain/query-timing.js";
+export type { QueryTiming } from "./domain/query-timing.js";
 
 export type FetchFunction = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -44,6 +46,7 @@ export type QueryMetrics = Readonly<{
   tuplesRead: number;
   bytesRead: number;
   directoryRequests: number;
+  timing?: QueryTiming;
 }>;
 
 export type QueryBinding = Readonly<Record<string, DatalogValue>>;
@@ -386,10 +389,25 @@ function parseQueryMetrics(input: unknown): QueryMetrics {
     tuplesRead: readMetric(input, "tuplesRead"),
     bytesRead: readMetric(input, "bytesRead"),
     directoryRequests: readMetric(input, "directoryRequests"),
+    ...(input["timing"] === undefined ? {} : {timing: parseQueryTiming(input["timing"])}),
   });
 }
 
-function readMetric(input: Record<string, unknown>, name: keyof QueryMetrics): number {
+function parseQueryTiming(input: unknown): QueryTiming {
+  if (!isRecord(input)) throw new PoneglyphProtocolError("Poneglyph Worker returned invalid query timing");
+  const timing = {
+    executionMs: readMetric(input, "executionMs"),
+    snapshotMs: readMetric(input, "snapshotMs"),
+    evaluationMs: readMetric(input, "evaluationMs"),
+    releaseMs: readMetric(input, "releaseMs"),
+  };
+  if (timing.executionMs < timing.snapshotMs + timing.evaluationMs + timing.releaseMs) {
+    throw new PoneglyphProtocolError("Poneglyph Worker returned inconsistent query timing");
+  }
+  return Object.freeze(timing);
+}
+
+function readMetric(input: Record<string, unknown>, name: string): number {
   const value = input[name];
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
     throw new PoneglyphProtocolError(`Poneglyph Worker returned invalid query metric ${name}`);

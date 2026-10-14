@@ -44,6 +44,17 @@ function createFetch(response: (request: RecordedRequest) => Response | Promise<
 }
 
 describe("Poneglyph TypeScript HTTP client", () => {
+  it("propagates server elapsed timing and rejects malformed or inconsistent timing", async () => {
+    const timing = {executionMs: 10, snapshotMs: 3, evaluationMs: 4, releaseMs: 2};
+    const metrics = {scanCalls: 1, shardRequests: 16, tuplesRead: 1, bytesRead: 100, directoryRequests: 16};
+    for (const value of [timing, {...timing, executionMs: -1}, {...timing, snapshotMs: 3.5}, {...timing, executionMs: 1}, {}, null]) {
+      const network = createFetch(() => jsonResponse({rows: [], snapshotSeq: 1, metrics: {...metrics, timing: value}}));
+      const graph = createDatabase({url: "https://poneglyph.example", graphId: "test", fetch: network.fetch});
+      const result = graph.query("test:title(Page, Title)");
+      if (value === timing) expect((await result).metrics.timing).toEqual(timing);
+      else await expect(result).rejects.toThrow(/query (timing|metric)/);
+    }
+  });
   it("writes validated facts with a stable txId and exposes the commit receipt", async () => {
     const network = createFetch(() => jsonResponse({
       txId: "release:seed-001",

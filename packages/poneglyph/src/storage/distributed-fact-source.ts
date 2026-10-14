@@ -1,4 +1,5 @@
 import type { FactLookup, FactSource, FactTuple } from "../datalog/fact-source.js";
+import type { QueryTiming } from "../domain/query-timing.js";
 import type { StorageEnv as Env } from "./environment.js";
 import { treeForKey, type TreeSnapshot } from "./forest.js";
 import { virtualKeyForEntity } from "./keys.js";
@@ -22,6 +23,7 @@ export type QueryMetrics = {
   tuplesRead: number;
   bytesRead: number;
   directoryRequests: number;
+  timing?: QueryTiming;
 };
 
 export class DistributedFactSource implements FactSource {
@@ -38,7 +40,15 @@ export class DistributedFactSource implements FactSource {
   private allLeaves: readonly LeafAddress[] | undefined;
   private readonly entityRoutes = new Map<string, LeafAddress>();
 
-  async *scan(lookup: FactLookup, signal?: AbortSignal): AsyncGenerator<FactTuple> {
+  scan(lookup: FactLookup, signal?: AbortSignal): AsyncIterable<FactTuple> {
+    return this.scanShards(lookup, undefined, signal);
+  }
+
+  scanEntityJoin(lookup: FactLookup, outputField: FactLookup["field"], signal?: AbortSignal): AsyncIterable<FactTuple> {
+    return this.scanShards(lookup, outputField, signal);
+  }
+
+  private async *scanShards(lookup: FactLookup, outputField: FactLookup["field"] | undefined, signal?: AbortSignal): AsyncGenerator<FactTuple> {
     const shardAddresses = await this.targetShards(lookup);
     if (shardAddresses === undefined) return;
     this.metrics.scanCalls += 1;
@@ -62,6 +72,7 @@ export class DistributedFactSource implements FactSource {
       };
       if (lookup.entity !== undefined) body["entity"] = lookup.entity;
       if (lookup.value !== undefined) body["value"] = lookup.value;
+      if (outputField !== undefined) body["joinField"] = outputField;
 
       const init: RequestInit = {
         method: "POST",
@@ -110,6 +121,8 @@ export class DistributedFactSource implements FactSource {
         const { index, next } = await Promise.race(pending.values());
         pending.delete(index);
         if (next.done) continue;
+        const address = shardAddresses[index];
+        if (address && next.value.entity.type === "string") this.entityRoutes.set(next.value.entity.value, address);
         yield next.value;
         const iterator = iterators[index];
         if (iterator !== undefined) pending.set(index, iterator.next().then((result) => ({ index, next: result })));

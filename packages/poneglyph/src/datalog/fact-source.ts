@@ -14,4 +14,7 @@ export type FactTuple = Readonly<{
 
 export interface FactSource {
   scan(lookup: FactLookup, signal?: AbortSignal): AsyncIterable<FactTuple>;
+  // Emit the bag product of each matching lookup tuple with every output-field
+  // tuple of the same entity. The returned value is from the output field.
+  scanEntityJoin?(lookup: FactLookup & Readonly<{value: DatalogValue}>, outputField: Uri, signal?: AbortSignal): AsyncIterable<FactTuple>;
 }

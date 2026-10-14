@@ -29,13 +29,7 @@ export async function* evaluateDatalog(
   }
 
   let emitted = 0;
-  for await (const binding of evaluateFacts(
-    query.facts,
-    facts,
-    options.signal,
-    0,
-    new Map<string, DatalogValue>(),
-  )) {
+  for await (const binding of evaluateQueryFacts(query.facts, facts, options.signal)) {
     throwIfAborted(options.signal);
     if (query.constraints.every((constraint) => {
       const left = resolveTerm(constraint.left, binding);
@@ -47,6 +41,25 @@ export async function* evaluateDatalog(
       yield binding;
     }
   }
+}
+
+async function* evaluateQueryFacts(
+  clauses: readonly FactClause[], facts: FactSource, signal: AbortSignal | undefined,
+): AsyncGenerator<Binding> {
+  const [filter, output] = clauses;
+  // This physical operator needs no cross-entity exchange. Distinct variables
+  // keep repeated-variable unification on the general evaluation path.
+  if (facts.scanEntityJoin && clauses.length === 2 && filter && output &&
+      filter.entity.kind === "variable" && output.entity.kind === "variable" &&
+      filter.entity.name === output.entity.name && filter.value.kind === "constant" &&
+      output.value.kind === "variable" && output.value.name !== filter.entity.name) {
+    for await (const tuple of facts.scanEntityJoin({field: filter.predicate, value: filter.value.value}, output.predicate, signal)) {
+      throwIfAborted(signal);
+      yield new Map([[filter.entity.name, tuple.entity], [output.value.name, tuple.value]]);
+    }
+    return;
+  }
+  yield* evaluateFacts(clauses, facts, signal, 0, new Map<string, DatalogValue>());
 }
 
 async function* evaluateFacts(

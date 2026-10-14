@@ -1,4 +1,5 @@
 import { MAX_RETAINED_TRANSACTION_OUTCOMES } from "./constants.js";
+import { isRecord } from "../domain/result.js";
 import { sha256Hex } from "./http.js";
 import { prefixOfKey, coordinatorObjectName, type VirtualKey, type VirtualPrefix } from "./keys.js";
 
@@ -26,3 +27,15 @@ export async function transactionCoordinatorName(graphId: string, txId: string):
 export type TreeSnapshot = Readonly<{
   prefix: VirtualPrefix; readId: string; snapshotSeq: number; directoryEpoch: number; expiresAtMs: number;
 }>;
+export function parseTreeSnapshot(input: unknown, prefix: VirtualPrefix): TreeSnapshot {
+  if (!isRecord(input) || input["prefix"] !== prefix ||
+      typeof input["readId"] !== "string" || !/^[a-f0-9-]{36}$/.test(input["readId"])) {
+    throw new Error("invalid subtree read lease identity");
+  }
+  const counter = (key: "snapshotSeq" | "directoryEpoch" | "expiresAtMs") => {
+    const value = input[key];
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw new Error("invalid subtree read lease counter");
+    return value;
+  };
+  return {prefix, readId: input["readId"], snapshotSeq: counter("snapshotSeq"), directoryEpoch: counter("directoryEpoch"), expiresAtMs: counter("expiresAtMs")};
+}

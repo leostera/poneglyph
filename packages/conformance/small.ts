@@ -9,6 +9,7 @@ import {lifecycleCases} from "./lifecycle.js";
 import {crashCases} from "./crashes.js";
 import {concurrentHistoryCases} from "./concurrent-histories.js";
 import {partialApplyCases} from "./partial-apply.js";
+import {queryPlanCases} from "./query-plan.js";
 export type Case = {name: string; run: (session: Session) => Promise<void>};
 export const fact = (entity: string, value: Value, field = "test:value", source = "agent:one", retraction = false): FactInput => ({source, entity, field, value, retraction});
 const text = (value: string): Value => ({type: "text", value});
@@ -118,6 +119,7 @@ export const smallCases: Case[] = [
     // are still distinct. Common lookup checks must preserve all multiplicity.
   }},
   ...readFaultCases,
+  ...queryPlanCases,
   ...writePhaseCases,
   ...splitCases,
   ...lifecycleCases,
