@@ -2,11 +2,64 @@
 
 ## Status
 
-Implemented local prototype (2026-10-14), at the user's request: use the Cloudflare Agents SDK, make MCP fully public and anonymous, and rate-limit it. This is an application snapshot, not a storage redesign or deployment authorization. No hosted deployment or complete One Piece corpus load is recorded. Canonical storage's bounded correctness/performance evidence remains in [RFD0005](./RFD0005-write-path-experiment.md); it does not establish universal correctness or hosted performance.
+Implemented prototype and initial bounded deployment (2026-10-14), at the user's explicit request: Agents SDK, public anonymous rate-limited MCP, six synthetic facts, then a generic private RPC service and tiny playground composition. The initial dedicated database/public Worker deployed from `3592158`; its seed committed at `6c000bb`. The central-service cutover is recorded separately below when performed. Public MCP confirmation from this machine is blocked by its work-network Cloudflare Gateway DNS classification, not verified as successful. No complete One Piece corpus load is recorded. Canonical storage's bounded correctness/performance evidence remains in [RFD0005](./RFD0005-write-path-experiment.md); it does not establish universal correctness or hosted performance.
+
+## Current deployment: Cloudflare-account members only (2026-10-14)
+
+The user changed this site's access policy and chose `https://onepiece.poneglyph.dev/mcp`. This section supersedes historical anonymous/no-login deployment requirements below; the reusable MCP package remains generic. The current site configuration deploys this exact hostname and its runtime allowlist accepts it plus loopback development hosts. The old public hostname is not an alternate runtime entrypoint in this latest configuration.
+
+Access application `17e9e6e4-edf9-4fdc-bead-b8575669dcb4` protects the receiving playground Worker identity `6df1a5832f6a44129e5986f60898054c`, so associated routes/hostnames are covered. Its single reusable Allow policy uses `cloudflare_account_member` scoped explicitly to the owner's personal account. The only allowed IdP is the existing Cloudflare login provider, with direct redirection and a one-hour session. Email one-time PIN login, email/domain allowlists, Everyone, bypass, service-token grants and public-path overrides are excluded. OPTIONS authentication is not bypassed. Workers.dev and preview URLs stay disabled. Other Access apps/IdPs and corporate Gateway policies are not changed.
+
+The homepage/schema disclose authentication. A separate MCP process must use an Access-compatible authenticated transport; browser login alone is insufficient. No MCP OAuth authorization server is added. Generic wildcard CORS is not an Access bypass or a cross-origin credential compatibility claim.
+
+An isolated earlier hostname-only deployment (`fb59f37`, version `5b96cf17-1111-4fb9-8e4e-0322ba6c6ad6`) was superseded 16 seconds later by another `cf_cli` deployment (`195b8474-58df-4d55-9ad8-9f9e76ce4cb1`), which changed the service binding and removed the new hostname. That failed preservation assertion and DNS `ENOTFOUND` remain evidence, not a successful MCP connection. The user then explicitly authorized checking and redeploying the latest source. Current source, built manifest and native modern/legacy query tests agree on `onepiece.poneglyph.dev`; hostile suffixes and the obsolete hostname are rejected. Root offline check/build passes **213 tests**, with one opt-in benchmark skipped. This revalidation is not a full conformance tier or corpus certification.
+
+Redeploy only the receiving playground Worker for the hostname repair, preserving the currently configured `poneglyph-service-worker` binding, read-only principal and limiter. Do not invoke the composite deploy script, redeploy/reseed the database, delete the old database or run a corpus load as part of this repair. Preflight already observed a newer deployed version (`a1f8caa5-f630-4e3b-86fc-2e9e5287cd63`) and restored domain before this repair upload; final API/probe evidence must identify the exact version actually observed. Local Miniflare bypasses Access. A policy read-back and anonymous login redirect do not prove authenticated login, denial of another authenticated identity, or successful hosted MCP queries.
 
 ## Summary
 
 Build a tiny agent-facing application under [`sites/playground.poneglyph.leostera.dev`](../../sites/playground.poneglyph.leostera.dev/). Its public Worker serves connection instructions at `/` and stateless MCP at `/mcp`, using `createMcpHandler` from `agents/mcp/server`. Agents learn the wiki graph schema through `describe_dataset`, then send bounded Datalog through `query`. The application reads one fixed graph via the public Poneglyph client and a private service binding. A separate, non-public Worker assembles the unchanged canonical database actors. The public Worker has no write/admin/probe endpoints. Cloudflare's native rate-limiting binding admits approximately 30 MCP POSTs/minute per edge IP per location, with explicit fail-closed admission.
+
+## Current direction: generic private RPC service (2026-10-14)
+
+The user selected `env.PONEGLYPH.getGraph({ graphId: "onepiece" })` as the Worker-consumer API. [`packages/poneglyph-worker`](../../packages/poneglyph-worker/) assembles the unchanged canonical actors and a private `WorkerEntrypoint`. It has no public domain, workers.dev/preview URL, HTTP database endpoint, probe or admin route. `poneglyph.svc.leostera.dev` is a logical service label, not a publicly registered custom domain. Calls use the named service binding, not DNS.
+
+```ts
+using graph = await env.PONEGLYPH.getGraph({ graphId: "onepiece" });
+const answer = await graph.query(datalog);
+// A separately granted writer may do this; readers are denied server-side:
+await graph.transact(facts, { txId: "app:original-operation" });
+```
+
+### Identity, policy and capabilities
+
+Binding configuration supplies `props: { clientId }`. The receiving service parses `this.ctx.props` and the exact `{ graphId }` request before storage. Missing/malformed identity, unknown principal, malformed policy, ungranted graph or caller-supplied identity/permissions/backend fields deny access. Cloudflare documents that setting these props requires permission to edit/deploy the receiving Worker; deployment administrators are trusted authorities, not adversaries isolated by this scheme. Props are an authenticated deployment assertion, **not automatically discovered caller script identity**. Native tests exercise configured props/enforcement, not Cloudflare control-plane IAM itself.
+
+`GraphAuthorizer.permissionsFor({ clientId, graphId })` separates policy from enforcement. The initial `staticAuthorizer` parses the entire deployment JSON into private maps and freezes permission snapshots; no application/graph names, wildcards or prototype lookups exist in generic service logic. `cloudflare.config.ts` supplies the initial playground read grant and loader read/write grant. A future control-plane policy source can replace this mechanism without changing callers; grant CRUD, live revocation, user identities and audit storage are out of scope. Writer grants currently include read permission.
+
+`getGraph` allocates only an invocation-scoped `RpcTarget` and local client; it creates no durable state. The captured graph ID/grant cannot be changed by method arguments. Returning/sharing the handle delegates that captured authority. Dispose handles; do not cache them across requests. Static grants are captured at acquisition: no immediate revocation of existing handles is promised.
+
+For a stable, ergonomic typed API, read handles have write-method **denials**, rather than an absent method/prototype that would require caller-side RPC reflection. This refines the earlier discussion of omitting methods: a read handle has no write implementation, and `transact`, `stateFacts` and `state` throw authorization errors before fact parsing/storage. Only a grant-selected subclass supplies the real canonical write path. Public MCP still receives only a query interface; annotations and TypeScript are not the authorization boundary.
+
+### RPC transport and lifecycle
+
+The adapter uses the existing public client's parsers and an in-process canonical dispatcher; it does not fork storage or expose that dispatcher's internal HTTP routes. Receipts, tagged values, duplicates, complete row membership, metrics and leased-vector snapshot meaning are preserved. Native RPC initially rejected the HTTP client's deliberately null-prototype row records with `DataCloneError`; the adapter now copies only row/metric records to plain objects, without converting values, deduplicating or truncating. The duplicate/int64 native regression protects this real serialization boundary.
+
+RPC writes **require a caller-retained original `txId`**. A remotely generated ID could be lost with the reply. Invalid/missing IDs/options fail before admission. No retries, early acknowledgment or new terminal-outcome inference are introduced. Disconnect/timeout/5xx/protocol failure may leave write delivery unknown: retain service identity, graph, original ID and exact facts and reconcile explicitly against that same service. Seven-day identity retention and every canonical storage limit remain unchanged.
+
+Enhanced RPC error serialization is enabled by these compatibility dates. Safe error names/fields, not custom `instanceof` identities, are the wire contract. Provider errors discard backend causes and hide 5xx details; MCP parses safe fields, rejecting malformed rejection metadata rather than treating it as success. All adapters still surface explicit failures.
+
+`AbortSignal` is not an RPC argument here. HTTP clients keep existing signal support. RPC follows platform invocation cancellation; the MCP adapter checks cancellation before acquiring/issuing a read and after its bounded completion, discarding canceled answers rather than claiming an abort. Reads otherwise drain under unchanged native budgets. Cancellation never proves a write aborted.
+
+The reusable MCP package exposes `createPublicPoneglyphMcpWorker`: owners supply dataset, hostnames/homepage, service selection, fixed graph and mandatory admission callback. The helper enforces the existing anonymous read-only HTTP/CORS/body/batch boundary. It acquires the RPC graph **lazily inside each query tool**, not around `handler.fetch`: legacy SSE may return the response before tool execution finishes. A scoped `using` releases the handle on success/failure; initialization/schema discovery allocates no graph. The site entrypoint is now a small composition, without actors, database HTTP transport plumbing or protocol code. The lower-level HTTP/custom-reader composition remains supported for actual existing consumers.
+
+### Validation and rollout
+
+Root offline gates include the private service. Focused `leo-code-*` reviews cover types/readability, parsing and immutable grants, RPC serialization/error/lifetime invariants, and clean cutover. Native tests use real bindings/RPC and canonical SQLite: principal/graph denial; all read-only write aliases; missing/malformed props; request-side role forgery; acquisition/denial with **no storage bindings**; committed/original-ID replay; conflicting payload identity; graph isolation; exact duplicate and int64 rows; private HTTP-route denial; and the existing native modern/legacy MCP/rate/body/CORS cases. Scoped SDK tests prove lazy acquisition, in-flight retention, exactly-once disposal and safe reconstructed errors. Default build/check/test remains offline; no new full oracle/corpus/performance claim follows.
+
+Deployment must preflight the new `poneglyph-service-worker` name/namespaces, deploy it first, seed the six facts into its **distinct namespace**, verify exact reads and authority, then switch the playground binding. This is explicit fixture seeding, not automatic state migration or reconciliation against the old database. Keep the old dedicated Worker/data intact pending separate deletion approval. The code removes the site's obsolete database mode/reader adapter; it provides no fallback to the old service. `bun run deploy` orders the service before its consumer.
+
+The original local/HTTP architecture sections below are historical checkpoints, superseded where this section differs. No public write endpoint or full corpus load is authorized by this cutover.
 
 ## Reusable package amendment (2026-10-14)
 
@@ -51,7 +104,7 @@ external agent / browser client
 
 The package declares Agents **0.28.1**, MCP server/client **2.3.1**, and Zod **4.6.7**, matching the installed Agents peer requirements rather than older documentation examples. The handler and `McpServer` are request-local: no globally connected server, `McpAgent`, Think instance, conversation state, LLM inference, or MCP session DO is needed.
 
-The site's `src/reader.ts` exposes only the graph client's `query` capability to the reusable MCP package. The graph ID and service are fixed by the application; strict tool argument schemas reject caller-selected graph, URL, limit, or arbitrary extra inputs. The fake HTTPS hostname is only a service-binding routing label, not an external fetch target.
+At this historical HTTP checkpoint, the site's now-removed `src/reader.ts` exposed only the graph client's `query` capability to the reusable MCP package. The graph ID and service are fixed by the application; strict tool argument schemas reject caller-selected graph, URL, limit, or arbitrary extra inputs. The fake HTTPS hostname is only a service-binding routing label, not an external fetch target.
 
 The dedicated database entrypoint imports the real canonical classes and `dispatchGraphRequest` from the repository. This is in-repo assembly, not a new supported npm storage-embedding API or a copied implementation. Its private routes accept only POST query/transaction requests for `onepiece`; the transaction path exists for a separately authorized operator/local ingest. It is never forwarded by the public Worker. Other graphs, entity APIs, TODO routes, split/inspection/debug endpoints and arbitrary paths are rejected.
 

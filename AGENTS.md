@@ -27,12 +27,12 @@ Architectural decisions should align with [RFD0003](docs/rfds/RFD0003-cloudflare
 - Prefer small, explicit architectural steps over broad speculative refactors.
 - Preserve append-only semantics in new designs. Do not introduce mutable source-of-truth entity tables as the primary model.
 - Treat facts as durable truth, entities as derived views, and projections as replayable workers.
-- Keep Cloudflare resource changes isolated beneath `*.poneglyph.leostera.dev`; run local gates before deploying and clean up only resources created for validation.
+- Keep Cloudflare resource changes scoped to explicitly authorized account/resources. The validation setup uses `*.poneglyph.leostera.dev`; the owner-approved MCP hostname is `onepiece.poneglyph.dev`. Run local gates before deploying; never delete durable resources without separate approval.
 
 ## Workspace
 
 - Use Bun 1.4.2 from the repository root: `bun install --frozen-lockfile`, `bun run check`, `bun run build`.
-- Libraries and validation harnesses live under `packages/`: `poneglyph`, `poneglyph-mcp`, `conformance`, and `write-path-bench`. The six private example packages live under `examples/<name>/`, and site applications under `sites/<hostname>/`; all three directories belong to the root Bun workspace. Private harnesses consume `@leostera/poneglyph` through `workspace:*` and its built exports, not copied file packages.
+- Libraries, reusable services and validation harnesses live under `packages/`: `poneglyph`, `poneglyph-worker`, `poneglyph-mcp`, `conformance`, and `write-path-bench`. The six private example packages live under `examples/<name>/`, and site applications under `sites/<hostname>/`; all three directories belong to the root Bun workspace. Private harnesses consume `@leostera/poneglyph` through `workspace:*` and its built exports, not copied file packages.
 - Each example owns its entrypoint/dependencies and has `build`, `typecheck`, `check`, offline `test`, and explicit `run` scripts. Root build/check/test include every example sequentially and fail on errors; never execute cloud smoke tests, corpus loads or benchmarks as a default test hook.
 - Keep one root `bun.lock`; do not introduce nested package-manager lockfiles. Node 26 remains required for Cloudflare/Vitest/Miniflare and `node:sqlite` tooling. Bun owns installation/script orchestration, not the Workers runtime.
 - `bun run test:focused` is the development E2E loop; `bun run test:small` is an explicit full68-case checkpoint. Never replace these with Bun's built-in test runner or start benchmark loads implicitly.

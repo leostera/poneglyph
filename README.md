@@ -38,11 +38,12 @@ This is a Bun workspace. Install **Bun 1.4.2** and **Node.js 26**: Bun manages d
 | Package | Purpose |
 | --- | --- |
 | [`packages/poneglyph`](packages/poneglyph/) | Library, client and canonical database Worker |
-| [`packages/poneglyph-mcp`](packages/poneglyph-mcp/) | Reusable read-only Agents SDK MCP tools/handler for multiple sites |
+| [`packages/poneglyph-worker`](packages/poneglyph-worker/) | Private graph-scoped Worker RPC service and canonical actor assembly |
+| [`packages/poneglyph-mcp`](packages/poneglyph-mcp/) | Reusable read-only Agents SDK MCP tools/handler and HTTP composition |
 | [`packages/conformance`](packages/conformance/) | Independent correctness oracle and disk-backed E2E harness |
 | [`packages/write-path-bench`](packages/write-path-bench/) | Private write-path benchmark harness |
 | `examples/*` | Six individually built, typechecked and offline-tested examples |
-| [`sites/playground.poneglyph.leostera.dev`](sites/playground.poneglyph.leostera.dev/) | Public read-only, rate-limited Agents SDK MCP playground (local prototype; deployment/corpus load pending) |
+| [`sites/playground.poneglyph.leostera.dev`](sites/playground.poneglyph.leostera.dev/) | Read-only, rate-limited MCP at `onepiece.poneglyph.dev`, protected by account-member Access; full corpus load unverified |
 
 One root `bun.lock` pins dependencies. Private harnesses link the library with `workspace:*`, consuming its built package exports. From the repository root:
 
