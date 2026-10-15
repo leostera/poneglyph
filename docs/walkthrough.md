@@ -73,3 +73,9 @@ const txId = await graph.stateFacts([draft]);
 ```
 
 `stateFacts` sends the draft list as one write and returns the transaction ID after success. If omitted, the client generates a URI-style ID before sending; the current API also permits callers to supply one. The ID names the whole batch, but an ID by itself is not proof of commit: on successful return, `stateFacts` has received a committed outcome, while a write error may carry the ID even when delivery is unknown. `graph.transact(...)` returns the same successful outcome with the ID, commit sequence, and `committed` status. Reusing an ID with the same facts refers to the same transaction; reusing it with different facts is a conflict. If delivery is uncertain, preserve the ID and exact facts and reconcile that transaction rather than inventing a replacement ID.
+
+### Graph scope and coordination
+
+A graph ID selects an isolated fact namespace. `db.defineGraph({ id })` creates a local client handle for that namespace; it does not register a SQL-style schema. A graph is roughly like a SQL database as a boundary, but it has no catalog of tables and columns: facts use field URIs. Separate graphs can isolate tenants, environments, or lifecycles, but Poneglyph does not join queries or transactions across them.
+
+The graph coordinator is persistent control for that graph's routing and visibility state, not the place where its facts are stored. The fact data lives in the graph's data-owning shards.
