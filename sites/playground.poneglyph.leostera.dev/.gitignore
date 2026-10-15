@@ -3,6 +3,7 @@ dist/
 .cloudflare/
 .wrangler/
 .artifacts/
+evidence/
 .dev.vars*
 !.dev.vars.example
 .env*

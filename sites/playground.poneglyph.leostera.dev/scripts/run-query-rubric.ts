@@ -14,7 +14,7 @@ import { QUERY_PREDICATE_INVENTORY, QUERY_RUBRIC } from "../src/query-rubric.js"
 const site = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const root = resolve(site, "../..");
 const corpusPath = resolve(root, "packages/write-path-bench/.data/facts.ndjson");
-const checkpointPath = resolve(site, "evidence/2026-10-15-onepiece-million-fact-import-prefix.json");
+const RUBRIC_PREFIX = Object.freeze({pages: 227_692, facts: 1_096_908, lastRemainderOrdinal: 1_794});
 const requestedCount = Number(argument("--count") ?? "50");
 const hosted = process.argv.includes("--hosted");
 const local = process.argv.includes("--local");
@@ -43,7 +43,7 @@ interface ImportPrefix {
   readonly corpusPages: number;
   readonly corpusFacts: number;
   readonly factsSha256: string;
-  readonly snapshotSeq: number | null;
+  readonly lastRemainderOrdinal: number;
   readonly retryOrdinal: number;
 }
 interface QueryCase {
@@ -124,27 +124,21 @@ function parsePrefix(): ImportPrefix {
   const pages10Plan = readJson(resolve(site, ".artifacts/import/pages10/manifest.json"));
   const pages10Result = readJson(resolve(site, ".artifacts/import/pages10/result.json"));
   const remainderPlan = readJson(resolve(site, "src/import-plan-remainder90.json"));
-  const checkpoint = readJson(checkpointPath);
   const corpusManifest = readJson(resolve(root, "packages/write-path-bench/.data/manifest.json"));
   const journal = readFileSync(resolve(site, ".artifacts/import/remainder90/journal.ndjson"), "utf8")
     .split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line) as Record<string, any>);
 
   assert.equal(pages10Plan.corpusSha256, corpusManifest.factsSha256);
   assert.equal(remainderPlan.corpusSha256, corpusManifest.factsSha256);
-  assert.equal(checkpoint.corpus.factsSha256, corpusManifest.factsSha256);
+  assert.equal(pages10Plan.selectedPages, 29_662);
+  assert.equal(pages10Plan.selectedFacts, 204_183);
   assert.equal(pages10Result.selectedPages, pages10Plan.selectedPages);
   assert.equal(pages10Result.selectedFacts, pages10Plan.selectedFacts);
-  assert.equal(checkpoint.enrichment.importedFacts, 0, "the hosted oracle assumes no enrichment overlay");
-  assert.equal(checkpoint.hostedBasePrefix.pages10.pages, pages10Plan.selectedPages);
-  assert.equal(checkpoint.hostedBasePrefix.pages10.facts, pages10Plan.selectedFacts);
 
   const latestCommitted = new Map<number, Record<string, any>>();
   for (const record of journal) if (record["phase"] === "committed") latestCommitted.set(record["batch"], record);
-  const remainderBatches = checkpoint.hostedBasePrefix.remainder90.committedContentBatches as number;
-  const firstOrdinal = checkpoint.hostedBasePrefix.remainder90.ordinals[0] as number;
-  const lastOrdinal = checkpoint.hostedBasePrefix.remainder90.ordinals[1] as number;
-  assert.equal(firstOrdinal, 0);
-  assert.equal(lastOrdinal + 1, remainderBatches);
+  const firstOrdinal = 0;
+  const lastOrdinal = RUBRIC_PREFIX.lastRemainderOrdinal;
   let remainderPages = 0, remainderFacts = 0;
   for (let ordinal = firstOrdinal; ordinal <= lastOrdinal; ordinal++) {
     const record = latestCommitted.get(ordinal);
@@ -160,12 +154,8 @@ function parsePrefix(): ImportPrefix {
   }
   const pages = pages10Plan.selectedPages + remainderPages;
   const facts = pages10Plan.selectedFacts + remainderFacts;
-  assert.equal(remainderPages, checkpoint.hostedBasePrefix.remainder90.pages);
-  assert.equal(remainderFacts, checkpoint.hostedBasePrefix.remainder90.facts);
-  assert.equal(pages, checkpoint.hostedBasePrefix.total.pages);
-  assert.equal(facts, checkpoint.hostedBasePrefix.total.facts);
-  assert.equal(pages, 227_692);
-  assert.equal(facts, 1_096_908);
+  assert.equal(pages, RUBRIC_PREFIX.pages);
+  assert.equal(facts, RUBRIC_PREFIX.facts);
 
   return {
     pages,
@@ -173,7 +163,7 @@ function parsePrefix(): ImportPrefix {
     corpusPages: corpusManifest.pages as number,
     corpusFacts: corpusManifest.facts as number,
     factsSha256: corpusManifest.factsSha256 as string,
-    snapshotSeq: checkpoint.hostedBasePrefix.snapshotSeq as number | null,
+    lastRemainderOrdinal: lastOrdinal,
     retryOrdinal: remainderPlan.retry.ordinal as number,
   };
 }

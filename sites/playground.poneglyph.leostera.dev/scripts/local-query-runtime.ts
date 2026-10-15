@@ -58,26 +58,23 @@ export async function openLocalGraph(graphId: string, runtimeDirectory: string):
 export async function replayReceiptPrefixLocally(
   graph: GraphClient,
   runId: string,
-  prefix: Readonly<{pages: number; facts: number}>,
+  prefix: Readonly<{pages: number; facts: number; lastRemainderOrdinal: number}>,
   onProgress: (loadedBatches: number, totalBatches: number, loadedFacts: number) => void,
 ): Promise<LocalPrefixLoad> {
   const site = resolve(import.meta.dirname, "..");
   const importDirectory = resolve(site, ".artifacts/import");
   const pagesPlan = parseImportPlan(JSON.parse(await readFile(resolve(importDirectory, "pages10/manifest.json"), "utf8")) as unknown);
   const remainderPlan = parseImportPlan(JSON.parse(await readFile(resolve(importDirectory, "remainder90/manifest.json"), "utf8")) as unknown);
-  const checkpoint = JSON.parse(await readFile(resolve(site, "evidence/2026-10-15-onepiece-million-fact-import-prefix.json"), "utf8")) as {
-    hostedBasePrefix?: {remainder90?: {ordinals?: readonly number[]}};
-  };
-  const lastRemainderOrdinal = checkpoint.hostedBasePrefix?.remainder90?.ordinals?.[1];
-  if (!Number.isSafeInteger(lastRemainderOrdinal) || lastRemainderOrdinal! < 0) throw new Error("receipt checkpoint has no bounded remainder ordinal");
+  const lastRemainderOrdinal = prefix.lastRemainderOrdinal;
+  if (!Number.isSafeInteger(lastRemainderOrdinal) || lastRemainderOrdinal < 0) throw new Error("query rubric has no bounded remainder ordinal");
 
-  const batchesToLoad = pagesPlan.batches.length + lastRemainderOrdinal! + 1;
+  const batchesToLoad = pagesPlan.batches.length + lastRemainderOrdinal + 1;
   let loadedBatches = 0;
   let pages = 0;
   let facts = 0;
   for (const [segment, plan, lastOrdinal] of [
     ["pages10", pagesPlan, pagesPlan.batches.length - 1],
-    ["remainder90", remainderPlan, lastRemainderOrdinal!],
+    ["remainder90", remainderPlan, lastRemainderOrdinal],
   ] as const) {
     for (let ordinal = 0; ordinal <= lastOrdinal; ordinal++) {
       const retry = plan.retry?.batch === ordinal ? plan.retry : undefined;
