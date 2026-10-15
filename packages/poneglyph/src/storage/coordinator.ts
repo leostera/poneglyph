@@ -7,6 +7,7 @@ import { parseUri, type Uri } from "../domain/identifiers.js";
 import { OwnerWrites, OwnerWriteError } from "./owner-writes.js";
 import { isRecord } from "../domain/result.js";
 import { evaluateDatalog, QueryResultLimitExceeded } from "../datalog/evaluator.js";
+import type { DatalogQuery } from "../datalog/ast.js";
 import { parseDatalogQuery } from "../datalog/parser.js";
 import { DistributedFactSource } from "./distributed-fact-source.js";
 import { QueryScanBudgetExceeded } from "../datalog/scan-stream.js";
@@ -827,13 +828,14 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     if (!query.ok) return jsonResponse({ error: query.error.message, offset: query.error.offset }, 400);
 
     const started = Date.now();
-    const cut = await tracing.enterSpan("poneglyph.query.snapshot", () => this.acquireReadCut(graphId));
+    const cut = await tracing.enterSpan("poneglyph.query.snapshot", () => this.acquireQueryReadCut(graphId, query.value));
     const snapshotMs = Date.now() - started;
     const lease = { snapshotSeq: Math.max(...cut.map(s => s.snapshotSeq)), directoryEpoch: 0,
       expiresAtMs: Math.min(...cut.map(s => s.expiresAtMs)) };
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new DOMException("query time budget exceeded", "TimeoutError")), QUERY_TIMEOUT_MS);
     const source = new DistributedFactSource(this.env, graphId, lease.snapshotSeq, lease.directoryEpoch, lease.expiresAtMs, undefined, cut);
+    source.metrics.treeReadLeaseAcquisitions = cut.length;
     const rows: Record<string, unknown>[] = [];
     let evaluationMs = 0, releaseMs = 0;
     try {
@@ -885,8 +887,8 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     const entity = parseUri(new URL(request.url).searchParams.get("uri"), "uri");
     if (!entity.ok) return jsonResponse({ error: entity.error.message }, 400);
     const key = await virtualKeyForEntity(graphId, entity.value);
-    const cut = await this.acquireReadCut(graphId);
-    const lease = cut.find(s => s.prefix === treeForKey(key))!;
+    const cut = await this.acquireReadCut(graphId, [treeForKey(key)]);
+    const lease = cut[0]!;
     try {
       const route = await resolveEntityLeaf(this.env, graphId, entity.value, lease.directoryEpoch);
       const stub = this.env.GRAPH_SHARDS.getByName(shardObjectName(graphId, route.address.prefix));
@@ -1186,14 +1188,28 @@ export class GraphCoordinatorDO extends DurableObject<Env> {
     throw new CoordinatorError(404, "unknown tree operation");
   }
 
-  private async acquireReadCut(graphId: GraphId): Promise<TreeSnapshot[]> {
+  private async acquireQueryReadCut(graphId: GraphId, query: DatalogQuery): Promise<TreeSnapshot[]> {
+    // A single positive relation with a literal entity can only read that
+    // entity's tree. Joins or unbound entities retain the complete owner vector.
+    const clause = query.facts.length === 1 ? query.facts[0] : undefined;
+    if (clause?.entity.kind === "constant" && clause.entity.value.type === "string") {
+      const entity = parseUri(clause.entity.value.value);
+      if (entity.ok) {
+        const key = await virtualKeyForEntity(graphId, entity.value);
+        return this.acquireReadCut(graphId, [treeForKey(key)]);
+      }
+    }
+    return this.acquireReadCut(graphId);
+  }
+
+  private async acquireReadCut(graphId: GraphId, prefixes: readonly VirtualPrefix[] = TREE_PREFIXES): Promise<TreeSnapshot[]> {
     return acquireParallelReadCut(async prefix => {
       const response = await this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graphId, prefix)).fetch("https://tree.internal/_tree-read", {
         method: "POST", body: JSON.stringify({ graphId, prefix }),
       });
       if (!response.ok) throw new CoordinatorError(423, "cannot acquire an atomic subtree read cut");
       return parseTreeSnapshot(await response.json(), prefix);
-    }, cut => this.releaseReadCut(graphId, cut));
+    }, cut => this.releaseReadCut(graphId, cut), prefixes);
   }
 
   private async releaseReadCut(graphId: GraphId, cut: readonly TreeSnapshot[]): Promise<void> {

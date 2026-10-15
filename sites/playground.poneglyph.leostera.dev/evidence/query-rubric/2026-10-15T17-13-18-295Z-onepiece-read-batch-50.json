@@ -1,0 +1,1241 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-10-15T17:15:22.334Z",
+  "classification": "bounded 50-case hosted read-only query compliance and descriptive read-path benchmark; not capacity, tail-latency, full-corpus, or universal correctness certification",
+  "complete": true,
+  "allCasesMatched": false,
+  "hostedEndpoint": "https://onepiece.poneglyph.dev/mcp",
+  "graph": {
+    "graphId": "onepiece",
+    "snapshotSeqMeaning": "snapshotSeq summarizes the leased owner vector; it is not a graph-global transaction clock"
+  },
+  "source": {
+    "pages": 227692,
+    "facts": 1096908,
+    "corpusPages": 296624,
+    "corpusFacts": 1530195,
+    "factsSha256": "e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064",
+    "snapshotSeq": null
+  },
+  "inventory": {
+    "predicates": [
+      "wiki:page:title",
+      "wiki:page:namespace",
+      "wiki:page:text_bytes",
+      "wiki:page:category",
+      "wiki:page:link"
+    ],
+    "bindingPatterns": 4,
+    "builtinsCovered": [
+      "integer equality",
+      "integer range",
+      "string contains"
+    ],
+    "relationCounts": [
+      {
+        "field": "wiki:page:title",
+        "tuples": 227692,
+        "distinctEntities": 227692,
+        "distinctValues": 227692
+      },
+      {
+        "field": "wiki:page:namespace",
+        "tuples": 227692,
+        "distinctEntities": 227692,
+        "distinctValues": 20
+      },
+      {
+        "field": "wiki:page:text_bytes",
+        "tuples": 227692,
+        "distinctEntities": 227692,
+        "distinctValues": 8202
+      },
+      {
+        "field": "wiki:page:category",
+        "tuples": 44911,
+        "distinctEntities": 27600,
+        "distinctValues": 1819
+      },
+      {
+        "field": "wiki:page:link",
+        "tuples": 368921,
+        "distinctEntities": 80687,
+        "distinctValues": 38264
+      }
+    ]
+  },
+  "methodology": {
+    "caseCount": 50,
+    "requestsPerCase": 1,
+    "serial": true,
+    "minimumStartSpacingMs": 2200,
+    "independentOracle": "typed multiset evaluation over the exact receipt-verified normalized corpus prefix",
+    "expectedMultisetSha256": "SHA-256 of sorted typed rows; duplicate rows retained",
+    "cpu": "not measured; no trace-sampling or deployment change was made",
+    "requestRetries": 0,
+    "perCaseFailures": "recorded and later cases continue; no failed query is automatically retried"
+  },
+  "summaryByFamily": [
+    {
+      "family": "fully-bound-one-relation",
+      "attempts": 5,
+      "matched": 5,
+      "failed": 0,
+      "failureCodes": [],
+      "clientRoundTripMs": {
+        "min": 193.13,
+        "median": 205.82,
+        "max": 491.05
+      },
+      "distinctShardsTouched": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "treeReadLeaseAcquisitions": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "shardRequests": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "snapshotMs": {
+        "min": 19,
+        "median": 20,
+        "max": 94
+      },
+      "evaluationMs": {
+        "min": 32,
+        "median": 36,
+        "max": 78
+      }
+    },
+    {
+      "family": "entity-bound-one-relation",
+      "attempts": 20,
+      "matched": 14,
+      "failed": 6,
+      "failureCodes": [
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable"
+      ],
+      "clientRoundTripMs": {
+        "min": 209.51,
+        "median": 268.54,
+        "max": 4567.38
+      },
+      "distinctShardsTouched": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "treeReadLeaseAcquisitions": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "shardRequests": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "snapshotMs": {
+        "min": 19,
+        "median": 42,
+        "max": 106
+      },
+      "evaluationMs": {
+        "min": 49,
+        "median": 77,
+        "max": 4336
+      }
+    },
+    {
+      "family": "value-bound-one-relation",
+      "attempts": 20,
+      "matched": 0,
+      "failed": 20,
+      "failureCodes": [
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable",
+        "MCP_TOOL_ERROR:backend_unavailable"
+      ],
+      "clientRoundTripMs": null,
+      "distinctShardsTouched": [],
+      "treeReadLeaseAcquisitions": [],
+      "shardRequests": [],
+      "snapshotMs": null,
+      "evaluationMs": null
+    },
+    {
+      "family": "two-relations-plus-integer-equality",
+      "attempts": 1,
+      "matched": 0,
+      "failed": 1,
+      "failureCodes": [
+        "MCP_TOOL_ERROR:backend_unavailable"
+      ],
+      "clientRoundTripMs": null,
+      "distinctShardsTouched": [],
+      "treeReadLeaseAcquisitions": [],
+      "shardRequests": [],
+      "snapshotMs": null,
+      "evaluationMs": null
+    },
+    {
+      "family": "value-bound-two-relation-join-plus-string-builtin",
+      "attempts": 1,
+      "matched": 0,
+      "failed": 1,
+      "failureCodes": [
+        "MCP_TOOL_ERROR:backend_unavailable"
+      ],
+      "clientRoundTripMs": null,
+      "distinctShardsTouched": [],
+      "treeReadLeaseAcquisitions": [],
+      "shardRequests": [],
+      "snapshotMs": null,
+      "evaluationMs": null
+    },
+    {
+      "family": "three-relation-link-resolution",
+      "attempts": 1,
+      "matched": 0,
+      "failed": 1,
+      "failureCodes": [
+        "MCP_TOOL_ERROR:backend_unavailable"
+      ],
+      "clientRoundTripMs": null,
+      "distinctShardsTouched": [],
+      "treeReadLeaseAcquisitions": [],
+      "shardRequests": [],
+      "snapshotMs": null,
+      "evaluationMs": null
+    },
+    {
+      "family": "four-relation-link-and-category-filter",
+      "attempts": 1,
+      "matched": 0,
+      "failed": 1,
+      "failureCodes": [
+        "MCP_TOOL_ERROR:backend_unavailable"
+      ],
+      "clientRoundTripMs": null,
+      "distinctShardsTouched": [],
+      "treeReadLeaseAcquisitions": [],
+      "shardRequests": [],
+      "snapshotMs": null,
+      "evaluationMs": null
+    },
+    {
+      "family": "three-relation-same-entity-join-plus-integer-range",
+      "attempts": 1,
+      "matched": 0,
+      "failed": 1,
+      "failureCodes": [
+        "MCP_TOOL_ERROR:backend_unavailable"
+      ],
+      "clientRoundTripMs": null,
+      "distinctShardsTouched": [],
+      "treeReadLeaseAcquisitions": [],
+      "shardRequests": [],
+      "snapshotMs": null,
+      "evaluationMs": null
+    }
+  ],
+  "samples": [
+    {
+      "index": 1,
+      "queryKey": "entity-wiki-page-title-1",
+      "family": "fully-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:18.609Z",
+      "completedAt": "2026-10-15T17:13:19.101Z",
+      "clientRoundTripMs": 491.05,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "expectedRowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2184,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 134,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 188,
+          "snapshotMs": 94,
+          "evaluationMs": 78,
+          "releaseMs": 16
+        }
+      }
+    },
+    {
+      "index": 2,
+      "queryKey": "entity-wiki-page-title-2",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:20.810Z",
+      "completedAt": "2026-10-15T17:13:23.824Z",
+      "clientRoundTripMs": 3013.99,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "40cfea2715176d2999227aaa235098d8a083c5e4851097fa62e8133bb67b3a40",
+      "expectedRowSha256": "40cfea2715176d2999227aaa235098d8a083c5e4851097fa62e8133bb67b3a40",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2188,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 306,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 2878,
+          "snapshotMs": 106,
+          "evaluationMs": 2740,
+          "releaseMs": 32
+        }
+      }
+    },
+    {
+      "index": 3,
+      "queryKey": "entity-wiki-page-title-3",
+      "family": "entity-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:23.824Z",
+      "completedAt": "2026-10-15T17:13:26.025Z",
+      "clientRoundTripMs": 2200.65,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 4,
+      "queryKey": "entity-wiki-page-title-4",
+      "family": "entity-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:26.025Z",
+      "completedAt": "2026-10-15T17:13:28.593Z",
+      "clientRoundTripMs": 2567.54,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 5,
+      "queryKey": "entity-wiki-page-title-5",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:28.593Z",
+      "completedAt": "2026-10-15T17:13:30.829Z",
+      "clientRoundTripMs": 2235.81,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "46da065adee4599e7e1c2273748429ea9b983db927ff41da2dacf7b0c0841c96",
+      "expectedRowSha256": "46da065adee4599e7e1c2273748429ea9b983db927ff41da2dacf7b0c0841c96",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2191,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 186,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 2053,
+          "snapshotMs": 66,
+          "evaluationMs": 1966,
+          "releaseMs": 21
+        }
+      }
+    },
+    {
+      "index": 6,
+      "queryKey": "entity-wiki-page-namespace-1",
+      "family": "fully-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:30.829Z",
+      "completedAt": "2026-10-15T17:13:31.100Z",
+      "clientRoundTripMs": 271.38,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "expectedRowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2184,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 123,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 71,
+          "snapshotMs": 20,
+          "evaluationMs": 36,
+          "releaseMs": 15
+        }
+      }
+    },
+    {
+      "index": 7,
+      "queryKey": "entity-wiki-page-namespace-2",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:33.030Z",
+      "completedAt": "2026-10-15T17:13:33.289Z",
+      "clientRoundTripMs": 258.21,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "a3ff9a04044ef0e6ba2107c3abc6a94ff72748f4c3afcea272f0aba3cc793440",
+      "expectedRowSha256": "a3ff9a04044ef0e6ba2107c3abc6a94ff72748f4c3afcea272f0aba3cc793440",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2188,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 221,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 115,
+          "snapshotMs": 30,
+          "evaluationMs": 54,
+          "releaseMs": 31
+        }
+      }
+    },
+    {
+      "index": 8,
+      "queryKey": "entity-wiki-page-namespace-3",
+      "family": "entity-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:35.232Z",
+      "completedAt": "2026-10-15T17:13:37.796Z",
+      "clientRoundTripMs": 2563.63,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 9,
+      "queryKey": "entity-wiki-page-namespace-4",
+      "family": "entity-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:37.796Z",
+      "completedAt": "2026-10-15T17:13:39.869Z",
+      "clientRoundTripMs": 2073.17,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 10,
+      "queryKey": "entity-wiki-page-namespace-5",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:39.999Z",
+      "completedAt": "2026-10-15T17:13:40.208Z",
+      "clientRoundTripMs": 209.51,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "41caff0638574822fdf3bf35233c18d3dbe489a87f4f60bbdffc1ad7a172c778",
+      "expectedRowSha256": "41caff0638574822fdf3bf35233c18d3dbe489a87f4f60bbdffc1ad7a172c778",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2191,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 154,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 92,
+          "snapshotMs": 22,
+          "evaluationMs": 50,
+          "releaseMs": 20
+        }
+      }
+    },
+    {
+      "index": 11,
+      "queryKey": "entity-wiki-page-text_bytes-1",
+      "family": "fully-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:42.200Z",
+      "completedAt": "2026-10-15T17:13:42.393Z",
+      "clientRoundTripMs": 193.13,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "expectedRowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2184,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 125,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 75,
+          "snapshotMs": 20,
+          "evaluationMs": 39,
+          "releaseMs": 16
+        }
+      }
+    },
+    {
+      "index": 12,
+      "queryKey": "entity-wiki-page-text_bytes-2",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:44.401Z",
+      "completedAt": "2026-10-15T17:13:44.659Z",
+      "clientRoundTripMs": 257.37,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "f39cd2ba311d61efc6da6ae96015e9e18d46bd25b481d12467c9ad8f808869d7",
+      "expectedRowSha256": "f39cd2ba311d61efc6da6ae96015e9e18d46bd25b481d12467c9ad8f808869d7",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2188,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 221,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 145,
+          "snapshotMs": 42,
+          "evaluationMs": 62,
+          "releaseMs": 41
+        }
+      }
+    },
+    {
+      "index": 13,
+      "queryKey": "entity-wiki-page-text_bytes-3",
+      "family": "entity-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:46.601Z",
+      "completedAt": "2026-10-15T17:13:49.173Z",
+      "clientRoundTripMs": 2571.41,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 14,
+      "queryKey": "entity-wiki-page-text_bytes-4",
+      "family": "entity-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:49.173Z",
+      "completedAt": "2026-10-15T17:13:51.636Z",
+      "clientRoundTripMs": 2463.23,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 15,
+      "queryKey": "entity-wiki-page-text_bytes-5",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:51.636Z",
+      "completedAt": "2026-10-15T17:13:51.905Z",
+      "clientRoundTripMs": 268.54,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "e0e694c8c507faa28397e49c78968c6912a8fa822b483952227f55864bdd9d83",
+      "expectedRowSha256": "e0e694c8c507faa28397e49c78968c6912a8fa822b483952227f55864bdd9d83",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2191,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 156,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 148,
+          "snapshotMs": 22,
+          "evaluationMs": 108,
+          "releaseMs": 18
+        }
+      }
+    },
+    {
+      "index": 16,
+      "queryKey": "entity-wiki-page-category-1",
+      "family": "fully-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:53.838Z",
+      "completedAt": "2026-10-15T17:13:54.037Z",
+      "clientRoundTripMs": 198.97,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "expectedRowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2184,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 141,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 77,
+          "snapshotMs": 20,
+          "evaluationMs": 32,
+          "releaseMs": 25
+        }
+      }
+    },
+    {
+      "index": 17,
+      "queryKey": "entity-wiki-page-category-2",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:13:56.039Z",
+      "completedAt": "2026-10-15T17:14:00.607Z",
+      "clientRoundTripMs": 4567.38,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "fd835449341be58e7d04958d928055ac700004590c7cf0244bf9c5c04f2796d1",
+      "expectedRowSha256": "fd835449341be58e7d04958d928055ac700004590c7cf0244bf9c5c04f2796d1",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2193,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 226,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 4451,
+          "snapshotMs": 91,
+          "evaluationMs": 4336,
+          "releaseMs": 24
+        }
+      }
+    },
+    {
+      "index": 18,
+      "queryKey": "entity-wiki-page-category-3",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:00.607Z",
+      "completedAt": "2026-10-15T17:14:02.556Z",
+      "clientRoundTripMs": 1949.42,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "fd835449341be58e7d04958d928055ac700004590c7cf0244bf9c5c04f2796d1",
+      "expectedRowSha256": "fd835449341be58e7d04958d928055ac700004590c7cf0244bf9c5c04f2796d1",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2195,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 202,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 1836,
+          "snapshotMs": 76,
+          "evaluationMs": 1738,
+          "releaseMs": 22
+        }
+      }
+    },
+    {
+      "index": 19,
+      "queryKey": "entity-wiki-page-category-4",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:02.808Z",
+      "completedAt": "2026-10-15T17:14:03.022Z",
+      "clientRoundTripMs": 213.69,
+      "rows": 2,
+      "expectedRows": 2,
+      "rowSha256": "8ed1761e05926f6a38e7ed84c3171513de325e515020ea1ed7a1c7635d48f36e",
+      "expectedRowSha256": "8ed1761e05926f6a38e7ed84c3171513de325e515020ea1ed7a1c7635d48f36e",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2195,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 2,
+        "bytesRead": 287,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 99,
+          "snapshotMs": 27,
+          "evaluationMs": 49,
+          "releaseMs": 23
+        }
+      }
+    },
+    {
+      "index": 20,
+      "queryKey": "entity-wiki-page-category-5",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:05.009Z",
+      "completedAt": "2026-10-15T17:14:05.297Z",
+      "clientRoundTripMs": 287.75,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "fd835449341be58e7d04958d928055ac700004590c7cf0244bf9c5c04f2796d1",
+      "expectedRowSha256": "fd835449341be58e7d04958d928055ac700004590c7cf0244bf9c5c04f2796d1",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2192,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 208,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 179,
+          "snapshotMs": 79,
+          "evaluationMs": 77,
+          "releaseMs": 23
+        }
+      }
+    },
+    {
+      "index": 21,
+      "queryKey": "entity-wiki-page-link-1",
+      "family": "fully-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:07.212Z",
+      "completedAt": "2026-10-15T17:14:07.417Z",
+      "clientRoundTripMs": 205.82,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "expectedRowSha256": "ce6558960ff0913e86513e872bdd93bf836981d16dff0eee8d8d8d37c57d3972",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2184,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 136,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 73,
+          "snapshotMs": 19,
+          "evaluationMs": 33,
+          "releaseMs": 21
+        }
+      }
+    },
+    {
+      "index": 22,
+      "queryKey": "entity-wiki-page-link-2",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:09.413Z",
+      "completedAt": "2026-10-15T17:14:09.661Z",
+      "clientRoundTripMs": 248.21,
+      "rows": 1,
+      "expectedRows": 1,
+      "rowSha256": "487cfef22a326efd7634c4dd678511759b8334d06f5d86268c5386342e7f70a5",
+      "expectedRowSha256": "487cfef22a326efd7634c4dd678511759b8334d06f5d86268c5386342e7f70a5",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2193,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 1,
+        "bytesRead": 129,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 98,
+          "snapshotMs": 19,
+          "evaluationMs": 59,
+          "releaseMs": 20
+        }
+      }
+    },
+    {
+      "index": 23,
+      "queryKey": "entity-wiki-page-link-3",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:11.615Z",
+      "completedAt": "2026-10-15T17:14:11.840Z",
+      "clientRoundTripMs": 225.55,
+      "rows": 9,
+      "expectedRows": 9,
+      "rowSha256": "67c96e43f9b53fd0b93c062a1aeb8eb1115c473dfbeebe3ef81a0ca9c8da2687",
+      "expectedRowSha256": "67c96e43f9b53fd0b93c062a1aeb8eb1115c473dfbeebe3ef81a0ca9c8da2687",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2195,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 9,
+        "bytesRead": 1134,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 118,
+          "snapshotMs": 27,
+          "evaluationMs": 64,
+          "releaseMs": 27
+        }
+      }
+    },
+    {
+      "index": 24,
+      "queryKey": "entity-wiki-page-link-4",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:13.815Z",
+      "completedAt": "2026-10-15T17:14:14.150Z",
+      "clientRoundTripMs": 335.76,
+      "rows": 2,
+      "expectedRows": 2,
+      "rowSha256": "bc121fbf1ac0e7a3cf6bff6ad22c7012db117013628748628b48b3c3512f5ee3",
+      "expectedRowSha256": "bc121fbf1ac0e7a3cf6bff6ad22c7012db117013628748628b48b3c3512f5ee3",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2190,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 2,
+        "bytesRead": 298,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 176,
+          "snapshotMs": 78,
+          "evaluationMs": 74,
+          "releaseMs": 24
+        }
+      }
+    },
+    {
+      "index": 25,
+      "queryKey": "entity-wiki-page-link-5",
+      "family": "entity-bound-one-relation",
+      "outcome": "matched",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:16.016Z",
+      "completedAt": "2026-10-15T17:14:16.278Z",
+      "clientRoundTripMs": 262.39,
+      "rows": 2,
+      "expectedRows": 2,
+      "rowSha256": "ec583c78b3a139765a77b237ec61c6653fd3fbbd7cffc912f8dd95aa2ea9582c",
+      "expectedRowSha256": "ec583c78b3a139765a77b237ec61c6653fd3fbbd7cffc912f8dd95aa2ea9582c",
+      "exactIndependentTypedMultiset": true,
+      "snapshotSeq": 2191,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "distinctShardsTouched": 1,
+        "treeReadLeaseAcquisitions": 1,
+        "tuplesRead": 2,
+        "bytesRead": 297,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 137,
+          "snapshotMs": 26,
+          "evaluationMs": 90,
+          "releaseMs": 21
+        }
+      }
+    },
+    {
+      "index": 26,
+      "queryKey": "value-wiki-page-title-1",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:18.218Z",
+      "completedAt": "2026-10-15T17:14:20.501Z",
+      "clientRoundTripMs": 2282.68,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 27,
+      "queryKey": "value-wiki-page-title-2",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:20.501Z",
+      "completedAt": "2026-10-15T17:14:22.637Z",
+      "clientRoundTripMs": 2135.66,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 28,
+      "queryKey": "value-wiki-page-title-3",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:22.702Z",
+      "completedAt": "2026-10-15T17:14:25.110Z",
+      "clientRoundTripMs": 2407.45,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 29,
+      "queryKey": "value-wiki-page-title-4",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:25.110Z",
+      "completedAt": "2026-10-15T17:14:27.536Z",
+      "clientRoundTripMs": 2426.63,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 30,
+      "queryKey": "value-wiki-page-title-5",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:27.537Z",
+      "completedAt": "2026-10-15T17:14:29.610Z",
+      "clientRoundTripMs": 2073.11,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 31,
+      "queryKey": "value-wiki-page-category-1",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:29.738Z",
+      "completedAt": "2026-10-15T17:14:32.182Z",
+      "clientRoundTripMs": 2444.42,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 32,
+      "queryKey": "value-wiki-page-category-2",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:32.183Z",
+      "completedAt": "2026-10-15T17:14:34.712Z",
+      "clientRoundTripMs": 2529.62,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 33,
+      "queryKey": "value-wiki-page-category-3",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:34.712Z",
+      "completedAt": "2026-10-15T17:14:37.071Z",
+      "clientRoundTripMs": 2358.1,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 34,
+      "queryKey": "value-wiki-page-category-4",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:37.071Z",
+      "completedAt": "2026-10-15T17:14:38.835Z",
+      "clientRoundTripMs": 1764.61,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 35,
+      "queryKey": "value-wiki-page-category-5",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:39.273Z",
+      "completedAt": "2026-10-15T17:14:41.935Z",
+      "clientRoundTripMs": 2662.16,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 36,
+      "queryKey": "value-wiki-page-link-1",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:41.935Z",
+      "completedAt": "2026-10-15T17:14:44.418Z",
+      "clientRoundTripMs": 2482.17,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 37,
+      "queryKey": "value-wiki-page-link-2",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:44.418Z",
+      "completedAt": "2026-10-15T17:14:46.713Z",
+      "clientRoundTripMs": 2295.67,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 38,
+      "queryKey": "value-wiki-page-link-3",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:46.714Z",
+      "completedAt": "2026-10-15T17:14:49.134Z",
+      "clientRoundTripMs": 2420.62,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 39,
+      "queryKey": "value-wiki-page-link-4",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:49.134Z",
+      "completedAt": "2026-10-15T17:14:51.671Z",
+      "clientRoundTripMs": 2536.42,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 40,
+      "queryKey": "value-wiki-page-link-5",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:51.671Z",
+      "completedAt": "2026-10-15T17:14:54.292Z",
+      "clientRoundTripMs": 2620.72,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 41,
+      "queryKey": "value-wiki-page-text_bytes-1",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:54.292Z",
+      "completedAt": "2026-10-15T17:14:57.216Z",
+      "clientRoundTripMs": 2924.33,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 42,
+      "queryKey": "value-wiki-page-text_bytes-2",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:57.216Z",
+      "completedAt": "2026-10-15T17:14:59.412Z",
+      "clientRoundTripMs": 2195.4,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 43,
+      "queryKey": "value-wiki-page-text_bytes-3",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:14:59.417Z",
+      "completedAt": "2026-10-15T17:15:02.413Z",
+      "clientRoundTripMs": 2995.53,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 44,
+      "queryKey": "value-wiki-page-text_bytes-4",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:15:02.413Z",
+      "completedAt": "2026-10-15T17:15:06.133Z",
+      "clientRoundTripMs": 3720.09,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 45,
+      "queryKey": "value-wiki-page-text_bytes-5",
+      "family": "value-bound-one-relation",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:15:06.133Z",
+      "completedAt": "2026-10-15T17:15:08.704Z",
+      "clientRoundTripMs": 2571.02,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 46,
+      "queryKey": "join-entity-title-namespace-equality",
+      "family": "two-relations-plus-integer-equality",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:15:08.705Z",
+      "completedAt": "2026-10-15T17:15:11.964Z",
+      "clientRoundTripMs": 3259.41,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 47,
+      "queryKey": "join-category-title-contains",
+      "family": "value-bound-two-relation-join-plus-string-builtin",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:15:11.964Z",
+      "completedAt": "2026-10-15T17:15:14.313Z",
+      "clientRoundTripMs": 2349.3,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 48,
+      "queryKey": "join-link-resolution-three-relations",
+      "family": "three-relation-link-resolution",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:15:14.314Z",
+      "completedAt": "2026-10-15T17:15:17.035Z",
+      "clientRoundTripMs": 2721.56,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 49,
+      "queryKey": "join-link-human-category-filter",
+      "family": "four-relation-link-and-category-filter",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:15:17.035Z",
+      "completedAt": "2026-10-15T17:15:19.403Z",
+      "clientRoundTripMs": 2367.37,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    },
+    {
+      "index": 50,
+      "queryKey": "join-title-category-namespace-order",
+      "family": "three-relation-same-entity-join-plus-integer-range",
+      "outcome": "error",
+      "sent": true,
+      "startedAt": "2026-10-15T17:15:19.403Z",
+      "completedAt": "2026-10-15T17:15:22.333Z",
+      "clientRoundTripMs": 2929.55,
+      "failure": "MCP_TOOL_ERROR:backend_unavailable"
+    }
+  ]
+}

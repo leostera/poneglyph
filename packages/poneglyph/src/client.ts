@@ -43,6 +43,8 @@ export type TransactionReceipt = Readonly<{
 export type QueryMetrics = Readonly<{
   scanCalls: number;
   shardRequests: number;
+  distinctShardsTouched?: number;
+  treeReadLeaseAcquisitions?: number;
   tuplesRead: number;
   bytesRead: number;
   directoryRequests: number;
@@ -386,6 +388,8 @@ function parseQueryMetrics(input: unknown): QueryMetrics {
   return Object.freeze({
     scanCalls: readMetric(input, "scanCalls"),
     shardRequests: readMetric(input, "shardRequests"),
+    ...(input["distinctShardsTouched"] === undefined ? {} : {distinctShardsTouched: readMetric(input, "distinctShardsTouched")}),
+    ...(input["treeReadLeaseAcquisitions"] === undefined ? {} : {treeReadLeaseAcquisitions: readMetric(input, "treeReadLeaseAcquisitions")}),
     tuplesRead: readMetric(input, "tuplesRead"),
     bytesRead: readMetric(input, "bytesRead"),
     directoryRequests: readMetric(input, "directoryRequests"),

@@ -39,3 +39,21 @@ https://onepiece.poneglyph.dev/mcp
 ```
 
 Sign in using a Cloudflare account that is a member of the owner's personal account. The Worker-scoped Access app uses only the Cloudflare IdP and an explicit Cloudflare Account Member selector; email-PIN login, email allowlists, Everyone and service-token grants are excluded. Workers.dev and preview URLs remain disabled. Your MCP transport must support Access authentication; browser sign-in alone does not authenticate a separate agent process. Call `describe_dataset` first; fixture data is not verified wiki lore. MCP POSTs have an approximate **30/minute per-IP, per-Cloudflare-location** allowance; `429` includes `Retry-After: 60`. Shared IPs share allowance. Native query budgets remain unchanged, and errors never become truncated successes. The generic handler's wildcard CORS is not an Access exemption or a promise of cross-origin cookie authentication. Local native tests bypass the cloud Access edge; deployment verification must read back the policy and check unauthenticated ingress separately.
+
+## Query inventory and read-path rubric
+
+`describe_dataset` publishes `queryInventory` from `src/query-rubric.ts`: the five normalized corpus predicates and their exposed Datalog types; all four constant/variable binding forms plus wildcard terms; supported typed comparison/string builtins; conjunction, joins and bag semantics; physical-operator boundaries; unsupported forms; and query budgets. The generic engine still accepts any valid predicate URI, while an unknown predicate is not a schema violation and normally returns no matching facts. The static inventory is not proof that a corpus load is complete.
+
+The first compliance/benchmark batch is exactly 50 deterministic queries generated from the receipt-verified 227,692-page / 1,096,908-fact base prefix: five full constant bindings (one per field), 20 entity-bound relations across all five fields, 20 value-bound relations over selective title/category/link/text-byte values, and five conjunction/builtin join shapes. Namespace is covered by its full and entity-bound forms; value `0` is deliberately not used because its expected broad result exceeds the row budget. Before the hosted command, run the local planner to verify the corpus hash, exact committed receipt prefix and expected typed result digests without accessing credentials or the network:
+
+```sh
+bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric
+```
+
+The following is a separate, explicitly hosted, read-only command. It sends one serial query per case, spaces request starts by at least 2.2 seconds to remain under the configured approximate 30/minute MCP allowance, compares every answer to an independently evaluated typed multiset, and writes per-case latency/lease/shard metrics plus result hashes to a new non-overwriting evidence file. Each failure is retained without raw response bodies or automatic query retry; later cases still run. It does not write graph facts, alter sampling, or deploy:
+
+```sh
+bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric -- --hosted --confirm-read-only-hosted --count 50
+```
+
+The runner uses the local Access-cookie helper without printing or persisting its credential. A batch with any backend error or result mismatch is not a passing compliance run. Report successful bounded samples only as descriptive evidence, not a capacity or tail-latency claim. Benchmark commands are never a build/check/test side effect; expand to a later batch only after reviewing the previous evidence and bottlenecks.

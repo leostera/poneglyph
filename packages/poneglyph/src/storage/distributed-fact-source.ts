@@ -20,6 +20,8 @@ import { listShardLeaves, resolveEntityLeaf, type LeafAddress } from "./routing.
 export type QueryMetrics = {
   scanCalls: number;
   shardRequests: number;
+  distinctShardsTouched: number;
+  treeReadLeaseAcquisitions: number;
   tuplesRead: number;
   bytesRead: number;
   directoryRequests: number;
@@ -33,12 +35,13 @@ export class DistributedFactSource implements FactSource {
     private readonly snapshotSeq: number,
     private readonly directoryEpoch: number,
     private readonly leaseExpiresAtMs: number,
-    readonly metrics: QueryMetrics = { scanCalls: 0, shardRequests: 0, tuplesRead: 0, bytesRead: 0, directoryRequests: 0 },
+    readonly metrics: QueryMetrics = { scanCalls: 0, shardRequests: 0, distinctShardsTouched: 0, treeReadLeaseAcquisitions: 0, tuplesRead: 0, bytesRead: 0, directoryRequests: 0 },
     private readonly cut: readonly TreeSnapshot[] = [],
   ) {}
 
   private allLeaves: readonly LeafAddress[] | undefined;
   private readonly entityRoutes = new Map<string, LeafAddress>();
+  private readonly touchedShards = new Set<string>();
 
   scan(lookup: FactLookup, signal?: AbortSignal): AsyncIterable<FactTuple> {
     return this.scanShards(lookup, undefined, signal);
@@ -53,6 +56,8 @@ export class DistributedFactSource implements FactSource {
     if (shardAddresses === undefined) return;
     this.metrics.scanCalls += 1;
     this.metrics.shardRequests += shardAddresses.length;
+    for (const address of shardAddresses) this.touchedShards.add(`${address.prefix}:${address.generation}`);
+    this.metrics.distinctShardsTouched = this.touchedShards.size;
     if (this.metrics.shardRequests > MAX_QUERY_SHARD_REQUESTS) {
       throw new QueryScanBudgetExceeded("query shard-request budget exceeded");
     }

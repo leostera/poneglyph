@@ -10,6 +10,7 @@ import { parseGraphId } from "../domain/graph-id.js";
 import { isRecord } from "../domain/result.js";
 import { factScalarToDatalogValue, parseDatalogValue } from "../datalog/value.js";
 import type { DatalogValue } from "../datalog/value.js";
+import { valueIndexKeysForDatalogValue } from "./value-index.js";
 import {
   MAX_ACTIVE_FACTS_PER_ENTITY,
   MAX_ENTITY_FIELDS,
@@ -512,11 +513,12 @@ export class GraphShardDO extends DurableObject<Env> {
     }
 
     if (scan.value !== undefined) {
-      // Datalog conversion is many-to-one: strings also encode references,
-      // booleans, dates and collections. Compare the exposed typed value;
-      // guessing an original FactValue silently loses valid bound matches.
-      clauses.push("datalog_type = ?", "datalog_value = ?");
-      args.push(scan.value.type, scan.value.value);
+      // value_key indexes canonical FactValues, while Datalog conversion is
+      // many-to-one. Seek all canonical keys that expose this typed value and
+      // retain the exact exposed-value predicate as a correctness guard.
+      const keys = valueIndexKeysForDatalogValue(scan.value);
+      clauses.push(`value_key IN (${keys.map(() => "?").join(", ")})`, "datalog_type = ?", "datalog_value = ?");
+      args.push(...keys, scan.value.type, scan.value.value);
     }
 
     const filtered = `SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE ${clauses.join(" AND ")}`;

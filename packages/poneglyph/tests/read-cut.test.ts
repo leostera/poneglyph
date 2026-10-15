@@ -22,6 +22,24 @@ describe("parallel read cut", () => {
     expect((await result).map(value => value.prefix)).toEqual(TREE_PREFIXES);
   });
 
+  it("acquires only the requested independent roots for a selective read", async () => {
+    const requested = [TREE_PREFIXES[7]!, TREE_PREFIXES[2]!];
+    const started: string[] = [];
+    const cut = await acquireParallelReadCut(async prefix => {
+      started.push(prefix);
+      return lease(prefix);
+    }, async () => {throw new Error("unexpected release");}, requested);
+    expect(started).toEqual(requested);
+    expect(cut.map(snapshot => snapshot.prefix)).toEqual(requested);
+  });
+
+  it("rejects empty or duplicate root selections before acquiring leases", async () => {
+    const acquire = async (prefix: TreeSnapshot["prefix"]) => lease(prefix);
+    await expect(acquireParallelReadCut(acquire, async () => {}, [])).rejects.toThrow("unique independent tree roots");
+    await expect(acquireParallelReadCut(acquire, async () => {}, [TREE_PREFIXES[0]!, TREE_PREFIXES[0]!]))
+      .rejects.toThrow("unique independent tree roots");
+  });
+
   it("waits for late successes before releasing every acquired lease on failure", async () => {
     const late = deferred<TreeSnapshot>();
     const failure = new Error("owner busy");

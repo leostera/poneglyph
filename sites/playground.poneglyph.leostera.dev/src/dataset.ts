@@ -1,5 +1,6 @@
 import { RATE_LIMIT } from "./rate-limit.js";
 import { GRAPH_ID } from "./runtime.js";
+import { QUERY_RUBRIC } from "./query-rubric.js";
 export const PUBLIC_HOST = "onepiece.poneglyph.dev";
 export const MCP_URL = `https://${PUBLIC_HOST}/mcp`;
 
@@ -24,9 +25,10 @@ export const DATASET = Object.freeze({
     'wiki:page:title(Page, "Monkey D. Luffy"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle)',
     'wiki:page:title(Page, "Monkey D. Luffy"), wiki:page:namespace(Page, Namespace), wiki:page:text_bytes(Page, Bytes)',
   ],
-  queryLanguage: "A conjunction of binary field(Entity, Value) relations, comma-separated. Uppercase-leading names are variables. Quote text constants with double quotes. This is bounded Datalog, not SQL or arbitrary code; no SELECT, LIMIT, recursive rules or pagination. Put selective relations first.",
-  resultContract: "Complete unordered typed rows, snapshotSeq and scan metrics, or an explicit error. Preserve duplicate rows and tagged values. snapshotSeq summarizes a leased owner vector; it is not a global transaction clock.",
-  limits: { queryCharacters: 8192, clauses: 64, rows: 2000, tuples: 50000, shardRequests: 20000, scanBytes: 20000000, databaseResponseBytes: 2000000, durationSeconds: 20, leafFanout: 256 },
+  queryLanguage: "Comma-separated conjunctions of positive binary field(Entity, Value) relations plus bound builtin constraints; at least one fact relation is required. Uppercase-leading identifiers are variables, _ is a wildcard, JSON-quoted strings and signed 64-bit integer literals are constants. Supports typed equality/order and contains/startsWith/endsWith builtins. Bounded non-recursive Datalog, not SQL: no negation, disjunction, aggregation, projection, ordering, limit, offset or pagination. See queryInventory for the full supported subset and rubric.",
+  queryInventory: QUERY_RUBRIC,
+  resultContract: "Complete unordered typed bag rows, snapshotSeq, scan metrics including request and distinct-shard counts, or an explicit error. Preserve duplicate rows and tagged values. snapshotSeq summarizes the selected leased owner vector; it is not a global transaction clock.",
+  limits: { queryCharacters: 8192, clauses: 64, rows: 2000, tuples: 50000, shardRequests: 20000, scanBytes: 20000000, databaseResponseBytes: 2000000, durationSeconds: 20, leafFanout: 256, directoryNodes: 511 },
   limitations: [
     "Schema information does not certify that the corpus has been loaded or that a load is complete. Queries read the currently configured graph.",
     "This corpus is a metadata/link graph, not full article text or a semantic extraction of wiki lore. Do not invent captain/crew/lore predicates.",
