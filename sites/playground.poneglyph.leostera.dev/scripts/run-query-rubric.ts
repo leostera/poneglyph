@@ -19,7 +19,9 @@ const accessEndpoint = "https://onepiece.poneglyph.dev/mcp";
 const MAX_VALUE_MATCHES = 25;
 const PACE_MS = 2_200;
 
-if (requestedCount !== 50) throw new Error("The initial query rubric batch is deliberately bounded to exactly 50 cases.");
+if (!Number.isSafeInteger(requestedCount) || ![50, 100].includes(requestedCount)) {
+  throw new Error("Query rubric batches are deliberately bounded to exactly 50 or 100 requests.");
+}
 if (hosted && !process.argv.includes("--confirm-read-only-hosted")) {
   throw new Error("Hosted mode requires --confirm-read-only-hosted; this runner sends 50 authenticated read-only queries.");
 }
@@ -413,21 +415,27 @@ async function main(): Promise<void> {
   assert.ok(existsSync(corpusPath), "normalized source corpus is missing");
   const prefix = parsePrefix();
   const relations = await loadOracle(prefix);
-  const cases = makeCases(relations);
+  const uniqueCases = makeCases(relations);
+  const repetitionsPerCase = requestedCount / uniqueCases.length;
+  const cases = Array.from({length: repetitionsPerCase}, (_, repetition) => uniqueCases.map(spec => repetition === 0
+    ? spec
+    : {...spec, key: `${spec.key}-repeat-${repetition + 1}`})).flat();
   const batchId = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
-  const outputPath = resolve(outputArg ?? `${site}/evidence/query-rubric/${batchId}-onepiece-read-batch-50.json`);
+  const outputPath = resolve(outputArg ?? `${site}/evidence/query-rubric/${batchId}-onepiece-read-batch-${cases.length}.json`);
   if (existsSync(outputPath)) throw new Error("Evidence output already exists; choose a new output path instead of overwriting it.");
 
   const plan = {
     batchId,
     mode: hosted ? "hosted-read-only" : "local-plan-only",
     exactCount: cases.length,
+    uniqueQueryCount: uniqueCases.length,
+    repetitionsPerQuery: repetitionsPerCase,
     receiptPrefix: {pages: prefix.pages, facts: prefix.facts, corpusPages: prefix.corpusPages, corpusFacts: prefix.corpusFacts, corpusFactsSha256: prefix.factsSha256, baseRetryOrdinal: prefix.retryOrdinal, enrichmentFactsHosted: 0},
     inventory: {predicates: QUERY_PREDICATE_INVENTORY.map(predicate => predicate.field), bindingPatterns: QUERY_RUBRIC.bindings.map(binding => binding.id), builtins: QUERY_RUBRIC.builtins, hostedBuiltinExamples: ["integer equality", "integer range", "string contains"], relationCounts: [...relations.entries()].map(([field, index]) => ({field, tuples: index.all.length, distinctEntities: index.byEntity.size, distinctValues: index.byValue.size}))},
     cases: cases.map(({key, family, predicate, query, clauses, expected}) => ({key, family, predicate, query, clauses, expectedRows: expected.length, expectedRowsSha256: digestRows(expected)})),
   };
   if (!hosted) {
-    console.log(JSON.stringify({...plan, note: "No credentials were read and no network request was sent. Add --hosted --confirm-read-only-hosted to run this exact 50-query batch."}, null, 2));
+    console.log(JSON.stringify({...plan, note: `No credentials were read and no network request was sent. Add --hosted --confirm-read-only-hosted to send this ${cases.length}-request batch (${uniqueCases.length} unique queries, ${repetitionsPerCase} pass${repetitionsPerCase === 1 ? "" : "es"}).`}, null, 2));
     return;
   }
 
@@ -539,7 +547,7 @@ async function main(): Promise<void> {
     graph: {graphId: "onepiece", snapshotSeqMeaning: "snapshotSeq summarizes the leased owner vector; it is not a graph-global transaction clock"},
     source: prefix,
     inventory: plan.inventory,
-    methodology: {caseCount: cases.length, requestsPerCase: 1, serial: true, minimumStartSpacingMs: PACE_MS, independentOracle: "typed multiset evaluation over the exact receipt-verified normalized corpus prefix", expectedMultisetSha256: "SHA-256 of sorted typed rows; duplicate rows retained", cpu: "not measured; no trace-sampling or deployment change was made", requestRetries: 0, perCaseFailures: "recorded and later cases continue; no failed query is automatically retried"},
+    methodology: {caseCount: cases.length, uniqueQueryCount: uniqueCases.length, repetitionsPerQuery: repetitionsPerCase, requestsPerCase: 1, serial: true, minimumStartSpacingMs: PACE_MS, independentOracle: "typed multiset evaluation over the exact receipt-verified normalized corpus prefix", expectedMultisetSha256: "SHA-256 of sorted typed rows; duplicate rows retained", cpu: "not measured; no trace-sampling or deployment change was made", requestRetries: 0, perCaseFailures: "recorded and later cases continue; no failed query is automatically retried"},
     summaryByFamily: families,
     samples,
   };
