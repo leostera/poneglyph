@@ -78,10 +78,14 @@ const txId = await graph.stateFacts([draft]);
 
 A graph ID selects an isolated fact namespace. `db.defineGraph({ id })` creates a local client handle for that namespace; it does not register a SQL-style schema. A graph is roughly like a SQL database as a boundary, but it has no catalog of tables and columns: facts use field URIs. Separate graphs can isolate tenants, environments, or lifecycles, but Poneglyph does not join queries or transactions across them.
 
-The graph coordinator is persistent control for that graph's routing and visibility state, not the place where its facts are stored. The fact data lives in the graph's data-owning shards.
+The graph coordinator is persistent control for that graph's routing and visibility state, not the place where its facts are stored. The fact data lives in the graph's data-owning shards. The routing forest has 16 independent root trees, each with its own sequence counter. A precise read snapshot is therefore a vector such as `{ root 0000: 17, root 0001: 9, ... }`, not one globally ordered graph sequence. The current transaction receipt labels its sequence scope `subtree-vector`.
 
 ## Step 3: Planning the write
 
 The Worker checks the request and sends it to a transaction-ledger bucket selected from the `txId`. The ledger records the canonical batch, its content hash, and the write's progress so an interrupted transaction can be recovered. The content hash binds this `txId` to this exact batch; it is not used to select fact storage. Repeating a batch with a new transaction ID is a new write, not a semantic duplicate.
 
 To place each fact, Poneglyph hashes the graph ID together with the fact's entity URI. A routing directory maps that key to the current leaf shard. The transaction groups facts by destination, and tree coordinators reserve the relevant entity owners before the shards are asked to prepare the write. The `entity` determines the destination; the field and value do not.
+
+## Step 4: Prepare and commit
+
+For a multi-shard write, each participant first validates and durably stages its portion as `prepared`; prepared facts are not yet query-visible. If a participant permanently rejects the write, the coordinator cancels the prepared portions and releases the reservations. If all participants prepare, the transaction ledger records a durable commit decision, then drives each shard to apply its part and publishes the result through the tree coordinators. An interruption leaves enough durable progress to resume the same transaction. A single-shard write can use one local atomic operation instead of the distributed prepare/commit path.
