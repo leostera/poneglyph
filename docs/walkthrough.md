@@ -51,3 +51,7 @@ app:task:status(Task, "open")
 ```
 
 The query joins the reference to the task's entity URI. The relationship is meaningful because the application explicitly stored it; Poneglyph does not infer "blocked by" from prose, labels, or unrelated links.
+
+### A flexible table analogy
+
+As a mental model, you can imagine entities as rows and field URIs as column names: adding facts with a new field can feel like adding a column. Physically, however, Poneglyph stores each claim as a separate fact, not as a schema-changing SQL row. Queries join those facts and choose the result variables (the result columns). This makes the model flexible, while leaving field-specific rules to the application unless it validates them itself.
