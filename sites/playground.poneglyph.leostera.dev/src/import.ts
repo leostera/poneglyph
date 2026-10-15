@@ -7,6 +7,28 @@ export interface ImportEnv {
   IMPORT_RATE_LIMITER?: Pick<RateLimit, "limit">;
 }
 const reply = (status: number, error: string) => Response.json({ error, delivery: "not-admitted" }, { status, headers: { "cache-control": "no-store" } });
+const SAFE_WRITE_ERROR_NAMES = new Set([
+  "Error", "PoneglyphInputError", "PoneglyphNetworkError", "PoneglyphProtocolError", "PoneglyphRequestError",
+]);
+type SafeWriteFailure = Readonly<{ name: string; status?: number; retryable?: boolean }>;
+
+function parseSafeWriteFailure(input: unknown): SafeWriteFailure {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return { name: "unknown" };
+  const record = input as Readonly<Record<string, unknown>>;
+  const name = typeof record["name"] === "string" && SAFE_WRITE_ERROR_NAMES.has(record["name"])
+    ? record["name"]
+    : "unknown";
+  const status = typeof record["status"] === "number" && Number.isInteger(record["status"])
+    && record["status"] >= 100 && record["status"] <= 599
+    ? record["status"]
+    : undefined;
+  const retryable = typeof record["retryable"] === "boolean" ? record["retryable"] : undefined;
+  return {
+    name,
+    ...(status === undefined ? {} : { status }),
+    ...(retryable === undefined ? {} : { retryable }),
+  };
+}
 
 async function readBody(request: Request): Promise<Uint8Array | undefined> {
   if (!request.body) return new Uint8Array();
@@ -64,7 +86,11 @@ export function createImportHandler(plan: ImportPlan, host: string) {
       using graph = await env.PONEGLYPH_IMPORT.getGraph({ graphId: plan.graphId });
       const receipt = await graph.transact(batch.facts, { txId: batch.txId });
       return Response.json({ ...receipt, batch: ordinal, facts: batch.facts.length }, { headers: { "cache-control": "no-store" } });
-    } catch {
+    } catch (error) {
+      // Structured telemetry intentionally excludes messages, stacks, causes,
+      // payloads and credentials; the write result still remains unknown.
+      const failure = parseSafeWriteFailure(error);
+      console.warn(JSON.stringify({ event: "playground-import-write-unknown", batch: ordinal, ...failure }));
       // Never infer rejection from reconstructed RPC errors or a disconnected
       // invocation. Reconcile this exact ID/payload/service, not a new ID.
       return Response.json({ error: "Import delivery unknown; retain the original approved batch", delivery: "unknown", txId: batch.txId }, {

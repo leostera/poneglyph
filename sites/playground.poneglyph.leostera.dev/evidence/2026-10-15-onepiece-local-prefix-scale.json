@@ -1,0 +1,102 @@
+{
+  "observedAt": "2026-10-15T00:03:57Z",
+  "classification": "local-only correctness and scale diagnostic; not hosted performance evidence",
+  "source": {
+    "normalizedFactsSha256": "e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064",
+    "sourceXmlSha256": "1446ff8fca4bdebd289e5a546d67078d1170369fb3bfb65a35c758d53cd4e084",
+    "planBodiesRehashedBeforeRun": true,
+    "batches": [
+      { "segment": "pages10", "ordinals": [0, 412], "count": 413, "facts": 204183 },
+      { "segment": "remainder90", "ordinals": [0, 827], "count": 828, "facts": 411998 }
+    ],
+    "totalBatches": 1241,
+    "totalFacts": 616181,
+    "totalPages": 129590
+  },
+  "execution": {
+    "runtime": "Cloudflare Workers Vitest pool with Miniflare Durable Objects",
+    "storage": "isolated ephemeral local namespace",
+    "hostedRequests": 0,
+    "deployments": 0,
+    "writes": "only to the ephemeral local test graph"
+  },
+  "batch827": {
+    "originalTransactionId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:remainder90:827",
+    "facts": 498,
+    "localOutcome": "committed",
+    "localReceiptCommitSeq": 1232,
+    "sequenceScope": "subtree-vector; receipts are not globally monotonic",
+    "hostedOutcome": "still unknown",
+    "hostedEvidence": "Explicit replays of the same approved body and transaction ID returned HTTP 503 with delivery=unknown; one captured response confirmed the returned txId matched the original. The local receipt is not a hosted receipt and does not resolve that unknown."
+  },
+  "queryWitnesses": [
+    {
+      "checkpoint": "pages10-prefix",
+      "snapshotSeq": 404,
+      "facts": 204183,
+      "query": "wiki:page:title(Page, \"Monkey D. Luffy\"), wiki:page:category(Page, Category)",
+      "typedMultisetComparedWith": "The category facts in the exact approved page-prefix batch bodies",
+      "rows": 8
+    },
+    {
+      "checkpoint": "pages10-prefix",
+      "snapshotSeq": 404,
+      "query": "wiki:page:title(Page, \"Monkey D. Luffy\"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle)",
+      "typedMultisetComparedWith": "The Luffy link facts and all matching page-title facts in the exact approved prefix bodies",
+      "rows": 13
+    },
+    {
+      "checkpoint": "remainder90-through-827",
+      "snapshotSeq": 1232,
+      "facts": 616181,
+      "query": "wiki:page:title(Page, \"Monkey D. Luffy\"), wiki:page:category(Page, Category)",
+      "typedMultisetComparedWith": "The category facts in the exact approved page-prefix batch bodies",
+      "rows": 8
+    },
+    {
+      "checkpoint": "remainder90-through-827",
+      "snapshotSeq": 1232,
+      "query": "wiki:page:title(Page, \"Monkey D. Luffy\"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle)",
+      "typedMultisetComparedWith": "The Luffy link facts and all matching page-title facts in the exact approved prefix bodies",
+      "rows": 14
+    }
+  ],
+  "roundTripMeasurements": {
+    "scope": "performance.now() around exports.default.fetch in the local Workers test environment; includes local storage/DO work, excludes external network",
+    "samplesPerQueryAndCheckpoint": 3,
+    "checkpoints": {
+      "pages10-prefix": {
+        "facts": 204183,
+        "categoryQuery": {
+          "samplesMs": [416, 62, 63],
+          "medianMs": 63,
+          "lastSampleMetrics": { "scanCalls": 1, "shardRequests": 16, "tuplesRead": 8, "bytesRead": 1498, "directoryRequests": 16, "executionMs": 62, "snapshotMs": 6, "evaluationMs": 51, "releaseMs": 5 }
+        },
+        "linkTitleJoinQuery": {
+          "samplesMs": [756, 751, 767],
+          "medianMs": 756,
+          "lastSampleMetrics": { "scanCalls": 18, "shardRequests": 273, "tuplesRead": 30, "bytesRead": 12791, "directoryRequests": 16, "executionMs": 766, "snapshotMs": 5, "evaluationMs": 755, "releaseMs": 6 }
+        }
+      },
+      "remainder90-through-827": {
+        "facts": 616181,
+        "categoryQuery": {
+          "samplesMs": [4319, 315, 183],
+          "medianMs": 315,
+          "lastSampleMetrics": { "scanCalls": 1, "shardRequests": 16, "tuplesRead": 8, "bytesRead": 1498, "directoryRequests": 16, "executionMs": 181, "snapshotMs": 5, "evaluationMs": 171, "releaseMs": 5 }
+        },
+        "linkTitleJoinQuery": {
+          "samplesMs": [2871, 3040, 3097],
+          "medianMs": 3040,
+          "lastSampleMetrics": { "scanCalls": 18, "shardRequests": 273, "tuplesRead": 31, "bytesRead": 12875, "directoryRequests": 16, "executionMs": 3095, "snapshotMs": 5, "evaluationMs": 3083, "releaseMs": 7 }
+        }
+      }
+    }
+  },
+  "interpretation": [
+    "The local exact batch 827 succeeds after the same ordered count of prior exact corpus transactions, so this local current-code run does not reproduce the hosted failure. It cannot establish whether the hosted transaction committed, aborted, or remains pending.",
+    "The Luffy link-to-title query resolves one additional link after more page-title facts become available (13 to 14 rows); both complete unordered typed row multisets matched the approved prefix data.",
+    "The three-clause join uses 18 scans and 273 shard requests at both checkpoints. Its local median round-trip grows from 756 ms to 3040 ms while its result grows by one row, motivating further investigation of repeated broad title lookups.",
+    "Samples are small and include warm-up outliers. These local timings are not Cloudflare hosted latency, p95/p99, capacity evidence, or a production optimization claim."
+  ]
+}

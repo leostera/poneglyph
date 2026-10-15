@@ -79,15 +79,27 @@ test("closed window is a pre-admission denial, without refreshing terminal ident
   assert.throws(() => parseImportPlan({ ...h.plan, batches: [{ ...h.plan.batches[0], facts: 1001 }] }));
 });
 
-test("RPC/disposal failures remain unknown, without retry or invented abort", async () => {
+test("RPC/disposal failures remain unknown and emit only safe diagnostic metadata", async () => {
   const h = harness(); let attempts = 0;
-  h.env.PONEGLYPH_IMPORT.getGraph = async () => ({ transact: async () => { attempts++; throw new Error("private disconnected stack"); }, [Symbol.dispose]() {} });
-  const response = await h.handle(request(), h.env, authenticated);
+  const warnings: unknown[][] = [];
+  const originalWarn = console.warn;
+  console.warn = (...values: unknown[]) => { warnings.push(values); };
+  h.env.PONEGLYPH_IMPORT.getGraph = async () => ({ transact: async () => {
+    attempts++;
+    throw Object.assign(new Error("private disconnected stack"), { name: "PoneglyphRequestError", status: 503, retryable: true, txId: "private-transaction-id" });
+  }, [Symbol.dispose]() {} });
+  let response: Response;
+  try { response = await h.handle(request(), h.env, authenticated); }
+  finally { console.warn = originalWarn; }
   assert.equal(response.status, 503);
   const result = await response.json();
   assert.ok(typeof result === "object" && result !== null && "delivery" in result && "txId" in result);
   assert.equal(result.delivery, "unknown"); assert.equal(result.txId, txId);
-  assert.doesNotMatch(JSON.stringify(result), /private disconnected/); assert.equal(attempts, 1);
+  assert.doesNotMatch(JSON.stringify(result), /private disconnected/);
+  assert.deepEqual(warnings, [[JSON.stringify({ event: "playground-import-write-unknown", batch: 0,
+    name: "PoneglyphRequestError", status: 503, retryable: true })]]);
+  assert.doesNotMatch(JSON.stringify(warnings), /private disconnected|private-transaction-id/);
+  assert.equal(attempts, 1);
 });
 
 test("remainder plan covers exactly the complement and has independent transaction identities", () => {
