@@ -55,3 +55,21 @@ The query joins the reference to the task's entity URI. The relationship is mean
 ### A flexible table analogy
 
 As a mental model, you can imagine entities as rows and field URIs as column names: adding facts with a new field can feel like adding a column. Physically, however, Poneglyph stores each claim as a separate fact, not as a schema-changing SQL row. Queries join those facts and choose the result variables (the result columns). This makes the model flexible, while leaving field-specific rules to the application unless it validates them itself.
+
+## Step 2: Submitting a fact draft
+
+The application supplies a draft with `source`, `entity`, `field`, and a typed `value`. Set `retraction: true` only when withdrawing an exact active assertion; otherwise `false` (the client default) means this is an assertion. The draft does not include `factId` or `statedAt`.
+
+```ts
+const draft = {
+  source: "agent:release-assistant",
+  entity: "app:task:rotate-key",
+  field: "app:task:status",
+  value: { type: "text", value: "open" },
+  retraction: false,
+} as const;
+
+const txId = await graph.stateFacts([draft]);
+```
+
+`stateFacts` sends the draft list as one write and returns the transaction ID after success. If omitted, the client generates a URI-style ID; `graph.transact(...)` instead returns a receipt with the ID, commit sequence, and committed status. The current API also permits callers to supply an ID. It identifies the whole batch: reusing it with the same facts refers to the same transaction, while reusing it with different facts is a conflict. If delivery is uncertain, preserve the ID and exact facts and reconcile that transaction rather than inventing a replacement ID.
