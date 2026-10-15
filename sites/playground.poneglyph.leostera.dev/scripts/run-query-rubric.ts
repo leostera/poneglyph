@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseDatalogQuery, type DatalogQuery, type DatalogValue, type Term } from "@leostera/poneglyph";
+import { createDatabase, parseDatalogQuery, type DatalogQuery, type DatalogValue, type Term } from "@leostera/poneglyph";
+import { openLocalGraph, replayReceiptPrefixLocally } from "./local-query-runtime.js";
 import { QUERY_PREDICATE_INVENTORY, QUERY_RUBRIC } from "../src/query-rubric.js";
 
 const site = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -14,6 +17,7 @@ const corpusPath = resolve(root, "packages/write-path-bench/.data/facts.ndjson")
 const checkpointPath = resolve(site, "evidence/2026-10-15-onepiece-million-fact-import-prefix.json");
 const requestedCount = Number(argument("--count") ?? "50");
 const hosted = process.argv.includes("--hosted");
+const local = process.argv.includes("--local");
 const outputArg = argument("--out");
 const accessEndpoint = "https://onepiece.poneglyph.dev/mcp";
 const MAX_VALUE_MATCHES = 25;
@@ -22,8 +26,9 @@ const PACE_MS = 2_200;
 if (!Number.isSafeInteger(requestedCount) || ![50, 100].includes(requestedCount)) {
   throw new Error("Query rubric batches are deliberately bounded to exactly 50 or 100 requests.");
 }
+if (hosted && local) throw new Error("Choose either hosted or local execution, not both.");
 if (hosted && !process.argv.includes("--confirm-read-only-hosted")) {
-  throw new Error("Hosted mode requires --confirm-read-only-hosted; this runner sends 50 authenticated read-only queries.");
+  throw new Error("Hosted mode requires --confirm-read-only-hosted; this runner sends a serial 50- or 100-request read-only batch.");
 }
 
 interface Tuple { readonly entity: string; readonly value: DatalogValue }
@@ -411,6 +416,119 @@ async function accessCookie(): Promise<string> {
   }
 }
 
+async function runLocalBatch(input: Readonly<{
+  cases: readonly QueryCase[];
+  prefix: ImportPrefix;
+  batchId: string;
+  outputPath: string;
+  uniqueQueryCount: number;
+  repetitionsPerQuery: number;
+}>): Promise<void> {
+  const runtimeDirectory = await mkdtemp(join(tmpdir(), "poneglyph-query-rubric-local-"));
+  const localGraphId = `rubric-local-${randomUUID().slice(0, 8)}`;
+  let localGraph: Awaited<ReturnType<typeof openLocalGraph>> | undefined;
+  let complete = false;
+  try {
+    localGraph = await openLocalGraph(localGraphId, runtimeDirectory);
+    console.error(JSON.stringify({event: "local-rubric-load-start", graphId: localGraphId, facts: input.prefix.facts}));
+    const loaded = await replayReceiptPrefixLocally(localGraph.graph, input.batchId, input.prefix, (loadedBatches, totalBatches, loadedFacts) => {
+      console.error(JSON.stringify({event: "local-rubric-load-progress", loadedBatches, totalBatches, loadedFacts}));
+    });
+
+    const samples: (SuccessfulSample | FailedSample)[] = [];
+    for (const [index, spec] of input.cases.entries()) {
+      const startedAt = new Date().toISOString();
+      const started = performance.now();
+      try {
+        const result = await localGraph.graph.query(spec.query);
+        const actual = result.rows as readonly Row[];
+        const clientRoundTripMs = Math.round((performance.now() - started) * 100) / 100;
+        if (JSON.stringify(canonicalBag(actual)) !== JSON.stringify(canonicalBag(spec.expected))) {
+          throw new Error("INDEPENDENT_TYPED_RESULT_MISMATCH");
+        }
+        const metrics = result.metrics;
+        const normalizedMetrics: Record<string, number> = {};
+        for (const field of ["scanCalls", "shardRequests", "distinctShardsTouched", "treeReadLeaseAcquisitions", "tuplesRead", "bytesRead", "directoryRequests"] as const) {
+          normalizedMetrics[field] = int(metrics[field], `local metrics.${field}`);
+        }
+        assert.ok(metrics.timing, "LOCAL_QUERY_TIMING_MISSING");
+        const timing = {
+          executionMs: int(metrics.timing.executionMs, "local timing.executionMs"),
+          snapshotMs: int(metrics.timing.snapshotMs, "local timing.snapshotMs"),
+          evaluationMs: int(metrics.timing.evaluationMs, "local timing.evaluationMs"),
+          releaseMs: int(metrics.timing.releaseMs, "local timing.releaseMs"),
+        };
+        const sample: SuccessfulSample = {
+          index: index + 1, queryKey: spec.key, family: spec.family, outcome: "matched", sent: true,
+          startedAt, completedAt: new Date().toISOString(), clientRoundTripMs,
+          rows: actual.length, expectedRows: spec.expected.length,
+          rowSha256: digestRows(actual), expectedRowSha256: digestRows(spec.expected),
+          exactIndependentTypedMultiset: true, snapshotSeq: result.snapshotSeq,
+          metrics: {
+            scanCalls: normalizedMetrics["scanCalls"]!, shardRequests: normalizedMetrics["shardRequests"]!,
+            distinctShardsTouched: normalizedMetrics["distinctShardsTouched"]!, treeReadLeaseAcquisitions: normalizedMetrics["treeReadLeaseAcquisitions"]!,
+            tuplesRead: normalizedMetrics["tuplesRead"]!, bytesRead: normalizedMetrics["bytesRead"]!, directoryRequests: normalizedMetrics["directoryRequests"]!, timing,
+          },
+        };
+        samples.push(sample);
+        console.log(JSON.stringify({index: index + 1, queryKey: spec.key, outcome: "matched", clientRoundTripMs, rows: actual.length}));
+      } catch (cause) {
+        const clientRoundTripMs = Math.round((performance.now() - started) * 100) / 100;
+        const message = cause instanceof Error ? cause.message : "";
+        const failure = message === "INDEPENDENT_TYPED_RESULT_MISMATCH"
+          ? message
+          : `local-query:${cause instanceof Error ? cause.name : "UnknownError"}`;
+        samples.push({index: index + 1, queryKey: spec.key, family: spec.family, outcome: "error", sent: true,
+          startedAt, completedAt: new Date().toISOString(), clientRoundTripMs, failure});
+        console.log(JSON.stringify({index: index + 1, queryKey: spec.key, outcome: "error", clientRoundTripMs, failure}));
+      }
+    }
+
+    const matched = samples.filter((sample): sample is SuccessfulSample => sample.outcome === "matched");
+    const allCasesMatched = samples.length === input.cases.length && matched.length === input.cases.length;
+    const evidence = {
+      formatVersion: 1,
+      observedAt: new Date().toISOString(),
+      classification: "local canonical SQLite-backed Durable Objects correctness run against the exact receipt-verified hosted prefix; not hosted performance evidence",
+      complete: samples.length === input.cases.length,
+      allCasesMatched,
+      graph: {logicalGraphId: "onepiece", localGraphId, snapshotSeqMeaning: "local owner-vector snapshot; not a graph-global clock"},
+      source: input.prefix,
+      localLoad: {...loaded, hostedWrites: 0, enrichmentFacts: 0, txIdentity: "fresh local-only transaction IDs", temporaryDatabaseRemovedAfterCompletion: true},
+      methodology: {
+        requestCount: input.cases.length,
+        uniqueQueryCount: input.uniqueQueryCount,
+        repetitionsPerQuery: input.repetitionsPerQuery,
+        execution: "serial Poneglyph HTTP client calls to an isolated Miniflare runtime with SQLite Durable Objects",
+        independentOracle: "typed multiset evaluation over the receipt-verified normalized corpus prefix",
+        requestRetries: 0,
+        perCaseFailures: "recorded and later cases continue; no query is automatically retried",
+        credentialsRead: false,
+        externalRequestsSent: false,
+      },
+      summaryByFamily: input.cases.reduce((families, spec) => {
+        let summary = families.find(item => item.family === spec.family);
+        if (!summary) {summary = {family: spec.family, attempts: 0, matched: 0, failed: 0}; families.push(summary);}
+        summary.attempts++;
+        const sample = samples.find(candidate => candidate.queryKey === spec.key);
+        if (sample?.outcome === "matched") summary.matched++;
+        else summary.failed++;
+        return families;
+      }, [] as {family: string; attempts: number; matched: number; failed: number}[]),
+      samples,
+    };
+    mkdirSync(dirname(input.outputPath), {recursive: true});
+    writeFileSync(input.outputPath, `${JSON.stringify(evidence, null, 2)}\n`, {flag: "wx"});
+    complete = true;
+    console.log(JSON.stringify({evidencePath: input.outputPath, complete: evidence.complete, allCasesMatched, matchedCases: matched.length, failedCases: samples.length - matched.length, totalCases: input.cases.length}));
+    if (!allCasesMatched) process.exitCode = 1;
+  } finally {
+    await localGraph?.close();
+    if (complete) await rm(runtimeDirectory, {recursive: true, force: true});
+    else console.error(JSON.stringify({event: "incomplete-local-rubric", graphId: localGraphId, runtimeDirectory, delivery: "local temporary graph retained; no request was retried"}));
+  }
+}
+
 async function main(): Promise<void> {
   assert.ok(existsSync(corpusPath), "normalized source corpus is missing");
   const prefix = parsePrefix();
@@ -421,12 +539,14 @@ async function main(): Promise<void> {
     ? spec
     : {...spec, key: `${spec.key}-repeat-${repetition + 1}`})).flat();
   const batchId = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
-  const outputPath = resolve(outputArg ?? `${site}/evidence/query-rubric/${batchId}-onepiece-read-batch-${cases.length}.json`);
+  const runMode = hosted ? "hosted-read-only" : local ? "local-canonical-storage" : "local-plan-only";
+  const filenameMode = local ? "local-read" : "read";
+  const outputPath = resolve(outputArg ?? `${site}/evidence/query-rubric/${batchId}-onepiece-${filenameMode}-batch-${cases.length}.json`);
   if (existsSync(outputPath)) throw new Error("Evidence output already exists; choose a new output path instead of overwriting it.");
 
   const plan = {
     batchId,
-    mode: hosted ? "hosted-read-only" : "local-plan-only",
+    mode: runMode,
     exactCount: cases.length,
     uniqueQueryCount: uniqueCases.length,
     repetitionsPerQuery: repetitionsPerCase,
@@ -434,8 +554,12 @@ async function main(): Promise<void> {
     inventory: {predicates: QUERY_PREDICATE_INVENTORY.map(predicate => predicate.field), bindingPatterns: QUERY_RUBRIC.bindings.map(binding => binding.id), builtins: QUERY_RUBRIC.builtins, hostedBuiltinExamples: ["integer equality", "integer range", "string contains"], relationCounts: [...relations.entries()].map(([field, index]) => ({field, tuples: index.all.length, distinctEntities: index.byEntity.size, distinctValues: index.byValue.size}))},
     cases: cases.map(({key, family, predicate, query, clauses, expected}) => ({key, family, predicate, query, clauses, expectedRows: expected.length, expectedRowsSha256: digestRows(expected)})),
   };
+  if (local) {
+    await runLocalBatch({cases, prefix, batchId, outputPath, uniqueQueryCount: uniqueCases.length, repetitionsPerQuery: repetitionsPerCase});
+    return;
+  }
   if (!hosted) {
-    console.log(JSON.stringify({...plan, note: `No credentials were read and no network request was sent. Add --hosted --confirm-read-only-hosted to send this ${cases.length}-request batch (${uniqueCases.length} unique queries, ${repetitionsPerCase} pass${repetitionsPerCase === 1 ? "" : "es"}).`}, null, 2));
+    console.log(JSON.stringify({...plan, note: `No credentials were read and no network request was sent. Add --local to execute the exact prefix in a temporary local Durable Objects graph, or --hosted --confirm-read-only-hosted for the hosted endpoint. This is a ${cases.length}-request batch (${uniqueCases.length} unique queries, ${repetitionsPerCase} pass${repetitionsPerCase === 1 ? "" : "es"}).`}, null, 2));
     return;
   }
 

@@ -50,7 +50,16 @@ The deterministic cohort contains 50 unique queries generated from the receipt-v
 bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric
 ```
 
-The following is a separate, explicitly hosted, read-only command. It sends one serial query per case, spaces request starts by at least 2.2 seconds to remain under the configured approximate 30/minute MCP allowance, compares every answer to an independently evaluated typed multiset, and writes per-case latency/lease/shard metrics plus result hashes to a new non-overwriting evidence file. Each failure is retained without raw response bodies or automatic query retry; later cases still run. It does not write graph facts, alter sampling, or deploy:
+For end-to-end local correctness, build the canonical Worker bundle if needed, then use `--local`. This starts an isolated Miniflare runtime with a fresh temporary SQLite Durable Object persistence path, replays the exact 2,208-batch receipt-verified prefix (227,692 pages / 1,096,908 facts) with fresh local-only transaction IDs, and compares every query to an independent typed-multiset oracle. It reads no Cloudflare credentials, sends no external requests, and never touches the hosted graph. The temporary database is removed after a completed batch; interrupted runs retain it for diagnosis and do not retry queries. This is a check of the defined 50-query cohort, not every valid Datalog program or a hosted performance test:
+
+```sh
+bun run --cwd packages/poneglyph build
+bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric -- --local --count 50
+# Or run the same 50 unique cases twice:
+bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric -- --local --count 100
+```
+
+The 100-request local run matched all 100 complete typed multisets (50 unique queries, each run twice); see [its evidence](evidence/query-rubric/2026-10-15T18-56-51-696Z-onepiece-local-read-batch-100.json). Local timings are for the isolated SQLite runtime and must not be compared as hosted latency. The following is a separate, explicitly hosted, read-only command. It sends one serial query per case, spaces request starts by at least 2.2 seconds to remain under the configured approximate 30/minute MCP allowance, compares every answer to an independently evaluated typed multiset, and writes per-case latency/lease/shard metrics plus result hashes to a new non-overwriting evidence file. Each failure is retained without raw response bodies or automatic query retry; later cases still run. It does not write graph facts, alter sampling, or deploy:
 
 ```sh
 bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric -- --hosted --confirm-read-only-hosted --count 50
