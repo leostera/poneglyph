@@ -27,7 +27,7 @@ export const DATASET = Object.freeze({
   ],
   queryLanguage: "Comma-separated conjunctions of positive binary field(Entity, Value) relations plus bound builtin constraints; at least one fact relation is required. Uppercase-leading identifiers are variables, _ is a wildcard, JSON-quoted strings and signed 64-bit integer literals are constants. Supports typed equality/order and contains/startsWith/endsWith builtins. Bounded non-recursive Datalog, not SQL: no negation, disjunction, aggregation, projection, ordering, limit, offset or pagination. See queryInventory for the full supported subset and rubric.",
   queryInventory: QUERY_RUBRIC,
-  resultContract: "Complete unordered typed bag rows, snapshotSeq, scan metrics including request and distinct-shard counts, or an explicit error. Preserve duplicate rows and tagged values. snapshotSeq summarizes the selected leased owner vector; it is not a global transaction clock.",
+  resultContract: "Complete unordered typed bag rows, snapshotSeq, and scan metrics (including request count, distinct leaves touched, and tree-read-lease acquisitions), or an explicit error. Preserve duplicate rows and tagged values. snapshotSeq summarizes the selected leased owner vector; it is not a global transaction clock.",
   limits: { queryCharacters: 8192, clauses: 64, rows: 2000, tuples: 50000, shardRequests: 20000, scanBytes: 20000000, databaseResponseBytes: 2000000, durationSeconds: 20, leafFanout: 256, directoryNodes: 511 },
   limitations: [
     "Schema information does not certify that the corpus has been loaded or that a load is complete. Queries read the currently configured graph.",

@@ -52,6 +52,11 @@ describe("published One Piece query inventory", () => {
     }
   });
 
+  it("publishes the value-index access path and the complete read metrics contract", () => {
+    assert.match(QUERY_RUBRIC.physicalOperators.join(" "), /value_key index.*exact typed-value predicates/i);
+    assert.match(DATASET.resultContract, /distinct leaves touched.*tree-read-lease acquisitions/i);
+  });
+
   it("keeps the documented boundary: positive facts required, builtins bind-only, no negation or unsupported calls", () => {
     assert.equal(parseDatalogQuery('contains("Monkey", "Mon")').ok, false);
     assert.equal(parseDatalogQuery('wiki:page:title(Page, Title), contains(Unknown, "Mon")').ok, false);

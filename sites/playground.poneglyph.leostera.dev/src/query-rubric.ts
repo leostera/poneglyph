@@ -47,6 +47,7 @@ export const QUERY_RUBRIC = Object.freeze({
     "Rows have bag semantics: repeated fact combinations produce repeated rows; rows are unordered and complete or the query fails.",
   ] as const),
   physicalOperators: Object.freeze([
+    "A bound Datalog value seeks existing canonical FactValue keys through the value_key index, then retains exact typed-value predicates; this does not reduce full-root fanout for an unbound entity.",
     "Two clauses with a constant first value and the same entity variable can use an owner-local SQL bag join.",
     "A three-clause final value-to-entity join has a bounded four-scan concurrent wave for the recognized plan shape.",
     "A single positive relation with a valid literal entity URI leases only that entity's tree root; joins and unbound entities use the complete read vector.",
