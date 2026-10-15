@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseFactDraft } from "../src/domain/fact.js";
 import type { FactDraft } from "../src/domain/fact.js";
+import type { FactSource } from "../src/datalog/fact-source.js";
 import { parseDatalogQuery } from "../src/datalog/parser.js";
 import { evaluateDatalog, QueryResultLimitExceeded, type Binding } from "../src/datalog/evaluator.js";
 import { InMemoryFactSource } from "./support/in-memory-fact-source.js";
@@ -10,9 +11,9 @@ function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { messag
   return result.value;
 }
 
-function fact(entity: string, field: string, value: unknown): FactDraft {
+function fact(entity: string, field: string, value: unknown, source = "agent:one-piece-test"): FactDraft {
   return unwrap(parseFactDraft({
-    source: "agent:one-piece-test",
+    source,
     entity,
     field,
     value,
@@ -77,6 +78,96 @@ describe("bounded positive Datalog subset", () => {
       field: "wiki:person:name",
       entity: { type: "string", value: "wiki:person:luffy" },
     });
+  });
+
+  it("bounds concurrent final joins and preserves repeated lookup rows", async () => {
+    const luffy = "wiki:onepiece:page:luffy";
+    const targets = ["Nami", "Zoro", "Robin", "Chopper", "Sanji"];
+    const facts = [
+      fact(luffy, "wiki:page:title", { type: "text", value: "Monkey D. Luffy" }),
+      fact(luffy, "wiki:page:link", { type: "text", value: "Nami" }, "wiki:source:first"),
+      fact(luffy, "wiki:page:link", { type: "text", value: "Nami" }, "wiki:source:second"),
+      ...targets.slice(1).map((title) => fact(luffy, "wiki:page:link", { type: "text", value: title })),
+      ...targets.map((title) => fact(`wiki:onepiece:page:${title.toLowerCase()}`, "wiki:page:title", { type: "text", value: title })),
+    ];
+    const stored = new InMemoryFactSource(facts);
+    let activeFinalScans = 0;
+    let maxConcurrentFinalScans = 0;
+    let releaseScans!: () => void;
+    const scanGate = new Promise<void>((resolve) => { releaseScans = resolve; });
+    const scanFallback = setTimeout(releaseScans, 100);
+    const source: FactSource = {
+      scan(lookup, signal) {
+        const finalLookup = lookup.field === "wiki:page:title" && lookup.entity === undefined
+          && lookup.value?.type === "string" && lookup.value.value !== "Monkey D. Luffy";
+        if (!finalLookup) return stored.scan(lookup, signal);
+
+        activeFinalScans += 1;
+        maxConcurrentFinalScans = Math.max(maxConcurrentFinalScans, activeFinalScans);
+        if (activeFinalScans === 4) releaseScans();
+        return (async function* () {
+          try {
+            await scanGate;
+            yield* stored.scan(lookup, signal);
+          } finally {
+            activeFinalScans -= 1;
+          }
+        })();
+      },
+    };
+    const query = unwrap(parseDatalogQuery(
+      'wiki:page:title(Page, "Monkey D. Luffy"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle)',
+    ));
+
+    let rows: Binding[];
+    try {
+      rows = await collect(evaluateDatalog(query, source));
+    } finally {
+      clearTimeout(scanFallback);
+    }
+    const triples = rows.map((row) => [stringValue(row, "Page"), stringValue(row, "TargetTitle"), stringValue(row, "TargetPage")]).sort();
+    const nami = [luffy, "Nami", "wiki:onepiece:page:nami"];
+    expect(triples).toEqual([nami, nami, ...targets.slice(1).map((title) => [luffy, title, `wiki:onepiece:page:${title.toLowerCase()}`])].sort());
+    expect(maxConcurrentFinalScans).toBe(4);
+    expect(activeFinalScans).toBe(0);
+  });
+
+  it("drains a final-scan wave and rejects instead of emitting partial rows on failure", async () => {
+    const luffy = "wiki:onepiece:page:luffy";
+    const targets = ["Nami", "Zoro", "Robin", "Chopper"];
+    const stored = new InMemoryFactSource([
+      fact(luffy, "wiki:page:title", { type: "text", value: "Monkey D. Luffy" }),
+      ...targets.map((title) => fact(luffy, "wiki:page:link", { type: "text", value: title })),
+      ...targets.map((title) => fact(`wiki:onepiece:page:${title.toLowerCase()}`, "wiki:page:title", { type: "text", value: title })),
+    ]);
+    let settledFinalScans = 0;
+    const source: FactSource = {
+      scan(lookup, signal) {
+        const finalLookup = lookup.field === "wiki:page:title" && lookup.entity === undefined
+          && lookup.value?.type === "string" && lookup.value.value !== "Monkey D. Luffy";
+        if (!finalLookup) return stored.scan(lookup, signal);
+        return (async function* () {
+          try {
+            await Promise.resolve();
+            if (lookup.value?.type === "string" && lookup.value.value === "Robin") throw new Error("injected final-scan failure");
+            yield* stored.scan(lookup, signal);
+          } finally {
+            settledFinalScans += 1;
+          }
+        })();
+      },
+    };
+    const query = unwrap(parseDatalogQuery(
+      'wiki:page:title(Page, "Monkey D. Luffy"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle)',
+    ));
+    let emittedRows = 0;
+
+    const run = async () => {
+      for await (const _row of evaluateDatalog(query, source)) emittedRows += 1;
+    };
+    await expect(run()).rejects.toThrow("injected final-scan failure");
+    expect(emittedRows).toBe(0);
+    expect(settledFinalScans).toBe(4);
   });
 
   it("matches the existing One Piece D. name query and prefix/suffix constraints", async () => {

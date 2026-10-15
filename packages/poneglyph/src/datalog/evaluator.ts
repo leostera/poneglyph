@@ -10,6 +10,7 @@ export type EvaluationOptions = Readonly<{
 }>;
 
 const DEFAULT_MAX_RESULTS = 10_000;
+const MAX_CONCURRENT_FINAL_SCANS = 4;
 
 export class QueryResultLimitExceeded extends Error {
   constructor(readonly maxResults: number) {
@@ -59,7 +60,93 @@ async function* evaluateQueryFacts(
     }
     return;
   }
+  if (canScanFinalJoinConcurrently(clauses)) {
+    yield* evaluateFinalJoinConcurrently(clauses, facts, signal);
+    return;
+  }
   yield* evaluateFacts(clauses, facts, signal, 0, new Map<string, DatalogValue>());
+}
+
+function canScanFinalJoinConcurrently(clauses: readonly FactClause[]): boolean {
+  if (clauses.length !== 3) return false;
+  const first = clauses[0];
+  const final = clauses[2];
+  if (!first || !final || first.entity.kind !== "variable" || first.value.kind !== "constant") return false;
+  if (final.entity.kind !== "variable" || final.value.kind !== "variable" || final.entity.name === final.value.name) return false;
+
+  const finalEntityName = final.entity.name;
+  const finalValueName = final.value.name;
+  const prefix = clauses.slice(0, -1);
+  const finalEntityIsAlreadyBound = prefix.some(clause => clauseHasVariable(clause, finalEntityName));
+  const finalValueIsBound = prefix.some(clause => clauseHasVariable(clause, finalValueName));
+  return !finalEntityIsAlreadyBound && finalValueIsBound;
+}
+
+function clauseHasVariable(clause: FactClause, name: string): boolean {
+  return (clause.entity.kind === "variable" && clause.entity.name === name)
+    || (clause.value.kind === "variable" && clause.value.name === name);
+}
+
+async function* evaluateFinalJoinConcurrently(
+  clauses: readonly FactClause[], facts: FactSource, signal: AbortSignal | undefined,
+): AsyncGenerator<Binding> {
+  const final = clauses[2];
+  if (!final) return;
+  const prefix = evaluateFacts(clauses.slice(0, -1), facts, signal, 0, new Map<string, DatalogValue>())[Symbol.asyncIterator]();
+  let prefixDone = false;
+
+  try {
+    while (!prefixDone) {
+      const scans: Promise<Binding[]>[] = [];
+      let prefixFailure: unknown;
+      let prefixFailed = false;
+
+      while (scans.length < MAX_CONCURRENT_FINAL_SCANS) {
+        let next: IteratorResult<Binding>;
+        try {
+          next = await prefix.next();
+        } catch (error) {
+          prefixFailure = error;
+          prefixFailed = true;
+          break;
+        }
+        if (next.done) {
+          prefixDone = true;
+          break;
+        }
+        const binding = next.value;
+        const lookup = lookupFor(final, binding);
+        scans.push(Promise.resolve().then(() => collectFinalMatches(facts.scan(lookup, signal), final, binding, signal)));
+      }
+
+      const settled = await Promise.allSettled(scans);
+      if (prefixFailed) throw prefixFailure;
+      const failedScan = settled.find((result): result is PromiseRejectedResult => result.status === "rejected");
+      if (failedScan) throw failedScan.reason;
+
+      for (const result of settled) {
+        if (result.status === "fulfilled") {
+          for (const binding of result.value) yield binding;
+        }
+      }
+    }
+  } finally {
+    await prefix.return?.(undefined);
+  }
+}
+
+async function collectFinalMatches(
+  tuples: AsyncIterable<FactTuple>, clause: FactClause, binding: Binding, signal: AbortSignal | undefined,
+): Promise<Binding[]> {
+  const matches: Binding[] = [];
+  for await (const tuple of tuples) {
+    throwIfAborted(signal);
+    const nextBinding = new Map(binding);
+    if (!unify(clause.entity, tuple.entity, nextBinding)) continue;
+    if (!unify(clause.value, tuple.value, nextBinding)) continue;
+    matches.push(nextBinding);
+  }
+  return matches;
 }
 
 async function* evaluateFacts(
