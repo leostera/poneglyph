@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-15T00:26:47Z",
+  "observedAt": "2026-10-15T00:50:21Z",
   "classification": "bounded hosted read-only query correctness and coordinator timing; not capacity or tail-latency certification",
   "access": "Cloudflare Access authenticated; no credentials retained in evidence",
   "graph": {
@@ -12,7 +12,15 @@
       "total": { "facts": 615683, "pages": 129590 },
       "corpus": { "facts": 1530195, "pages": 296624 },
       "percent": { "facts": 40.24, "pages": 43.69 },
-      "nextBatch": { "ordinal": 827, "hostedDelivery": "unknown", "httpStatus": 503 }
+      "nextBatch": { "ordinal": 827, "hostedDelivery": "unknown", "httpStatus": 503 },
+      "batch827VisibilityWitness": {
+        "snapshotSeq": 1231,
+        "batch827FirstTitleQuery": "wiki:page:title(\"wiki:onepiece:page:User%20blog%20comment%3AKuroAshi98%2FThe%20Fated%20Rivals%3F!%20Moss%20or%20Swirls%3F!%2F%40comment-4889755-20120605175739%2F%40comment-76.71.73.93-20120606015441\", \"User blog comment:KuroAshi98/The Fated Rivals?! Moss or Swirls?!/@comment-4889755-20120605175739/@comment-76.71.73.93-20120606015441\")",
+        "batch827FirstTitleRows": 0,
+        "batch826ControlQuery": "wiki:page:title(\"wiki:onepiece:page:User%20talk%3A124.181.217.16\", \"User talk:124.181.217.16\")",
+        "batch826ControlRows": 1,
+        "interpretation": "The batch-827 title is not visible in this read cut; the control is visible. This does not determine the canonical batch-827 transaction outcome."
+      }
     }
   },
   "sourceValidation": {
