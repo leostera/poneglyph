@@ -6,7 +6,7 @@ export const MCP_URL = `https://${PUBLIC_HOST}/mcp`;
 // This describes the existing normalized corpus, not proof of a completed load.
 export const DATASET = Object.freeze({
   name: "One Piece Wiki graph playground",
-  currentDataNote: "Hosted receipts cover the first 29,662 normalized pages plus remainder batches 0–826: 129,590 of 296,624 page records (43.69%) and 615,683 of 1,530,195 facts (40.24%). Remainder batch 827 has unresolved delivery; do not assume it committed. This static schema does not certify completeness; consult retained receipts and query evidence. Historical synthetic smoke fixtures are not verified wiki extraction.",
+  currentDataNote: "Hosted receipts cover the first 29,662 normalized pages plus remainder batches 0–827: 129,716 of 296,624 page records (43.73%) and 616,181 of 1,530,195 facts (40.27%). Batch 827 committed under its approved one-time retry after the original attempt was confirmed aborted; batch 828 is next, and later batches are not claimed. This static schema does not certify completeness; consult retained receipts and query evidence. Historical synthetic smoke fixtures are not verified wiki extraction.",
   graphId: GRAPH_ID,
   source: "One Piece Fandom MediaWiki XML dump",
   access: { authentication: "Cloudflare Access; membership in the owner's Cloudflare account enforced at the Worker ingress", readOnly: true, requestsPerIpPerLocationPerMinute: RATE_LIMIT.simple.limit, rateLimitAccuracy: "approximate; not a global accounting/spend cap", requestBytes: 65536, batching: "not supported", on429: "Wait according to the HTTP Retry-After header. The server never retries automatically." },

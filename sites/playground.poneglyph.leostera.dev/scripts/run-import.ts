@@ -20,15 +20,30 @@ const plan = parseImportPlan(JSON.parse(stored));
 if (Date.now() >= Date.parse(plan.expiresAt)) throw new Error("Import window expired; do not mint replacement IDs");
 const journalPath = resolve(directory, "journal.ndjson");
 const history = await readFile(journalPath, "utf8").catch(error => { if (error.code === "ENOENT") return ""; throw error; });
-let next = 0, lastPhase: string | undefined;
+let next = 0, lastPhase: string | undefined, supersededAborted = false;
 for (const line of history.trim().split("\n").filter(Boolean)) {
   const record = JSON.parse(line);
-  if (record.batch !== next || record.txId !== plan.batches[next]?.txId || record.sha256 !== plan.batches[next]?.sha256) throw new Error("Journal identity/order mismatch");
-  if (record.phase === "committed") { next++; lastPhase = undefined; }
+  const original = plan.batches[next];
+  const retry = plan.retry?.batch === next ? plan.retry : undefined;
+  if (!original || record.batch !== next) throw new Error("Journal batch order mismatch");
+  const isSuperseded = retry !== undefined && record.txId === retry.supersedesTxId && record.sha256 === retry.supersedesSha256;
+  const isRetry = retry !== undefined && record.txId === retry.txId && record.sha256 === retry.sha256;
+  if (isSuperseded) {
+    if (record.phase === "inflight" || record.phase === "stopped") lastPhase = record.phase;
+    else if (record.phase === "reconciled-aborted" && lastPhase !== undefined) { lastPhase = undefined; supersededAborted = true; }
+    else throw new Error("Superseded transaction journal outcome is not a confirmed abort");
+    continue;
+  }
+  if (isRetry && !supersededAborted) throw new Error("Approved retry requires a reconciled-aborted original identity");
+  if (record.txId !== (isRetry ? retry!.txId : original.txId) || record.sha256 !== (isRetry ? retry!.sha256 : original.sha256)) {
+    throw new Error("Journal identity/order mismatch");
+  }
+  if (record.phase === "committed") { next++; lastPhase = undefined; supersededAborted = false; }
   else if (record.phase === "inflight" || record.phase === "stopped") lastPhase = record.phase;
   else throw new Error("Invalid journal phase");
 }
 if (lastPhase) throw new Error(`Unresolved original batch ${next}: explicit same-ID reconciliation is required, no automatic retry`);
+if (plan.retry?.batch === next && !supersededAborted) throw new Error(`Batch ${next} retry is pinned but the original identity is not confirmed aborted`);
 if (batchLimit !== undefined && batchLimit > plan.batches.length) throw new Error("--max-batches exceeds the approved plan length");
 const stopAt = Math.min(plan.batches.length, next + (batchLimit ?? plan.batches.length));
 const journal = await open(journalPath, "a");
@@ -36,12 +51,15 @@ const run = promisify(execFile);
 let completed = false;
 try {
   for (; next < stopAt; next++) {
-    const batch = plan.batches[next];
-    const file = resolve(directory, `${next}.json`);
+    const original = plan.batches[next]!;
+    const retry = plan.retry?.batch === next && supersededAborted ? plan.retry : undefined;
+    const batch = retry ?? original;
+    const file = resolve(directory, retry ? `${next}-retry${retry.attempt}.json` : `${next}.json`);
     const bytes = await readFile(file);
     await parseApprovedBatch(bytes, plan);
     const append = async (fields: Record<string, unknown>) => {
-      await journal.write(JSON.stringify({ at: new Date().toISOString(), service: plan.service, graphId: plan.graphId, batch: next, txId: batch.txId, sha256: batch.sha256, ...fields }) + "\n");
+      await journal.write(JSON.stringify({ at: new Date().toISOString(), service: plan.service, graphId: plan.graphId, batch: next,
+        txId: batch.txId, sha256: batch.sha256, ...(retry === undefined ? {} : { attempt: retry.attempt }), ...fields }) + "\n");
       await journal.sync();
     };
     await append({ phase: "inflight" }); // durable original identity BEFORE send

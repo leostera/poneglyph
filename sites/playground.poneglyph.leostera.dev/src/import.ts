@@ -10,10 +10,10 @@ const reply = (status: number, error: string) => Response.json({ error, delivery
 const SAFE_WRITE_ERROR_NAMES = new Set([
   "Error", "PoneglyphInputError", "PoneglyphNetworkError", "PoneglyphProtocolError", "PoneglyphRequestError",
 ]);
-type SafeWriteFailure = Readonly<{ name: string; status?: number; retryable?: boolean }>;
+type SafeWriteFailure = Readonly<{ name: string; status?: number; retryable?: boolean; upstreamOutcome: "transaction-aborted" | "upstream-unavailable" | "upstream-rejected" | "delivery-unknown" }>;
 
 function parseSafeWriteFailure(input: unknown): SafeWriteFailure {
-  if (typeof input !== "object" || input === null || Array.isArray(input)) return { name: "unknown" };
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return { name: "unknown", upstreamOutcome: "delivery-unknown" };
   const record = input as Readonly<Record<string, unknown>>;
   const name = typeof record["name"] === "string" && SAFE_WRITE_ERROR_NAMES.has(record["name"])
     ? record["name"]
@@ -23,10 +23,14 @@ function parseSafeWriteFailure(input: unknown): SafeWriteFailure {
     ? record["status"]
     : undefined;
   const retryable = typeof record["retryable"] === "boolean" ? record["retryable"] : undefined;
+  const upstreamOutcome = status === 422 ? "transaction-aborted"
+    : status !== undefined && status >= 500 ? "upstream-unavailable"
+      : status === undefined ? "delivery-unknown" : "upstream-rejected";
   return {
     name,
     ...(status === undefined ? {} : { status }),
     ...(retryable === undefined ? {} : { retryable }),
+    upstreamOutcome,
   };
 }
 
@@ -90,7 +94,7 @@ export function createImportHandler(plan: ImportPlan, host: string) {
       // Structured telemetry intentionally excludes messages, stacks, causes,
       // payloads and credentials; the write result still remains unknown.
       const failure = parseSafeWriteFailure(error);
-      console.warn(JSON.stringify({ event: "playground-import-write-unknown", batch: ordinal, ...failure }));
+      console.error(JSON.stringify({ event: "playground-import-write-unknown", batch: ordinal, ...failure }));
       // Never infer rejection from reconstructed RPC errors or a disconnected
       // invocation. Reconcile this exact ID/payload/service, not a new ID.
       return Response.json({ error: "Import delivery unknown; retain the original approved batch", delivery: "unknown", txId: batch.txId }, {

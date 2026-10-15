@@ -10,12 +10,15 @@ import { factAsJson } from "./protocol.js";
 import { integer, planBatch, parseWritePlan, type WritePlan, type OwnerPlan, type ParticipantPlan } from "./plan.js";
 import type { StorageEnv } from "./environment.js";
 import type { BatchCache } from "./batch-cache.js";
+import { classifyParticipantFailure, type ParticipantFailureCode } from "./transaction-diagnostics.js";
 
 type Phase = "planning" | "reserving" | "preparing" | "committing" | "atomic-delegated" | "cancelling" | "complete" | "aborted";
 type Intent = Readonly<{tx_id: string; graph_id: string; payload_hash: string; batch_json: string; trees_json: string;
   plan_json: string | null; phase: Phase; commit_seq: number; statement_time_ms: number; created_at_ms: number; local_witness_json: string | null; participant_witness: number}>;
 type LocalWitness = Readonly<{status: "committed" | "aborted"; txId: string; graphId: string; payloadHash: string;
   commitSeq: number; statementTimeMs: number; identityTimeMs: number; shardPrefix: string; shardGeneration: number; directoryEpoch: number; factCount: number}>;
+type ParticipantFailure = Readonly<{participant: number; status: number; reasonCode: ParticipantFailureCode}>;
+type PreflightFailure = Readonly<{participant: number; status: number; reasonCode: ParticipantFailureCode | "split-required" | "capacity-not-admitted" | "invalid-preflight-response"}>;
 
 export class DistributedTransaction {
   private active = false;
@@ -34,7 +37,10 @@ export class DistributedTransaction {
     }
     if (prior && (prior.graph_id !== graph || prior.payload_hash !== hash)) return jsonResponse({error: "txId has already been used with a different fact batch"}, 409);
     if (prior?.phase === "complete") return this.receipt(prior);
-    if (prior?.phase === "aborted") return this.aborted(prior);
+    if (prior?.phase === "aborted") {
+      console.error(JSON.stringify({event: "poneglyph.transaction.replayed-aborted", phase: "terminal"}));
+      return this.aborted(prior);
+    }
     if (this.active) return jsonResponse({error: "this transaction is active", retryable: true}, 423);
     this.active = true;
     try {
@@ -90,20 +96,46 @@ export class DistributedTransaction {
           ({...entry, fact: factAsJson(batch.facts[entry.index]!)}))} : {})}),
     });
   }
-  private async preflight(intent: Intent, plan: WritePlan, batch: FactBatch): Promise<boolean> {
+  private async preflight(intent: Intent, plan: WritePlan, batch: FactBatch): Promise<readonly PreflightFailure[]> {
     const replies = await Promise.all(plan.participants.map(p => this.participant(intent, plan, p, batch, "_preflight")));
-    let rejected = false;
-    for (const response of replies) {
-      const body: unknown = await response.json();
-      if (!response.ok) {if (response.status >= 500) throw new Error("provisional capacity preflight unavailable"); rejected = true;}
-      else if (!isRecord(body) || body["canAdmit"] !== true || body["shouldSplit"] === true) rejected = true;
+    const failures: PreflightFailure[] = [];
+    for (const [participant, response] of replies.entries()) {
+      let body: unknown;
+      try { body = await response.json(); }
+      catch {
+        failures.push({participant, status: response.status, reasonCode: "invalid-preflight-response"});
+        console.error(JSON.stringify({event: "poneglyph.transaction.preflight-failed", participant, status: response.status,
+          reasonCode: "invalid-preflight-response"}));
+        if (response.status >= 500) throw new Error("provisional capacity preflight unavailable");
+        continue;
+      }
+      if (!response.ok) {
+        failures.push({participant, status: response.status, reasonCode: classifyParticipantFailure(response.status, body)});
+        if (response.status >= 500) {
+          console.error(JSON.stringify({event: "poneglyph.transaction.preflight-failed", participant, status: response.status,
+            reasonCode: classifyParticipantFailure(response.status, body)}));
+          throw new Error("provisional capacity preflight unavailable");
+        }
+        continue;
+      }
+      if (!isRecord(body) || typeof body["canAdmit"] !== "boolean" || typeof body["shouldSplit"] !== "boolean") {
+        failures.push({participant, status: response.status, reasonCode: "invalid-preflight-response"});
+        console.error(JSON.stringify({event: "poneglyph.transaction.preflight-failed", participant, status: response.status,
+          reasonCode: "invalid-preflight-response"}));
+        throw new Error("provisional capacity preflight returned an invalid response");
+      }
+      if (body["shouldSplit"] === true) failures.push({participant, status: response.status, reasonCode: "split-required"});
+      if (body["canAdmit"] !== true) failures.push({participant, status: response.status, reasonCode: "capacity-not-admitted"});
     }
-    return rejected;
+    return failures;
   }
 
   private async advance(recovery: boolean): Promise<Response> {
     let intent = this.read()!;
-    if (recovery && intent.phase === "planning") return this.aborted(this.phase("aborted"));
+    if (recovery && intent.phase === "planning") {
+      console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "planning", reasonCode: "recovery-before-plan"}));
+      return this.aborted(this.phase("aborted"));
+    }
     const batch = await this.batch(intent);
     let plan: WritePlan;
     let freshlyReserved = false;
@@ -118,7 +150,7 @@ export class DistributedTransaction {
         this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);
         return jsonResponse({error: "participant limit exceeded", retryable: false}, 413);
       }
-      const rejected = await this.preflight(intent, plan, batch);
+      const preflightFailures = await this.preflight(intent, plan, batch);
       // Persist exact possible ownership before the first reservation RPC.
       this.storage.sql.exec("UPDATE candidate_transactions SET phase = 'reserving', plan_json = ?, trees_json = ? WHERE tx_id = ?",
         JSON.stringify(plan), JSON.stringify(plan.owners.map(o => o.prefix)), this.txId);
@@ -142,8 +174,13 @@ export class DistributedTransaction {
       freshlyReserved = true;
       // A provisional rejection is not authoritative after visibility changed.
       // Positive preflight never replaces actual prepare/atomic admission.
-      if (rejected && await this.preflight(intent, plan, batch)) {
-        await this.cancel(this.phase("cancelling"), plan, batch); return this.aborted(this.read()!);
+      if (preflightFailures.length > 0) {
+        const recheckFailures = await this.preflight(intent, plan, batch);
+        if (recheckFailures.length > 0) {
+          console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "preflight",
+            reasonCode: "capacity-or-routing-rejected", initialFailures: preflightFailures, recheckFailures}));
+          await this.cancel(this.phase("cancelling"), plan, batch); return this.aborted(this.read()!);
+        }
       }
     } else {
       if (!intent.plan_json) throw new Error("admitted operation lost its exact plan");
@@ -151,6 +188,7 @@ export class DistributedTransaction {
     }
     if (intent.phase === "reserving") {
       // Recover uncertain ownership only; no new reservation/admission on alarm.
+      console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "reserving", reasonCode: "recovery-before-prepare"}));
       await this.release(intent, plan, true); return this.aborted(this.phase("aborted"));
     }
     if (intent.phase === "preparing") {
@@ -166,10 +204,24 @@ export class DistributedTransaction {
       if (plan.participants.length === 1) intent = this.phase("atomic-delegated");
       else {
         const replies = await Promise.all(plan.participants.map(p => this.participant(intent, plan, p, batch, "_prepare")));
-        const permanent = replies.some(r => r.status >= 400 && r.status < 500), incomplete = replies.some(r => !r.ok);
-        await Promise.all(replies.map(r => r.arrayBuffer()));
-        if (permanent) {await this.cancel(this.phase("cancelling"), plan, batch); return this.aborted(this.read()!);}
-        if (incomplete) throw new Error("participant prepare incomplete");
+        const failures = (await Promise.all(replies.map(async (response, participant): Promise<ParticipantFailure | undefined> => {
+          if (response.ok) { await response.arrayBuffer(); return undefined; }
+          const text = await response.text();
+          let body: unknown = text;
+          try { body = JSON.parse(text) as unknown; } catch { /* classify only; never log the raw response */ }
+          return {participant, status: response.status, reasonCode: classifyParticipantFailure(response.status, body)};
+        }))).filter((failure): failure is ParticipantFailure => failure !== undefined);
+        const permanent = failures.some(failure => failure.status >= 400 && failure.status < 500);
+        if (permanent) {
+          console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "prepare", reasonCode: "participant-rejected",
+            failures}));
+          await this.cancel(this.phase("cancelling"), plan, batch); return this.aborted(this.read()!);
+        }
+        if (failures.length > 0) {
+          console.error(JSON.stringify({event: "poneglyph.transaction.incomplete", phase: "prepare", reasonCode: "participant-unavailable",
+            failures}));
+          throw new Error("participant prepare incomplete");
+        }
         intent = this.phase("committing");
       }
     }
@@ -202,18 +254,28 @@ export class DistributedTransaction {
     if (plan.participants.length !== 1 || plan.owners.length !== 1) throw new Error("delegation changed physical authority");
     const participant = plan.participants[0]!;
     let witness: LocalWitness;
+    let rejectionStatus = 0;
+    let rejection: unknown;
     if (intent.local_witness_json) witness = this.witness(JSON.parse(intent.local_witness_json), intent, plan, batch);
     else {
       const response = await this.participant(intent, plan, participant, batch, "_atomic");
       const value: unknown = await response.json();
       if (!response.ok) throw new Error("local decision authority returned no terminal answer");
+      if (isRecord(value) && value["status"] === "aborted") {
+        rejectionStatus = typeof value["rejectionStatus"] === "number" ? value["rejectionStatus"] : 0;
+        rejection = value["error"];
+      }
       witness = this.witness(value, intent, plan, batch);
       // This witness must precede releasing topology/conflict fences. Recovery
       // must not require re-mutating a leaf that can now have become a router.
       this.storage.sql.exec("UPDATE candidate_transactions SET local_witness_json = ? WHERE tx_id = ?", JSON.stringify(witness), this.txId);
     }
     if (witness.status === "committed") await this.publish(intent, plan);
-    else await this.release(intent, plan, true);
+    else {
+      console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "atomic",
+        reasonCode: classifyParticipantFailure(rejectionStatus, rejection), rejectionStatus}));
+      await this.release(intent, plan, true);
+    }
     const terminal = this.phase(witness.status === "committed" ? "complete" : "aborted");
     await this.finalize(intent, plan, batch);
     return witness.status === "committed" ? this.receipt(terminal) : this.aborted(terminal);

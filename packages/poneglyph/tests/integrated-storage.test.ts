@@ -115,10 +115,19 @@ describe("integrated storage authority", () => {
     const read = await query(graph); expect(read.status).toBe(200); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
   });
 
-  it("records authoritative atomic abort and releases all owner fences", async () => {
+  it("records a sanitized atomic-abort diagnostic and releases all owner fences", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), id = "integrated:invalid-retraction";
-    expect(await writeStatus(graph, id, [fact(first, true)])).toMatchObject({status: 422});
-    expect(await writeStatus(graph, id, [fact(first, true)])).toMatchObject({status: 422});
+    const diagnostics: unknown[][] = [];
+    const originalError = console.error;
+    console.error = (...values: unknown[]) => { diagnostics.push(values); };
+    try {
+      expect(await writeStatus(graph, id, [fact(first, true)])).toMatchObject({status: 422});
+      expect(await writeStatus(graph, id, [fact(first, true)])).toMatchObject({status: 422});
+    } finally { console.error = originalError; }
+    expect(diagnostics).toContainEqual([JSON.stringify({event: "poneglyph.transaction.aborted", phase: "atomic",
+      reasonCode: "inactive-fact-retraction", rejectionStatus: 422})]);
+    expect(JSON.stringify(diagnostics)).not.toContain(first);
+    expect(JSON.stringify(diagnostics)).not.toContain(id);
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT status, decision_kind, owner_released FROM shard_transactions").one())
         .toMatchObject({status: "cancelled", decision_kind: "atomic", owner_released: 1});
@@ -222,6 +231,32 @@ describe("integrated storage authority", () => {
     await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
       expect(state.storage.sql.exec("SELECT phase FROM candidate_transactions WHERE tx_id = ?", id).one()).toMatchObject({phase: abort ? "aborted" : "complete"}));
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(abort ? 0 : 1));
+  });
+
+  it("logs a sanitized permanent distributed-prepare rejection before cancelling", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph), id = "integrated:prepare-rejection-diagnostic";
+    const second = env.GRAPH_SHARDS.getByName(shardObjectName(graph, otherRoot));
+    const diagnostics: unknown[][] = [];
+    const originalError = console.error;
+    console.error = (...values: unknown[]) => { diagnostics.push(values); };
+    try {
+      await runInDurableObject(second, async instance => {
+        const prepare = Reflect.get(instance, "prepare");
+        Reflect.set(instance, "prepare", () => new Response(JSON.stringify({error: "transaction was cancelled for private:entity"}), {status: 409}));
+        try { expect(await writeStatus(graph, id, [fact(first), fact(other)])).toMatchObject({status: 422}); }
+        finally { Reflect.set(instance, "prepare", prepare); }
+      });
+    } finally { console.error = originalError; }
+    const abort = diagnostics.map(([value]) => typeof value === "string" ? JSON.parse(value) as Record<string, unknown> : undefined)
+      .find(value => value?.["event"] === "poneglyph.transaction.aborted");
+    expect(abort).toMatchObject({event: "poneglyph.transaction.aborted", phase: "prepare", reasonCode: "participant-rejected"});
+    expect(abort?.["failures"]).toEqual(expect.arrayContaining([expect.objectContaining({status: 409, reasonCode: "participant-cancelled"})]));
+    expect(JSON.stringify(diagnostics)).not.toContain("private:entity");
+    expect(JSON.stringify(diagnostics)).not.toContain(id);
+    for (const prefix of [otherRoot, root]) {
+      await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix)), (_instance, state) =>
+        expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0));
+    }
   });
 
   it("recovers partial distributed prepare after actual eviction with complete indices and no double growth", async () => {

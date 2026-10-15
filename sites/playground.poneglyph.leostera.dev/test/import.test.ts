@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import test from "node:test";
 import { parseTransactionId } from "@leostera/poneglyph";
 import { createImportHandler, type ImportEnv } from "../src/import.js";
@@ -81,25 +82,43 @@ test("closed window is a pre-admission denial, without refreshing terminal ident
 
 test("RPC/disposal failures remain unknown and emit only safe diagnostic metadata", async () => {
   const h = harness(); let attempts = 0;
-  const warnings: unknown[][] = [];
-  const originalWarn = console.warn;
-  console.warn = (...values: unknown[]) => { warnings.push(values); };
+  const diagnostics: unknown[][] = [];
+  const originalError = console.error;
+  console.error = (...values: unknown[]) => { diagnostics.push(values); };
   h.env.PONEGLYPH_IMPORT.getGraph = async () => ({ transact: async () => {
     attempts++;
     throw Object.assign(new Error("private disconnected stack"), { name: "PoneglyphRequestError", status: 503, retryable: true, txId: "private-transaction-id" });
   }, [Symbol.dispose]() {} });
   let response: Response;
   try { response = await h.handle(request(), h.env, authenticated); }
-  finally { console.warn = originalWarn; }
+  finally { console.error = originalError; }
   assert.equal(response.status, 503);
   const result = await response.json();
   assert.ok(typeof result === "object" && result !== null && "delivery" in result && "txId" in result);
   assert.equal(result.delivery, "unknown"); assert.equal(result.txId, txId);
   assert.doesNotMatch(JSON.stringify(result), /private disconnected/);
-  assert.deepEqual(warnings, [[JSON.stringify({ event: "playground-import-write-unknown", batch: 0,
-    name: "PoneglyphRequestError", status: 503, retryable: true })]]);
-  assert.doesNotMatch(JSON.stringify(warnings), /private disconnected|private-transaction-id/);
+  assert.deepEqual(diagnostics, [[JSON.stringify({ event: "playground-import-write-unknown", batch: 0,
+    name: "PoneglyphRequestError", status: 503, retryable: true, upstreamOutcome: "upstream-unavailable" })]]);
+  assert.doesNotMatch(JSON.stringify(diagnostics), /private disconnected|private-transaction-id/);
   assert.equal(attempts, 1);
+});
+
+test("known aborted upstream response is labeled in private diagnostics but remains unknown to callers", async () => {
+  const h = harness();
+  const diagnostics: unknown[][] = [];
+  const originalError = console.error;
+  console.error = (...values: unknown[]) => { diagnostics.push(values); };
+  h.env.PONEGLYPH_IMPORT.getGraph = async () => ({ transact: async () => {
+    throw Object.assign(new Error("transaction details remain private"), { name: "PoneglyphRequestError", status: 422, retryable: false, txId: "private-transaction-id" });
+  }, [Symbol.dispose]() {} });
+  let response: Response;
+  try { response = await h.handle(request(), h.env, authenticated); }
+  finally { console.error = originalError; }
+  assert.equal(response.status, 503);
+  assert.equal(((await response.json()) as { delivery?: unknown }).delivery, "unknown");
+  assert.deepEqual(diagnostics, [[JSON.stringify({ event: "playground-import-write-unknown", batch: 0,
+    name: "PoneglyphRequestError", status: 422, retryable: false, upstreamOutcome: "transaction-aborted" })]]);
+  assert.doesNotMatch(JSON.stringify(diagnostics), /transaction details|private-transaction-id/);
 });
 
 test("remainder plan covers exactly the complement and has independent transaction identities", () => {
@@ -110,6 +129,22 @@ test("remainder plan covers exactly the complement and has independent transacti
   assert.equal(remainder.selectedPages, remainder.totalPages - Math.floor(remainder.totalPages / 10));
   assert.throws(() => parseImportPlan({ ...remainder, selectedPages: 1 }));
   assert.throws(() => parseImportPlan({ ...remainder, batches: [{ ...remainder.batches[0], txId }] }));
+});
+
+test("one explicitly approved retry changes only the transaction identity after the prior identity is superseded", async () => {
+  const originalPlan = fixturePlan();
+  const retryTxId = `${txId}:retry:1`;
+  const retryBody = JSON.stringify({ ...JSON.parse(body), txId: retryTxId });
+  const retryPlan = parseImportPlan({ ...originalPlan, retry: { batch: 0, attempt: 1, txId: retryTxId,
+    sha256: createHash("sha256").update(retryBody).digest("hex"), facts: 2, pages: 1, bytes: Buffer.byteLength(retryBody),
+    supersedesTxId: txId, supersedesSha256: originalPlan.batches[0]!.sha256 } });
+  const parsed = await parseApprovedBatch(new TextEncoder().encode(retryBody), retryPlan);
+  assert.equal(parsed.batch.txId, retryTxId);
+  assert.deepEqual(parsed.batch.facts, (await parseApprovedBatch(new TextEncoder().encode(body), originalPlan)).batch.facts);
+  await assert.rejects(() => parseApprovedBatch(new TextEncoder().encode(retryBody.replace("Import Boundary Fixture", "Changed")), retryPlan));
+  assert.throws(() => parseImportPlan({ ...originalPlan, retry: { batch: 0, attempt: 1, txId: "attacker:replacement",
+    sha256: "c".repeat(64), facts: 2, pages: 1, bytes: Buffer.byteLength(retryBody), supersedesTxId: txId,
+    supersedesSha256: originalPlan.batches[0]!.sha256 } }));
 });
 
 test("independent approved parser retains complete typed payload and refuses altered transaction identity", async () => {

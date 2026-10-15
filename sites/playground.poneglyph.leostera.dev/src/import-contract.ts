@@ -6,11 +6,12 @@ export const IMPORT_BATCH_FACTS = 500;
 export const IMPORT_RATE_LIMIT = { namespace: "2026101403", simple: { limit: 60, period: 60 as const } };
 export type ImportSegment = "pages10" | "remainder90";
 export type ImportBatch = Readonly<{ txId: string; sha256: string; facts: number; pages: number; bytes: number }>;
+export type ImportRetry = Readonly<{ batch: number; attempt: 1; txId: string; sha256: string; facts: number; pages: number; bytes: number; supersedesTxId: string; supersedesSha256: string }>;
 export type ImportPlan = Readonly<{
   version: 1 | 2; segment: ImportSegment; graphId: "onepiece"; service: "poneglyph-service-worker";
   corpusSha256: string; xmlSha256: string; source: string;
   totalPages: number; selectedPages: number; selectedFacts: number;
-  openedAt: string; expiresAt: string; batches: readonly ImportBatch[];
+  openedAt: string; expiresAt: string; batches: readonly ImportBatch[]; retry?: ImportRetry;
 }>;
 
 const digest = /^[a-f0-9]{64}$/;
@@ -42,18 +43,36 @@ export function parseImportPlan(input: unknown): ImportPlan {
     return Object.freeze({ txId: batch.txId, sha256: batch.sha256, facts: batch.facts, pages: batch.pages, bytes: batch.bytes });
   });
   if (pages !== plan.selectedPages || facts !== plan.selectedFacts) throw new Error("Import plan totals disagree");
+  let retry: ImportRetry | undefined;
+  if (plan.retry !== undefined) {
+    const candidate = plan.retry as Partial<ImportRetry> | null;
+    const original = typeof candidate?.batch === "number" ? batches[candidate.batch] : undefined;
+    if (!candidate || !Number.isSafeInteger(candidate.batch) || candidate.batch! < 0 || !original
+      || candidate.attempt !== 1 || typeof candidate.supersedesTxId !== "string" || candidate.supersedesTxId !== original.txId
+      || typeof candidate.supersedesSha256 !== "string" || candidate.supersedesSha256 !== original.sha256
+      || typeof candidate.txId !== "string" || candidate.txId !== `${original.txId}:retry:1`
+      || typeof candidate.sha256 !== "string" || !digest.test(candidate.sha256)
+      || candidate.facts !== original.facts || candidate.pages !== original.pages
+      || !Number.isSafeInteger(candidate.bytes) || candidate.bytes! <= 0 || candidate.bytes! > IMPORT_BODY_BYTES) {
+      throw new Error("Invalid explicitly approved import retry");
+    }
+    retry = Object.freeze({ batch: candidate.batch!, attempt: 1, txId: candidate.txId, sha256: candidate.sha256,
+      facts: candidate.facts!, pages: candidate.pages!, bytes: candidate.bytes!, supersedesTxId: candidate.supersedesTxId, supersedesSha256: candidate.supersedesSha256 });
+  }
   return Object.freeze({ version: plan.version, segment, graphId: "onepiece", service: "poneglyph-service-worker", corpusSha256: plan.corpusSha256,
     xmlSha256: plan.xmlSha256, source: plan.source, totalPages: plan.totalPages!, selectedPages: pages, selectedFacts: facts,
-    openedAt: plan.openedAt, expiresAt: plan.expiresAt, batches: Object.freeze(batches) });
+    openedAt: plan.openedAt, expiresAt: plan.expiresAt, batches: Object.freeze(batches), ...(retry === undefined ? {} : { retry }) });
 }
 
 export async function parseApprovedBatch(bytes: Uint8Array, plan: ImportPlan): Promise<{ ordinal: number; batch: FactBatch }> {
   if (bytes.byteLength > IMPORT_BODY_BYTES) throw new Error("Import body exceeds byte limit");
   const input: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   if (typeof input !== "object" || input === null || Array.isArray(input)
-    || Object.keys(input).sort().join(",") !== "batch,facts,txId" || !("batch" in input)
-    || typeof input.batch !== "number" || !Number.isSafeInteger(input.batch) || input.batch < 0) throw new Error("Expected an approved batch ordinal");
-  const approved = plan.batches[input.batch];
+    || Object.keys(input).sort().join(",") !== "batch,facts,txId" || !("batch" in input) || !("txId" in input)
+    || typeof input.batch !== "number" || !Number.isSafeInteger(input.batch) || input.batch < 0
+    || typeof input.txId !== "string") throw new Error("Expected an approved batch ordinal");
+  const retry = plan.retry?.batch === input.batch && input.txId === plan.retry.txId ? plan.retry : undefined;
+  const approved = retry ?? plan.batches[input.batch];
   if (!approved || bytes.byteLength !== approved.bytes) throw new Error("Batch is not in the approved plan");
   const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", Uint8Array.from(bytes))), byte => byte.toString(16).padStart(2, "0")).join("");
   if (hash !== approved.sha256) throw new Error("Batch payload does not match approved SHA-256");

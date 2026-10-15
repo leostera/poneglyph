@@ -19,10 +19,12 @@ const plan = parseImportPlan(JSON.parse(stored));
 if (Date.now() >= Date.parse(plan.expiresAt)) throw new Error("Import window expired; no replacement IDs");
 const records = (await readFile(resolve(directory, "journal.ndjson"), "utf8")).trim().split("\n").map(line => JSON.parse(line));
 const last = records.at(-1);
-const expected = plan.batches[ordinal];
+const original = plan.batches[ordinal];
+const retry = plan.retry?.batch === ordinal && last?.txId === plan.retry.txId && last?.sha256 === plan.retry.sha256 ? plan.retry : undefined;
+const expected = retry ?? original;
 if (!expected || !last || !["inflight", "stopped"].includes(last.phase) || last.batch !== ordinal
-  || last.txId !== expected.txId || last.sha256 !== expected.sha256 || last.graphId !== plan.graphId || last.service !== plan.service) throw new Error("Not the unresolved original journal identity");
-const file = resolve(directory, `${ordinal}.json`);
+  || last.txId !== expected.txId || last.sha256 !== expected.sha256 || last.graphId !== plan.graphId || last.service !== plan.service) throw new Error("Not the unresolved journal identity");
+const file = resolve(directory, retry ? `${ordinal}-retry${retry.attempt}.json` : `${ordinal}.json`);
 await parseApprovedBatch(await readFile(file), plan);
 const journal = await open(resolve(directory, "journal.ndjson"), "a");
 const append = async (fields: Record<string, unknown>) => {

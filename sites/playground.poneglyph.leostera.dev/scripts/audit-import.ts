@@ -61,9 +61,17 @@ let comparedFacts = 0;
 let comparedPages = 0;
 for (let ordinal = 0; ordinal < plan.batches.length; ordinal++) {
   const metadata = plan.batches[ordinal]!;
-  const bytes = await readFile(resolve(directory, `${ordinal}.json`));
+  const retry = plan.retry?.batch === ordinal ? plan.retry : undefined;
+  const bytes = await readFile(resolve(directory, retry ? `${ordinal}-retry${retry.attempt}.json` : `${ordinal}.json`));
   const approved = await parseApprovedBatch(bytes, plan);
   assert.equal(approved.ordinal, ordinal);
+  if (retry) {
+    const originalBytes = await readFile(resolve(directory, `${ordinal}.json`));
+    const originalHash = createHash("sha256").update(originalBytes).digest("hex");
+    if (originalHash !== retry.supersedesSha256) throw new Error("Superseded retry body checksum mismatch");
+    const original = await parseApprovedBatch(originalBytes, plan);
+    assert.deepEqual(approved.batch.facts, original.batch.facts, "retry must preserve every original typed fact");
+  }
   assert.equal(approved.batch.facts.length, metadata.facts);
   assert.equal(approved.batch.facts[0]?.field, "wiki:page:title", "batches must begin at a whole-page boundary");
   let batchPages = 0;

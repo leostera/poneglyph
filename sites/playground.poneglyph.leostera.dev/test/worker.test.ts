@@ -78,8 +78,8 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
     assert.match(page, /Private via Cloudflare Access/);
     assert.doesNotMatch(page, /Public and anonymous/);
     assert.match(DATASET.access.authentication, /Cloudflare Access/);
-    assert.match(DATASET.currentDataNote, /129,590 of 296,624 page records .*615,683 of 1,530,195 facts/);
-    assert.match(DATASET.currentDataNote, /batch 827 has unresolved delivery/);
+    assert.match(DATASET.currentDataNote, /129,716 of 296,624 page records .*616,181 of 1,530,195 facts/);
+    assert.match(DATASET.currentDataNote, /batch 828 is next/);
     for (const path of ["/v1/graphs/onepiece/transactions", "/v1/graphs/onepiece/query", "/_transact", "/__e2e/inspect", "/todo"]) {
       assert.equal((await active.dispatchFetch(`https://${PUBLIC_HOST}${path}`, { method: "POST", body: "{}" })).status, 404);
     }

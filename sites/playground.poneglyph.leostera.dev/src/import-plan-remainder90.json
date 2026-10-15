@@ -18695,5 +18695,16 @@
       "pages": 76,
       "bytes": 125342
     }
-  ]
+  ],
+  "retry": {
+    "batch": 827,
+    "attempt": 1,
+    "txId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:remainder90:827:retry:1",
+    "sha256": "d964403535f0da3db3a2a9cdbe5608a8d9ac166c0188bac64530d1a9991194ae",
+    "facts": 498,
+    "pages": 126,
+    "bytes": 163515,
+    "supersedesTxId": "wiki:import:e09d65047fe1479eacc7823761526d8280e3071d5c805ddf4b9bef43acb29064:remainder90:827",
+    "supersedesSha256": "9c69a43f5079b3a3e345d5bed0eda727d224d40518c5c0f3741b6b209297cf7b"
+  }
 }
