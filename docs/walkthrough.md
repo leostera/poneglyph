@@ -79,3 +79,9 @@ const txId = await graph.stateFacts([draft]);
 A graph ID selects an isolated fact namespace. `db.defineGraph({ id })` creates a local client handle for that namespace; it does not register a SQL-style schema. A graph is roughly like a SQL database as a boundary, but it has no catalog of tables and columns: facts use field URIs. Separate graphs can isolate tenants, environments, or lifecycles, but Poneglyph does not join queries or transactions across them.
 
 The graph coordinator is persistent control for that graph's routing and visibility state, not the place where its facts are stored. The fact data lives in the graph's data-owning shards.
+
+## Step 3: Planning the write
+
+The Worker checks the request and sends it to a transaction-ledger bucket selected from the `txId`. The ledger records the canonical batch, its content hash, and the write's progress so an interrupted transaction can be recovered. The content hash binds this `txId` to this exact batch; it is not used to select fact storage. Repeating a batch with a new transaction ID is a new write, not a semantic duplicate.
+
+To place each fact, Poneglyph hashes the graph ID together with the fact's entity URI. A routing directory maps that key to the current leaf shard. The transaction groups facts by destination, and tree coordinators reserve the relevant entity owners before the shards are asked to prepare the write. The `entity` determines the destination; the field and value do not.
