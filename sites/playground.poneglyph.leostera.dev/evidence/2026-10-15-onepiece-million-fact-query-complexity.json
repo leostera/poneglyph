@@ -1,0 +1,1290 @@
+{
+  "formatVersion": 1,
+  "observedAt": "2026-10-15T16:33:04.069Z",
+  "classification": "bounded hosted read-only query complexity and sampled runtime telemetry; not capacity, tail-latency, or full-corpus certification",
+  "graph": {
+    "graphId": "onepiece",
+    "snapshotSeq": 2196,
+    "snapshotMeaning": "leased owner-vector summary, not a global transaction clock"
+  },
+  "hostedBasePrefix": {
+    "importedPages": 227692,
+    "importedFacts": 1096908,
+    "pagePercent": 76.76,
+    "factPercent": 71.68,
+    "corpusPages": 296624,
+    "corpusFacts": 1530195,
+    "pages10Receipts": 413,
+    "remainderReceipts": 1795,
+    "remainderOrdinals": [
+      0,
+      1794
+    ],
+    "nextRemainderOrdinal": 1795,
+    "receiptsMatchedPinnedTransactionIdsAndDigests": true,
+    "sourceExpectedRows": "reconstructed from exact normalized corpus prefix corresponding to audited whole-page receipts; no hosted query result used to create expectations"
+  },
+  "importWrites": 0,
+  "queryRequests": 18,
+  "deployments": 0,
+  "measurement": {
+    "transport": "direct authenticated MCP request; Access credential held only in process memory and not retained",
+    "clientRoundTrip": "request send through complete MCP body read; includes public Worker, private service, network and response transfer",
+    "coordinatorTiming": "executionMs with snapshot/evaluation/release phases; wall-clock, not CPU",
+    "sampling": "three serial samples per query; six query shapes; rotation between rounds; no retries; no writes",
+    "readCut": "successful query acquires 16 root read leases and requests their release; tree leases fence writes/topology, not shard mutexes",
+    "shardCountCaveat": "shardRequests is request count, not unique shard count; distinct leaf count is derived from the complete unbound fanout metric and canonical routing behavior, not sampled telemetry IDs",
+    "cpuCaveat": "cumulative CPU sums Workers invocation cpuTimeMs across correlated public Worker, private service, coordinator and shard events; telemetry sampling and missing events can make it a lower bound",
+    "totalSequentialClientRoundTripMs": 32220.52,
+    "wholeRunWallMs": 40747,
+    "readLeaseSource": "TREE_PREFIXES has 16 roots; every successful query acquires all 16 leases and releases the complete acquired cut in finally. These are tree read leases fencing writes/topology, not per-shard mutexes.",
+    "shardCountDerivation": "A broad unbound scan enumerates every leaf under all 16 leased roots. The one-clause value-bound query reports one scan call and 16 shard requests at snapshot 2196, establishing 16 active data leaves. Every other non-entity-bound query includes such a global scan; the entity-bound query routes to one leaf. Thus distinct leaf shards touched are 1 for entity-bound and 16 for each other query, while shardRequests is cumulative requests across scans.",
+    "cpuTelemetry": "Workers invocation CPU is obtainable only from sampled observability events on this deployment. Existing playground and private-service trace sampling is 0.1. Captured sums below are not complete per-query cumulative CPU and are not used as totals or complexity comparisons.",
+    "additionalUnscoredHostedProbeQueries": 1
+  },
+  "queries": [
+    {
+      "queryKey": "entity-bound-one-clause",
+      "shape": "1 clause; entity-bound lookup",
+      "query": "wiki:page:title(\"wiki:onepiece:page:Monkey%20D.%20Luffy\", Title)",
+      "rows": 1,
+      "exactIndependentTypedMultiset": true,
+      "rowSha256": "58783f0b5065137185e43b253ada850fb3e0100429ebf2955537daae00942271",
+      "clientRoundTripMs": {
+        "samples": [
+          840.48,
+          240.11,
+          635.16
+        ],
+        "min": 240.11,
+        "median": 635.16,
+        "max": 840.48
+      },
+      "coordinatorExecutionMs": {
+        "samples": [
+          561,
+          106,
+          503
+        ],
+        "median": 503
+      },
+      "coordinatorPhasesMs": {
+        "snapshotMs": {
+          "samples": [
+            428,
+            41,
+            423
+          ],
+          "median": 423
+        },
+        "evaluationMs": {
+          "samples": [
+            64,
+            23,
+            27
+          ],
+          "median": 27
+        },
+        "releaseMs": {
+          "samples": [
+            69,
+            42,
+            53
+          ],
+          "median": 53
+        }
+      },
+      "scanMetrics": [
+        {
+          "scanCalls": 1,
+          "shardRequests": 1,
+          "tuplesRead": 1,
+          "bytesRead": 140,
+          "directoryRequests": 1
+        },
+        {
+          "scanCalls": 1,
+          "shardRequests": 1,
+          "tuplesRead": 1,
+          "bytesRead": 140,
+          "directoryRequests": 1
+        },
+        {
+          "scanCalls": 1,
+          "shardRequests": 1,
+          "tuplesRead": 1,
+          "bytesRead": 140,
+          "directoryRequests": 1
+        }
+      ],
+      "distinctDataShardsTouched": 1,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "cpuTelemetry": {
+        "requestedSamples": 3,
+        "correlatedTraceSamples": 1,
+        "capturedWorkerCpuMs": [
+          21
+        ],
+        "completeCumulativeCpuAvailable": false,
+        "reason": "Cloudflare trace sampling is configured at 0.1; correlated telemetry omits Worker invocation events (including scan and tree-lease events), so sums are captured event CPU only, not complete per-query CPU."
+      }
+    },
+    {
+      "queryKey": "value-bound-one-clause",
+      "shape": "1 clause; value-bound lookup across leaves",
+      "query": "wiki:page:title(Page, \"Monkey D. Luffy\")",
+      "rows": 1,
+      "exactIndependentTypedMultiset": true,
+      "rowSha256": "da062d7f3ee19fa6c0b02e9d1ee3d6f635a92ff1d948d3e01e1c10a43239eda1",
+      "clientRoundTripMs": {
+        "samples": [
+          5475.66,
+          535.77,
+          1290.45
+        ],
+        "min": 535.77,
+        "median": 1290.45,
+        "max": 5475.66
+      },
+      "coordinatorExecutionMs": {
+        "samples": [
+          5327,
+          332,
+          551
+        ],
+        "median": 551
+      },
+      "coordinatorPhasesMs": {
+        "snapshotMs": {
+          "samples": [
+            65,
+            50,
+            101
+          ],
+          "median": 65
+        },
+        "evaluationMs": {
+          "samples": [
+            5114,
+            142,
+            382
+          ],
+          "median": 382
+        },
+        "releaseMs": {
+          "samples": [
+            148,
+            140,
+            68
+          ],
+          "median": 140
+        }
+      },
+      "scanMetrics": [
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 1,
+          "bytesRead": 680,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 1,
+          "bytesRead": 680,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 1,
+          "bytesRead": 680,
+          "directoryRequests": 16
+        }
+      ],
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "cpuTelemetry": {
+        "requestedSamples": 3,
+        "correlatedTraceSamples": 3,
+        "capturedWorkerCpuMs": [
+          87,
+          758,
+          783
+        ],
+        "completeCumulativeCpuAvailable": false,
+        "reason": "Cloudflare trace sampling is configured at 0.1; correlated telemetry omits Worker invocation events (including scan and tree-lease events), so sums are captured event CPU only, not complete per-query CPU."
+      }
+    },
+    {
+      "queryKey": "two-clause-categories",
+      "shape": "2 clauses; selective title then entity join",
+      "query": "wiki:page:title(Page, \"Monkey D. Luffy\"), wiki:page:category(Page, Category)",
+      "rows": 8,
+      "exactIndependentTypedMultiset": true,
+      "rowSha256": "30be3e4b5642a99a34a34467663839737d7165b29535b7856c3ed356cdff1d60",
+      "clientRoundTripMs": {
+        "samples": [
+          1022.43,
+          392.64,
+          789.71
+        ],
+        "min": 392.64,
+        "median": 789.71,
+        "max": 1022.43
+      },
+      "coordinatorExecutionMs": {
+        "samples": [
+          911,
+          275,
+          549
+        ],
+        "median": 549
+      },
+      "coordinatorPhasesMs": {
+        "snapshotMs": {
+          "samples": [
+            69,
+            45,
+            332
+          ],
+          "median": 69
+        },
+        "evaluationMs": {
+          "samples": [
+            626,
+            166,
+            174
+          ],
+          "median": 174
+        },
+        "releaseMs": {
+          "samples": [
+            216,
+            64,
+            43
+          ],
+          "median": 64
+        }
+      },
+      "scanMetrics": [
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 8,
+          "bytesRead": 1498,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 8,
+          "bytesRead": 1498,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 8,
+          "bytesRead": 1498,
+          "directoryRequests": 16
+        }
+      ],
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "cpuTelemetry": {
+        "requestedSamples": 3,
+        "correlatedTraceSamples": 2,
+        "capturedWorkerCpuMs": [
+          720,
+          629
+        ],
+        "completeCumulativeCpuAvailable": false,
+        "reason": "Cloudflare trace sampling is configured at 0.1; correlated telemetry omits Worker invocation events (including scan and tree-lease events), so sums are captured event CPU only, not complete per-query CPU."
+      }
+    },
+    {
+      "queryKey": "two-clause-category-title-join",
+      "shape": "2 clauses; category-value search then entity join",
+      "query": "wiki:page:category(Page, \"Category:Straw Hat Pirates Members\"), wiki:page:title(Page, Title)",
+      "rows": 8,
+      "exactIndependentTypedMultiset": true,
+      "rowSha256": "af837420e4e39c6c59e2ed757b7753e9173e426216dd6837c916804335f04f4e",
+      "clientRoundTripMs": {
+        "samples": [
+          722.88,
+          714.63,
+          623.18
+        ],
+        "min": 623.18,
+        "median": 714.63,
+        "max": 722.88
+      },
+      "coordinatorExecutionMs": {
+        "samples": [
+          567,
+          558,
+          494
+        ],
+        "median": 558
+      },
+      "coordinatorPhasesMs": {
+        "snapshotMs": {
+          "samples": [
+            48,
+            284,
+            245
+          ],
+          "median": 245
+        },
+        "evaluationMs": {
+          "samples": [
+            347,
+            172,
+            116
+          ],
+          "median": 172
+        },
+        "releaseMs": {
+          "samples": [
+            172,
+            102,
+            133
+          ],
+          "median": 133
+        }
+      },
+      "scanMetrics": [
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 8,
+          "bytesRead": 1260,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 8,
+          "bytesRead": 1260,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 1,
+          "shardRequests": 16,
+          "tuplesRead": 8,
+          "bytesRead": 1260,
+          "directoryRequests": 16
+        }
+      ],
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "cpuTelemetry": {
+        "requestedSamples": 3,
+        "correlatedTraceSamples": 1,
+        "capturedWorkerCpuMs": [
+          139
+        ],
+        "completeCumulativeCpuAvailable": false,
+        "reason": "Cloudflare trace sampling is configured at 0.1; correlated telemetry omits Worker invocation events (including scan and tree-lease events), so sums are captured event CPU only, not complete per-query CPU."
+      }
+    },
+    {
+      "queryKey": "three-clause-link-resolution",
+      "shape": "3 clauses; link-target title join",
+      "query": "wiki:page:title(Page, \"Monkey D. Luffy\"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle)",
+      "rows": 14,
+      "exactIndependentTypedMultiset": true,
+      "rowSha256": "36e6b41d6a8f1bddbf8f51227bc5a1ca38701a11c3df378c55a3f21b27327a39",
+      "clientRoundTripMs": {
+        "samples": [
+          2795.95,
+          2384.36,
+          2861.99
+        ],
+        "min": 2384.36,
+        "median": 2795.95,
+        "max": 2861.99
+      },
+      "coordinatorExecutionMs": {
+        "samples": [
+          2599,
+          2244,
+          2737
+        ],
+        "median": 2599
+      },
+      "coordinatorPhasesMs": {
+        "snapshotMs": {
+          "samples": [
+            44,
+            46,
+            69
+          ],
+          "median": 46
+        },
+        "evaluationMs": {
+          "samples": [
+            2362,
+            2145,
+            2112
+          ],
+          "median": 2145
+        },
+        "releaseMs": {
+          "samples": [
+            193,
+            53,
+            556
+          ],
+          "median": 193
+        }
+      },
+      "scanMetrics": [
+        {
+          "scanCalls": 18,
+          "shardRequests": 273,
+          "tuplesRead": 31,
+          "bytesRead": 12875,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 18,
+          "shardRequests": 273,
+          "tuplesRead": 31,
+          "bytesRead": 12875,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 18,
+          "shardRequests": 273,
+          "tuplesRead": 31,
+          "bytesRead": 12875,
+          "directoryRequests": 16
+        }
+      ],
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "cpuTelemetry": {
+        "requestedSamples": 3,
+        "correlatedTraceSamples": 2,
+        "capturedWorkerCpuMs": [
+          7705,
+          156
+        ],
+        "completeCumulativeCpuAvailable": false,
+        "reason": "Cloudflare trace sampling is configured at 0.1; correlated telemetry omits Worker invocation events (including scan and tree-lease events), so sums are captured event CPU only, not complete per-query CPU."
+      }
+    },
+    {
+      "queryKey": "four-clause-human-filter",
+      "shape": "4 clauses; resolved link plus category filter",
+      "query": "wiki:page:title(Page, \"Monkey D. Luffy\"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle), wiki:page:category(TargetPage, \"Category:Humans\")",
+      "rows": 6,
+      "exactIndependentTypedMultiset": true,
+      "rowSha256": "9cc228607b498a1c78c537d5f128e67f2d17ae5b9103e40573fed1f0a35cee1c",
+      "clientRoundTripMs": {
+        "samples": [
+          3716.24,
+          3734.5,
+          3444.38
+        ],
+        "min": 3444.38,
+        "median": 3716.24,
+        "max": 3734.5
+      },
+      "coordinatorExecutionMs": {
+        "samples": [
+          3521,
+          3584,
+          3094
+        ],
+        "median": 3521
+      },
+      "coordinatorPhasesMs": {
+        "snapshotMs": {
+          "samples": [
+            49,
+            319,
+            55
+          ],
+          "median": 55
+        },
+        "evaluationMs": {
+          "samples": [
+            3416,
+            3140,
+            2998
+          ],
+          "median": 3140
+        },
+        "releaseMs": {
+          "samples": [
+            56,
+            125,
+            41
+          ],
+          "median": 56
+        }
+      },
+      "scanMetrics": [
+        {
+          "scanCalls": 32,
+          "shardRequests": 287,
+          "tuplesRead": 37,
+          "bytesRead": 13967,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 32,
+          "shardRequests": 287,
+          "tuplesRead": 37,
+          "bytesRead": 13967,
+          "directoryRequests": 16
+        },
+        {
+          "scanCalls": 32,
+          "shardRequests": 287,
+          "tuplesRead": 37,
+          "bytesRead": 13967,
+          "directoryRequests": 16
+        }
+      ],
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "cpuTelemetry": {
+        "requestedSamples": 3,
+        "correlatedTraceSamples": 3,
+        "capturedWorkerCpuMs": [
+          11432,
+          8183,
+          12788
+        ],
+        "completeCumulativeCpuAvailable": false,
+        "reason": "Cloudflare trace sampling is configured at 0.1; correlated telemetry omits Worker invocation events (including scan and tree-lease events), so sums are captured event CPU only, not complete per-query CPU."
+      }
+    }
+  ],
+  "samples": [
+    {
+      "queryKey": "entity-bound-one-clause",
+      "sample": 1,
+      "startedAt": "2026-10-15T16:32:22.820Z",
+      "endedAt": "2026-10-15T16:32:23.663Z",
+      "clientRoundTripMs": 840.48,
+      "rows": 1,
+      "rowSha256": "58783f0b5065137185e43b253ada850fb3e0100429ebf2955537daae00942271",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "tuplesRead": 1,
+        "bytesRead": 140,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 561,
+          "snapshotMs": 428,
+          "evaluationMs": 64,
+          "releaseMs": 69
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 1,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": null
+    },
+    {
+      "queryKey": "value-bound-one-clause",
+      "sample": 1,
+      "startedAt": "2026-10-15T16:32:24.166Z",
+      "endedAt": "2026-10-15T16:32:29.641Z",
+      "clientRoundTripMs": 5475.66,
+      "rows": 1,
+      "rowSha256": "da062d7f3ee19fa6c0b02e9d1ee3d6f635a92ff1d948d3e01e1c10a43239eda1",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 1,
+        "bytesRead": 680,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 5327,
+          "snapshotMs": 65,
+          "evaluationMs": 5114,
+          "releaseMs": 148
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 87,
+        "workerInvocationEvents": 28,
+        "graphShardScanEventsObserved": 0,
+        "distinctShardObjectIdsObserved": 0,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 13,
+        "treeReadLeaseReleaseEventsObserved": 11,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "two-clause-categories",
+      "sample": 1,
+      "startedAt": "2026-10-15T16:32:30.143Z",
+      "endedAt": "2026-10-15T16:32:31.165Z",
+      "clientRoundTripMs": 1022.43,
+      "rows": 8,
+      "rowSha256": "30be3e4b5642a99a34a34467663839737d7165b29535b7856c3ed356cdff1d60",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 8,
+        "bytesRead": 1498,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 911,
+          "snapshotMs": 69,
+          "evaluationMs": 626,
+          "releaseMs": 216
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": null
+    },
+    {
+      "queryKey": "two-clause-category-title-join",
+      "sample": 1,
+      "startedAt": "2026-10-15T16:32:31.667Z",
+      "endedAt": "2026-10-15T16:32:32.390Z",
+      "clientRoundTripMs": 722.88,
+      "rows": 8,
+      "rowSha256": "af837420e4e39c6c59e2ed757b7753e9173e426216dd6837c916804335f04f4e",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 8,
+        "bytesRead": 1260,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 567,
+          "snapshotMs": 48,
+          "evaluationMs": 347,
+          "releaseMs": 172
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": null
+    },
+    {
+      "queryKey": "three-clause-link-resolution",
+      "sample": 1,
+      "startedAt": "2026-10-15T16:32:32.891Z",
+      "endedAt": "2026-10-15T16:32:35.687Z",
+      "clientRoundTripMs": 2795.95,
+      "rows": 14,
+      "rowSha256": "36e6b41d6a8f1bddbf8f51227bc5a1ca38701a11c3df378c55a3f21b27327a39",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 18,
+        "shardRequests": 273,
+        "tuplesRead": 31,
+        "bytesRead": 12875,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 2599,
+          "snapshotMs": 44,
+          "evaluationMs": 2362,
+          "releaseMs": 193
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 7705,
+        "workerInvocationEvents": 185,
+        "graphShardScanEventsObserved": 144,
+        "distinctShardObjectIdsObserved": 16,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 11,
+        "treeReadLeaseReleaseEventsObserved": 15,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "four-clause-human-filter",
+      "sample": 1,
+      "startedAt": "2026-10-15T16:32:36.189Z",
+      "endedAt": "2026-10-15T16:32:39.905Z",
+      "clientRoundTripMs": 3716.24,
+      "rows": 6,
+      "rowSha256": "9cc228607b498a1c78c537d5f128e67f2d17ae5b9103e40573fed1f0a35cee1c",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 32,
+        "shardRequests": 287,
+        "tuplesRead": 37,
+        "bytesRead": 13967,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 3521,
+          "snapshotMs": 49,
+          "evaluationMs": 3416,
+          "releaseMs": 56
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 11432,
+        "workerInvocationEvents": 267,
+        "graphShardScanEventsObserved": 227,
+        "distinctShardObjectIdsObserved": 16,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 11,
+        "treeReadLeaseReleaseEventsObserved": 13,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "two-clause-categories",
+      "sample": 2,
+      "startedAt": "2026-10-15T16:32:40.406Z",
+      "endedAt": "2026-10-15T16:32:40.799Z",
+      "clientRoundTripMs": 392.64,
+      "rows": 8,
+      "rowSha256": "30be3e4b5642a99a34a34467663839737d7165b29535b7856c3ed356cdff1d60",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 8,
+        "bytesRead": 1498,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 275,
+          "snapshotMs": 45,
+          "evaluationMs": 166,
+          "releaseMs": 64
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 720,
+        "workerInvocationEvents": 53,
+        "graphShardScanEventsObserved": 15,
+        "distinctShardObjectIdsObserved": 15,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 11,
+        "treeReadLeaseReleaseEventsObserved": 10,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "two-clause-category-title-join",
+      "sample": 2,
+      "startedAt": "2026-10-15T16:32:41.300Z",
+      "endedAt": "2026-10-15T16:32:42.015Z",
+      "clientRoundTripMs": 714.63,
+      "rows": 8,
+      "rowSha256": "af837420e4e39c6c59e2ed757b7753e9173e426216dd6837c916804335f04f4e",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 8,
+        "bytesRead": 1260,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 558,
+          "snapshotMs": 284,
+          "evaluationMs": 172,
+          "releaseMs": 102
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": null
+    },
+    {
+      "queryKey": "three-clause-link-resolution",
+      "sample": 2,
+      "startedAt": "2026-10-15T16:32:42.516Z",
+      "endedAt": "2026-10-15T16:32:44.901Z",
+      "clientRoundTripMs": 2384.36,
+      "rows": 14,
+      "rowSha256": "36e6b41d6a8f1bddbf8f51227bc5a1ca38701a11c3df378c55a3f21b27327a39",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 18,
+        "shardRequests": 273,
+        "tuplesRead": 31,
+        "bytesRead": 12875,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 2244,
+          "snapshotMs": 46,
+          "evaluationMs": 2145,
+          "releaseMs": 53
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 156,
+        "workerInvocationEvents": 53,
+        "graphShardScanEventsObserved": 14,
+        "distinctShardObjectIdsObserved": 14,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 13,
+        "treeReadLeaseReleaseEventsObserved": 11,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "four-clause-human-filter",
+      "sample": 2,
+      "startedAt": "2026-10-15T16:32:45.402Z",
+      "endedAt": "2026-10-15T16:32:49.137Z",
+      "clientRoundTripMs": 3734.5,
+      "rows": 6,
+      "rowSha256": "9cc228607b498a1c78c537d5f128e67f2d17ae5b9103e40573fed1f0a35cee1c",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 32,
+        "shardRequests": 287,
+        "tuplesRead": 37,
+        "bytesRead": 13967,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 3584,
+          "snapshotMs": 319,
+          "evaluationMs": 3140,
+          "releaseMs": 125
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 8183,
+        "workerInvocationEvents": 180,
+        "graphShardScanEventsObserved": 146,
+        "distinctShardObjectIdsObserved": 16,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 9,
+        "treeReadLeaseReleaseEventsObserved": 8,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "entity-bound-one-clause",
+      "sample": 2,
+      "startedAt": "2026-10-15T16:32:49.638Z",
+      "endedAt": "2026-10-15T16:32:49.879Z",
+      "clientRoundTripMs": 240.11,
+      "rows": 1,
+      "rowSha256": "58783f0b5065137185e43b253ada850fb3e0100429ebf2955537daae00942271",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "tuplesRead": 1,
+        "bytesRead": 140,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 106,
+          "snapshotMs": 41,
+          "evaluationMs": 23,
+          "releaseMs": 42
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 1,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 21,
+        "workerInvocationEvents": 28,
+        "graphShardScanEventsObserved": 1,
+        "distinctShardObjectIdsObserved": 1,
+        "graphShardScanEventsMatchReportedRequests": true,
+        "treeReadLeaseEventsObserved": 12,
+        "treeReadLeaseReleaseEventsObserved": 11,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "value-bound-one-clause",
+      "sample": 2,
+      "startedAt": "2026-10-15T16:32:50.380Z",
+      "endedAt": "2026-10-15T16:32:50.916Z",
+      "clientRoundTripMs": 535.77,
+      "rows": 1,
+      "rowSha256": "da062d7f3ee19fa6c0b02e9d1ee3d6f635a92ff1d948d3e01e1c10a43239eda1",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 1,
+        "bytesRead": 680,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 332,
+          "snapshotMs": 50,
+          "evaluationMs": 142,
+          "releaseMs": 140
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 758,
+        "workerInvocationEvents": 56,
+        "graphShardScanEventsObserved": 15,
+        "distinctShardObjectIdsObserved": 15,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 14,
+        "treeReadLeaseReleaseEventsObserved": 11,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "three-clause-link-resolution",
+      "sample": 3,
+      "startedAt": "2026-10-15T16:32:51.417Z",
+      "endedAt": "2026-10-15T16:32:54.279Z",
+      "clientRoundTripMs": 2861.99,
+      "rows": 14,
+      "rowSha256": "36e6b41d6a8f1bddbf8f51227bc5a1ca38701a11c3df378c55a3f21b27327a39",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 18,
+        "shardRequests": 273,
+        "tuplesRead": 31,
+        "bytesRead": 12875,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 2737,
+          "snapshotMs": 69,
+          "evaluationMs": 2112,
+          "releaseMs": 556
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": null
+    },
+    {
+      "queryKey": "four-clause-human-filter",
+      "sample": 3,
+      "startedAt": "2026-10-15T16:32:54.781Z",
+      "endedAt": "2026-10-15T16:32:58.225Z",
+      "clientRoundTripMs": 3444.38,
+      "rows": 6,
+      "rowSha256": "9cc228607b498a1c78c537d5f128e67f2d17ae5b9103e40573fed1f0a35cee1c",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 32,
+        "shardRequests": 287,
+        "tuplesRead": 37,
+        "bytesRead": 13967,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 3094,
+          "snapshotMs": 55,
+          "evaluationMs": 2998,
+          "releaseMs": 41
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 12788,
+        "workerInvocationEvents": 298,
+        "graphShardScanEventsObserved": 259,
+        "distinctShardObjectIdsObserved": 16,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 12,
+        "treeReadLeaseReleaseEventsObserved": 9,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "entity-bound-one-clause",
+      "sample": 3,
+      "startedAt": "2026-10-15T16:32:58.726Z",
+      "endedAt": "2026-10-15T16:32:59.361Z",
+      "clientRoundTripMs": 635.16,
+      "rows": 1,
+      "rowSha256": "58783f0b5065137185e43b253ada850fb3e0100429ebf2955537daae00942271",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 1,
+        "tuplesRead": 1,
+        "bytesRead": 140,
+        "directoryRequests": 1,
+        "timing": {
+          "executionMs": 503,
+          "snapshotMs": 423,
+          "evaluationMs": 27,
+          "releaseMs": 53
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 1,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": null
+    },
+    {
+      "queryKey": "value-bound-one-clause",
+      "sample": 3,
+      "startedAt": "2026-10-15T16:32:59.863Z",
+      "endedAt": "2026-10-15T16:33:01.153Z",
+      "clientRoundTripMs": 1290.45,
+      "rows": 1,
+      "rowSha256": "da062d7f3ee19fa6c0b02e9d1ee3d6f635a92ff1d948d3e01e1c10a43239eda1",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 1,
+        "bytesRead": 680,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 551,
+          "snapshotMs": 101,
+          "evaluationMs": 382,
+          "releaseMs": 68
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 783,
+        "workerInvocationEvents": 53,
+        "graphShardScanEventsObserved": 15,
+        "distinctShardObjectIdsObserved": 15,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 14,
+        "treeReadLeaseReleaseEventsObserved": 10,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "two-clause-categories",
+      "sample": 3,
+      "startedAt": "2026-10-15T16:33:01.654Z",
+      "endedAt": "2026-10-15T16:33:02.443Z",
+      "clientRoundTripMs": 789.71,
+      "rows": 8,
+      "rowSha256": "30be3e4b5642a99a34a34467663839737d7165b29535b7856c3ed356cdff1d60",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 8,
+        "bytesRead": 1498,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 549,
+          "snapshotMs": 332,
+          "evaluationMs": 174,
+          "releaseMs": 43
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 629,
+        "workerInvocationEvents": 47,
+        "graphShardScanEventsObserved": 12,
+        "distinctShardObjectIdsObserved": 12,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 12,
+        "treeReadLeaseReleaseEventsObserved": 9,
+        "complete": false
+      }
+    },
+    {
+      "queryKey": "two-clause-category-title-join",
+      "sample": 3,
+      "startedAt": "2026-10-15T16:33:02.944Z",
+      "endedAt": "2026-10-15T16:33:03.567Z",
+      "clientRoundTripMs": 623.18,
+      "rows": 8,
+      "rowSha256": "af837420e4e39c6c59e2ed757b7753e9173e426216dd6837c916804335f04f4e",
+      "snapshotSeq": 2196,
+      "metrics": {
+        "scanCalls": 1,
+        "shardRequests": 16,
+        "tuplesRead": 8,
+        "bytesRead": 1260,
+        "directoryRequests": 16,
+        "timing": {
+          "executionMs": 494,
+          "snapshotMs": 245,
+          "evaluationMs": 116,
+          "releaseMs": 133
+        }
+      },
+      "exactIndependentTypedMultiset": true,
+      "distinctDataShardsTouched": 16,
+      "readLeases": {
+        "acquired": 16,
+        "releaseRequests": 16
+      },
+      "capturedWorkerCpuTelemetry": {
+        "cumulativeCpuMs": 139,
+        "workerInvocationEvents": 48,
+        "graphShardScanEventsObserved": 11,
+        "distinctShardObjectIdsObserved": 11,
+        "graphShardScanEventsMatchReportedRequests": false,
+        "treeReadLeaseEventsObserved": 11,
+        "treeReadLeaseReleaseEventsObserved": 11,
+        "complete": false
+      }
+    }
+  ],
+  "limitations": {
+    "smallSerialSample": true,
+    "p95p99Established": false,
+    "capacityEstablished": false,
+    "universalCorrectnessEstablished": false,
+    "fullBaseCorpusImported": false,
+    "enrichmentImported": false,
+    "cumulativeCpuFullyMeasured": false,
+    "cpuTelemetryCoverage": "12/18 query samples yielded correlated events, and those traces omitted invocation events; captured CPU sums are not total query CPU.",
+    "distinctShardCountsBasedOn": "canonical all-leaf query metrics plus DistributedFactSource routing behavior, not sampled telemetry IDs",
+    "readLeaseCountsBasedOn": "canonical 16-root read-cut control flow for successful queries"
+  },
+  "observability": {
+    "traceHeadSamplingRate": 0.1,
+    "rootRequestsCorrelated": 16,
+    "querySamples": 18,
+    "traceGroupsCorrelated": 12,
+    "telemetryIncomplete": true,
+    "deploymentsToChangeSampling": 0,
+    "traceIdsRetained": false
+  },
+  "unscoredTelemetryProbe": {
+    "observedAt": "2026-10-15T16:28:47.905Z",
+    "queryShape": "entity-bound one-clause title lookup",
+    "clientRoundTripMs": 1252.11,
+    "rows": 1,
+    "snapshotSeq": 2196,
+    "metrics": {
+      "scanCalls": 1,
+      "shardRequests": 1,
+      "tuplesRead": 1,
+      "bytesRead": 140,
+      "directoryRequests": 1,
+      "timing": {
+        "executionMs": 542,
+        "snapshotMs": 437,
+        "evaluationMs": 57,
+        "releaseMs": 48
+      }
+    },
+    "telemetry": {
+      "correlatedEventRows": 32,
+      "workerInvocationEvents": 30,
+      "capturedCpuMs": 102,
+      "scanEventsObserved": 1,
+      "uniqueShardObjectsObserved": 1,
+      "treeLeaseAcquisitionEventsObserved": 16,
+      "treeLeaseReleaseEventsObserved": 10
+    },
+    "includedInEighteenSampleSummaries": false,
+    "independentTypedMultisetChecked": false,
+    "purpose": "Validate that Workers invocation CPU and internal DO triggers are visible; the missing six release events demonstrate incomplete telemetry capture."
+  }
+}
