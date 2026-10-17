@@ -192,6 +192,17 @@ At the original continuation checkpoint the exact plan contained **2,877 batches
 
 At the next fail-closed stop, **277,787 facts / 45,913 page records across 561 committed source batches** were present; **1,252,408 facts / 250,711 pages** from the full source plans remained uncommitted, including one terminally aborted batch. During the approved continuation, 356 source batches / 176,561 facts committed. The sampler logged 115 successful four-query samples; 107 overlapped at least one active write. There were no query errors or exact-row mismatches. Per-run join-multiset checks reported no regressions; logged join cardinality grew from 11 to 12 and never fell, and none of the four logged `snapshotSeq` positions regressed pointwise across samples. Per-query execution latency was p50 **272 ms**, p95 **2,271 ms**, maximum **9,109 ms**; a four-read sample took at most **9,375 ms**. These are isolated workload measurements, not an SLA or tail-latency guarantee.
 
+Cloudflare Workers Observability, queried with `cf observability telemetry query` for the isolated Worker over 2026-10-17 19:54–20:34 UTC, shows per-entrypoint wall time substantially above CPU time. Values below are p95 / observed maximum, in milliseconds:
+
+| Durable Object entrypoint | Wall time | CPU time |
+| --- | ---: | ---: |
+| `GraphCoordinatorDO` | 2,080 / 9,022 | 142 / 175 |
+| `GraphLedgerDO` | 7,690 / 17,083 | 159 / 265 |
+| `GraphTreeDO` | 23 / 5,643 | 3 / 56 |
+| `GraphShardDO` | 85 / 6,299 | 20 / 133 |
+
+These are platform telemetry samples aggregated across invocations, not per-query or per-transaction traces. Low CPU relative to wall time is consistent with waiting on storage/RPC work, but does not identify the exact cause; trace correlation and a complete-load profile remain outstanding. The client-side query timings above are the direct measurements for the four fixed Datalog shapes.
+
 During that continuation, 42 source transactions returned HTTP 502 with uncertain delivery. Read-only transaction-status audits later confirmed 41 were committed and one, `remainder90:147`, was durably aborted; there are no unresolved deliveries. The failed original batch is pinned as 493 facts / 103 pages, SHA-256 `181a6ab82d69a7f57eb96126c9d33bb7ba32fa08eef0e8ffc2d597ef30307e13`. A sampled title query for one page in that payload returned zero rows at `snapshotSeq` 547; this is a sample check, not proof about every fact in the aborted batch. No replacement ID or rebatching has been sent. The run stopped as required.
 
 A single-repair proposal is staged locally in the ignored artifact `sites/onepiece.poneglyph.dev/.artifacts/import/mavplus-validation/repair147-plan.json`, SHA-256 `8550f6d0f807334c220ee27b5b57325c3057c1b6dd954be2710aa76df59e6461`. It pins one exact-fact `:retry:1` request (payload SHA-256 `31b88e425b3b302bf9da1af209ce179538bcb51ac0bc47f7488f28834622eb38`) on the same isolated Worker/namespaces and prohibits additional attempts. **This repair plan is pending explicit owner approval; no repair or continuation writes will occur until that exact hash is approved.** The original continuation plan remains approved only for its pinned remaining writes. Production and the public playground remain untouched. This partial staged load is not full-dataset or algorithm certification.
