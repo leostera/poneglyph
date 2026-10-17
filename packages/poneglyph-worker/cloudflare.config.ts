@@ -1,9 +1,25 @@
 import { bindings, defineConfig, exports } from "cf/config";
 import * as service from "./src/index.ts" with { type: "cf-worker" };
-import type { GraphGrants } from "./src/authorization.js";
+import type { GraphPermission } from "./src/authorization.js";
 
 // Deployment-owned policy. The generic service/authorizer has no product names.
-function makeServiceWorker(name: string) {
+type GrantJson = Record<string, Record<string, GraphPermission[]>>;
+
+const serviceGrants: GrantJson = {
+  playground: { onepiece: ["read"] },
+  "playground-loader": { onepiece: ["read", "write"] },
+  "playground-importer": { onepiece: ["read", "write"] },
+};
+
+const validationGrants: GrantJson = {
+  ...serviceGrants,
+  "playground-loader": {
+    onepiece: ["read", "write"],
+    "control-plane-validation": ["read", "write"],
+  },
+};
+
+function makeServiceWorker(name: string, grants: GrantJson) {
   return {
     name,
     entrypoint: service,
@@ -18,11 +34,7 @@ function makeServiceWorker(name: string) {
       GRAPH_LEDGERS: bindings.durableObject({ worker: name, exportName: "GraphLedgerDO" }),
       GRAPH_TREES: bindings.durableObject({ worker: name, exportName: "GraphTreeDO" }),
       GRAPH_SHARDS: bindings.durableObject({ worker: name, exportName: "GraphShardDO" }),
-      GRAPH_GRANTS: bindings.json({
-        playground: { onepiece: ["read"] },
-        "playground-loader": { onepiece: ["read", "write"] },
-        "playground-importer": { onepiece: ["read", "write"] },
-      } satisfies GraphGrants),
+      GRAPH_GRANTS: bindings.json(grants),
     },
     exports: {
       GraphCoordinatorDO: exports.durableObject({ storage: "sqlite" }),
@@ -33,5 +45,8 @@ function makeServiceWorker(name: string) {
   };
 }
 
-export const serviceWorker = makeServiceWorker("poneglyph-service-worker");
-export default defineConfig({ worker: serviceWorker });
+export const serviceWorker = makeServiceWorker("poneglyph-service-worker", serviceGrants);
+export const validationWorker = makeServiceWorker("poneglyph-mavplus-validation-worker", validationGrants);
+export default defineConfig(({ mode }) => ({
+  worker: mode === "mavplus-validation" ? validationWorker : serviceWorker,
+}));

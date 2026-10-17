@@ -27,4 +27,15 @@ bun run --cwd packages/poneglyph-worker build
 bun run --cwd packages/poneglyph-worker deploy
 ```
 
+## Isolated control-plane validation deployment
+
+The `mavplus-validation` cf mode selects the existing private `poneglyph-mavplus-validation-worker` name and its existing four Durable Object classes/namespaces. It adds one graph-scoped grant: `playground-loader` may read/write `control-plane-validation`. The default mode still selects `poneglyph-service-worker` with its existing grants. The validation Worker has no public domain, workers.dev, or preview URL. Deploying this mode changes only the isolated Worker version and its authorization JSON; it does not create test facts or run the live test.
+
+```sh
+cd packages/poneglyph-worker
+cf deploy --mode mavplus-validation --dry-run
+# Only after verifying the selected Worker/config and receiving explicit approval:
+cf deploy --mode mavplus-validation --message "isolated control-plane test grant"
+```
+
 This private package exports Worker source/config for in-workspace cf composition. It is not a new published npm storage-embedding API. The old canonical validation Worker/harness remains separate; this service does not expose its testing/admin routes.
