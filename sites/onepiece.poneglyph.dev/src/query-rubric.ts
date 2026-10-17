@@ -1,3 +1,4 @@
+// Fixed query-runner fixtures only; deliberately excluded from public describe_dataset.
 export const QUERY_PREDICATE_INVENTORY = Object.freeze([
   {field: "wiki:page:title", valueType: "string", description: "Exact page title; values are strings, not entity references."},
   {field: "wiki:page:namespace", valueType: "integer", description: "MediaWiki namespace number."},
@@ -7,8 +8,7 @@ export const QUERY_PREDICATE_INVENTORY = Object.freeze([
 ] as const);
 
 export const QUERY_RUBRIC = Object.freeze({
-  predicateFields: QUERY_PREDICATE_INVENTORY,
-  dataScope: "The five fields above are the normalized One Piece corpus vocabulary. The generic engine accepts any valid URI predicate; an unknown predicate is not a schema error and normally has no matching facts. The semantic enrichment overlay and its extra predicates are not hosted.",
+  dataScope: "The generic engine accepts any valid URI predicate; an unknown predicate is not a schema error and normally has no matching facts. Use get_schema to observe fields and FactValue tags present at a declared read snapshot. The semantic enrichment overlay and its extra predicates are not hosted.",
   relation: {
     form: "field(Entity, Value)",
     arity: 2,

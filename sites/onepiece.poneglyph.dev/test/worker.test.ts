@@ -43,9 +43,25 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
           config: { name: "playground", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
           env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground" } }, MCP_RATE_LIMITER: { type: "rate-limit", ...RATE_LIMIT },
             PONEGLYPH_IMPORT: { type: "worker", worker: "database", props: { clientId: "playground-importer" } }, IMPORT_RATE_LIMITER: { type: "rate-limit", ...IMPORT_RATE_LIMIT } } } },
-        { config: { name: "database", manifest: manifest(await readFile(resolve(directory, "database.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
-          env: { GRAPH_COORDINATORS: { type: "durable-object", worker: "database", exportName: "GraphCoordinatorDO" }, GRAPH_SHARDS: { type: "durable-object", worker: "database", exportName: "GraphShardDO" }, GRAPH_GRANTS: { type: "json", value: { playground: { onepiece: ["read"] }, "playground-loader": { onepiece: ["read", "write"] }, "playground-importer": { onepiece: ["read", "write"] } } } },
-          exports: { GraphCoordinatorDO: { type: "durable-object", storage: "sqlite" }, GraphShardDO: { type: "durable-object", storage: "sqlite" } } } },
+        { config: {
+          name: "database",
+          manifest: manifest(await readFile(resolve(directory, "database.mjs"), "utf8")),
+          compatibilityDate: COMPATIBILITY_DATE,
+          compatibilityFlags: ["nodejs_compat"],
+          env: {
+            GRAPH_FACADES: { type: "durable-object", worker: "database", exportName: "GraphCoordinatorDO" },
+            GRAPH_LEDGERS: { type: "durable-object", worker: "database", exportName: "GraphLedgerDO" },
+            GRAPH_TREES: { type: "durable-object", worker: "database", exportName: "GraphTreeDO" },
+            GRAPH_SHARDS: { type: "durable-object", worker: "database", exportName: "GraphShardDO" },
+            GRAPH_GRANTS: { type: "json", value: { playground: { onepiece: ["read"] }, "playground-loader": { onepiece: ["read", "write"] }, "playground-importer": { onepiece: ["read", "write"] } } },
+          },
+          exports: {
+            GraphCoordinatorDO: { type: "durable-object", storage: "sqlite" },
+            GraphLedgerDO: { type: "durable-object", storage: "sqlite" },
+            GraphTreeDO: { type: "durable-object", storage: "sqlite" },
+            GraphShardDO: { type: "durable-object", storage: "sqlite" },
+          },
+        } },
         { config: { name: "operator", manifest: manifest(await readFile(resolve(directory, "operator.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
           env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground-loader" } } } } },
         // Same public entrypoint, deliberately missing DB binding, with one token.
@@ -65,7 +81,9 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
     }
     const seed = await operator.fetch("http://127.0.0.1/seed", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ graphId: "attacker", txId: "different", facts: [] }) });
     assert.equal(seed.status, 200);
-    assert.deepEqual(await seed.json(), { txId: "playground:seed:20261014-v1", commitSeq: 1, status: "committed", graphId: GRAPH_ID, facts: 6, dataset: "synthetic-smoke-fixture; not wiki corpus" });
+    const seeded = await seed.json() as Record<string, unknown>;
+    assert.match(String(seeded.txId), /^poneglyph:tx:/);
+    assert.deepEqual({...seeded, txId: "server-minted"}, {txId: "server-minted", graphId: GRAPH_ID, facts: 6, dataset: "synthetic-smoke-fixture; not wiki corpus"});
 
     // Direct native invocation bypasses the cloud Access edge; these assertions
     // verify exact hostname routing, not hosted authentication.
@@ -78,9 +96,9 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
     assert.match(page, /Private via Cloudflare Access/);
     assert.doesNotMatch(page, /Public and anonymous/);
     assert.match(DATASET.access.authentication, /Cloudflare Access/);
-    assert.match(DATASET.currentDataNote, /227,692 of 296,624 page records .*1,096,908 of 1,530,195 facts/);
-    assert.match(DATASET.currentDataNote, /ordinal 1795 and later remain unimported/);
-    assert.match(DATASET.currentDataNote, /35,986-fact semantic enrichment overlay is local only/);
+    assert.match(DATASET.currentDataNote, /routing-version-9 graph was freshly deployed and currently has no imported facts/);
+    assert.match(DATASET.currentDataNote, /previous v8 load-test dataset and its receipts\/query evidence are historical only/);
+    assert.match(DATASET.currentDataNote, /Imports remain paused/);
     for (const path of ["/v1/graphs/onepiece/transactions", "/v1/graphs/onepiece/query", "/_transact", "/__e2e/inspect", "/todo"]) {
       assert.equal((await active.dispatchFetch(`https://${PUBLIC_HOST}${path}`, { method: "POST", body: "{}" })).status, 404);
     }
@@ -118,8 +136,15 @@ test("public Agents MCP reaches the real canonical SQLite runtime, with read-onl
     assert.notEqual(importedRead.isError, true);
     assert.ok("content" in importedRead && importedRead.content[0]?.type === "text");
     assert.deepEqual(JSON.parse(importedRead.content[0].text).rows, [{ Title: { type: "string", value: "Import Boundary Fixture" }, Namespace: { type: "integer", value: "0" } }]);
+    const observedSchema = await client.callTool({name: "get_schema", arguments: {}});
+    assert.notEqual(observedSchema.isError, true);
+    assert.ok("content" in observedSchema && observedSchema.content[0]?.type === "text");
+    const schema = JSON.parse(observedSchema.content[0].text);
+    assert.equal(schema.sequenceScope, "subtree-vector");
+    assert.equal(schema.snapshotVector.length, 16);
+    assert.ok(schema.fields.some((field: {field: string; valueTags: readonly string[]}) => field.field === "wiki:page:title" && field.valueTags.includes("text")));
     const listed = await client.listTools();
-    assert.deepEqual(listed.tools.map(tool => tool.name).sort(), ["describe_dataset", "query"]);
+    assert.deepEqual(listed.tools.map(tool => tool.name).sort(), ["describe_dataset", "get_schema", "query"]);
     // Two concurrent requests must not share a connected MCP server/transport.
     const [result, integer] = await Promise.all([
       client.callTool({ name: "query", arguments: { query: DATASET.examples[2] } }),

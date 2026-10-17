@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { parseDatalogQuery } from "@leostera/poneglyph";
 import { DATASET } from "../src/dataset.js";
-import { QUERY_PREDICATE_INVENTORY, QUERY_RUBRIC } from "../src/query-rubric.js";
+import { QUERY_RUBRIC } from "../src/query-rubric.js";
 
 const sampleEntity = '"wiki:onepiece:page:Monkey%20D.%20Luffy"';
 function parse(query: string) {
@@ -11,15 +11,15 @@ function parse(query: string) {
   return result.value;
 }
 
-describe("published One Piece query inventory", () => {
-  it("lists each known corpus predicate and its Datalog value type exactly once", () => {
-    const inventory = QUERY_RUBRIC.predicateFields.map(predicate => [predicate.field, predicate.valueType]).sort();
-    const described = DATASET.predicates.map(predicate => [predicate.field, predicate.value === "text" ? "string" : "integer"]).sort();
-    assert.deepEqual(inventory, described);
-    assert.equal(new Set(inventory.map(([field]) => field)).size, 5);
+describe("published One Piece query contract", () => {
+  it("uses get_schema for observations instead of publishing a static predicate inventory", () => {
+    assert.equal("predicates" in DATASET, false);
+    assert.equal("predicateFields" in QUERY_RUBRIC, false);
+    assert.match(DATASET.schemaObservation, /declared subtree-vector snapshot/i);
+    assert.match(QUERY_RUBRIC.dataScope, /get_schema/);
   });
 
-  it("covers every binary-relation binding form for each known predicate", () => {
+  it("covers every binary-relation binding form for a valid URI predicate", () => {
     const shapes: ((field: string) => string)[] = [
       field => `${field}(${sampleEntity}, "value")`,
       field => `${field}(${sampleEntity}, Value)`,
@@ -27,9 +27,7 @@ describe("published One Piece query inventory", () => {
       field => `${field}(Entity, Value)`,
       field => `${field}(_, _)`,
     ];
-    for (const predicate of QUERY_PREDICATE_INVENTORY) {
-      for (const shape of shapes) parse(shape(predicate.field));
-    }
+    for (const shape of shapes) parse(shape("wiki:example:predicate"));
     assert.deepEqual(QUERY_RUBRIC.bindings.map(binding => binding.id), [
       "entity-and-value-constant",
       "entity-constant-value-variable",

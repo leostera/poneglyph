@@ -1,7 +1,7 @@
 import type { FactInput, TransactionReceipt } from "@leostera/poneglyph";
 import { IMPORT_ACCESS_AUDIENCE, IMPORT_BODY_BYTES, IMPORT_RATE_LIMIT, parseApprovedBatch, type ImportPlan } from "./import-contract.js";
 
-interface ImportGraph extends Disposable { transact(facts: readonly FactInput[], options: { txId: string }): Promise<TransactionReceipt> }
+interface ImportGraph extends Disposable { transactApprovedBatch(facts: readonly FactInput[], options: { txId: string }): Promise<Readonly<{txId: string; commitSeq: number; status: "committed"}>> }
 export interface ImportEnv {
   PONEGLYPH_IMPORT: { getGraph(input: { graphId: string }): Promise<ImportGraph> };
   IMPORT_RATE_LIMITER?: Pick<RateLimit, "limit">;
@@ -88,7 +88,7 @@ export function createImportHandler(plan: ImportPlan, host: string) {
     const { batch, ordinal } = approved;
     try {
       using graph = await env.PONEGLYPH_IMPORT.getGraph({ graphId: plan.graphId });
-      const receipt = await graph.transact(batch.facts, { txId: batch.txId });
+      const receipt = await graph.transactApprovedBatch(batch.facts, { txId: batch.txId });
       return Response.json({ ...receipt, batch: ordinal, facts: batch.facts.length }, { headers: { "cache-control": "no-store" } });
     } catch (error) {
       // Structured telemetry intentionally excludes messages, stacks, causes,

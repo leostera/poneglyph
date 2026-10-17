@@ -28,12 +28,16 @@ export async function openLocalGraph(graphId: string, runtimeDirectory: string):
       manifest,
       compatibilityDate: "2026-10-06",
       env: {
-        GRAPH_COORDINATORS: worker("GraphCoordinatorDO"),
+        GRAPH_FACADES: worker("GraphCoordinatorDO"),
+        GRAPH_LEDGERS: worker("GraphLedgerDO"),
+        GRAPH_TREES: worker("GraphTreeDO"),
         GRAPH_SHARDS: worker("GraphShardDO"),
         TODO_HUBS: worker("TodoHubDO"),
       },
       exports: {
         GraphCoordinatorDO: sqlite,
+        GraphLedgerDO: sqlite,
+        GraphTreeDO: sqlite,
         GraphShardDO: sqlite,
         TodoHubDO: sqlite,
       },
@@ -89,11 +93,9 @@ export async function replayReceiptPrefixLocally(
 
       // Replay the exact committed facts into a fresh local graph with a new
       // local identity. No hosted writer, import route, or retry is involved.
-      const txId = `local:query-rubric:${runId}:${segment}:${ordinal}`;
-      const receipt = await graph.transact(parsed.batch.facts, {txId});
-      if (receipt.status !== "committed" || receipt.txId !== txId) {
-        throw new Error(`local ${segment} batch ${ordinal} did not return its committed receipt`);
-      }
+      const clientRequestToken = `local:query-rubric:${runId}:${segment}:${ordinal}`;
+      const receipt = await graph.transact(parsed.batch.facts, {clientRequestToken});
+      if (typeof receipt.txId !== "string") throw new Error(`local ${segment} batch ${ordinal} did not return a transaction witness`);
       loadedBatches++;
       pages += approved.pages;
       facts += approved.facts;

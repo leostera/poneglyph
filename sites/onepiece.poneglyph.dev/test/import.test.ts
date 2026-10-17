@@ -17,7 +17,7 @@ function harness() {
     IMPORT_RATE_LIMITER: { limit: async () => { admissions++; return { success: true }; } },
     PONEGLYPH_IMPORT: { getGraph: async input => {
       assert.deepEqual(input, { graphId: "onepiece" }); acquired++;
-      return { transact: async (facts, options) => { assert.equal(facts.length, 2); assert.deepEqual(options, { txId }); writes++; return { txId: id.value, commitSeq: 1, status: "committed" }; }, [Symbol.dispose]: () => { disposed++; } };
+      return {transactApprovedBatch: async (facts, options) => { assert.equal(facts.length, 2); assert.deepEqual(options, { txId }); writes++; return { txId: id.value, commitSeq: 1, status: "committed" }; }, [Symbol.dispose]: () => { disposed++; } };
     } },
   };
   return { plan, env, handle: createImportHandler(plan, host), counts: () => ({ acquired, writes, disposed, admissions }) };
@@ -85,7 +85,7 @@ test("RPC/disposal failures remain unknown and emit only safe diagnostic metadat
   const diagnostics: unknown[][] = [];
   const originalError = console.error;
   console.error = (...values: unknown[]) => { diagnostics.push(values); };
-  h.env.PONEGLYPH_IMPORT.getGraph = async () => ({ transact: async () => {
+  h.env.PONEGLYPH_IMPORT.getGraph = async () => ({transactApprovedBatch: async () => {
     attempts++;
     throw Object.assign(new Error("private disconnected stack"), { name: "PoneglyphRequestError", status: 503, retryable: true, txId: "private-transaction-id" });
   }, [Symbol.dispose]() {} });
@@ -108,7 +108,7 @@ test("known aborted upstream response is labeled in private diagnostics but rema
   const diagnostics: unknown[][] = [];
   const originalError = console.error;
   console.error = (...values: unknown[]) => { diagnostics.push(values); };
-  h.env.PONEGLYPH_IMPORT.getGraph = async () => ({ transact: async () => {
+  h.env.PONEGLYPH_IMPORT.getGraph = async () => ({transactApprovedBatch: async () => {
     throw Object.assign(new Error("transaction details remain private"), { name: "PoneglyphRequestError", status: 422, retryable: false, txId: "private-transaction-id" });
   }, [Symbol.dispose]() {} });
   let response: Response;

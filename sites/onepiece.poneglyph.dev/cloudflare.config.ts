@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       workersDev: false,
       previewUrls: false,
       domains: seedMode ? [] : ["onepiece.poneglyph.dev"],
-      observability: { enabled: true, logs: { enabled: true }, traces: { enabled: true, headSamplingRate: 0.1 } },
+      observability: { enabled: true, logs: { enabled: true }, traces: { enabled: true, headSamplingRate: 1.0 } },
       env: seedMode ? seedBindings : playgroundBindings,
     }
   };

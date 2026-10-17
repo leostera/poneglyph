@@ -26,7 +26,7 @@ export default {
       return Response.json({ graphId: GRAPH_ID, results });
     }
     // No caller-supplied facts, graph or backend. One fixed tiny transaction.
-    const receipt = await graph.transact(TEST_FACTS, { txId: TEST_TX_ID });
+    const receipt = await graph.transact(TEST_FACTS, {clientRequestToken: TEST_TX_ID});
     return Response.json({ ...receipt, graphId: GRAPH_ID, facts: TEST_FACTS.length, dataset: "synthetic-smoke-fixture; not wiki corpus" });
   },
 } satisfies ExportedHandler<OperatorEnv>;
