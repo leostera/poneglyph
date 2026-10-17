@@ -6,7 +6,7 @@ import { parseFactBatch, type FactInput } from "@leostera/poneglyph";
 import { summarize, type Scenario } from "./scenarios.js";
 
 export type Batch = { txId: string; facts: readonly FactInput[]; body: string };
-export type CallOutcome = { txId: string; facts: number; kind: "committed" | "rejected" | "unknown"; attempts: number;
+export type CallOutcome = { txId: string; serverTxId?: string; facts: number; kind: "committed" | "rejected" | "unknown"; attempts: number;
   latencyMs: number; status: number; databaseMs?: number; workerId?: string; detail?: string };
 export type DriverOptions = { endpoints: string[]; token: string; maxAttempts: number; attemptTimeoutMs: number; journal: string;
   collectOutcomes?: boolean; onOutcome?: (outcome: CallOutcome) => void;
@@ -18,7 +18,7 @@ export function makeBatches(facts: readonly FactInput[], scenario: Scenario, run
     const txId = `bench:${runId}:${batches.length}`;
     const parsed = parseFactBatch({ txId, facts: facts.slice(start, start + scenario.batchSize) });
     if (!parsed.ok) throw new Error(`unsupported batch ${batches.length}: ${parsed.error.message}`);
-    const body = JSON.stringify(parsed.value);
+    const body = JSON.stringify({clientRequestToken: txId, facts: parsed.value.facts});
     if (Buffer.byteLength(body) > 1_000_000) throw new Error(`unsupported batch ${batches.length}: exceeds 1 MB`);
     batches.push({ txId, facts: parsed.value.facts, body });
   }
@@ -42,8 +42,8 @@ async function callBatch(batch: Batch, endpoint: string, options: DriverOptions,
       const body = record(await response.json());
       attempts.statuses[String(status)] = (attempts.statuses[String(status)] ?? 0) + 1;
       if (response.ok) {
-        if (body.txId !== batch.txId) throw new Error("receipt transaction mismatch");
-        return { txId: batch.txId, facts: batch.facts.length, kind: "committed", attempts: attempt,
+        if (body.requestToken !== batch.txId || typeof body.txId !== "string") throw new Error("request-token receipt mismatch");
+        return {txId: batch.txId, serverTxId: body.txId, facts: batch.facts.length, kind: "committed", attempts: attempt,
           latencyMs: performance.now() - started, status,
           ...(typeof body.databaseMs === "number" ? { databaseMs: body.databaseMs } : {}),
           ...(typeof body.workerId === "string" ? { workerId: body.workerId } : {}) };

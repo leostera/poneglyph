@@ -42,7 +42,7 @@ export async function* corpusBatches(input: string, limit: number, batchSize: nu
     facts.push(parsed.value.facts[0]!); count++;
     if (facts.length === batchSize || count === limit) {
       const txId = `${prefix}:${ordinal++}`;
-      yield { txId, facts, body: JSON.stringify({ txId, facts }) };
+      yield {txId, facts, body: JSON.stringify({clientRequestToken: txId, facts})};
       facts = [];
     }
     if (count === limit) break;
@@ -56,7 +56,7 @@ export class AuditLedger {
   constructor(filename: string, reference: string, readonly prefix: string, readonly factCount: number, readonly batchSize: number) {
     this.db = new DatabaseSync(filename);
     this.db.exec(`PRAGMA journal_mode=WAL;
-      CREATE TABLE IF NOT EXISTS outcomes (ordinal INTEGER PRIMARY KEY, kind TEXT NOT NULL, facts INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS outcomes (ordinal INTEGER PRIMARY KEY, kind TEXT NOT NULL, facts INTEGER NOT NULL, server_tx_id TEXT);
       CREATE TABLE IF NOT EXISTS matched (ordinal INTEGER PRIMARY KEY, tx_ordinal INTEGER NOT NULL);
       CREATE INDEX IF NOT EXISTS matched_by_tx ON matched(tx_ordinal);`);
     this.db.prepare("ATTACH DATABASE ? AS reference").run(reference);
@@ -71,12 +71,14 @@ export class AuditLedger {
     return ordinal;
   }
   recordOutcome(outcome: CallOutcome) {
-    this.db.prepare("INSERT INTO outcomes VALUES (?, ?, ?)").run(this.transactionOrdinal(outcome.txId), outcome.kind, outcome.facts);
+    this.db.prepare("INSERT INTO outcomes VALUES (?, ?, ?, ?)").run(this.transactionOrdinal(outcome.txId), outcome.kind, outcome.facts, outcome.serverTxId ?? null);
     if (++this.writes % 10000 === 0) this.db.exec("COMMIT; BEGIN");
   }
   beginAudit() { this.db.exec("COMMIT; DELETE FROM matched; BEGIN"); }
   matchFact(txId: string, hash: string) {
-    const tx = this.transactionOrdinal(txId);
+    const outcome = this.db.prepare("SELECT ordinal FROM outcomes WHERE server_tx_id = ?").get(txId);
+    if (typeof outcome?.ordinal !== "number") throw new Error(`persisted fact has no acknowledged server transaction ID: ${txId}`);
+    const tx = outcome.ordinal;
     const row = this.db.prepare(`SELECT ordinal FROM reference.facts f WHERE tuple_hash = ? AND ordinal >= ? AND ordinal < ?
       AND NOT EXISTS (SELECT 1 FROM matched m WHERE m.ordinal = f.ordinal) ORDER BY ordinal LIMIT 1`)
       .get(hash, tx * this.batchSize, Math.min((tx + 1) * this.batchSize, this.factCount));

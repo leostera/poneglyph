@@ -56,9 +56,9 @@ export default {
     try {
       if (!await authorized(request, env.BENCH_TOKEN)) return Response.json({ error: "unauthorized" }, { status: 401 });
       const raw = await readBody(request);
-      if (typeof raw !== "object" || raw === null || !("txId" in raw) || !("facts" in raw) ||
-          typeof raw.txId !== "string" || !Array.isArray(raw.facts)) {
-        throw new PoneglyphInputError("expected {txId, facts}");
+      if (typeof raw !== "object" || raw === null || !("clientRequestToken" in raw) || !("facts" in raw) ||
+          typeof raw.clientRequestToken !== "string" || !Array.isArray(raw.facts)) {
+        throw new PoneglyphInputError("expected {clientRequestToken, facts}");
       }
       const db = await createDatabase({
         url: "https://poneglyph.internal", graphId: env.GRAPH_ID,
@@ -66,8 +66,8 @@ export default {
       });
       const started = performance.now();
       // The client parses each fact before sending it; success waits for the real database.
-      const txId = await db.stateFacts(raw.facts, { txId: raw.txId });
-      return Response.json({ txId, workerId: env.WORKER_ID, databaseMs: performance.now() - started });
+      const receipt = await db.transact(raw.facts, {clientRequestToken: raw.clientRequestToken});
+      return Response.json({txId: receipt.txId, requestToken: raw.clientRequestToken, workerId: env.WORKER_ID, databaseMs: performance.now() - started});
     } catch (error) {
       if (error instanceof PoneglyphInputError) return Response.json({ error: error.message, retryable: false }, { status: 400 });
       if (error instanceof PoneglyphRequestError) return Response.json({ error: error.message, retryable: error.retryable }, { status: error.status });

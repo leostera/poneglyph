@@ -64,9 +64,10 @@ export async function verifyStream(runtime: LocalRuntime, ledger: AuditLedger) {
   if (coordinator.visibilityScope === "subtree-vector") {
     // Owner registries cover admitted writes. Also inspect every caller-unknown
     // or rejected ID so an unclaimed transaction intent cannot evade the audit.
-    const ids = ledger.db.prepare("SELECT ordinal FROM outcomes WHERE kind != 'committed'").all();
+    const ids = ledger.db.prepare("SELECT server_tx_id FROM outcomes WHERE kind != 'committed' AND server_tx_id IS NOT NULL").all();
     for (let offset = 0; offset < ids.length; offset += 16) await Promise.all(ids.slice(offset, offset + 16).map(async id => {
-      const states = rows(await runtime.audit(`transaction?txId=${encodeURIComponent(`${ledger.prefix}:${id.ordinal}`)}`));
+      if (typeof id.server_tx_id !== "string") throw new Error("invalid audited transaction ID");
+      const states = rows(await runtime.audit(`transaction?txId=${encodeURIComponent(id.server_tx_id)}`));
       for (const state of states) if (!["complete", "aborted"].includes(String(state.phase))) throw new Error("unresolved unacknowledged transaction coordinator");
     }));
   }

@@ -16,6 +16,10 @@ function signature(source: unknown, entity: unknown, field: unknown, value: unkn
 
 export async function verify(runtime: LocalRuntime, batches: Batch[], outcomes: CallOutcome[]) {
   const plans = new Map(batches.map(batch => [batch.txId, batch]));
+  const clientTokenByTransaction = new Map<string, string>();
+  for (const outcome of outcomes) {
+    if (outcome.serverTxId !== undefined) clientTokenByTransaction.set(outcome.serverTxId, outcome.txId);
+  }
   const expected = new Map<string, Map<string, number>>();
   for (const batch of batches) {
     const multiset = new Map<string, number>();
@@ -34,64 +38,69 @@ export async function verify(runtime: LocalRuntime, batches: Batch[], outcomes: 
     visited.add(prefix);
     let after = 0;
     while (true) {
-    const page = record(await runtime.audit(`shard?prefix=${prefix}&after=${after}`));
-    const identity = rows(page.identity)[0];
-    if (identity?.role === "router") {
-      for (const key of ["child_zero_prefix", "child_one_prefix"]) {
-        const child = identity[key];
-        if (typeof child !== "string" || child.length <= prefix.length || !child.startsWith(prefix) || !/^[01]{1,256}$/.test(child)) throw new Error("invalid router child");
-        pending.push(child);
+      const page = record(await runtime.audit(`shard?prefix=${prefix}&after=${after}`));
+      const identity = rows(page.identity)[0];
+      if (identity?.role === "router") {
+        for (const key of ["child_zero_prefix", "child_one_prefix"]) {
+          const child = identity[key];
+          if (typeof child !== "string" || child.length <= prefix.length || !child.startsWith(prefix) || !/^[01]{1,256}$/.test(child)) throw new Error("invalid router child");
+          pending.push(child);
+        }
+        break;
       }
-      break;
-    }
-    if (identity?.role !== "leaf") throw new Error("invalid audit leaf identity");
-    if (after === 0) {
-      if (count(page.missingValues) !== 0 || count(page.orphanValues) !== 0 || count(page.mismatchedValues) !== 0) throw new Error("fact/value index inconsistency");
-      const current = count(page.active);
-      active += current;
-      if (count(page.values) !== current) throw new Error("scalar corpus value index count mismatch");
-      if (typeof page.databaseBytes === "number") databaseBytes += page.databaseBytes;
-      for (const status of rows(page.statuses)) if (status.status === "prepared" && status.count !== 0) throw new Error("unresolved participant transaction");
-    }
-    const entries = rows(page.facts);
-    if (!entries.length) break;
-    for (const row of entries) {
-      if (typeof row.tx_id !== "string" || typeof row.value_json !== "string" || typeof row.ordinal !== "number") throw new Error("invalid fact audit row");
-      if (!plans.has(row.tx_id)) throw new Error(`unexpected transaction ${row.tx_id}`);
-      const key = signature(row.source, row.entity, row.field, JSON.parse(row.value_json), row.retraction);
-      const remaining = expected.get(row.tx_id)!;
-      const n = remaining.get(key) ?? 0;
-      if (!n) throw new Error(`extra or mismatched fact in ${row.tx_id}`);
-      remaining.set(key, n - 1); facts++; after = row.ordinal;
-      seenTransactions.set(row.tx_id, (seenTransactions.get(row.tx_id) ?? 0) + 1);
-    }
+      if (identity?.role !== "leaf") throw new Error("invalid audit leaf identity");
+      if (after === 0) {
+        if (count(page.missingValues) !== 0 || count(page.orphanValues) !== 0 || count(page.mismatchedValues) !== 0) throw new Error("fact/value index inconsistency");
+        const current = count(page.active);
+        active += current;
+        if (count(page.values) !== current) throw new Error("scalar corpus value index count mismatch");
+        if (typeof page.databaseBytes === "number") databaseBytes += page.databaseBytes;
+        for (const status of rows(page.statuses)) if (status.status === "prepared" && status.count !== 0) throw new Error("unresolved participant transaction");
+      }
+      const entries = rows(page.facts);
+      if (!entries.length) break;
+      for (const row of entries) {
+        if (typeof row.tx_id !== "string" || typeof row.value_json !== "string" || typeof row.ordinal !== "number") throw new Error("invalid fact audit row");
+        const clientToken = clientTokenByTransaction.get(row.tx_id);
+        if (clientToken === undefined) throw new Error(`unexpected or unacknowledged transaction ${row.tx_id}`);
+        const key = signature(row.source, row.entity, row.field, JSON.parse(row.value_json), row.retraction);
+        const remaining = expected.get(clientToken);
+        if (remaining === undefined) throw new Error(`persisted transaction has no planned request token ${row.tx_id}`);
+        const n = remaining.get(key) ?? 0;
+        if (!n) throw new Error(`extra or mismatched fact in ${row.tx_id}`);
+        remaining.set(key, n - 1); facts++; after = row.ordinal;
+        seenTransactions.set(row.tx_id, (seenTransactions.get(row.tx_id) ?? 0) + 1);
+      }
     }
   }
   for (const [txId] of seenTransactions) {
-    if ([...expected.get(txId)!.values()].some(n => n !== 0)) throw new Error(`partial transaction ${txId}`);
+    const clientToken = clientTokenByTransaction.get(txId)!;
+    if ([...expected.get(clientToken)!.values()].some(n => n !== 0)) throw new Error(`partial transaction ${txId}`);
   }
   for (const outcome of outcomes) {
-    if (outcome.kind === "committed" && seenTransactions.get(outcome.txId) !== outcome.facts) throw new Error(`acknowledged write missing: ${outcome.txId}`);
-    if (outcome.kind === "rejected" && seenTransactions.has(outcome.txId)) throw new Error(`rejected write persisted: ${outcome.txId}`);
+    const persisted = outcome.serverTxId === undefined ? undefined : seenTransactions.get(outcome.serverTxId);
+    if (outcome.kind === "committed" && persisted !== outcome.facts) throw new Error(`acknowledged write missing: ${outcome.txId}`);
+    if (outcome.kind === "rejected" && persisted !== undefined) throw new Error(`rejected write persisted: ${outcome.txId}`);
   }
   const coordinator = record(await runtime.audit("coordinator"));
   if (coordinator.visibilityScope === "subtree-vector") {
-    for (const outcome of outcomes.filter(o => o.kind !== "committed")) {
-      const states = rows(await runtime.audit(`transaction?txId=${encodeURIComponent(outcome.txId)}`));
+    for (const outcome of outcomes.filter(x => x.kind !== "committed" && x.serverTxId !== undefined)) {
+      const states = rows(await runtime.audit(`transaction?txId=${encodeURIComponent(outcome.serverTxId!)}`));
       for (const state of states) if (!["complete", "aborted"].includes(String(state.phase))) throw new Error("unresolved unacknowledged transaction coordinator");
     }
   }
   for (const phase of rows(coordinator.phases)) if (!["complete", "aborted"].includes(String(phase.phase))) throw new Error("unresolved coordinator transaction");
-  // Scalar corpus facts have one current value-index entry each. Full row membership is
-  // checked in the log; current unique tuples are checked against the active projection.
   const activeTuples = new Set<string>();
-  for (const txId of seenTransactions.keys()) for (const fact of plans.get(txId)!.facts) {
-    if (fact.retraction) throw new Error("corpus audit does not model retractions; use dedicated protocol tests");
-    activeTuples.add(signature(fact.source, fact.entity, fact.field, fact.value, false));
+  for (const txId of seenTransactions.keys()) {
+    const clientToken = clientTokenByTransaction.get(txId)!;
+    for (const fact of plans.get(clientToken)!.facts) {
+      if (fact.retraction) throw new Error("corpus audit does not model retractions; use dedicated protocol tests");
+      activeTuples.add(signature(fact.source, fact.entity, fact.field, fact.value, false));
+    }
   }
   if (active !== activeTuples.size) throw new Error(`active tuple mismatch ${active} != ${activeTuples.size}`);
-  return { valid: true, persistedFacts: facts, persistedTransactions: seenTransactions.size, activeTuples: active,
-    reconciledUnacknowledgedTransactions: outcomes.filter(x => x.kind === "unknown" && seenTransactions.has(x.txId)).length,
-    uncommittedAtQuiescentAudit: outcomes.filter(x => x.kind === "unknown" && !seenTransactions.has(x.txId)).length,
-    databaseBytes, coordinator };
+  return {valid: true, persistedFacts: facts, persistedTransactions: seenTransactions.size, activeTuples: active,
+    reconciledUnacknowledgedTransactions: outcomes.filter(x => x.kind === "unknown" && x.serverTxId !== undefined && seenTransactions.has(x.serverTxId)).length,
+    uncommittedAtQuiescentAudit: outcomes.filter(x => x.kind === "unknown" && (x.serverTxId === undefined || !seenTransactions.has(x.serverTxId))).length,
+    databaseBytes, coordinator};
 }

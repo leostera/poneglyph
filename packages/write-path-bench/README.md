@@ -8,14 +8,14 @@ Detailed harness parameters, extraction/audit scope, retention policy, and both 
 
 ```text
 local HTTP driver -> gateway -> 1..32 application Workers
-                                   -> @leostera/poneglyph.stateFacts
+                                   -> @leostera/poneglyph.transact
                                    -> database Worker (service binding)
                                    -> real Miniflare SQLite Durable Objects
 ```
 
 All applications use one graph in one database per trial. The gateway selects application services locally; it is not a new database coordinator. Production coordinator/shard write methods are inherited unchanged. The benchmark subclasses add read-only audit methods, reachable only by a token-protected local entrypoint. They must not be exposed on a public cloud route.
 
-The client is a `workspace:*` dependency consuming the built package exports, not a direct import of database internals. `stateFacts` is an added client method delegating to the existing transaction protocol. No faster baseline storage path was introduced. The existing `state` method is retained.
+The client is a `workspace:*` dependency consuming the built package exports, not a direct import of database internals. Each batch's stable benchmark identity is sent as `clientRequestToken`; the service mints the internal transaction ID and returns `{ txId }` only on commit. The harness records that server transaction ID for durable fact/restart audits. No alternate storage path is introduced.
 
 ## Reproduce locally
 
@@ -56,7 +56,7 @@ Optional environment variables:
 - `BENCH_ATTEMPTS`: maximum attempts per logical call; default 8, maximum 30.
 - `BENCH_TIMEOUT_MS`: per-attempt timeout; default 30,000, maximum 120,000.
 
-IDs are unique per run/scenario/batch. Retries retain the exact ID/payload. A concurrency slot includes request and retry/backoff time. Successful responses await the real database commit. Unknown outcomes are retained as unknown to the caller and separately reconciled against quiescent storage; an absent transaction at audit time is not silently reported as a successful load.
+Client request tokens are unique per run/scenario/batch. Retries retain the exact token/payload. A concurrency slot includes request and retry/backoff time. Successful responses await the real database commit and retain the server-minted transaction ID for audit. Unknown outcomes remain unknown to the caller; a missing transaction at quiescent audit is not silently reported as a successful load, and any unacknowledged persisted transaction fails the audit for explicit reconciliation.
 
 Delivery streams the prepared facts with only the outstanding batches in memory. Verification uses a disk-backed SQLite reference/response ledger, then walks the actual fact-store leaves and checks every persisted fact against its transaction's expected fact range. Both pre-/post-restart audits are bounded by page size, not an in-memory copy of the corpus. Latency samples are retained for exact percentiles. The benchmark's local ledger is verification bookkeeping, not part of Poneglyph or an import API. The pre-fix report identifies the unchanged implementation it measured. Subsequent authorized bug fixes are a separately identified revision; transaction/retention/capacity limits remain unchanged; the canonical pooled-ledger/independent-owner architecture is identified by actual bundle inputs.
 

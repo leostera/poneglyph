@@ -52,7 +52,7 @@ test("capacity lookup pages respect SQL bindings for 100, 101, and 1,000 distinc
   } finally { await runtime.mf.dispose(); await rm(directory, { recursive: true, force: true }); }
 });
 
-test("packaged stateFacts path: parallel application Workers, auth, retry identity, query, restart audit", { timeout: 120000 }, async () => {
+test("packaged transact path: parallel application Workers, auth, request-token replay, query, restart audit", { timeout: 120000 }, async () => {
   await buildWorkers();
   const directory = await mkdtemp(resolve(tmpdir(), "poneglyph-write-path-test-"));
   let runtime = await startLocal("bench-integration", directory, 4);
@@ -68,16 +68,19 @@ test("packaged stateFacts path: parallel application Workers, auth, retry identi
     const replay = await fetch(runtime.endpoints[0]!, { method: "POST", headers: { authorization: `Bearer ${runtime.token}` }, body: batches[0]!.body });
     assert.equal(replay.status, 200);
     const conflicting = await fetch(runtime.endpoints[1]!, { method: "POST", headers: { authorization: `Bearer ${runtime.token}` },
-      body: JSON.stringify({ txId: batches[0]!.txId, facts: [facts[19]] }) });
+      body: JSON.stringify({clientRequestToken: batches[0]!.txId, facts: [facts[19]]}) });
     assert.equal(conflicting.status, 409);
     const query = record(await runtime.query('wiki:person:name(Person, "Person 19")'));
     assert.equal((query.rows as unknown[]).length, 1);
     const malformed = await fetch(runtime.endpoints[0]!, { method: "POST", headers: { authorization: `Bearer ${runtime.token}` },
-      body: JSON.stringify({ txId: "bad", facts: [{ entity: "not a fact" }] }) });
+      body: JSON.stringify({clientRequestToken: "bad", facts: [{entity: "not a fact"}]}) });
     assert.equal(malformed.status, 400);
     const token = runtime.token;
     await runtime.mf.dispose();
     runtime = await startLocal("bench-integration", directory, 4, token);
     assert.equal((await verify(runtime, batches, result.outcomes)).persistedFacts, 200);
+    const postRestartReplay = await fetch(runtime.endpoints[0]!, {method: "POST", headers: {authorization: `Bearer ${runtime.token}`}, body: batches[0]!.body});
+    assert.equal(postRestartReplay.status, 200);
+    assert.equal((record(await postRestartReplay.json()).txId), result.outcomes[0]?.serverTxId, "durable request-token mapping survives runtime restart");
   } finally { await runtime.mf.dispose(); await rm(directory, { recursive: true, force: true }); }
 });
