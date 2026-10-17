@@ -73,15 +73,11 @@ export async function main(environment: NodeJS.ProcessEnv = process.env): Promis
     // promises for assertions and drain them even if the move request fails.
     for (const message of pending) void message.catch(() => {});
     const moved = await postJson(`${baseUrl}/api/todo/tasks/${taskId}/move`, { toList: "todo:list:done" }, cookie);
-    const commitSeq = moved["commitSeq"];
     const txId = moved["txId"];
-    if (typeof commitSeq !== "number" || typeof txId !== "string" || moved["status"] !== "committed") {
-      throw new Error(`task move did not return a committed transaction: ${JSON.stringify(moved)}`);
-    }
+    if (typeof txId !== "string") throw new Error(`task move did not return a transaction witness: ${JSON.stringify(moved)}`);
     const [eventA, eventB] = await Promise.all([firstMessage, secondMessage]);
     for (const event of [eventA, eventB]) {
-      if (event["type"] !== "invalidate" || event["graphId"] !== "todo-shared-2026" ||
-          event["txId"] !== txId || event["commitSeq"] !== commitSeq) {
+      if (event["type"] !== "invalidate" || event["graphId"] !== "todo-shared-2026" || event["txId"] !== txId) {
         throw new Error(`client received an unexpected TODO invalidation: ${JSON.stringify(event)}`);
       }
     }
@@ -92,7 +88,7 @@ export async function main(environment: NodeJS.ProcessEnv = process.env): Promis
     const rows = visible["rows"];
     if (!Array.isArray(rows) || rows.length !== 1 || !isRecord(rows[0]) ||
         !isRecord(rows[0]["List"]) || rows[0]["List"]["type"] !== "string" || rows[0]["List"]["value"] !== "todo:list:done") {
-      throw new Error(`cross-shard move was not fully visible at its notification sequence: ${JSON.stringify(visible)}`);
+      throw new Error(`cross-shard move was not fully visible after its successful transaction: ${JSON.stringify(visible)}`);
     }
     console.log(JSON.stringify({
       baseUrl: endpoint.origin,
@@ -103,7 +99,7 @@ export async function main(environment: NodeJS.ProcessEnv = process.env): Promis
       graphId: "todo-shared-2026",
       initialSnapshotSeq: snapshot["snapshotSeq"],
       taskId,
-      crossShardMove: { txId, status: moved["status"], commitSeq },
+      crossShardMove: {txId},
       authenticatedLiveClients: 2,
       invalidationSentAfterVisibleCommit: true,
       querySnapshotSeq: visible["snapshotSeq"],

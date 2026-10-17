@@ -14,18 +14,18 @@ export function deploymentUrl(input: string | undefined): URL {
 
 export async function main(environment: NodeJS.ProcessEnv = process.env, fetcher: typeof fetch = fetch): Promise<void> {
   const endpoint = deploymentUrl(environment["PONEGLYPH_CLOUDFLARE_URL"]);
-  const graphId = `cf-scaleout-${randomUUID()}`, txId = `poneglyph:tx:${randomUUID()}`;
+  const graphId = `cf-scaleout-${randomUUID()}`, clientRequestToken = `cf-scaleout:${randomUUID()}`;
   const entities = Array.from({ length: 4 }, (_, index) => `wiki:person:cf-scaleout-${index}`);
   const facts = entities.map((entity, index) => ({
     source: "agent:cf-scaleout-validation", entity, field: "schema:name",
     value: { type: "text" as const, value: `Poneglyph scale-out test ${index}` }, retraction: false,
   }));
   const graph = createDatabase({ url: endpoint, fetch: fetcher }).defineGraph({ id: graphId });
-  // The public client parses exact receipt identity and does not silently retry
-  // uncertain delivery. A manual reconciliation must reuse this graph/ID/input.
-  const committed = await graph.transact(facts, { txId });
-  const replayed = await graph.transact(facts, { txId });
-  assert.deepEqual(replayed, committed, "same identity/input must return the original exact receipt");
+  // The server mints the internal transaction ID. The request token lets an
+  // operator safely replay this exact logical request after uncertain delivery.
+  const committed = await graph.transact(facts, {clientRequestToken});
+  const replayed = await graph.transact(facts, {clientRequestToken});
+  assert.deepEqual(replayed, committed, "same token/input must return the original transaction witness");
   const query = await graph.query('schema:name(Entity, Name), startsWith(Name, "Poneglyph scale-out test")');
   const expected = facts.map(fact => JSON.stringify([{ type: "string", value: fact.entity }, { type: "string", value: fact.value.value }])).sort();
   const actual = query.rows.map(row => {
@@ -34,8 +34,8 @@ export async function main(environment: NodeJS.ProcessEnv = process.env, fetcher
   }).sort();
   assert.deepEqual(actual, expected, "exact typed multiset of all acknowledged entities/names");
   // Neither a graph-global scalar clock nor one physical root is promised by G.
-  console.log(JSON.stringify({ baseUrl: endpoint.origin, graphId, txId, factsWritten: facts.length,
-    commitSeq: committed.commitSeq, replayStatus: replayed.status, snapshotSeq: query.snapshotSeq,
+  console.log(JSON.stringify({baseUrl: endpoint.origin, graphId, txId: committed.txId, factsWritten: facts.length,
+    replayTxId: replayed.txId, snapshotSeq: query.snapshotSeq,
     rows: query.rows.length, metrics: query.metrics }, null, 2));
 }
 

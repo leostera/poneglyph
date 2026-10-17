@@ -333,12 +333,12 @@ function isCharacterCategory(category: string): boolean {
 }
 
 export async function writeBatch(baseUrl: string, graphId: string, sequence: number, facts: readonly InputFact[], fetcher: typeof fetch = fetch): Promise<void> {
-  const txId = `poneglyph:tx:onepiece-local:${graphId}:${sequence}`;
-  if (encoder.encode(JSON.stringify({ txId, facts })).byteLength > 1_000_000) throw new Error(`transaction ${sequence} exceeds 1 MB`);
-  const graph = createDatabase({ url: baseUrl, fetch: fetcher }).defineGraph({ id: graphId });
-  // Sequence numbers name inputs; they are not a graph-global commit clock.
-  // Unknown delivery is surfaced with its original identity, never auto-retried.
-  await graph.transact(facts, { txId });
+  const clientRequestToken = `onepiece-load:${graphId}:${sequence}`;
+  if (encoder.encode(JSON.stringify({clientRequestToken, facts})).byteLength > 1_000_000) throw new Error(`transaction ${sequence} exceeds 1 MB`);
+  const graph = createDatabase({url: baseUrl, fetch: fetcher}).defineGraph({id: graphId});
+  // The batch ordinal is a retry key, not a transaction ID or graph sequence.
+  // Unknown delivery is surfaced; a caller may retry only the same token/facts.
+  await graph.transact(facts, {clientRequestToken});
 }
 
 async function runQueries(baseUrl: string, graphId: string, queryRepetitions: number): Promise<readonly Record<string, unknown>[]> {

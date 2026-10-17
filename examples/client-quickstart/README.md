@@ -1,6 +1,6 @@
 # Client quickstart example
 
-Private workspace example consuming `@leostera/poneglyph`'s built exports. Writes three related facts under a stable caller identity and queries a three-relation join.
+Private workspace example consuming `@leostera/poneglyph`'s built exports. Writes three related facts with a stable `clientRequestToken` and queries a three-relation join. The server generates the internal transaction ID and returns it only after success.
 
 From the repository root:
 

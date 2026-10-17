@@ -1,6 +1,6 @@
 # Deployed smoke example
 
-Private workspace HTTP smoke example consuming the packaged client. `build`, `typecheck`, `check` and `test` run offline; tests verify original identity/payload replay and exact typed rows with fake responses. The target is explicit and credential-free, transport is not silently retried, and no one-root or global-clock assumption is imposed. They do **not** establish cloud durability or certify a deployed topology.
+Private workspace HTTP smoke example consuming the packaged client. `build`, `typecheck`, `check` and `test` run offline; tests verify same-token/exact-payload replay and exact typed rows with fake responses. The target is explicit and credential-free, transport is not silently retried, and no one-root or global-clock assumption is imposed. They do **not** establish cloud durability or certify a deployed topology.
 
 ```sh
 bun run --cwd examples/deployed-smoke check

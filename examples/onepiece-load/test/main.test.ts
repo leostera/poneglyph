@@ -46,12 +46,13 @@ test("title identity cannot merge punctuation, case or Unicode variants", () => 
   assert.equal(new Set(entities).size, titles.length);
 });
 
-test("batch ordinal is not assumed to be a global commit sequence", async () => {
-  const facts = pageFacts({ title: "Test Page", namespace: "0", text: "" });
+test("batch ordinal names a request token, not a transaction ID or commit sequence", async () => {
+  const facts = pageFacts({title: "Test Page", namespace: "0", text: ""});
   await writeBatch("https://example.invalid", "example-local", 1, facts, async (_input, init) => {
     const body: Record<string, unknown> = JSON.parse(String(init?.body));
-    assert.equal(body["txId"], "poneglyph:tx:onepiece-local:example-local:1");
-    return Response.json({ txId: body["txId"], status: "committed", commitSeq: 99 });
+    assert.equal(body["clientRequestToken"], "onepiece-load:example-local:1");
+    assert.equal(Object.hasOwn(body, "txId"), false);
+    return Response.json({txId: "poneglyph:tx:server-minted"});
   });
 });
 

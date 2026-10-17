@@ -10,7 +10,7 @@ function fakeEndpoint(corrupt = false) {
     const body: Record<string, unknown> = JSON.parse(String(init?.body));
     if (String(input).endsWith("/transactions")) {
       writes.push(body);
-      return Response.json({ status: "committed", commitSeq: 7, txId: body["txId"] });
+      return Response.json({txId: "poneglyph:tx:smoke-witness"});
     }
     const facts = writes[0]?.["facts"] as { entity: string; value: { value: string } }[];
     const rows = facts.map(fact => ({ Entity: { type: "string", value: fact.entity }, Name: { type: "string", value: fact.value.value } }));
@@ -31,6 +31,8 @@ test("smoke verifies original identity/payload and exact typed rows without assu
   const endpoint = fakeEndpoint(), log = t.mock.method(console, "log", () => {});
   await main(target, endpoint.fetcher);
   assert.equal(endpoint.writes.length, 2);
+  assert.equal(typeof endpoint.writes[0]?.["clientRequestToken"], "string");
+  assert.equal(Object.hasOwn(endpoint.writes[0]!, "txId"), false);
   assert.deepEqual(endpoint.writes[0], endpoint.writes[1]);
   assert.equal(log.mock.callCount(), 1);
 });

@@ -9,7 +9,7 @@ function socket(): Socket & EventEmitter {
 
 test("TODO invalidation decoding accepts UTF-8 object messages", async () => {
   const client = socket(), pending = nextMessage(client);
-  const event = { type: "invalidate", graphId: "todo-shared-2026", txId: "test:move", commitSeq: 7 };
+  const event = {type: "invalidate", graphId: "todo-shared-2026", txId: "poneglyph:tx:test-move"};
   client.emit("message", Buffer.from(JSON.stringify(event)));
   assert.deepEqual(await pending, event);
   assert.equal(client.listenerCount("message"), 0);

@@ -23,8 +23,8 @@ const facts: readonly FactInput[] = [
 
 export async function quickstart(url: string, fetcher: typeof fetch = fetch) {
   const graph = createDatabase({ url, fetch: fetcher }).defineGraph({ id: "release-assistant" });
-  // Reusing this identity with the same facts makes reruns idempotent.
-  const txId = await graph.stateFacts(facts, { txId: "release:quickstart-v1" });
+  // Reusing this logical request token with the same facts makes retries idempotent.
+  const {txId} = await graph.transact(facts, {clientRequestToken: "release:quickstart-v1"});
   const result = await graph.query(
     'app:service:blocked-by(Service, Task), app:task:status(Task, "open"), app:task:owner(Task, Owner)',
   );
