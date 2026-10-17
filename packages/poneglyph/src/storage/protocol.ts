@@ -2,7 +2,8 @@ import { parseFactDraft, type FactDraft } from "../domain/fact.js";
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseTransactionId, parseUri, type TransactionId } from "../domain/identifiers.js";
 import { isRecord, parsed, rejected, type ParseResult } from "../domain/result.js";
-import { parseDatalogValue, type DatalogValue } from "../datalog/value.js";
+import { parseDatalogValue, sameDatalogValue, type DatalogValue } from "../datalog/value.js";
+import { MAX_QUERY_VALUE_SET_SIZE } from "./constants.js";
 import { parseVirtualKey, parseVirtualPrefix, type VirtualKey, type VirtualPrefix } from "./keys.js";
 
 export type IndexedFact = Readonly<{ index: number; fact: FactDraft; virtualKey: VirtualKey }>;
@@ -30,6 +31,7 @@ export type ScanRequest = Readonly<{
   joinField?: string;
   entity?: DatalogValue;
   value?: DatalogValue;
+  values?: readonly DatalogValue[];
   snapshotSeq: number;
   leaseExpiresAtMs: number;
 }>;
@@ -124,6 +126,7 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
     leaseExpiresAtMs: number;
     entity?: DatalogValue;
     value?: DatalogValue;
+    values?: readonly DatalogValue[];
   } = {
     graphId: graphId.value,
     shardPrefix: shardPrefix.value,
@@ -142,6 +145,20 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
     const value = parseDatalogValue(input["value"], "scan.value");
     if (!value.ok) return value;
     request.value = value.value;
+  }
+  if (input["values"] !== undefined) {
+    if (!Array.isArray(input["values"]) || input["values"].length === 0 || input["values"].length > MAX_QUERY_VALUE_SET_SIZE) {
+      return rejected("scan.values", `expected between 1 and ${MAX_QUERY_VALUE_SET_SIZE} values`);
+    }
+    if (request.value !== undefined || request.entity !== undefined) return rejected("scan.values", "value-set scans cannot include entity or single-value filters");
+    const values: DatalogValue[] = [];
+    for (const [index, inputValue] of input["values"].entries()) {
+      const value = parseDatalogValue(inputValue, `scan.values[${index}]`);
+      if (!value.ok) return value;
+      if (values.some(existing => sameDatalogValue(existing, value.value))) return rejected(`scan.values[${index}]`, "expected distinct values");
+      values.push(value.value);
+    }
+    request.values = Object.freeze(values);
   }
 
   if (input["joinField"] !== undefined) {

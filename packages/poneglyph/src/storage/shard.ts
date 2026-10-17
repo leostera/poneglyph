@@ -569,6 +569,17 @@ export class GraphShardDO extends DurableObject<Env> {
       clauses.push(`value_key IN (${keys.map(() => "?").join(", ")})`, "datalog_type = ?", "datalog_value = ?");
       args.push(...keys, scan.value.type, scan.value.value);
     }
+    if (scan.values !== undefined) {
+      const keys = [...new Set(scan.values.flatMap(value => valueIndexKeysForDatalogValue(value)))];
+      const valuePredicates = scan.values.map(() => "(datalog_type = ? AND datalog_value = ?)");
+      if (args.length + keys.length + scan.values.length * 2 > MAX_SQL_BINDINGS) {
+        throw new ShardProtocolError(400, "value-set scan exceeds SQLite binding limit");
+      }
+      clauses.push(`value_key IN (${keys.map(() => "?").join(", ")})`);
+      args.push(...keys);
+      clauses.push(`(${valuePredicates.join(" OR ")})`);
+      for (const value of scan.values) args.push(value.type, value.value);
+    }
 
     const filtered = `SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE ${clauses.join(" AND ")}`;
     if (scan.joinField !== undefined) {

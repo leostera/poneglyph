@@ -3,6 +3,7 @@ import { parseFactDraft } from "../src/domain/fact.js";
 import type { FactDraft } from "../src/domain/fact.js";
 import type { FactSource } from "../src/datalog/fact-source.js";
 import { parseDatalogQuery } from "../src/datalog/parser.js";
+import type { DatalogValue } from "../src/datalog/value.js";
 import { evaluateDatalog, QueryResultLimitExceeded, type Binding } from "../src/datalog/evaluator.js";
 import { InMemoryFactSource } from "./support/in-memory-fact-source.js";
 
@@ -130,6 +131,41 @@ describe("bounded positive Datalog subset", () => {
     expect(triples).toEqual([nami, nami, ...targets.slice(1).map((title) => [luffy, title, `wiki:onepiece:page:${title.toLowerCase()}`])].sort());
     expect(maxConcurrentFinalScans).toBe(4);
     expect(activeFinalScans).toBe(0);
+  });
+
+  it("batches final lookup values without collapsing duplicate prefix rows", async () => {
+    const luffy = "wiki:onepiece:page:luffy";
+    const targets = ["Nami", "Zoro", "Robin", "Chopper", "Sanji"];
+    const stored = new InMemoryFactSource([
+      fact(luffy, "wiki:page:title", {type: "text", value: "Monkey D. Luffy"}),
+      fact(luffy, "wiki:page:link", {type: "text", value: "Nami"}, "wiki:source:first"),
+      fact(luffy, "wiki:page:link", {type: "text", value: "Nami"}, "wiki:source:second"),
+      ...targets.slice(1).map(title => fact(luffy, "wiki:page:link", {type: "text", value: title})),
+      ...targets.map(title => fact(`wiki:onepiece:page:${title.toLowerCase()}`, "wiki:page:title", {type: "text", value: title})),
+    ]);
+    const valueSets: DatalogValue[][] = [];
+    const source: FactSource = {
+      scan: (lookup, signal) => stored.scan(lookup, signal),
+      scanValues(lookup, signal) {
+        valueSets.push([...lookup.values]);
+        const wanted = new Set(lookup.values.map(value => JSON.stringify([value.type, value.value])));
+        return (async function* () {
+          for await (const tuple of stored.scan({field: lookup.field}, signal)) {
+            if (wanted.has(JSON.stringify([tuple.value.type, tuple.value.value]))) yield tuple;
+          }
+        })();
+      },
+    };
+    const query = unwrap(parseDatalogQuery(
+      'wiki:page:title(Page, "Monkey D. Luffy"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle)',
+    ));
+
+    const rows = await collect(evaluateDatalog(query, source));
+    const triples = rows.map(row => [stringValue(row, "Page"), stringValue(row, "TargetTitle"), stringValue(row, "TargetPage")]).sort();
+    const nami = [luffy, "Nami", "wiki:onepiece:page:nami"];
+    expect(triples).toEqual([nami, nami, ...targets.slice(1).map(title => [luffy, title, `wiki:onepiece:page:${title.toLowerCase()}`])].sort());
+    expect(valueSets).toHaveLength(1);
+    expect(valueSets[0]?.map(value => value.value).sort()).toEqual([...targets].sort());
   });
 
   it("drains a final-scan wave and rejects instead of emitting partial rows on failure", async () => {

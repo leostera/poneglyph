@@ -11,6 +11,7 @@ export type EvaluationOptions = Readonly<{
 
 const DEFAULT_MAX_RESULTS = 10_000;
 const MAX_CONCURRENT_FINAL_SCANS = 4;
+const MAX_FINAL_JOIN_BINDINGS = 16;
 
 export class QueryResultLimitExceeded extends Error {
   constructor(readonly maxResults: number) {
@@ -61,7 +62,8 @@ async function* evaluateQueryFacts(
     return;
   }
   if (canScanFinalJoinConcurrently(clauses)) {
-    yield* evaluateFinalJoinConcurrently(clauses, facts, signal);
+    if (facts.scanValues) yield* evaluateFinalJoinBatched(clauses, facts, signal);
+    else yield* evaluateFinalJoinConcurrently(clauses, facts, signal);
     return;
   }
   yield* evaluateFacts(clauses, facts, signal, 0, new Map<string, DatalogValue>());
@@ -133,6 +135,63 @@ async function* evaluateFinalJoinConcurrently(
   } finally {
     await prefix.return?.(undefined);
   }
+}
+
+async function* evaluateFinalJoinBatched(
+  clauses: readonly FactClause[], facts: FactSource, signal: AbortSignal | undefined,
+): AsyncGenerator<Binding> {
+  const final = clauses[2];
+  if (!final || final.value.kind !== "variable" || !facts.scanValues) return;
+  const bindingsByValue = new Map<string, {value: DatalogValue; bindings: Binding[]}>();
+  const prefix = evaluateFacts(clauses.slice(0, -1), facts, signal, 0, new Map<string, DatalogValue>())[Symbol.asyncIterator]();
+  let prefixDone = false;
+  let bufferedBindings = 0;
+
+  const flush = async function* (): AsyncGenerator<Binding> {
+    if (bindingsByValue.size === 0) return;
+    const values = [...bindingsByValue.values()].map(group => group.value);
+    for await (const tuple of facts.scanValues!({field: final.predicate, values}, signal)) {
+      throwIfAborted(signal);
+      const matches = bindingsByValue.get(valueKey(tuple.value))?.bindings;
+      if (!matches) continue;
+      for (const binding of matches) {
+        const next = new Map(binding);
+        if (unify(final.entity, tuple.entity, next) && unify(final.value, tuple.value, next)) yield next;
+      }
+    }
+    bindingsByValue.clear();
+    bufferedBindings = 0;
+  };
+
+  try {
+    while (!prefixDone) {
+      const next = await prefix.next();
+      if (next.done) {
+        prefixDone = true;
+        yield* flush();
+        continue;
+      }
+      const binding = next.value;
+      const value = binding.get(final.value.name);
+      if (value === undefined) throw new Error(`final join value ${final.value.name} is not bound`);
+      const key = valueKey(value);
+      let group = bindingsByValue.get(key);
+      if (group === undefined) {
+        if (bindingsByValue.size === MAX_FINAL_JOIN_BINDINGS) yield* flush();
+        group = {value, bindings: []};
+        bindingsByValue.set(key, group);
+      }
+      group.bindings.push(binding);
+      bufferedBindings += 1;
+      if (bufferedBindings >= MAX_FINAL_JOIN_BINDINGS) yield* flush();
+    }
+  } finally {
+    await prefix.return?.(undefined);
+  }
+}
+
+function valueKey(value: DatalogValue): string {
+  return JSON.stringify([value.type, value.value]);
 }
 
 async function collectFinalMatches(

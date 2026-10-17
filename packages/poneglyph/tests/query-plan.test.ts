@@ -62,6 +62,75 @@ describe("owner-local query plan", () => {
     });
   });
 
+  it("batches multi-value final joins into one forest traversal and preserves bag multiplicity", async () => {
+    const graph = `test-${crypto.randomUUID()}`;
+    const targets = ["Nami", "Zoro", "Robin", "Chopper", "Sanji", "Usopp", "Franky", "Brook", "Jinbe", "Vivi", "Law", "Ace", "Sabo", "Shanks", "Mihawk", "Buggy"];
+    const facts: FactInput[] = [
+      {source: "agent:luffy-title", entity: "wiki:onepiece:page:luffy", field: "wiki:page:title", value: {type: "text", value: "Monkey D. Luffy"}},
+      ...targets.map(title => ({source: `agent:link-${title}`, entity: "wiki:onepiece:page:luffy", field: "wiki:page:link", value: {type: "text" as const, value: title}})),
+      ...targets.map(title => ({source: `agent:title-${title}`, entity: `wiki:onepiece:page:${title.toLowerCase()}`, field: "wiki:page:title", value: {type: "text" as const, value: title}})),
+    ];
+    await write(graph, "query:batched-final-join", facts);
+
+    const response = await query(graph,
+      'wiki:page:title(Page, "Monkey D. Luffy"), wiki:page:link(Page, TargetTitle), wiki:page:title(TargetPage, TargetTitle)',
+    );
+    expect(response.status).toBe(200);
+    const result = await response.json() as QueryResult;
+    const triples = result.rows.map(row => [row["Page"]?.value, row["TargetTitle"]?.value, row["TargetPage"]?.value]).sort();
+    expect(triples).toEqual(targets.map(title => ["wiki:onepiece:page:luffy", title, `wiki:onepiece:page:${title.toLowerCase()}`]).sort());
+    expect(result.metrics).toMatchObject({scanCalls: 3, shardRequests: 33, distinctShardsTouched: 16, treeReadLeaseAcquisitions: 16});
+
+    const root = treeForKey(await virtualKeyForEntity(graph, "wiki:onepiece:page:luffy"));
+    const valueKeys = new Set<string>();
+    const args: (string | number)[] = ["wiki:page:title", 1, 1];
+    for (const title of targets) {
+      for (const key of valueIndexKeysForDatalogValue({type: "string", value: title})) valueKeys.add(key);
+    }
+    const keys = [...valueKeys];
+    args.push(...keys);
+    for (const title of targets) args.push("string", title);
+    const valuePredicates = targets.map(() => "(datalog_type = ? AND datalog_value = ?)");
+    const plan = await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) =>
+      state.storage.sql.exec<{detail: string}>(
+        `EXPLAIN QUERY PLAN SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values
+         WHERE field = ? AND valid_from_seq <= ? AND (valid_to_seq IS NULL OR valid_to_seq > ?)
+         AND value_key IN (${keys.map(() => "?").join(", ")}) AND (${valuePredicates.join(" OR ")})`,
+        ...args,
+      ).toArray().map(row => row.detail).join(" "),
+    );
+    expect(plan).toContain("active_values_by_field_value_snapshot");
+  });
+
+  it("keeps typed candidates distinct in a multi-value final lookup", async () => {
+    const graph = `test-${crypto.randomUUID()}`, sourceEntity = "test:source";
+    await write(graph, "query:multi-value-types", [
+      {source: "agent:source-title", entity: sourceEntity, field: "test:title", value: {type: "text", value: "Source"}},
+      ...["true", "7", "null"].map((value, index) => ({source: `agent:link-${index}`, entity: sourceEntity, field: "test:link", value: {type: "text" as const, value}})),
+      {source: "agent:true-text", entity: "test:true-text", field: "test:title", value: {type: "text", value: "true"}},
+      {source: "agent:true-boolean", entity: "test:true-boolean", field: "test:title", value: {type: "boolean", value: true}},
+      {source: "agent:seven-text", entity: "test:seven-text", field: "test:title", value: {type: "text", value: "7"}},
+      {source: "agent:seven-integer", entity: "test:seven-integer", field: "test:title", value: {type: "number", value: "7"}},
+      {source: "agent:null-text", entity: "test:null-text", field: "test:title", value: {type: "text", value: "null"}},
+      {source: "agent:null-value", entity: "test:null-value", field: "test:title", value: {type: "null"}},
+    ]);
+
+    const response = await query(graph,
+      'test:title(Page, "Source"), test:link(Page, TargetTitle), test:title(TargetPage, TargetTitle)',
+    );
+    expect(response.status).toBe(200);
+    const result = await response.json() as QueryResult;
+    const triples = result.rows.map(row => [row["TargetTitle"]?.type, row["TargetTitle"]?.value, row["TargetPage"]?.value]).sort();
+    expect(triples).toEqual([
+      ["string", "true", "test:true-text"],
+      ["string", "true", "test:true-boolean"],
+      ["string", "7", "test:seven-text"],
+      ["string", "null", "test:null-text"],
+      ["string", "null", "test:null-value"],
+    ].sort());
+    expect(result.metrics).toMatchObject({scanCalls: 3, shardRequests: 33, treeReadLeaseAcquisitions: 16});
+  });
+
   it("uses the existing FactValue index for bound values without collapsing exposed Datalog types", async () => {
     const graph = `test-${crypto.randomUUID()}`;
     const facts: FactInput[] = [

@@ -1,4 +1,5 @@
-import type { FactLookup, FactSource, FactTuple } from "../datalog/fact-source.js";
+import type { FactLookup, FactSource, FactTuple, FactValueSetLookup } from "../datalog/fact-source.js";
+import type { DatalogValue } from "../datalog/value.js";
 import type { QueryTiming } from "../domain/query-timing.js";
 import type { StorageEnv as Env } from "./environment.js";
 import { treeForKey, type TreeSnapshot } from "./forest.js";
@@ -12,10 +13,15 @@ import {
   MAX_QUERY_TUPLES,
   MAX_QUERY_SHARD_FANOUT,
   MAX_QUERY_DIRECTORY_NODES,
+  MAX_QUERY_VALUE_SET_SIZE,
+  MAX_SQL_BINDINGS,
   MAX_TRANSACTION_BYTES,
 } from "./constants.js";
 import { shardObjectName } from "./keys.js";
 import { listShardLeaves, resolveEntityLeaf, type LeafAddress } from "./routing.js";
+import { valueIndexKeysForDatalogValue } from "./value-index.js";
+
+const MAX_VALUE_SET_JSON_BYTES = 13_000;
 
 export type QueryMetrics = {
   scanCalls: number;
@@ -51,7 +57,33 @@ export class DistributedFactSource implements FactSource {
     return this.scanShards(lookup, outputField, signal);
   }
 
-  private async *scanShards(lookup: FactLookup, outputField: FactLookup["field"] | undefined, signal?: AbortSignal): AsyncGenerator<FactTuple> {
+  scanValues(lookup: FactValueSetLookup, signal?: AbortSignal): AsyncIterable<FactTuple> {
+    return this.scanValueSets(lookup, signal);
+  }
+
+  private async *scanValueSets(lookup: FactValueSetLookup, signal?: AbortSignal): AsyncGenerator<FactTuple> {
+    const encoder = new TextEncoder();
+    const batchable: DatalogValue[] = [];
+    for (const value of distinctValues(lookup.values)) {
+      if (encoder.encode(JSON.stringify([value])).byteLength + 2 > MAX_VALUE_SET_JSON_BYTES) {
+        // Preserve the original single-value request path for unusually large
+        // values; the shard's existing request-body limit remains authoritative.
+        yield* this.scanShards({field: lookup.field, value}, undefined, signal);
+      } else {
+        batchable.push(value);
+      }
+    }
+    for (const values of partitionValueSets(batchable)) {
+      yield* this.scanShards({field: lookup.field}, undefined, signal, values);
+    }
+  }
+
+  private async *scanShards(
+    lookup: FactLookup,
+    outputField: FactLookup["field"] | undefined,
+    signal?: AbortSignal,
+    values?: readonly DatalogValue[],
+  ): AsyncGenerator<FactTuple> {
     const shardAddresses = await this.targetShards(lookup);
     if (shardAddresses === undefined) return;
     this.metrics.scanCalls += 1;
@@ -77,6 +109,7 @@ export class DistributedFactSource implements FactSource {
       };
       if (lookup.entity !== undefined) body["entity"] = lookup.entity;
       if (lookup.value !== undefined) body["value"] = lookup.value;
+      if (values !== undefined) body["values"] = values;
       if (outputField !== undefined) body["joinField"] = outputField;
 
       const init: RequestInit = {
@@ -168,4 +201,45 @@ export class DistributedFactSource implements FactSource {
     this.entityRoutes.set(entity.value, route.address);
     return [route.address];
   }
+}
+
+function distinctValues(input: readonly DatalogValue[]): readonly DatalogValue[] {
+  const unique: DatalogValue[] = [];
+  const seen = new Set<string>();
+  for (const value of input) {
+    const key = JSON.stringify([value.type, value.value]);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(value);
+  }
+  return unique;
+}
+
+function* partitionValueSets(input: readonly DatalogValue[]): Generator<readonly DatalogValue[]> {
+  const encoder = new TextEncoder();
+  let values: DatalogValue[] = [];
+  let sqlBindings = 3;
+  let jsonBytes = 2;
+  for (const value of input) {
+    const valueBindings = valueIndexKeysForDatalogValue(value).length + 2;
+    if (3 + valueBindings > MAX_SQL_BINDINGS) throw new QueryScanBudgetExceeded("query value-set SQL binding budget exceeded");
+    const itemBytes = encoder.encode(JSON.stringify(value)).byteLength;
+    const nextJsonBytes = jsonBytes + (values.length === 0 ? 0 : 1) + itemBytes;
+    if (values.length > 0 && (
+      values.length >= MAX_QUERY_VALUE_SET_SIZE ||
+      sqlBindings + valueBindings > MAX_SQL_BINDINGS ||
+      nextJsonBytes > MAX_VALUE_SET_JSON_BYTES
+    )) {
+      yield Object.freeze(values);
+      values = [];
+      sqlBindings = 3;
+      jsonBytes = 2;
+    }
+    const itemJsonBytes = jsonBytes + (values.length === 0 ? 0 : 1) + itemBytes;
+    if (itemJsonBytes > MAX_VALUE_SET_JSON_BYTES) throw new QueryScanBudgetExceeded("query value-set request byte budget exceeded");
+    values.push(value);
+    sqlBindings += valueBindings;
+    jsonBytes = itemJsonBytes;
+  }
+  if (values.length > 0) yield Object.freeze(values);
 }
