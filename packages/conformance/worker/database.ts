@@ -1,18 +1,27 @@
 import original, { TodoHubDO } from "../../poneglyph/src/worker.js";
-import { GraphCoordinatorDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../poneglyph/src/storage/implementation.js";
+import { GraphCoordinatorDO, GraphLedgerDO, GraphTreeDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../poneglyph/src/storage/implementation.js";
 
 import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
 import {WriteBarrier} from "./write-barrier.js";
 import {ApplyGate} from "./apply-gate.js";
 import {authorityActors, ownerActorName} from "./authority-placement.js";
-import {coordinatorAuthority, shardAuthority, ownerWitness, participantStage, type AuthorityRole} from "./authority-sql.js";
+import {facadeAuthority, ledgerAuthority, ownerAuthority, shardAuthority, ownerWitness, participantStage, type AuthorityRole} from "./authority-sql.js";
 import {parseReply} from "../response-evidence.js";
 import {parseAuthorityIdentities} from "./authority-controls.js";
 
 import {TREE_DEPTH} from "../../poneglyph/src/storage/forest.js";
+import {parseFactBatch} from "../../poneglyph/src/domain/fact.js";
+import {parseGraphId} from "../../poneglyph/src/domain/graph-id.js";
+import {dispatchInternalTransaction} from "../../poneglyph/src/storage/transaction-request.js";
 export {TodoHubDO};
-export class InspectionCoordinatorDO extends GraphCoordinatorDO {
-  authorityStatus(role: AuthorityRole, after: number) {return coordinatorAuthority(this.ctx.storage, role, after);}
+export class InspectionFacadeDO extends GraphCoordinatorDO {
+  authorityStatus(_role: AuthorityRole, after: number) {return facadeAuthority(after);}
+}
+export class InspectionLedgerDO extends GraphLedgerDO {
+  authorityStatus(_role: AuthorityRole, after: number) {return ledgerAuthority(this.ctx.storage, after);}
+}
+export class InspectionTreeDO extends GraphTreeDO {
+  authorityStatus(_role: AuthorityRole, after: number) {return ownerAuthority(this.ctx.storage, after);}
   ownerWitness(txId: string) {return ownerWitness(this.ctx.storage, txId);}
 }
 export class InspectionShardDO extends GraphShardDO {
@@ -63,10 +72,34 @@ export class InspectionShardDO extends GraphShardDO {
       `SELECT rowid AS cursor, * FROM ${table} WHERE rowid > ?${current} ORDER BY rowid LIMIT 128`, after).toArray()};
   }
 }
-interface InspectionEnv extends Env {GRAPH_COORDINATORS: DurableObjectNamespace<InspectionCoordinatorDO>; GRAPH_SHARDS: DurableObjectNamespace<InspectionShardDO>; AUDIT_TOKEN: string}
+interface InspectionEnv extends Env {
+  GRAPH_FACADES: DurableObjectNamespace<InspectionFacadeDO>;
+  GRAPH_LEDGERS: DurableObjectNamespace<InspectionLedgerDO>;
+  GRAPH_TREES: DurableObjectNamespace<InspectionTreeDO>;
+  GRAPH_SHARDS: DurableObjectNamespace<InspectionShardDO>;
+  AUDIT_TOKEN: string;
+}
 export default {
   async fetch(request: Request, env: InspectionEnv) {
     const url = new URL(request.url);
+    if (url.pathname === "/__conformance/transaction") {
+      if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
+      const body: unknown = await request.json().catch(() => undefined);
+      if (typeof body !== "object" || body === null || Array.isArray(body)) return new Response("invalid internal transaction", {status: 400});
+      const input = body as Record<string, unknown>;
+      const graph = parseGraphId(input["graph"]);
+      const rawFacts = input["facts"];
+      const facts = Array.isArray(rawFacts) ? rawFacts.map(fact => {
+        if (typeof fact !== "object" || fact === null || Array.isArray(fact)) return fact;
+        const draft = fact as Record<string, unknown>;
+        return {...draft, retraction: draft["retraction"] ?? false};
+      }) : rawFacts;
+      const batch = parseFactBatch({txId: input["txId"], facts});
+      if (!graph.ok || !batch.ok || Object.keys(input).some(key => !["graph", "txId", "facts"].includes(key))) {
+        return new Response("invalid internal transaction", {status: 400});
+      }
+      return dispatchInternalTransaction(env, graph.value, batch.value);
+    }
     if (url.pathname === "/__e2e/authority-actors") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
       const graph = url.searchParams.get("graph");
@@ -81,7 +114,10 @@ export default {
       const graph = url.searchParams.get("graph"), name = url.searchParams.get("name"), role = url.searchParams.get("role");
       const after = Number(url.searchParams.get("after") ?? 0);
       if (!graph || !name || !(name === coordinatorObjectName(graph) || name.startsWith(`${coordinatorObjectName(graph)}:`)) || (role !== "graph" && role !== "owner" && role !== "ledger") || !Number.isSafeInteger(after) || after < 0) return new Response("invalid authority inspection", {status: 400});
-      return Response.json(await env.GRAPH_COORDINATORS.getByName(name).authorityStatus(role, after));
+      const stub = role === "graph" ? env.GRAPH_FACADES.getByName(name)
+        : role === "ledger" ? env.GRAPH_LEDGERS.getByName(name)
+        : env.GRAPH_TREES.getByName(name);
+      return Response.json(await stub.authorityStatus(role, after));
     }
     if (url.pathname === "/__e2e/owner-witness") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
@@ -89,7 +125,7 @@ export default {
       const id = url.searchParams.get("txId");
       if (!graph || !prefix.ok || prefix.value.length !== TREE_DEPTH || !id) return new Response("invalid owner witness request", {status: 400});
       const ids = parseAuthorityIdentities([id]);
-      return Response.json(await env.GRAPH_COORDINATORS.getByName(ownerActorName(graph, prefix.value)).ownerWitness(ids[0]!));
+      return Response.json(await env.GRAPH_TREES.getByName(ownerActorName(graph, prefix.value)).ownerWitness(ids[0]!));
     }
     if (url.pathname === "/__e2e/participant-stage" || url.pathname === "/__e2e/apply-gate") {
       if (request.headers.get("authorization") !== `Bearer ${env.AUDIT_TOKEN}`) return new Response("unauthorized", {status: 401});
@@ -138,7 +174,7 @@ export default {
       if (!graph || !prefix.ok || (pages !== undefined && (!Number.isSafeInteger(pages) || pages < 1))) return new Response("invalid split control", {status: 400});
       // Native migration only: force requests an actual small-data split, not
       // synthetic accounting/capacity or a SQL seed/repair path.
-      return env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(graph)).fetch("https://coordinator.internal/_split", {
+      return env.GRAPH_FACADES.getByName(coordinatorObjectName(graph)).fetch("https://coordinator.internal/_split", {
         method: "POST", headers: {"content-type": "application/json"},
         body: JSON.stringify({graphId: graph, prefix: prefix.value, force: true, ...(pages === undefined ? {} : {stopAfterPages: pages})}),
       });

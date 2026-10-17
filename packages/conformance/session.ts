@@ -51,7 +51,10 @@ export class Session {
       phase = "reading-body";
       text = await response.text();
       phase = "parsing-reply";
-      const body = parseReply(JSON.parse(text));
+      let decoded: unknown;
+      try {decoded = JSON.parse(text) as unknown;}
+      catch {throw new Error(`unexpected non-JSON HTTP ${response.status} reply: ${text.slice(0, 512)}`);}
+      const body = parseReply(decoded);
       this.outcomes.push({operation, app, status: response.status, body, invokedAt, recordedAt: new Date().toISOString()});
       return {status: response.status, body};
     } catch (error) {

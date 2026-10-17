@@ -1,0 +1,848 @@
+{
+  "formatVersion": 2,
+  "execution": {
+    "policy": "fail-fast",
+    "status": "complete",
+    "firstFailure": null,
+    "cleanupFailures": []
+  },
+  "kind": "correctness-conformance",
+  "tier": "small-1-100",
+  "id": "2026-10-16T11-37-50.108Z",
+  "gitRevision": "94e01f901178cd05b9033cf5d4e6f8d3b7a3f458",
+  "gitStatus": " M ../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md\n M ../../docs/rfds/RFD0005-write-path-experiment.md\n M ../../docs/rfds/RFD0006-public-read-only-mcp-playground.md\n M ../../docs/walkthrough.md\n M ../../examples/client-quickstart/README.md\n M ../../examples/client-quickstart/src/main.ts\n M ../../examples/client-quickstart/test/main.test.ts\n M ../../examples/deployed-smoke/README.md\n M ../../examples/deployed-smoke/src/main.ts\n M ../../examples/deployed-smoke/test/main.test.ts\n M ../../examples/deployed-todo-smoke/src/main.ts\n M ../../examples/deployed-todo-smoke/test/main.test.ts\n M ../../examples/onepiece-load/src/main.ts\n M ../../examples/onepiece-load/test/main.test.ts\n M session.ts\n M worker/application.ts\n M worker/database.ts\n M ../poneglyph-mcp/README.md\n M ../poneglyph-mcp/src/server.ts\n M ../poneglyph-mcp/test/mcp.test.ts\n M ../poneglyph-mcp/test/scoped-graph.test.ts\n M ../poneglyph-worker/README.md\n M ../poneglyph-worker/src/index.ts\n M ../poneglyph-worker/test/driver.ts\n M ../poneglyph-worker/test/rpc.test.ts\n M ../poneglyph/README.md\n M ../poneglyph/src/client.ts\n M ../poneglyph/src/domain/identifiers.ts\n M ../poneglyph/src/index.ts\n M ../poneglyph/src/storage/constants.ts\n M ../poneglyph/src/storage/coordinator.ts\n M ../poneglyph/src/storage/forest.ts\n M ../poneglyph/src/storage/implementation.ts\n M ../poneglyph/src/storage/ledger.ts\n M ../poneglyph/src/storage/shard.ts\n M ../poneglyph/src/storage/sql.ts\n M ../poneglyph/src/todo_demo/hub.ts\n M ../poneglyph/src/todo_demo/page.ts\n M ../poneglyph/src/todo_demo/service.ts\n M ../poneglyph/src/worker.ts\n M ../poneglyph/tests/client.test.ts\n M ../poneglyph/tests/integrated-storage.test.ts\n M ../poneglyph/tests/query-plan.test.ts\n M ../poneglyph/tests/throughput-bench.test.ts\n M ../poneglyph/tests/todo.test.ts\n M ../poneglyph/tests/write-correctness.test.ts\n M ../write-path-bench/README.md\n M ../write-path-bench/audit.ts\n M ../write-path-bench/driver.ts\n M ../write-path-bench/ledger.ts\n M ../write-path-bench/stream-audit.ts\n M ../write-path-bench/tests/benchmark.test.ts\n M ../write-path-bench/worker/application.ts\n M ../../sites/playground.poneglyph.leostera.dev/README.md\n M ../../sites/playground.poneglyph.leostera.dev/scripts/local-query-runtime.ts\n M ../../sites/playground.poneglyph.leostera.dev/src/dataset.ts\n M ../../sites/playground.poneglyph.leostera.dev/src/import.ts\n M ../../sites/playground.poneglyph.leostera.dev/src/operator.ts\n M ../../sites/playground.poneglyph.leostera.dev/src/page.ts\n M ../../sites/playground.poneglyph.leostera.dev/src/query-rubric.ts\n M ../../sites/playground.poneglyph.leostera.dev/test/import.test.ts\n M ../../sites/playground.poneglyph.leostera.dev/test/query-rubric.test.ts\n M ../../sites/playground.poneglyph.leostera.dev/test/worker.test.ts\n D ../../specs/README.md\n D ../../specs/ShardSplit.cfg\n D ../../specs/ShardSplit.tla\n D ../../specs/TransactionVisibility.cfg\n D ../../specs/TransactionVisibility.tla\n D ../../specs/check.sh\n?? ../../docs/poneglyph-explainer-preview.mp4\n?? ../../docs/poneglyph-explainer.mp4\n?? ../../docs/video/\n?? results/2026-10-14T16-37-07.188Z/\n?? results/focused-controls-2026-10-15T00-37-16.925Z/\n?? results/focused-controls-2026-10-16T01-30-07.131Z/\n?? results/focused-controls-2026-10-16T01-31-01.767Z/\n?? results/focused-controls-2026-10-16T01-31-50.330Z/\n?? results/focused-controls-2026-10-16T01-41-03.521Z/\n?? results/focused-controls-2026-10-16T11-37-24.657Z/\n?? ../poneglyph/src/domain/schema-observation.ts\n?? ../poneglyph/src/storage/request-tokens.ts\n?? ../poneglyph/src/storage/transaction-request.ts\n",
+  "runtime": {
+    "node": "v26.11.0",
+    "miniflare": "5.20261006.1-alpha",
+    "compatibilityDate": "2026-10-06"
+  },
+  "suiteDigests": {
+    "contract.ts": "83731988b88855a37e17b26701247403af04a863fbf23449eb867e47d4480073",
+    "contract.test.ts": "7e24fc3237c52b5cb8915f49f078b1160356f9e15e225323cb19e2e7476b1d1f",
+    "build.ts": "375b8de6b88047d4126c1a55f45a161cbade683c6160719d88796bf89a50a7f1",
+    "build-identity.test.ts": "0f0b80421cd6a6ed0c18496aeac3f246f32b256f71aa5f631bec3b8a7880cec2",
+    "runtime.ts": "001e3c196054ca7743ca9ed10dcea0e91e53edca6f944cf60b440e8a153b5743",
+    "process-runtime.ts": "4a1b83c5ce12ad3fa8c53baa7efb9ef0571401201f3650b7a683957ea965e104",
+    "process-host.ts": "1129724a287a28d336811954a1131ae7c28aad31bfc7b4ff06af98a1984bf7fa",
+    "process-group.ts": "ef95607199ccfb183e9468e35809bc8bc4db6b2cfdde34b49629b0095c59ba19",
+    "process-group.test.ts": "26f326870e77aa0341b27b2928f491346402fb691fc651cb79a17379840a7a1e",
+    "crashes.ts": "e8f2b7acf70b7963eb674c5a83e9e94079167fac87daa5ccba408ca0982ef28f",
+    "model.ts": "84b7699b40bb242ab3e8649a815120643be4ad5a1c4a58e191882999a0c85e12",
+    "model.test.ts": "b737a1e1cf247590e2557b5cbe6947cb2a732aa856807f46853191f6cbbbc76f",
+    "query-catalogue.ts": "a3cfde0570cc66e4adde3a0ea955c500e275ad9dbe520e5ba731429e1719fe87",
+    "query-catalogue.test.ts": "a287138563857ff38a6bdabca376fc2083a5833415dc064ac6b8ce9938343209",
+    "inspection-page.ts": "8a8c78d895d15c49b783da2d489c4020680a23bd8f0da7d52deb6baa0bfe5cb3",
+    "inspection-page.test.ts": "7e42714a06996cb2364f80f6c750ac9454eaf18b38bd4b10925501a735bd81b0",
+    "read-faults.ts": "655f9c43c34df4cb12daa969eddcbc71339e5fe2273cf345ec063e9e47d26ee2",
+    "read-fault.test.ts": "44816b43b6449c481f74731367ccd88e7c7c234de7ddb33e0d8fac0356e8cf8e",
+    "write-phases.ts": "ca5463f45fcd9b3f8f6615cb4ded137ebd8722c47b3d9a2cdcefd7217b6e3b2d",
+    "concurrent-histories.ts": "fdec39208f06b523f5c5d15d372acae04839e27cad51994458f70ad3c88121db",
+    "partial-apply.ts": "9ad5b8e594507e08ec29e4561edad8d980afde2386ab4c991a80d32dc5140564",
+    "participant-stage.ts": "fef6d38ff76f7a97d6c35df020823327beb63882093fd7936f3dbb2414982c4e",
+    "participant-stage.test.ts": "9f45f5510bafdce3c6bee7257d1c91fca3f89636b4c91afee741a8c487174416",
+    "worker/apply-gate.ts": "3803c5d77919c545503edcf2a3ffdd340921af7a3c54b1acea83cb8a1d19c76f",
+    "apply-gate.test.ts": "cff9ef5061ac3bf57f151164b70f0145b39e55dd4cfbd5a2b8fc2766c90d1171",
+    "legal-history.ts": "d3639b2117e1cc24678f42ccd8ae6d225d220bdd25512a684b6c6bd1e967a2cf",
+    "legal-history.test.ts": "31bd731c8eb135bda3e6eeab394cfe63a1431085e9853aed0325a79ccd1c90c9",
+    "splits.ts": "3247f328f483caaaba1a4176f299b030df7aa6f4e186c39fac6ee8af4927fc70",
+    "lifecycle.ts": "be415e0f74f29663d44b6ebf80ddf88110d8f608124ec3bd11b7acb3c6dbd12d",
+    "actor-fingerprint.ts": "9ff4e9c1d863a137a17ca5a045c790c772746f5e6db98315fca2718106452c63",
+    "actor-fingerprint.test.ts": "80c7eb6c8f3182096a845dfacb2bb64e5a00af6c3c4a1b0402c159ac8226e029",
+    "authority-audit.ts": "919ddf6e0571f571101482af78b0c5fe0319821c25ee25482459dd21eae097e7",
+    "authority-evidence.ts": "503bce5b35f15e524613e2354aaaac5b43174c8f66f05bdf60660b401791a8c0",
+    "authority-evidence.test.ts": "4e31b0b8aaa66f145a9f6fb7bbdf70f65f186ba8ef1bc928dc97c5fc54b4375d",
+    "owner-witness.ts": "fef98f0634f8eaf31cbb8b79c8d9557161aae673937b5f2eb4a1c147db0058df",
+    "owner-witness.test.ts": "96dc17889f7f2fefe31a95da77ced400297088c93f32d0a23063694b99414565",
+    "transaction-digest.ts": "413c92fd8a3e12f4f87e4bb70b852b54664163667f5182b48c608e8afac2b865",
+    "transaction-digest.test.ts": "9bc4af9826c30ae5a541e4f0481587a0caa821d1cbefcc18544bb2b5f8c4baf3",
+    "worker/authority-placement.ts": "ccd6f6977e16591207a75a6e34ecf3fe24e0e288156e077f7d5ec8d11e580697",
+    "worker/authority-sql.ts": "5486517d4f5ee5e8001b7d16c1633a47e3ca64efa95de2c76377232c7160f91a",
+    "worker/authority-controls.ts": "bf232e9f436c1bdf460c44abb31c6cc419f5e330cf185a3cd37e45efa6a940c7",
+    "write-barrier.test.ts": "b690996053de00c5aa336670f9bbf24eb84073c4bdbcedccb8deaeae2a2d799c",
+    "response-evidence.ts": "8fc5cba5a6492bfe1c7ac8d7394965daf10a04d3962855f247664b2cb78cf22e",
+    "response-evidence.test.ts": "e32f202d330849236de6169df12c9139d78b8c71fd17c581ab5d64ea56a46718",
+    "session.ts": "abc2fde8aa13afe147bd0dbdd6107b810261155b9f932c3730a993a2f807547d",
+    "small.ts": "b142dad68528f107682bf0d27d080d0f1f0e3d3779f297a32d71121ce22f3eb6",
+    "query-plan.ts": "c6d6d852614bf481ffe6dcc1f3a977da8c7b1a3c613b95d7958c266e27acef16",
+    "run-control.ts": "e58d882fafdd3dca1e7d1d01b3b73d6707b43fedbbb50d754657543c94e171b5",
+    "run-control.test.ts": "e29c08656205e8586e8598e9c4cd4af874e231ca3659c7d9c97a0ae03384c6ac",
+    "run.ts": "79b4f9130286752e19ff5a946649f8f2ba4cf2d80a513595fb614dc03bc022cf",
+    "worker/application.ts": "17b0d1b5fa731b55cff81cd2a4ef176eedce7e9a6e8e3dce1b3502242be7b6d9",
+    "worker/database.ts": "6149964828b45cb0383e75dda738f3c34325e83519e3901d7a340cde5ba36047",
+    "worker/read-fault.ts": "a6b976fbceab5a4e26e4e3750e17b080a3bccddbf6267381185b250c9409fac7",
+    "worker/write-barrier.ts": "0126ed4b837d38d7d9efc3df679189ddeb5a9e083b7b55af153fe239d70066ea",
+    "archive.ts": "5baf6d1f4623805b6a10f2ae93d3d7e904c7f2f8b5217fb728a06f59304521ca",
+    "package.json": "566143ee61064f3487bc7ccb297cf3812129d128a75de9ed38e251ef3615dc30",
+    "../../package.json": "c171603f55c88c02370ae6a25420ab90388f88623458450ffb64c22d640f2802",
+    "../../bun.lock": "2580e53f6d31dd2a15d6840a9074871193e0923711d8a3bb95ef7794a29f8435"
+  },
+  "cases": [
+    "value/null",
+    "value/text-empty",
+    "value/text-unicode-escaped",
+    "value/integer-min",
+    "value/integer-max",
+    "value/integer-zero",
+    "value/boolean-true",
+    "value/boolean-false",
+    "value/bytes",
+    "value/bytes-empty",
+    "value/reference",
+    "value/date",
+    "value/date-time",
+    "value/list-empty",
+    "value/list-duplicates",
+    "value/map-empty",
+    "value/nested-collections",
+    "value/map-unicode-order",
+    "size/1",
+    "size/2",
+    "size/10",
+    "size/25",
+    "size/50",
+    "size/99",
+    "size/100",
+    "identity/exact-replay",
+    "identity/changed-payload",
+    "identity/canonical-map-order",
+    "identity/graph-isolation",
+    "assertion/duplicate-input",
+    "assertion/multiple-sources",
+    "assertion/multiple-values",
+    "order/assert-retract",
+    "order/retract-assert",
+    "order/assert-retract-assert",
+    "order/source-qualified",
+    "order/old-value-retraction",
+    "query/joins-cycles-repeated-variables",
+    "query/disconnected-and-constraints",
+    "transport/lost-application-reply",
+    "stateful/seed-0",
+    "stateful/seed-1",
+    "stateful/seed-2",
+    "stateful/seed-3",
+    "boundary/invalid-late-value",
+    "boundary/invalid-int64",
+    "boundary/invalid-date",
+    "boundary/empty-batch",
+    "query/many-to-one-value-encodings",
+    "read-fault/unavailable-before",
+    "read-fault/malformed",
+    "read-fault/empty-eof",
+    "read-fault/record-eof",
+    "read-fault/record-error",
+    "query-plan/owner-local-bag-join",
+    "write-phase/prepared-atomic-public-read",
+    "write-phase/applied-atomic-public-read",
+    "concurrent/same-payload-admitted-identity",
+    "concurrent/different-payload-admitted-identity",
+    "topology/nested-exact-public-and-durable",
+    "topology/interrupted-copy-exact-public-and-durable",
+    "lifecycle/native-actor-reset-after-ack",
+    "recovery/native-actor-reset-after-apply-before-reply",
+    "lifecycle/SIGKILL-process-group-after-ack",
+    "recovery/SIGKILL-process-group-after-native-apply",
+    "concurrent/legal-history/same-source-assert-retract",
+    "concurrent/legal-history/source-qualified-retraction-projection",
+    "concurrent/legal-history/disjoint-entities-typed-multiplicity",
+    "recovery/native-partial-participant-apply-process-crash"
+  ],
+  "contract": {
+    "correctnessBudgets": {
+      "requestMs": 30000,
+      "writeAttempts": 16,
+      "retryBackoffMs": 5,
+      "phaseObservationPolls": 128,
+      "phaseObservationDelayMs": 5,
+      "controlRequestMs": 2000,
+      "inFlightReadMs": 2000,
+      "replyBarrierSafetyMs": 10000,
+      "recoveryAttempts": 16,
+      "processStartMs": 30000,
+      "processExitMs": 10000,
+      "processDeathPolls": 128,
+      "processDeathDelayMs": 10,
+      "authorityRowsPerActor": 100000,
+      "authorityPageRows": 128
+    },
+    "requiredCoverage": [
+      {
+        "family": "facts-values-projections",
+        "remaining": [
+          "complete tiny ordered histories and metamorphic permutations"
+        ]
+      },
+      {
+        "family": "queries-access-algebra",
+        "remaining": [
+          "joins/reverse/negative reads through every recovery/topology/concurrency phase"
+        ]
+      },
+      {
+        "family": "public-client-boundary",
+        "remaining": [
+          "all client write entrypoints, generated IDs, malformed receipts and abort-before/during-send"
+        ]
+      },
+      {
+        "family": "identity-concurrency",
+        "remaining": [
+          "overlapping/disjoint entity and source histories, retraction races, tickets and bounded legal-history enumeration"
+        ]
+      },
+      {
+        "family": "write-failures-recovery",
+        "remaining": [
+          "before admission, reservation, prepare, decision, local witness, participant application, publication/release and recovery interruption"
+        ]
+      },
+      {
+        "family": "routing-migration",
+        "remaining": [
+          "copy/page digest replay, abrupt interruption during migration/cutover, stale/retired generations/epochs and pinned work/leases"
+        ]
+      },
+      {
+        "family": "native-lifecycle",
+        "remaining": [
+          "actual abrupt process-group crash and actor eviction distinct from quiescent restart"
+        ]
+      },
+      {
+        "family": "limits-maintenance",
+        "remaining": [
+          "below/at/above all declared bounds, synthetic expiry/quota/pinning, explicit bounded recovery"
+        ]
+      },
+      {
+        "family": "stateful-100k",
+        "remaining": [
+          "32 fixed stateful seeds, streamed 100k append/churn, exhaustive bounded public reads and durable reconciliation"
+        ]
+      }
+    ],
+    "smallTierComplete": false,
+    "statefulSeeds": [
+      1831565813,
+      191034286,
+      2845470055,
+      1204938528,
+      3859374297,
+      2218842770,
+      578311243,
+      3232747012,
+      1592215485,
+      4246651254,
+      2606119727,
+      965588200,
+      3620023969,
+      1979492442,
+      338960915,
+      2993396684,
+      1352865157,
+      4007300926,
+      2366769399,
+      726237872,
+      3380673641,
+      1740142114,
+      99610587,
+      2754046356,
+      1113514829,
+      3767950598,
+      2127419071,
+      486887544,
+      3141323313,
+      1500791786,
+      4155227555,
+      2514696028
+    ],
+    "seedsExecuted": false
+  },
+  "limitations": [
+    "Initial small-tier foundation plus actual scan-response faults and prepared/applied reply barriers with atomic public reads; native nested/interrupted-copy split checks and overlapping admitted-identity histories; native actor abort/reconstruction after acknowledgment and held apply; broader write failures/process crash/stale-routing/general-history coverage remains incomplete",
+    "Warm cases include actual SIGKILL host/workerd process-group crashes after acknowledgment and held native apply; cold phases remain quiescent disk restarts, not elapsed retention or natural idle eviction",
+    "No throughput/latency/performance measurements or promotion decisions"
+  ],
+  "implementations": [
+    {
+      "manifest": {
+        "implementation": "poneglyph",
+        "identity": "poneglyph-pooled-owner-write-path",
+        "sourceDigests": {
+          "../poneglyph/dist/client.js": "679e294446be849dd5d2e45a6c914cb1e76ac8de315989688bf88e0798b222a0",
+          "../poneglyph/dist/datalog/ast.js": "20d3ed3a2f4bbdf67581c4a1a8cca094f636415a0e05657a812b6c35288e4e16",
+          "../poneglyph/dist/datalog/evaluator.js": "45affb6487c0fdc56aae400e287b82acf1dbe3cd66f11c908562784173f84efc",
+          "../poneglyph/dist/datalog/fact-source.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "../poneglyph/dist/datalog/parser.js": "bc528dae38e60b2f87137f89a35dd154f5d7a280cb99490c97f2cca911afb36f",
+          "../poneglyph/dist/datalog/value.js": "a42784eaf59359e86d6e3ca31a66dbbde9d96d6558e717296fb29a878853ec80",
+          "../poneglyph/dist/domain/date-validation.js": "4b7d7283ed28fdc9a5bf6a5827b6796c54454503e4113b23f69108a9e64ae6f9",
+          "../poneglyph/dist/domain/fact-value.js": "dbf69ccc15f594656aa28892522b9909a0000d04f926d5e995e8685aa3df8248",
+          "../poneglyph/dist/domain/fact.js": "549cc66749833c217ea9d9860f9a942b91f130b0345689a0f2bb18e549b64ac2",
+          "../poneglyph/dist/domain/graph-id.js": "b20ec3aaf6d8343b4709beab1d8b1d70f33022720eca700b1689930ec024db99",
+          "../poneglyph/dist/domain/identifiers.js": "9e63d6c5cae128bf091a19dd905a9a250a01f359cd7aa632632a94372e559573",
+          "../poneglyph/dist/domain/int64.js": "2e3e55ccc389336263a1dd51d6089b641da0515fbb3c1307d09df995d47af9a5",
+          "../poneglyph/dist/domain/result.js": "d8d4830e99f43409a946d8b2e1316a1f13e5171b599865ab00643585bcda9609",
+          "../poneglyph/dist/domain/schema-observation.js": "756fc40b60ee92a978c0685d6d179367311f639acc8a3853c7aa1fe35c96c9f5",
+          "../poneglyph/dist/domain/string-order.js": "aa59fe031cfc95f85594e9b0ee8eccf3b1234378c157da25a5628ea12b03460c",
+          "../poneglyph/dist/index.js": "317f2cb763e6f5633f4eaf3212183b75003bff9ebc984a04c21b72373d94372f",
+          "../poneglyph/src/datalog/ast.ts": "586cc0a795c7114b6813eaf6d309fedc13b5d32180aebcb10b2da4bbeff7b9f0",
+          "../poneglyph/src/datalog/evaluator.ts": "dc9e75de88916081cf5379cdf11d200063afb49b31310e0351fa69215a0b07a0",
+          "../poneglyph/src/datalog/parser.ts": "558f30101ecd7547efd62df4976fe1fd834651624fae58406411ebb8080ae183",
+          "../poneglyph/src/datalog/scan-stream.ts": "a6cda81757c4bd0dd4fe8845635275ae451521df7d7eaf65cf82140026049d4e",
+          "../poneglyph/src/datalog/value.ts": "7291d44c1f0856b7d448dce8fef8d1a127f7ad364f4e9782ad7beb223e996a05",
+          "../poneglyph/src/domain/date-validation.ts": "7f141cf8063ea3519680f0a71bc424212283f1401c9415dbbf3d6af5cb1d75e1",
+          "../poneglyph/src/domain/fact-value.ts": "8df5f3e2b8a22899325ff75d4d2ed35e53c7adb296a64fc6b28af1db2831c71a",
+          "../poneglyph/src/domain/fact.ts": "ba92f8a48cfba0ab82bcbc611ddf7e4a8107df7a89ef0a203c7a2dae4b6cf6b4",
+          "../poneglyph/src/domain/graph-id.ts": "fb23faf3dc333f49752a9e17009bcaf512a01632419b1b574fb9f491d25cf641",
+          "../poneglyph/src/domain/identifiers.ts": "81e4b8b0056b4ad23b1bf3461c87ef40e7bfaf8ec4f3be3385a046383a5b1830",
+          "../poneglyph/src/domain/int64.ts": "4448f6097cdf97b1bdc72e4ecd7819516ade0661f424f9ec18865a3a45460ffd",
+          "../poneglyph/src/domain/result.ts": "9f1e517b566238e0a4fc771172c6c7c5d7f0954e82584201193d298bd061b8f5",
+          "../poneglyph/src/domain/string-order.ts": "a38dc679f8479e9f089e0795c3da5d48d72dceb01046567f6184d5457bcf1ea4",
+          "../poneglyph/src/storage/batch-cache.ts": "0d5aab84937d90fc7713f62d55b768ad9ce6ebb039bcdc9da8cd6748899dc516",
+          "../poneglyph/src/storage/benchmark.ts": "ad6d5208b49f55c335321d1e62b2b057db4add3e19659c44588f193816a765d2",
+          "../poneglyph/src/storage/capacity.ts": "9f4104bb26c43a07270d7c2a185c69379b71a6e24309224094a3fb622e58b4fa",
+          "../poneglyph/src/storage/constants.ts": "57534dc4aefc03c9ec5538481ef8913a9cc557a8881894bd67d820af50102716",
+          "../poneglyph/src/storage/coordinator.ts": "9a764647869364ecb94261909b8b060cb3c6213676337db7091b2dccdbeccdb4",
+          "../poneglyph/src/storage/distributed-fact-source.ts": "6cd36f5ce7506f970ebd5ef462da3946aa282ed29fa63d9a9597f0683f75fcba",
+          "../poneglyph/src/storage/forest.ts": "07be9b19f1264d9fafe9384e02948a95a461f67660f1d35448e0cae118204939",
+          "../poneglyph/src/storage/http.ts": "9322e6173d8706b7f52bafc450e87cf0557bd2bfc55c957002430ed2600a368b",
+          "../poneglyph/src/storage/implementation.ts": "41002fb811cd0b0ca80e9da245847182b72f3870376fed94a4d87fb75446069e",
+          "../poneglyph/src/storage/keys.ts": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34",
+          "../poneglyph/src/storage/ledger.ts": "61cf2cbf774981afea8c858ec7970b29a1a1a21649b9dac0f890ba34a212e35a",
+          "../poneglyph/src/storage/migration.ts": "46e149dd4ffce655979864fd20ed4906e7a02d3344b76713a8cf3b941151e55a",
+          "../poneglyph/src/storage/owner-writes.ts": "437838c1740d499f8b3d66059367e8098d3243bd9a0e42aa710da8d7a24ba6c4",
+          "../poneglyph/src/storage/plan.ts": "364097cc4545d6327f1c77905eeb715a4ce10066574e412fb89420ea82e8b570",
+          "../poneglyph/src/storage/protocol.ts": "686e01f635c59f461ab50b2adaad3d52e1deb4f57a9be983bad39900af0de47e",
+          "../poneglyph/src/storage/read-cut.ts": "c10bfabe17426e0b777b8f2d5672aeb0ab84301fd4d1f2ad3bb659515fa4e47c",
+          "../poneglyph/src/storage/request-tokens.ts": "92d1a2536b42543e2de7a5ea12ab07afbb86609069a11504b8d91c47889d2fcd",
+          "../poneglyph/src/storage/routing.ts": "62800de752a3dc53003b47cf8d651905b689d16877ac37c14351e5fddf2deab7",
+          "../poneglyph/src/storage/shard.ts": "9c5baa1410d3a43edf5aba54de8f4784e9bffce2131819e8c09f93ac023a7da6",
+          "../poneglyph/src/storage/sql.ts": "beffccc74bb3e5e062197992ff07d712e94327e3e903fe0c4327175d1d014837",
+          "../poneglyph/src/storage/transaction-diagnostics.ts": "61e845662354bd61b665dc6dcf014ef5f337c8bbb2673d5679c806f02daa1edf",
+          "../poneglyph/src/storage/transaction-request.ts": "5ad07e6da81e36e3a011e4c2e4ce53e923dda8a29237ed11a84b11b5338f71dd",
+          "../poneglyph/src/storage/transaction.ts": "6b05f76116bdc8f4c36a3255a7fcbb12c9dac610ba383aa413397d65c7e04f0a",
+          "../poneglyph/src/storage/value-index.ts": "f9ce643ee26de158b474b305791c1bb741cf9c765be7d0f0d5209d9338a94def",
+          "../poneglyph/src/testing/storage-audit.ts": "32babba0e76eb9c19edb04d7ea019bc9a0589d4a9bf2f5a1582ffdebd61e2077",
+          "../poneglyph/src/todo_demo/auth.ts": "388c7607879e7ca4c681a801e5904e989008293d2bd5dc2aa0d8874aead8429e",
+          "../poneglyph/src/todo_demo/hub.ts": "dd97097fbcad02a119ddeb0a9227b8eeb2a183442ad021dc2553cbae767ae7b6",
+          "../poneglyph/src/todo_demo/page.ts": "53be46126057d9fdae76d4cae72d349556ba22d99eeb96068659786c482a7b8e",
+          "../poneglyph/src/todo_demo/service.ts": "bb32baa8a9302959e80f9439446d90c7cc320c5cae898e3a13a6863fd6f26cba",
+          "../poneglyph/src/todo_demo/worker.ts": "91bae6a11adc83b6fab7ce9b230a5d2beff4a78fe9be1ae14898e9b0f65e9616",
+          "../poneglyph/src/worker.ts": "9069c00acc6bbc7e60f1b7b34f24af7f75b70387785922387172f0fa0595da1c",
+          "contract.ts": "83731988b88855a37e17b26701247403af04a863fbf23449eb867e47d4480073",
+          "response-evidence.ts": "8fc5cba5a6492bfe1c7ac8d7394965daf10a04d3962855f247664b2cb78cf22e",
+          "worker/application.ts": "17b0d1b5fa731b55cff81cd2a4ef176eedce7e9a6e8e3dce1b3502242be7b6d9",
+          "worker/apply-gate.ts": "3803c5d77919c545503edcf2a3ffdd340921af7a3c54b1acea83cb8a1d19c76f",
+          "worker/authority-controls.ts": "bf232e9f436c1bdf460c44abb31c6cc419f5e330cf185a3cd37e45efa6a940c7",
+          "worker/authority-placement.ts": "ccd6f6977e16591207a75a6e34ecf3fe24e0e288156e077f7d5ec8d11e580697",
+          "worker/authority-sql.ts": "5486517d4f5ee5e8001b7d16c1633a47e3ca64efa95de2c76377232c7160f91a",
+          "worker/database.ts": "6149964828b45cb0383e75dda738f3c34325e83519e3901d7a340cde5ba36047",
+          "worker/read-fault.ts": "a6b976fbceab5a4e26e4e3750e17b080a3bccddbf6267381185b250c9409fac7",
+          "worker/write-barrier.ts": "0126ed4b837d38d7d9efc3df679189ddeb5a9e083b7b55af153fe239d70066ea"
+        },
+        "bundleDigests": {
+          "application": "358860ad9bb3a34456b94f7a99c3ae8498adc7d20ee12142f064d21a1fe84a21",
+          "database": "e942ebfc7de8f55af84dc5fdec75b2293ae604002b8f3523106d1e7a88704d79"
+        }
+      },
+      "persistence": "/Users/leostera/Developer/github.com/leostera/poneglyph/packages/conformance/.artifacts/2026-10-16T11-37-50.108Z/poneglyph/persistence",
+      "warmPassed": 69,
+      "coldPassed": 69,
+      "results": [
+        {
+          "name": "value/null",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-0"
+        },
+        {
+          "name": "value/text-empty",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-1"
+        },
+        {
+          "name": "value/text-unicode-escaped",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-2"
+        },
+        {
+          "name": "value/integer-min",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-3"
+        },
+        {
+          "name": "value/integer-max",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-4"
+        },
+        {
+          "name": "value/integer-zero",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-5"
+        },
+        {
+          "name": "value/boolean-true",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-6"
+        },
+        {
+          "name": "value/boolean-false",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-7"
+        },
+        {
+          "name": "value/bytes",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-8"
+        },
+        {
+          "name": "value/bytes-empty",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-9"
+        },
+        {
+          "name": "value/reference",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-10"
+        },
+        {
+          "name": "value/date",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-11"
+        },
+        {
+          "name": "value/date-time",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-12"
+        },
+        {
+          "name": "value/list-empty",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-13"
+        },
+        {
+          "name": "value/list-duplicates",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-14"
+        },
+        {
+          "name": "value/map-empty",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-15"
+        },
+        {
+          "name": "value/nested-collections",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-16"
+        },
+        {
+          "name": "value/map-unicode-order",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-17"
+        },
+        {
+          "name": "size/1",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 1,
+          "graph": "conformance-small-18"
+        },
+        {
+          "name": "size/2",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-19"
+        },
+        {
+          "name": "size/10",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 10,
+          "graph": "conformance-small-20"
+        },
+        {
+          "name": "size/25",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 25,
+          "graph": "conformance-small-21"
+        },
+        {
+          "name": "size/50",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 50,
+          "graph": "conformance-small-22"
+        },
+        {
+          "name": "size/99",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 99,
+          "graph": "conformance-small-23"
+        },
+        {
+          "name": "size/100",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 100,
+          "graph": "conformance-small-24"
+        },
+        {
+          "name": "identity/exact-replay",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-25"
+        },
+        {
+          "name": "identity/changed-payload",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 1,
+          "graph": "conformance-small-26"
+        },
+        {
+          "name": "identity/canonical-map-order",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 1,
+          "graph": "conformance-small-27"
+        },
+        {
+          "name": "identity/graph-isolation",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 1,
+          "graph": "conformance-small-28"
+        },
+        {
+          "name": "assertion/duplicate-input",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-29"
+        },
+        {
+          "name": "assertion/multiple-sources",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-30"
+        },
+        {
+          "name": "assertion/multiple-values",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-31"
+        },
+        {
+          "name": "order/assert-retract",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-32"
+        },
+        {
+          "name": "order/retract-assert",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-33"
+        },
+        {
+          "name": "order/assert-retract-assert",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-34"
+        },
+        {
+          "name": "order/source-qualified",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-35"
+        },
+        {
+          "name": "order/old-value-retraction",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-36"
+        },
+        {
+          "name": "query/joins-cycles-repeated-variables",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 4,
+          "graph": "conformance-small-37"
+        },
+        {
+          "name": "query/disconnected-and-constraints",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 4,
+          "graph": "conformance-small-38"
+        },
+        {
+          "name": "transport/lost-application-reply",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-39"
+        },
+        {
+          "name": "stateful/seed-0",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 15,
+          "graph": "conformance-small-40"
+        },
+        {
+          "name": "stateful/seed-1",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 15,
+          "graph": "conformance-small-41"
+        },
+        {
+          "name": "stateful/seed-2",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 15,
+          "graph": "conformance-small-42"
+        },
+        {
+          "name": "stateful/seed-3",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 15,
+          "graph": "conformance-small-43"
+        },
+        {
+          "name": "boundary/invalid-late-value",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 0,
+          "graph": "conformance-small-44"
+        },
+        {
+          "name": "boundary/invalid-int64",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 0,
+          "graph": "conformance-small-45"
+        },
+        {
+          "name": "boundary/invalid-date",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 0,
+          "graph": "conformance-small-46"
+        },
+        {
+          "name": "boundary/empty-batch",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 0,
+          "graph": "conformance-small-47"
+        },
+        {
+          "name": "query/many-to-one-value-encodings",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 13,
+          "graph": "conformance-small-48"
+        },
+        {
+          "name": "read-fault/unavailable-before",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-49"
+        },
+        {
+          "name": "read-fault/malformed",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-50"
+        },
+        {
+          "name": "read-fault/empty-eof",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-51"
+        },
+        {
+          "name": "read-fault/record-eof",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-52"
+        },
+        {
+          "name": "read-fault/record-error",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-53"
+        },
+        {
+          "name": "query-plan/owner-local-bag-join",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 46,
+          "graph": "conformance-small-54"
+        },
+        {
+          "name": "write-phase/prepared-atomic-public-read",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 27,
+          "graph": "conformance-small-55"
+        },
+        {
+          "name": "write-phase/applied-atomic-public-read",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 27,
+          "graph": "conformance-small-56"
+        },
+        {
+          "name": "concurrent/same-payload-admitted-identity",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 27,
+          "graph": "conformance-small-57"
+        },
+        {
+          "name": "concurrent/different-payload-admitted-identity",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 27,
+          "graph": "conformance-small-58"
+        },
+        {
+          "name": "topology/nested-exact-public-and-durable",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 36,
+          "graph": "conformance-small-59"
+        },
+        {
+          "name": "topology/interrupted-copy-exact-public-and-durable",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 36,
+          "graph": "conformance-small-60"
+        },
+        {
+          "name": "lifecycle/native-actor-reset-after-ack",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 6,
+          "graph": "conformance-small-61"
+        },
+        {
+          "name": "recovery/native-actor-reset-after-apply-before-reply",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 6,
+          "graph": "conformance-small-62"
+        },
+        {
+          "name": "lifecycle/SIGKILL-process-group-after-ack",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 4,
+          "graph": "conformance-small-63"
+        },
+        {
+          "name": "recovery/SIGKILL-process-group-after-native-apply",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 4,
+          "graph": "conformance-small-64"
+        },
+        {
+          "name": "concurrent/legal-history/same-source-assert-retract",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 3,
+          "graph": "conformance-small-65"
+        },
+        {
+          "name": "concurrent/legal-history/source-qualified-retraction-projection",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 4,
+          "graph": "conformance-small-66"
+        },
+        {
+          "name": "concurrent/legal-history/disjoint-entities-typed-multiplicity",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 2,
+          "graph": "conformance-small-67"
+        },
+        {
+          "name": "recovery/native-partial-participant-apply-process-crash",
+          "warm": "pass",
+          "cold": "pass",
+          "facts": 29,
+          "graph": "conformance-small-68"
+        }
+      ]
+    }
+  ],
+  "plannedImplementations": [
+    "poneglyph"
+  ],
+  "executedPhases": 138,
+  "unexecutedPhases": 0,
+  "evidence": {
+    "file": "report.json.gz",
+    "uncompressedSha256": "2b7b2deb81219272656d087ea0d8df188dbb794ff23a95a2157f876958abe326",
+    "compressedSha256": "c5ed83c6146161fe3a85f0aac920957e29183f0a158a61697308a2a3755cee04"
+  }
+}

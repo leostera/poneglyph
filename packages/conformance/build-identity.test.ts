@@ -1,10 +1,24 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {identifyActorInputs} from "./build.js";
+
 const path = (directory: string, role: string) => `../poneglyph/src/${directory}/${role}.ts`;
-test("conformance builds the sole production coordinator and shard", () => {
-  assert.equal(identifyActorInputs([path("storage", "coordinator"), path("storage", "shard"), "../poneglyph/src/datalog/value.ts"]), "poneglyph-pooled-owner-write-path");
+const canonical = [
+  path("storage", "coordinator-facade"),
+  path("storage", "ledger-do"),
+  path("storage", "coordinator"),
+  path("storage", "shard"),
+];
+
+test("conformance builds the exact four production storage roles", () => {
+  assert.equal(identifyActorInputs([...canonical, "../poneglyph/src/datalog/value.ts"]), "poneglyph-pooled-owner-write-path");
 });
+
 test("obsolete, mixed, missing and unknown actors fail closed", () => {
-  for (const inputs of [[path("storage", "coordinator"), path("storage-g", "shard")], [path("storage", "coordinator")], [path("storage", "coordinator"), path("storage", "shard"), path("storage-unknown", "shard")]]) assert.throws(() => identifyActorInputs(inputs));
+  for (const inputs of [
+    canonical.slice(1),
+    [...canonical.slice(0, 3)],
+    [...canonical, path("storage-g", "shard")],
+    [...canonical, path("storage-unknown", "ledger-do")],
+  ]) assert.throws(() => identifyActorInputs(inputs));
 });

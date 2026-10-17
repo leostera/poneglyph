@@ -1,6 +1,13 @@
 import { createDatabase, PoneglyphInputError, PoneglyphRequestError, type FactInput } from "@leostera/poneglyph";
 
 interface ApplicationEnv {DATABASE: Fetcher; CONFORMANCE_TOKEN: string; WORKER_ID: string}
+async function internalWrite(env: ApplicationEnv, graph: string, txId: string, facts: FactInput[]): Promise<Response> {
+  return env.DATABASE.fetch("https://database.internal/__conformance/transaction", {
+    method: "POST",
+    headers: {authorization: `Bearer ${env.CONFORMANCE_TOKEN}`, "content-type": "application/json"},
+    body: JSON.stringify({graph, txId, facts}),
+  });
+}
 export default {
   async fetch(request: Request, env: ApplicationEnv): Promise<Response> {
     if (request.headers.get("authorization") !== `Bearer ${env.CONFORMANCE_TOKEN}`) return new Response("unauthorized", {status: 401});
@@ -9,9 +16,11 @@ export default {
       fetch: (input, init) => env.DATABASE.fetch(input, init)});
     try {
       switch (body.action) {
-        case "write": return Response.json(await database.transact(body.facts, {txId: body.txId}));
+        case "write": return await internalWrite(env, body.graph, body.txId, body.facts);
         case "lost-write-reply": {
-          await database.stateFacts(body.facts, {txId: body.txId});
+          const committed = await internalWrite(env, body.graph, body.txId, body.facts);
+          if (!committed.ok) return committed;
+          await committed.arrayBuffer();
           // Shared semantic fault: lose the application response only AFTER a
           // real committed database receipt. This is not a fabricated commit.
           return Response.json({error: "injected lost application reply", retryable: true}, {status: 502});

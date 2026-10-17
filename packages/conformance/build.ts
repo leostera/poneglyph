@@ -7,8 +7,8 @@ import {fileURLToPath} from "node:url";
 export const ROOT = dirname(fileURLToPath(import.meta.url));
 export const implementation = {name: "poneglyph", directory: "storage", ownerDepth: 4} as const;
 
-// Build the actual production composition, without aliases, selectors or a
-// replacement authority module. The oracle remains independent of this code.
+// Build the actual four-role production composition, without aliases,
+// selectors or a replacement authority module. The oracle remains independent.
 export async function buildConformance(output: string) {
   await mkdir(output, {recursive: true});
   const inputs = new Map<string, string>();
@@ -27,13 +27,15 @@ export async function buildConformance(output: string) {
 }
 export function identifyActorInputs(inputs: readonly string[]): string {
   const actors = inputs.flatMap(path => {
-    const match = /(?:^|\/)src\/(storage(?:-[^/]+)?)\/(coordinator|shard)\.ts$/.exec(path.replaceAll("\\", "/"));
-    return match ? [{directory: match[1]!, role: match[2]!}] : [];
-  });
-  for (const role of ["coordinator", "shard"]) {
-    const directories = new Set(actors.filter(actor => actor.role === role).map(actor => actor.directory));
-    assert.deepEqual([...directories], ["storage"], `canonical ${role}, no obsolete/mixed actors`);
-  }
+    const match = /(?:^|\/)src\/(storage(?:-[^/]+)?)\/(coordinator-facade|ledger-do|coordinator|shard)\.ts$/.exec(path.replaceAll("\\", "/"));
+    return match ? [`${match[1]}/${match[2]}`] : [];
+  }).sort();
+  assert.deepEqual(actors, [
+    "storage/coordinator",
+    "storage/coordinator-facade",
+    "storage/ledger-do",
+    "storage/shard",
+  ], "exact facade/ledger/tree/shard production roles, no obsolete or mixed actors");
   return "poneglyph-pooled-owner-write-path";
 }
 function hash(bytes: Uint8Array) {return createHash("sha256").update(bytes).digest("hex");}
