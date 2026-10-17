@@ -28,7 +28,6 @@ export class OwnerWrites {
     return this.storage.transactionSync(() => {
       const now = Date.now();
       this.storage.sql.exec("DELETE FROM tree_reservations WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?", now - TRANSACTION_IDEMPOTENCY_RETENTION_MS);
-      this.storage.sql.exec("DELETE FROM graph_transactions WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?", now - TRANSACTION_IDEMPOTENCY_RETENTION_MS);
       const prior = this.read(txId), state = this.state();
       if (prior && (prior.payload_hash !== hash || prior.entities_json !== keys || prior.created_at_ms !== identityTime)) throw new OwnerWriteError(409, "owner reservation identity or entity-set conflict");
       // A completed old owner outcome must not become half of a newly admitted
@@ -47,8 +46,7 @@ export class OwnerWrites {
         if (this.storage.sql.exec("SELECT 1 FROM entity_write_locks WHERE entity = ?", entity).toArray().length)
           throw new OwnerWriteError(423, "entity is reserved by another transaction", true);
       }
-      const count = this.storage.sql.exec<{count: number}>(`SELECT (SELECT COUNT(*) FROM tree_reservations) +
-        (SELECT COUNT(*) FROM graph_transactions) AS count`).one().count;
+      const count = this.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_reservations").one().count;
       if (count >= TREE_OUTCOME_LIMIT) throw new OwnerWriteError(429, "owner retained-outcome allocation is full");
       const encoder = new TextEncoder();
       const lockBytes = entities.reduce((sum, entity) => sum + encoder.encode(entity).byteLength + encoder.encode(txId).byteLength + 256, 0);

@@ -41,7 +41,6 @@ describe("authenticated reactive TODO demo", () => {
     expect(authenticatedGraphQuery.status).toBe(200);
     const bypassWrite = await request(`/v1/graphs/${TODO_GRAPH_ID}/transactions`, {
       method: "POST", headers: { cookie }, body: JSON.stringify({
-        txId: `poneglyph:tx:${crypto.randomUUID()}`,
         facts: [{ source: "agent:test", entity: "todo:task:external", field: "schema:name", value: { type: "text", value: "bypass" }, retraction: false }],
       }),
     });
@@ -75,19 +74,19 @@ describe("authenticated reactive TODO demo", () => {
     });
     expect(moved.status).toBe(200);
     const moveResult: unknown = await moved.json();
-    if (!isRecord(moveResult) || typeof moveResult["commitSeq"] !== "number" || typeof moveResult["txId"] !== "string") {
+    if (!isRecord(moveResult) || typeof moveResult["txId"] !== "string") {
       throw new Error("move response is invalid");
     }
 
     const [eventA, eventB] = await Promise.all([firstEvent, secondEvent]);
-    expect(eventA).toMatchObject({ type: "invalidate", graphId: TODO_GRAPH_ID, txId: moveResult["txId"], commitSeq: moveResult["commitSeq"] });
+    expect(eventA).toMatchObject({type: "invalidate", graphId: TODO_GRAPH_ID, txId: moveResult["txId"]});
     expect(eventB).toEqual(eventA);
     const visible = await request("/api/todo/snapshot", { headers: { cookie } });
     expect(visible.status).toBe(200);
     const visibleBody: unknown = await visible.json();
-    expect(visibleBody).toMatchObject({ snapshotSeq: moveResult["commitSeq"], tasks: [{ id: taskId, title: "Review the storage invariants", list: TODO_LISTS.done }] });
+    expect(visibleBody).toMatchObject({snapshotSeq: expect.any(Number), tasks: [{id: taskId, title: "Review the storage invariants", list: TODO_LISTS.done}]});
 
-    const metadata = await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(TODO_GRAPH_ID, moveResult["txId"])), (_instance, state) =>
+    const metadata = await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(TODO_GRAPH_ID, moveResult["txId"])), (_instance, state) =>
       state.storage.sql.exec<{plan_json: string}>("SELECT plan_json FROM candidate_transactions WHERE tx_id = ?", moveResult["txId"]).one().plan_json);
     const plan: unknown = JSON.parse(metadata);
     if (!isRecord(plan) || !Array.isArray(plan["participants"])) throw new Error("missing committed participant plan");

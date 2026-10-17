@@ -6,14 +6,15 @@ Private, deployable Workers RPC service for canonical Poneglyph storage. No publ
 using graph = await env.PONEGLYPH.getGraph({ graphId: "onepiece" });
 const result = await graph.query('wiki:page:title(Page, "Monkey D. Luffy")');
 // Only a binding principal with write permission can do this:
-await graph.transact(facts, { txId: "my-app:operation:one" });
+const receipt = await graph.transact(facts, {clientRequestToken: "my-app:operation:one"});
+// receipt is exactly { txId }, minted by the service after commit.
 ```
 
 The binding's deployment-controlled `props.clientId` identifies the application. Deployment-owned JSON grants map that identity to allowed graphs and `read`/`write` permissions. Missing/malformed identity/policy, unknown clients and ungranted graphs deny access before storage. The generic runtime contains no application names or One Piece rules; the initial grants live in `cloudflare.config.ts`.
 
 Read handles expose the same typed method shape but their write methods **always deny on the server**, before parsing facts or accessing storage. This is not advisory metadata/TypeScript enforcement. A write-enabled subclass supplies the canonical write operation. Handle acquisition does not create durable state. Handles delegate their captured authority when shared and do not survive the caller's invocation; dispose them with `using`. Static grants are captured at acquisition, not an immediate-revocation control plane.
 
-RPC writes require an explicit original `txId`; retain the exact payload plus service/graph identity before sending. RPC failure/disconnection/timeout is not proof of abort or acknowledgement. There are no automatic retries. RPC accepts no `AbortSignal`; HTTP clients retain their existing signal support. Results preserve complete tagged rows, duplicates, snapshot meaning and access metrics.
+Public RPC writes mint internal transaction IDs on the service and return only `{ txId }` after commit. To replay one logical request after uncertain delivery, retain and resend the same `clientRequestToken` (up to 256 UTF-8 bytes) and exact facts; it is graph-scoped and retained for seven days, subject to bounded capacity. Changed facts conflict. RPC failure/disconnection/timeout does not prove abort, and errors do not disclose an internal transaction ID. There are no automatic retries. RPC accepts no `AbortSignal`; HTTP clients retain their existing signal support. Results preserve complete tagged rows, duplicates, snapshot meaning and access metrics. The separate trusted `transactApprovedBatch` service operation is reserved for approved import plans and is not part of the public `GraphClient` API.
 
 `poneglyph.svc.leostera.dev` is a logical service name, **not a registered public custom domain**. Consumers use service bindings, not DNS. See [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md) for policy trust, RPC boundaries, rollout and evidence limitations.
 

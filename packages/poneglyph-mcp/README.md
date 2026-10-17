@@ -15,7 +15,7 @@ export default createPublicPoneglyphMcpWorker<Env>({
 });
 ```
 
-The helper owns the public read-only HTTP boundary, CORS and request-local MCP; the app owns its fixed graph, service, admission and content. It calls `env.PONEGLYPH.getGraph({ graphId })` lazily inside query-tool execution and disposes the graph after the read settles, including failures. MCP initialization/schema discovery does not acquire a graph. RPC cancellation follows invocation lifetime; an observed signal prevents new reads/discards a canceled answer, without pretending to serialize `AbortSignal` or abort an admitted write.
+The helper owns the public read-only HTTP boundary, CORS and request-local MCP; the app owns its fixed graph, service, admission and content. It calls `env.PONEGLYPH.getGraph({ graphId })` lazily inside each read-tool execution (`query` or `get_schema`) and disposes the graph after the read settles, including failures. MCP initialization and `describe_dataset` do not acquire a graph; `get_schema` performs a real snapshot read. RPC cancellation follows invocation lifetime; an observed signal prevents new reads/discards a canceled answer, without pretending to serialize `AbortSignal` or abort an admitted write.
 
 For HTTP/custom transports, the lower-level composition remains supported:
 
@@ -29,8 +29,8 @@ const graph = createDatabase({
   fetch: (input, init) => env.DATABASE.fetch(input, init),
 });
 const handler = createPoneglyphMcpHandler({
-  reader: { query: (source, options) => graph.query(source, options) },
-  dataset: { name: "My graph", predicates: ["example:name"], limitations: [] },
+  reader: { query: (source, options) => graph.query(source, options), getSchema: options => graph.getSchema(options) },
+  dataset: { name: "My graph", querySyntax: "Positive binary relations with bounded joins", limitations: [] },
   serverInfo: { name: "my-graph-mcp", version: "1.0.0" },
   allowedHostnames: ["my-mcp.example"],
 });
@@ -38,7 +38,7 @@ const handler = createPoneglyphMcpHandler({
 return handler.fetch(request);
 ```
 
-`createPoneglyphMcpServer` exposes the server factory separately for other compositions. Tools are `describe_dataset` and `query`; successful query output preserves complete typed rows/multiplicity, snapshot and metrics. Errors never become truncated successes or automatic retries. The HTTP handler bounds bodies, rejects JSON-RPC batches, and creates fresh Agents SDK server/transport state per request.
+`createPoneglyphMcpServer` exposes the server factory separately for other compositions. Tools are `describe_dataset`, `get_schema`, and `query`. `get_schema` returns observed fields and FactValue tags with its exact subtree snapshot vector; it never asserts constraints or population completeness. Successful query output preserves complete typed rows/multiplicity, snapshot and metrics. Errors never become truncated successes or automatic retries. The HTTP handler bounds bodies, rejects JSON-RPC batches, and creates fresh Agents SDK server/transport state per request.
 
 The owner supplies ingress policy, CORS, rate limiter, graph/backend selection, resource bindings, static website and deployment lifecycle. Reusing the package does not create a new database implementation or grant clients write access. The [playground](../../sites/playground.poneglyph.leostera.dev/) is one consumer; [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md) records the boundary and its first deployment.
 

@@ -90,30 +90,29 @@ async function moveTask(request: Request, env: Env, taskId: string): Promise<Res
 }
 
 async function commitFacts(env: Env, facts: readonly unknown[]): Promise<
-  | Readonly<{ ok: true; txId: string; commitSeq: number; status: "committed" }>
-  | Readonly<{ ok: false; response: Response }>
+  | Readonly<{ok: true; txId: string}>
+  | Readonly<{ok: false; response: Response}>
 > {
-  const txId = `poneglyph:tx:${crypto.randomUUID()}`;
-  const response = await env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(TODO_GRAPH_ID)).fetch(
+  const response = await env.GRAPH_FACADES.getByName(coordinatorObjectName(TODO_GRAPH_ID)).fetch(
     `https://coordinator.internal/v1/graphs/${TODO_GRAPH_ID}/transactions`,
     {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ txId, facts }),
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({facts}),
     },
   );
   const body: unknown = await response.json().catch(() => undefined);
-  if (!response.ok || !isRecord(body) || body["status"] !== "committed" || typeof body["commitSeq"] !== "number") {
-    return { ok: false, response: jsonResponse(isRecord(body) ? body : { error: "transaction failed" }, response.status || 502) };
+  if (!response.ok || !isRecord(body) || typeof body["txId"] !== "string") {
+    return {ok: false, response: jsonResponse(isRecord(body) ? body : {error: "transaction failed"}, response.status || 502)};
   }
-  return { ok: true, txId, commitSeq: body["commitSeq"], status: "committed" };
+  return {ok: true, txId: body["txId"]};
 }
 
 async function runQuery(env: Env, query: string): Promise<
   | Readonly<{ ok: true; rows: readonly Record<string, unknown>[]; snapshotSeq: number; metrics: unknown }>
   | Readonly<{ ok: false; response: Response }>
 > {
-  const response = await env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(TODO_GRAPH_ID)).fetch(
+  const response = await env.GRAPH_FACADES.getByName(coordinatorObjectName(TODO_GRAPH_ID)).fetch(
     `https://coordinator.internal/v1/graphs/${TODO_GRAPH_ID}/query`,
     { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query }) },
   );
@@ -127,7 +126,7 @@ async function runQuery(env: Env, query: string): Promise<
 
 async function publishInvalidation(
   env: Env,
-  transaction: Readonly<{ txId: string; commitSeq: number }>,
+  transaction: Readonly<{txId: string}>,
   changedLists: readonly string[],
 ): Promise<void> {
   const hub = env.TODO_HUBS.getByName("shared-todo");
@@ -135,7 +134,6 @@ async function publishInvalidation(
     type: "invalidate",
     graphId: TODO_GRAPH_ID,
     txId: transaction.txId,
-    commitSeq: transaction.commitSeq,
     changedLists,
   };
   try {

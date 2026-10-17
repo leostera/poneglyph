@@ -1,12 +1,14 @@
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseFactBatch, type FactBatch } from "../domain/fact.js";
+import { parseTransactionId } from "../domain/identifiers.js";
 import { isRecord } from "../domain/result.js";
 import { MAX_TRANSACTION_BYTES, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "./constants.js";
-import { LEDGER_RECOVERY_DELAY_MS } from "./forest.js";
-import { jsonResponse, readJsonBody, sha256Hex } from "./http.js";
+import { LEDGER_BUCKETS, LEDGER_RECOVERY_DELAY_MS, ledgerBucketForTransactionId } from "./forest.js";
+import { jsonResponse, readJsonBody } from "./http.js";
 import type { StorageEnv } from "./environment.js";
 import { DistributedTransaction } from "./transaction.js";
 import { BatchCache } from "./batch-cache.js";
+import { retainedLedgerOutcomeCount } from "./ledger-capacity.js";
 
 const RECOVERY_BATCH_SIZE = 100;
 const RECOVERY_CONCURRENCY = 6;
@@ -21,24 +23,63 @@ export class TransactionLedger {
   private readonly executions = new Map<string, Execution>();
   private readonly cache = new BatchCache();
 
-  constructor(private readonly storage: DurableObjectStorage, private readonly env: StorageEnv) {}
+  constructor(
+    private readonly storage: DurableObjectStorage,
+    private readonly env: StorageEnv,
+    private readonly scheduleAlarm: () => Promise<void>,
+  ) {}
 
   async fetch(request: Request): Promise<Response> {
     const raw = await readJsonBody(request, MAX_TRANSACTION_BYTES + 256);
     if (!raw.ok || !isRecord(raw.value)) return jsonResponse({error: "invalid transaction envelope"}, 400);
     const graph = parseGraphId(raw.value["graphId"]), batch = parseFactBatch(raw.value["batch"]);
     if (!graph.ok || !batch.ok) return jsonResponse({error: "invalid graph or fact batch"}, 400);
-    const bucket = (await sha256Hex(batch.value.txId)).slice(0, 1);
+    const bucket = await ledgerBucketForTransactionId(batch.value.txId);
+    if (!this.bindIdentity(graph.value, bucket)) return jsonResponse({error: "transaction escapes its ledger identity"}, 409);
+    return this.executeBatch(graph.value, batch.value);
+  }
+
+  async status(request: Request): Promise<Response> {
+    const raw = await readJsonBody(request, 2_048);
+    if (!raw.ok) return jsonResponse({error: raw.error.message}, 400);
+    if (!isRecord(raw.value)) return jsonResponse({error: "invalid transaction-status request"}, 400);
+    const graph = parseGraphId(raw.value["graphId"]);
+    const txId = parseTransactionId(raw.value["txId"]);
+    if (!graph.ok || !txId.ok || Object.keys(raw.value).some(key => key !== "graphId" && key !== "txId")) {
+      return jsonResponse({error: "invalid transaction-status identity"}, 400);
+    }
+    return jsonResponse(await this.statusFor(graph.value, txId.value));
+  }
+
+  bindIdentity(graphId: string, bucket: string): boolean {
+    if (!LEDGER_BUCKETS.includes(bucket)) return false;
+    return this.storage.transactionSync(() => {
+      const context = this.storage.sql.exec<{graph_id: string; bucket: string}>("SELECT graph_id, bucket FROM ledger_context").toArray()[0];
+      if (context) return context.graph_id === graphId && context.bucket === bucket;
+      this.storage.sql.exec("INSERT INTO ledger_context VALUES (1, ?, ?)", graphId, bucket);
+      return true;
+    });
+  }
+
+  async statusFor(graphId: string, txId: string): Promise<{phase: string; createdAtMs?: number}> {
+    const bucket = await ledgerBucketForTransactionId(txId);
     const context = this.storage.sql.exec<{graph_id: string; bucket: string}>("SELECT graph_id, bucket FROM ledger_context").toArray()[0];
-    if (context && (context.graph_id !== graph.value || context.bucket !== bucket))
+    if (!context || context.graph_id !== graphId || context.bucket !== bucket) return {phase: "missing"};
+    const row = this.storage.sql.exec<{phase: string; created_at_ms: number}>(
+      "SELECT phase, created_at_ms FROM candidate_transactions WHERE tx_id = ?", txId,
+    ).toArray()[0];
+    return row === undefined ? {phase: "missing"} : {phase: row.phase, createdAtMs: row.created_at_ms};
+  }
+
+  async executeBatch(graph: GraphId, batch: FactBatch): Promise<Response> {
+    if (!this.bindIdentity(graph, await ledgerBucketForTransactionId(batch.txId)))
       return jsonResponse({error: "transaction escapes its ledger identity"}, 409);
-    if (!context) this.storage.sql.exec("INSERT INTO ledger_context VALUES (1, ?, ?)", graph.value, bucket);
-    return this.execute(graph.value, batch.value);
+    return this.execute(graph, batch);
   }
 
   private async execute(graph: GraphId, batch: FactBatch, recovery = false): Promise<Response> {
     const execution = this.executions.get(batch.txId) ?? {
-      engine: new DistributedTransaction(this.storage, this.env, batch.txId, () => this.schedule(), this.cache), callers: 0,
+      engine: new DistributedTransaction(this.storage, this.env, batch.txId, this.scheduleAlarm, this.cache), callers: 0,
     };
     this.executions.set(batch.txId, execution);
     execution.callers++;
@@ -49,24 +90,21 @@ export class TransactionLedger {
       // A committed/publicly visible transaction must not become a failed
       // acknowledgement merely because terminal maintenance could not rearm.
       // Every pending drive already armed recovery before participant I/O.
-      try { await this.schedule(); }
+      try { await this.scheduleAlarm(); }
       catch (error) { console.error("transaction ledger maintenance deferred", String(error)); }
     }
   }
 
-  // Only indexed deadlines drive the alarm. Audits never invoke this method.
-  private async schedule(): Promise<void> {
+  async nextMaintenanceAt(): Promise<number | undefined> {
     const pending = this.storage.sql.exec<{due: number | null}>(
       "SELECT MIN(next_recovery_at_ms) AS due FROM candidate_transactions WHERE phase NOT IN ('complete', 'aborted')",
     ).one().due;
     const terminal = this.storage.sql.exec<{due: number | null}>(
       "SELECT MIN(created_at_ms) AS due FROM candidate_transactions WHERE phase IN ('complete', 'aborted')",
     ).one().due;
-    const deadlines = [pending, terminal === null ? null : terminal + TRANSACTION_IDEMPOTENCY_RETENTION_MS].filter((value): value is number => value !== null);
-    if (!deadlines.length) return;
-    const due = Math.max(Date.now() + 1_000, Math.min(...deadlines));
-    const current = await this.storage.getAlarm();
-    if (current === null || due < current) await this.storage.setAlarm(due);
+    const deadlines = [pending, terminal === null ? null : terminal + TRANSACTION_IDEMPOTENCY_RETENTION_MS]
+      .filter((value): value is number => value !== null);
+    return deadlines.length === 0 ? undefined : Math.min(...deadlines);
   }
 
   async alarm(): Promise<void> {
@@ -98,7 +136,7 @@ export class TransactionLedger {
       }
     };
     try { await Promise.all(Array.from({length: RECOVERY_CONCURRENCY}, worker)); }
-    finally { await this.schedule(); }
+    finally { await this.scheduleAlarm(); }
   }
 
   private sweepExpired(): void {

@@ -4,7 +4,9 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 import { createDatabase, type FetchFunction } from "@leostera/poneglyph";
 import { createPoneglyphMcpHandler, type GraphReader } from "../src/index.js";
 const MCP_URL = "https://example.test/mcp";
-const DATASET = { name: "Example graph", graphId: "example", predicates: ["wiki:page:title"] };
+const DATASET = { name: "Example graph", graphId: "example", schemaNote: "Use get_schema for observed fields." };
+const schema = {snapshotSeq: 7, sequenceScope: "subtree-vector", snapshotVector: [{prefix: "0000", sequence: 7, epoch: 1}],
+  fields: [{field: "wiki:page:title", valueTags: ["text"]}]};
 
 const metrics = { scanCalls: 1, shardRequests: 1, tuplesRead: 2, bytesRead: 128, directoryRequests: 1 };
 const answer = { rows: [{ Value: { type: "integer", value: "9223372036854775807" } }, { Value: { type: "integer", value: "9223372036854775807" } }], snapshotSeq: 7, metrics };
@@ -39,10 +41,30 @@ function fakeGraph(fetcher: FetchFunction): GraphReader {
 test("only anonymous read tools are advertised; dataset guidance is explicit", async () => {
   await withClient(fakeGraph(async () => { throw new Error("schema must not contact storage"); }), async client => {
     const { tools } = await client.listTools();
-    assert.deepEqual(tools.map(tool => tool.name).sort(), ["describe_dataset", "query"]);
+    assert.deepEqual(tools.map(tool => tool.name).sort(), ["describe_dataset", "get_schema", "query"]);
     for (const tool of tools) assert.equal(tool.annotations?.readOnlyHint, true);
     const result = await client.callTool({ name: "describe_dataset", arguments: {} });
     assert.deepEqual(toolPayload(result), DATASET);
+  });
+});
+
+test("get_schema returns observed fields and its declared snapshot without schema inference", async () => {
+  await withClient(fakeGraph(async (input, init) => {
+    assert.equal(String(input), "https://database.internal/v1/graphs/example/schema");
+    assert.deepEqual(JSON.parse(String(init?.body)), {});
+    return Response.json(schema);
+  }), async client => {
+    const result = await client.callTool({name: "get_schema", arguments: {}});
+    assert.notEqual(result.isError, true);
+    assert.deepEqual(toolPayload(result), schema);
+  });
+});
+
+test("malformed observed schemas fail as backend protocol errors", async () => {
+  await withClient(fakeGraph(async () => Response.json({...schema, snapshotSeq: 6})), async client => {
+    const result = await client.callTool({name: "get_schema", arguments: {}});
+    assert.equal(result.isError, true);
+    assert.equal(toolPayload(result).error.code, "invalid_backend_response");
   });
 });
 

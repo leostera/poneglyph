@@ -6,7 +6,20 @@ Draft implementation contract with bounded validation evidence (2026-10-11). The
 
 ## Current implementation amendment
 
-The single graph-wide sequencer/lock described below is the historical A contract. The user-selected sole implementation now uses sixteen owner roots, pooled graph-bound journals, entity fences and leased vector reads, while retaining expandable prefixes and the existing capacity/query limits. See [RFD0005's current direction](./RFD0005-write-path-experiment.md#current-direction-one-implementation-2026-10-14). Its schema7/routing8 rejects older persistence; this change does not silently migrate the earlier deployed namespaces or make the historical simulator a physical-capacity proof.
+The single graph-wide sequencer/lock described below is the historical A contract. The user-selected sole implementation uses sixteen owner roots, pooled graph-bound journals, entity fences and leased vector reads, while retaining expandable prefixes and the existing capacity/query limits. See [RFD0005's current direction](./RFD0005-write-path-experiment.md#current-direction-one-implementation-2026-10-14). Earlier schema/routing checkpoints reject incompatible persistence; they do not silently migrate historical namespaces or make the simulator a physical-capacity proof.
+
+## Four-role Durable Object decomposition (routing version 9 source)
+
+The current source splits canonical storage across four SQLite Durable Object classes with one explicit request path: `GraphCoordinatorDO` → `GraphLedgerDO` → `GraphTreeDO` → `GraphShardDO`. This is implemented in `packages/poneglyph/src/storage/` and wired through `packages/poneglyph-worker/cloudflare.config.ts`. The four-role source was deployed to the private service and playground; deployment versions, the synthetic smoke fixture, and evidence limits are recorded in [RFD0006](./RFD0006-public-read-only-mcp-playground.md). Class/namespace names remain unversioned; deterministic instance names retain `v9`. No old state was copied.
+
+- `GraphCoordinatorDO` is the graph-facing, stateless facade. `dispatchGraphRequest` always addresses `GRAPH_FACADES` first; the facade validates the graph route and dispatches writes to a ledger, and owns bounded Datalog/query/schema/entity response behavior. It has no application SQLite schema or transaction alarm.
+- `GraphLedgerDO` owns one graph/bucket's durable `candidate_transactions`, optional client-request-token mapping, recovery, retention and the single combined Durable Object alarm. Token rows and transaction rows share `LEDGER_OUTCOME_LIMIT`; they cannot independently consume the full per-bucket allocation. A token mapping whose candidate journal does not yet exist reserves both row slots, and journal creation fulfills that reservation rather than competing with unrelated writes. A token request is routed by `SHA-256(graphId || 0x00 || token)`. Its server-minted transaction ID encodes that bucket (`poneglyph:tx:token:<hex-bucket>:<uuid>`), so `transactionCoordinatorName` sends transaction retries, status checks and recovery back to the same ledger. Token and ledger state are committed in the same actor database before participant I/O.
+- `GraphTreeDO` owns one of sixteen independent four-bit roots: directory epoch/visibility sequence, entity write reservations and locks, read leases, split state, and topology transitions. Its schema no longer contains the ledger journal or facts.
+- `GraphShardDO` owns prefix routers and leaves; only leaf shards store the append-only fact log and replayable fact/value/entity projections and indexes. A split moves those rows to children and leaves routing metadata in the parent.
+
+A public write now follows `HttpGraphClient.transact` → `dispatchGraphRequest` → `GraphCoordinatorDO.fetch` → `dispatchPublicTransaction` → one `GraphLedgerDO` → affected `GraphTreeDO` roots and `GraphShardDO` participants. The ledger is selected by graph plus transaction ID; for tokenized writes the encoded bucket makes that route identical to the token's bucket. Reads start at the facade, acquire the necessary tree leases, and query shard leaves. Trees and shards also make bounded control/proof calls to one another during reservation, apply, publication and split recovery. No facts are copied between the old coordinator namespace and new role namespaces; incompatible old actor databases are not imported by this refactor.
+
+`packages/poneglyph/src/storage/sql.ts` now initializes separate fail-closed `g-ledger`, `g-tree`, and `g-shard` schemas. The graph facade initializes no schema. Schema compatibility and routing version are separate: the shard schema marker is version 8, current ledger/tree marker versions are 1, and routing names use version 9. This is a role-boundary refactor, not a new consistency-model proof: it does not justify Serializable/Linearizable/Strict-Serializable labels or hosted throughput/capacity claims. Focused and package checks plus the bounded synthetic deployment smoke are the available evidence; no corpus import is part of it.
 
 ## Query execution amendment (2026-10-14)
 
@@ -58,6 +71,8 @@ The next branch phase removes the Rust workspace and makes TypeScript the only P
 - Changes to FokosDB.
 
 ## Design
+
+The subsections below retain the original A design contract and its historical single-coordinator placement. For the current source's four actor boundaries, use the four-role amendment above and RFD0005's current direction; in particular, `GraphCoordinatorDO` now means the stateless facade, `GraphLedgerDO` owns transaction decisions, and `GraphTreeDO` owns visibility and owner coordination. The routing, capacity and split constraints remain relevant where they do not depend on that old placement.
 
 ### Routing and directory
 
@@ -194,7 +209,7 @@ const facts: readonly FactInput[] = [{
   field: "team:task:title",
   value: { type: "text", value: "First task" },
 }];
-const txId = await graph.stateFacts(facts, { txId: "team-memory:seed-1" });
+const {txId} = await graph.transact(facts, {clientRequestToken: "team-memory:seed-1"});
 const result = await graph.query('team:task:title(Task, "First task")');
 ```
 
@@ -202,29 +217,27 @@ const result = await graph.query('team:task:title(Task, "First task")');
 
 | Client method | Result and boundary |
 | --- | --- |
-| `stateFacts(facts, options?)` | Awaits a valid committed receipt, then returns `TransactionId`. |
-| `state(facts, options?)` | Retained alias of `stateFacts`, not a separate write path. |
-| `transact(facts, options?)` | Returns `{ txId, commitSeq, status: "committed" }`. |
+| `transact(facts, options?)` | Returns exactly `{ txId }` after the service validates a committed transaction witness. |
 | `query(source, options?)` | Validates Datalog source locally and returns buffered `{ rows, snapshotSeq, metrics }`. |
 
-`FactInput` accepts an optional retraction flag, normalized to false when omitted/nullish; the shared fact parser checks the complete batch before transport. Write options accept `txId` and `AbortSignal`; query options accept `AbortSignal`. Omitted IDs use `poneglyph:tx:${crypto.randomUUID()}`; callers without `crypto.randomUUID` must provide one. The client never retries automatically. Retain the ID before sending and resend the identical facts/ID after an ambiguous failure. A receipt must match the sent ID, have committed status, and contain a positive safe-integer sequence; malformed success is not acknowledgement.
+`FactInput` accepts an optional retraction flag, normalized to false when omitted/nullish; the shared fact parser checks the complete batch before transport. Write options accept an optional `clientRequestToken` and `AbortSignal`; query options accept `AbortSignal`. The service generates each internal transaction ID and exposes it only in the successful receipt. A token is a non-empty string of at most 256 UTF-8 bytes, scoped to the graph; its durable mapping is retained for seven days subject to bounded capacity. Same-token/same-facts retries, including concurrent duplicates, return the original `{ txId }`; changed facts conflict. Without a token, each submission is a new transaction. The client never retries automatically. After ambiguous delivery, only retry the same logical operation using the same token and exact facts. Internal sequence/ticket state remains private and is not a graph-global API clock.
 
 - `PoneglyphInputError`: invalid graph/fact/query input, optionally with parser path/offset. Invalid configuration can instead throw `TypeError`.
-- `PoneglyphNetworkError`: fetch/body-read failure with cause and write ID when applicable; the commit outcome may be unknown.
-- `PoneglyphRequestError`: HTTP failure with status, retryable hint, optional raw `retryAfter`, and write ID. A boolean server hint overrides inference; otherwise 408/423/429/5xx are retryable. A string such as `"false"` is not a boolean hint.
-- `PoneglyphProtocolError`: malformed successful response/receipt/query binding, with write ID when applicable; not proof of abort.
+- `PoneglyphNetworkError`: fetch/body-read failure with cause; the commit outcome may be unknown and no internal ID is exposed.
+- `PoneglyphRequestError`: HTTP failure with status, retryable hint and optional raw `retryAfter`. A boolean server hint overrides inference; otherwise 408/423/429/5xx are retryable. A string such as `"false"` is not a boolean hint.
+- `PoneglyphProtocolError`: malformed successful response/receipt/query binding; not proof of abort.
 
 Query rows are parsed/frozen Datalog bindings, not a streaming cursor. Snapshot sequence and access counters must be nonnegative safe integers. Metrics are `scanCalls`, `shardRequests`, `tuplesRead`, `bytesRead`, and `directoryRequests`, plus the optional elapsed `timing` group specified in the query execution amendment. The API has no pagination, query objects/builders, `query(txId, query)`, or historical/as-of contract. Latest/read-token/stable-snapshot product questions remain deferred. More clients do not remove the single graph coordinator; multiple graph IDs create separate graphs, not transparent partitioning. Cloudflare's approximately 1,000 requests/second per DO is a soft workload-dependent limit, not a hard ceiling or Poneglyph throughput claim.
 
 The HTTP routes are:
 
 ```text
-POST /v1/graphs/{graphId}/transactions  { "txId": "...", "facts": [...] }
+POST /v1/graphs/{graphId}/transactions  { "facts": [...], "clientRequestToken": "optional" }
 POST /v1/graphs/{graphId}/query         { "query": "..." }
 GET  /v1/graphs/{graphId}/entities?uri=wiki%3Acrew%3Astraw-hats
 ```
 
-Transaction drafts contain source/entity/field URIs, a tagged value such as `{ "type": "reference", "value": "wiki:person:luffy" }`, and explicit `retraction` at the HTTP boundary. Graph IDs are lowercase slugs of at most 64 characters. Shared parsers return typed `ParseResult` values rather than silently coercing malformed input. Parsing facts or queries alone persists nothing. See [`src/client.ts`](../../packages/poneglyph/src/client.ts), [`src/index.ts`](../../packages/poneglyph/src/index.ts), and [`client quickstart`](../../examples/client-quickstart/src/main.ts).
+Transaction drafts contain source/entity/field URIs, a tagged value such as `{ "type": "reference", "value": "wiki:person:luffy" }`, and explicit `retraction` at the HTTP boundary. The public write envelope accepts facts and an optional `clientRequestToken`; it rejects caller-supplied transaction IDs. Graph IDs are lowercase slugs of at most 64 characters. Shared parsers return typed `ParseResult` values rather than silently coercing malformed input. Parsing facts or queries alone persists nothing. See [`src/client.ts`](../../packages/poneglyph/src/client.ts), [`src/index.ts`](../../packages/poneglyph/src/index.ts), and [`client quickstart`](../../examples/client-quickstart/src/main.ts).
 
 ### Package construction and publishing gates
 

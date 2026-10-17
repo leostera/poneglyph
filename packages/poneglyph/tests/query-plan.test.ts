@@ -5,9 +5,13 @@ import type { FactInput, QueryResult } from "../src/client.js";
 import { treeForKey, treeCoordinatorName, TREE_PREFIXES } from "../src/storage/forest.js";
 import { virtualKeyForEntity, coordinatorObjectName, shardObjectName } from "../src/storage/keys.js";
 import { valueIndexKeysForDatalogValue } from "../src/storage/value-index.js";
+import { parseFactBatch } from "../src/domain/fact.js";
+import { dispatchInternalTransaction } from "../src/storage/transaction-request.js";
 
 async function write(graph: string, txId: string, facts: readonly FactInput[]) {
-  const response = await exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/transactions`, {method: "POST", body: JSON.stringify({txId, facts: facts.map(fact => ({...fact, retraction: fact.retraction ?? false}))})}));
+  const batch = parseFactBatch({txId, facts: facts.map(fact => ({...fact, retraction: fact.retraction ?? false}))});
+  if (!batch.ok) throw new Error(batch.error.message);
+  const response = await dispatchInternalTransaction(env, graph, batch.value);
   expect(response.status, await response.text()).toBe(200);
 }
 async function query(graph: string, source: string) {
@@ -38,7 +42,7 @@ describe("owner-local query plan", () => {
     await write(graph, "query:retract", [{...categories[1]!, retraction: true}, {...titles[1]!, retraction: true}]);
     await check(361, 16);
     const prefix = treeForKey(await virtualKeyForEntity(graph, entity));
-    const split = await env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(graph)).fetch("https://graph.internal/_split", {method: "POST", body: JSON.stringify({graphId: graph, prefix, force: true})});
+    const split = await env.GRAPH_FACADES.getByName(coordinatorObjectName(graph)).fetch("https://graph.internal/_split", {method: "POST", body: JSON.stringify({graphId: graph, prefix, force: true})});
     expect(split.status).toBe(200);
     await check(361, 17);
   });
@@ -53,7 +57,7 @@ describe("owner-local query plan", () => {
     expect(result.rows).toEqual([{Title: {type: "string", value: "Captain"}}]);
     expect(result.snapshotVector.map(owner => owner.prefix)).toEqual([root]);
     expect(result.metrics).toMatchObject({scanCalls: 1, shardRequests: 1, distinctShardsTouched: 1, treeReadLeaseAcquisitions: 1});
-    for (const prefix of TREE_PREFIXES) await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, prefix)), (_instance, state) => {
+    for (const prefix of TREE_PREFIXES) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, prefix)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM graph_read_leases").one()["count"]).toBe(0);
     });
   });
@@ -130,12 +134,12 @@ describe("owner-local query plan", () => {
 
   it("releases successful siblings when one owner refuses a read cut", async () => {
     const graph = `test-${crypto.randomUUID()}`, busy = TREE_PREFIXES[0]!;
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, busy)), (_instance, state) => {
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, busy)), (_instance, state) => {
       state.storage.sql.exec("UPDATE graph_state SET topology_op_id = 'test-busy' WHERE singleton = 1");
     });
     const response = await query(graph, source); expect(response.status).toBe(423);
     expect((await response.json() as Record<string, unknown>)["rows"]).toBeUndefined();
-    for (const prefix of TREE_PREFIXES) await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, prefix)), (_instance, state) => {
+    for (const prefix of TREE_PREFIXES) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, prefix)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM graph_read_leases").one()["count"]).toBe(0);
     });
   });

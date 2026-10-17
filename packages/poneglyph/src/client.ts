@@ -4,9 +4,11 @@ import { parseFactBatch } from "./domain/fact.js";
 import type { FactValue } from "./domain/fact-value.js";
 import { parseGraphId, type GraphId } from "./domain/graph-id.js";
 import { isRecord, type ParseError } from "./domain/result.js";
-import type { TransactionId } from "./domain/identifiers.js";
+import { parseClientRequestToken, parseTransactionId, type TransactionId } from "./domain/identifiers.js";
 import type { QueryTiming } from "./domain/query-timing.js";
+import { parseGraphSchemaObservation, type GraphSchemaObservation } from "./domain/schema-observation.js";
 export type { QueryTiming } from "./domain/query-timing.js";
+export type { GraphSchemaObservation, ObservedField, ObservedValueTag, SchemaSnapshotOwner } from "./domain/schema-observation.js";
 
 export type FetchFunction = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -27,18 +29,14 @@ export type FactInput = Readonly<{
   retraction?: boolean;
 }>;
 
-export type StateOptions = Readonly<{
-  txId?: string;
+export type TransactionOptions = Readonly<{
+  clientRequestToken?: string;
   signal?: AbortSignal;
 }>;
 
 export type QueryOptions = Readonly<{ signal?: AbortSignal }>;
 
-export type TransactionReceipt = Readonly<{
-  txId: TransactionId;
-  commitSeq: number;
-  status: "committed";
-}>;
+export type TransactionReceipt = Readonly<{ txId: TransactionId }>;
 
 export type QueryMetrics = Readonly<{
   scanCalls: number;
@@ -61,10 +59,9 @@ export type QueryResult = Readonly<{
 
 export interface GraphClient {
   readonly id: GraphId;
-  stateFacts(facts: readonly FactInput[], options?: StateOptions): Promise<TransactionId>;
-  state(facts: readonly FactInput[], options?: StateOptions): Promise<TransactionId>;
-  transact(facts: readonly FactInput[], options?: StateOptions): Promise<TransactionReceipt>;
+  transact(facts: readonly FactInput[], options?: TransactionOptions): Promise<TransactionReceipt>;
   query(source: string, options?: QueryOptions): Promise<QueryResult>;
+  getSchema(options?: QueryOptions): Promise<GraphSchemaObservation>;
 }
 
 export interface DatabaseClient {
@@ -88,12 +85,9 @@ export class PoneglyphInputError extends TypeError {
 }
 
 export class PoneglyphNetworkError extends Error {
-  readonly txId?: TransactionId;
-
-  constructor(message: string, cause: unknown, txId?: TransactionId) {
+  constructor(message: string, cause: unknown) {
     super(message, { cause });
     this.name = "PoneglyphNetworkError";
-    if (txId !== undefined) this.txId = txId;
   }
 }
 
@@ -101,31 +95,25 @@ export class PoneglyphRequestError extends Error {
   readonly status: number;
   readonly retryable: boolean;
   readonly retryAfter?: string;
-  readonly txId?: TransactionId;
 
   constructor(input: Readonly<{
     status: number;
     message: string;
     retryable: boolean;
     retryAfter?: string;
-    txId?: TransactionId;
   }>) {
     super(input.message);
     this.name = "PoneglyphRequestError";
     this.status = input.status;
     this.retryable = input.retryable;
     if (input.retryAfter !== undefined) this.retryAfter = input.retryAfter;
-    if (input.txId !== undefined) this.txId = input.txId;
   }
 }
 
 export class PoneglyphProtocolError extends Error {
-  readonly txId?: TransactionId;
-
-  constructor(message: string, txId?: TransactionId) {
+  constructor(message: string) {
     super(message);
     this.name = "PoneglyphProtocolError";
-    if (txId !== undefined) this.txId = txId;
   }
 }
 
@@ -162,20 +150,16 @@ class DatabaseWithGraph extends Database implements DatabaseWithDefaultGraph {
 
   readonly id: GraphId;
 
-  stateFacts(facts: readonly FactInput[], options?: StateOptions): Promise<TransactionId> {
-    return this.defaultGraph.stateFacts(facts, options);
-  }
-
-  state(facts: readonly FactInput[], options?: StateOptions): Promise<TransactionId> {
-    return this.stateFacts(facts, options);
-  }
-
-  transact(facts: readonly FactInput[], options?: StateOptions): Promise<TransactionReceipt> {
+  transact(facts: readonly FactInput[], options?: TransactionOptions): Promise<TransactionReceipt> {
     return this.defaultGraph.transact(facts, options);
   }
 
   query(source: string, options?: QueryOptions): Promise<QueryResult> {
     return this.defaultGraph.query(source, options);
+  }
+
+  getSchema(options?: QueryOptions): Promise<GraphSchemaObservation> {
+    return this.defaultGraph.getSchema(options);
   }
 }
 
@@ -185,28 +169,29 @@ class HttpGraphClient implements GraphClient {
     readonly id: GraphId,
   ) {}
 
-  async stateFacts(facts: readonly FactInput[], options: StateOptions = {}): Promise<TransactionId> {
-    const receipt = await this.transact(facts, options);
-    return receipt.txId;
-  }
-
-  state(facts: readonly FactInput[], options: StateOptions = {}): Promise<TransactionId> {
-    return this.stateFacts(facts, options);
-  }
-
-  async transact(facts: readonly FactInput[], options: StateOptions = {}): Promise<TransactionReceipt> {
-    const txId = options.txId ?? createTransactionId();
+  async transact(facts: readonly FactInput[], options: TransactionOptions = {}): Promise<TransactionReceipt> {
     const normalizedFacts = normalizeFacts(facts);
-    const batch = parseFactBatch({ txId, facts: normalizedFacts });
+    const batch = parseFactBatch({ txId: "poneglyph:validation:client-request", facts: normalizedFacts });
     if (!batch.ok) throw new PoneglyphInputError(batch.error.message, batch.error);
 
-    const response = await this.transport.post(
-      graphPath(this.id, "transactions"),
-      { txId: batch.value.txId, facts: batch.value.facts },
-      batch.value.txId,
-      options.signal,
-    );
-    return parseTransactionReceipt(response, batch.value.txId);
+    const token = options.clientRequestToken === undefined
+      ? undefined
+      : parseClientRequestToken(options.clientRequestToken);
+    if (token !== undefined && !token.ok) throw new PoneglyphInputError(token.error.message, token.error);
+
+    const body = {
+      facts: batch.value.facts,
+      ...(token === undefined ? {} : { clientRequestToken: token.value }),
+    };
+    const response = await this.transport.post(graphPath(this.id, "transactions"), body, options.signal);
+    return parseTransactionReceipt(response);
+  }
+
+  async getSchema(options: QueryOptions = {}): Promise<GraphSchemaObservation> {
+    const response = await this.transport.post(graphPath(this.id, "schema"), {}, options.signal);
+    const schema = parseGraphSchemaObservation(response);
+    if (!schema.ok) throw new PoneglyphProtocolError("Poneglyph Worker returned an invalid graph schema observation");
+    return schema.value;
   }
 
   async query(source: string, options: QueryOptions = {}): Promise<QueryResult> {
@@ -217,7 +202,6 @@ class HttpGraphClient implements GraphClient {
     const response = await this.transport.post(
       graphPath(this.id, "query"),
       { query: source },
-      undefined,
       options.signal,
     );
     return parseQueryResult(response);
@@ -245,7 +229,6 @@ class HttpTransport {
   async post(
     path: string,
     body: unknown,
-    txId?: TransactionId,
     signal?: AbortSignal,
   ): Promise<Record<string, unknown>> {
     const headers = new Headers(this.headers);
@@ -261,20 +244,20 @@ class HttpTransport {
     try {
       response = await this.fetcher(`${this.origin}${this.pathPrefix}${path}`, init);
     } catch (cause) {
-      throw new PoneglyphNetworkError("Poneglyph request could not reach the Worker", cause, txId);
+      throw new PoneglyphNetworkError("Poneglyph request could not reach the Worker", cause);
     }
 
     let text: string;
     try {
       text = await response.text();
     } catch (cause) {
-      throw new PoneglyphNetworkError("Poneglyph response could not be read", cause, txId);
+      throw new PoneglyphNetworkError("Poneglyph response could not be read", cause);
     }
     let bodyValue: unknown;
     try {
       bodyValue = JSON.parse(text) as unknown;
     } catch {
-      if (response.ok) throw new PoneglyphProtocolError("Poneglyph Worker returned invalid JSON", txId);
+      if (response.ok) throw new PoneglyphProtocolError("Poneglyph Worker returned invalid JSON");
       bodyValue = { error: text.slice(0, 512) };
     }
 
@@ -290,11 +273,10 @@ class HttpTransport {
           ? bodyValue["retryable"]
           : isRetryableStatus(response.status),
         ...(retryAfter === undefined ? {} : { retryAfter }),
-        ...(txId === undefined ? {} : { txId }),
       });
     }
 
-    if (!isRecord(bodyValue)) throw new PoneglyphProtocolError("Poneglyph Worker returned a non-object response", txId);
+    if (!isRecord(bodyValue)) throw new PoneglyphProtocolError("Poneglyph Worker returned a non-object response");
     return bodyValue;
   }
 }
@@ -307,14 +289,7 @@ function normalizeFacts(facts: readonly FactInput[]): readonly unknown[] {
   });
 }
 
-function createTransactionId(): string {
-  if (typeof globalThis.crypto?.randomUUID !== "function") {
-    throw new TypeError("Poneglyph needs crypto.randomUUID() to generate a transaction ID; pass options.txId instead");
-  }
-  return `poneglyph:tx:${globalThis.crypto.randomUUID()}`;
-}
-
-function graphPath(graphId: GraphId, action: "transactions" | "query"): string {
+function graphPath(graphId: GraphId, action: "transactions" | "query" | "schema"): string {
   return `/v1/graphs/${encodeURIComponent(graphId)}/${action}`;
 }
 
@@ -342,17 +317,10 @@ function parseHeaders(input: HeadersInit | undefined): Headers {
   }
 }
 
-function parseTransactionReceipt(
-  input: Record<string, unknown>,
-  expectedTxId: TransactionId,
-): TransactionReceipt {
-  const txId = input["txId"];
-  const commitSeq = input["commitSeq"];
-  if (input["status"] !== "committed" || txId !== expectedTxId ||
-      typeof commitSeq !== "number" || !Number.isSafeInteger(commitSeq) || commitSeq < 1) {
-    throw new PoneglyphProtocolError("Poneglyph Worker returned an invalid transaction receipt", expectedTxId);
-  }
-  return Object.freeze({ txId: expectedTxId, commitSeq, status: "committed" });
+function parseTransactionReceipt(input: Record<string, unknown>): TransactionReceipt {
+  const txId = parseTransactionId(input["txId"], "receipt.txId");
+  if (!txId.ok) throw new PoneglyphProtocolError("Poneglyph Worker returned an invalid transaction receipt");
+  return Object.freeze({ txId: txId.value });
 }
 
 function parseQueryResult(input: Record<string, unknown>): QueryResult {

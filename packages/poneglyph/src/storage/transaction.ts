@@ -5,6 +5,7 @@ import { MAX_TRANSACTION_BYTES, MAX_TRANSACTION_FACTS, MAX_TRANSACTION_PARTICIPA
 import { accountStorage } from "./capacity.js";
 import { canonicalBatchJson, jsonResponse, sha256Hex } from "./http.js";
 import { LEDGER_OUTCOME_LIMIT, LEDGER_RECOVERY_DELAY_MS, treeCoordinatorName } from "./forest.js";
+import { retainedLedgerOutcomeCount } from "./ledger-capacity.js";
 import { shardObjectName } from "./keys.js";
 import { factAsJson } from "./protocol.js";
 import { integer, planBatch, parseWritePlan, type WritePlan, type OwnerPlan, type ParticipantPlan } from "./plan.js";
@@ -46,8 +47,26 @@ export class DistributedTransaction {
     try {
       if (!prior) {
         if (recovery) throw new Error("recovery cannot supply a new application transaction");
-        const count = this.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions").one().count;
-        if (count >= LEDGER_OUTCOME_LIMIT) return jsonResponse({error: "transaction ledger reached its retained-outcome allocation", retryable: false}, 429);
+        const expiredBefore = Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS;
+        this.storage.sql.exec(
+          `DELETE FROM candidate_transactions WHERE tx_id IN (
+            SELECT tx_id FROM candidate_transactions WHERE phase IN ('complete', 'aborted') AND created_at_ms < ? LIMIT 100
+          )`, expiredBefore,
+        );
+        this.storage.sql.exec(
+          `DELETE FROM client_request_tokens WHERE token_hash IN (
+            SELECT token_hash FROM client_request_tokens WHERE terminal_at_ms IS NOT NULL AND created_at_ms < ? LIMIT 100
+          )`, expiredBefore,
+        );
+        const count = retainedLedgerOutcomeCount(this.storage);
+        const usesTokenReservation = this.storage.sql.exec(
+          "SELECT 1 FROM client_request_tokens WHERE tx_id = ?", this.txId,
+        ).toArray().length > 0;
+        // Creating the journal fulfills the second slot already reserved by
+        // this token mapping; ordinary transactions must claim a free slot.
+        if (usesTokenReservation ? count > LEDGER_OUTCOME_LIMIT : count >= LEDGER_OUTCOME_LIMIT) {
+          return jsonResponse({error: "ledger reached its shared retained-outcome allocation", retryable: false}, 429);
+        }
         const capacity = accountStorage(this.storage.sql.databaseSize, {factLogBytes: 0, activeIndexBytes: 0, projectionBytes: 0,
           transactionStagingBytes: new TextEncoder().encode(json).byteLength * 3 + 4096});
         if (!capacity.canAdmit) return jsonResponse({error: "transaction metadata capacity exceeded", retryable: false}, 413);
@@ -81,7 +100,7 @@ export class DistributedTransaction {
     this.cache.put(this.txId, intent.batch_json, parsed.value); return parsed.value;
   }
   private async tree(intent: Intent, owner: Pick<OwnerPlan, "prefix">, action: string, extra: object = {}): Promise<Response> {
-    return this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(intent.graph_id, owner.prefix)).fetch(`https://owner.internal/${action}`, {
+    return this.env.GRAPH_TREES.getByName(treeCoordinatorName(intent.graph_id, owner.prefix)).fetch(`https://owner.internal/${action}`, {
       method: "POST", body: JSON.stringify({graphId: intent.graph_id, prefix: owner.prefix, txId: this.txId, payloadHash: intent.payload_hash,
         identityTimeMs: intent.created_at_ms, ...extra}),
     });

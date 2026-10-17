@@ -1,4 +1,4 @@
-export const ROUTING_VERSION = 8;
+export const ROUTING_VERSION = 9;
 
 export const MAX_DIRECTORY_DEPTH = 256;
 export const MAX_DIRECTORY_LOOKUP_HOPS = MAX_DIRECTORY_DEPTH + 1;

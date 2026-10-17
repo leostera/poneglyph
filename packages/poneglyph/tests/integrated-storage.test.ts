@@ -2,19 +2,22 @@ import { runInDurableObject, evictDurableObject, runDurableObjectAlarm } from "c
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import * as storage from "../src/storage/implementation.js";
-import { treeForKey, treeCoordinatorName, transactionCoordinatorName } from "../src/storage/forest.js";
+import { treeForKey, treeCoordinatorName, transactionCoordinatorName, tokenLedgerName } from "../src/storage/forest.js";
 import { virtualKeyForEntity, shardObjectName, bitAt } from "../src/storage/keys.js";
 import { auditFactStorage } from "../src/testing/storage-audit.js";
 import { sha256Hex, canonicalBatchJson } from "../src/storage/http.js";
 import { parseFactBatch } from "../src/domain/fact.js";
-import { MAX_ACCOUNTED_BYTES_PER_DO } from "../src/storage/constants.js";
+import { dispatchInternalTransaction } from "../src/storage/transaction-request.js";
+import { MAX_ACCOUNTED_BYTES_PER_DO, MAX_RETAINED_TRANSACTION_OUTCOMES, MAX_TRANSACTION_BYTES, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "../src/storage/constants.js";
 import { BatchCache } from "../src/storage/batch-cache.js";
-import { ensureCoordinatorSchema, ensureShardSchema } from "../src/storage/sql.js";
+import { ensureTreeSchema, ensureShardSchema } from "../src/storage/sql.js";
 
 const fact = (entity: string, retraction = false, value = "alive") => ({source: "agent:integrated", entity,
   field: "wiki:person:status", value: {type: "text", value}, retraction});
-function write(graph: string, txId: string, facts: unknown[]) {
-  return exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/transactions`, {method: "POST", body: JSON.stringify({txId, facts})}));
+async function write(graph: string, txId: string, facts: unknown[]) {
+  const batch = parseFactBatch({txId, facts});
+  if (!batch.ok) return Response.json({error: batch.error.message}, {status: 400});
+  return dispatchInternalTransaction(env, graph, batch.value);
 }
 async function writeStatus(graph: string, txId: string, facts: unknown[]) {
   const response = await write(graph, txId, facts); const body = await response.text();
@@ -37,12 +40,12 @@ async function fixtures(graph: string) {
 }
 
 async function recover(graph: string, id: string) {
-  const ledger = env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id));
+  const ledger = env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id));
   await runInDurableObject(ledger, (_instance, state) => state.storage.sql.exec("UPDATE candidate_transactions SET next_recovery_at_ms = 0 WHERE tx_id = ?", id));
   await runDurableObjectAlarm(ledger);
 }
 async function split(graph: string, prefix: string, stopAfterPages?: number) {
-  const response = await env.GRAPH_COORDINATORS.getByName(storage.coordinatorObjectName(graph)).fetch("https://graph.internal/_split", {
+  const response = await env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)).fetch("https://graph.internal/_split", {
     method: "POST", body: JSON.stringify({graphId: graph, prefix, force: true, stopAfterPages}),
   });
   return {status: response.status, body: await response.text()};
@@ -50,10 +53,10 @@ async function split(graph: string, prefix: string, stopAfterPages?: number) {
 async function expireAnchor(graph: string, id: string, roots: readonly ReturnType<typeof treeForKey>[]) {
   // Synthetic window fixture: rebind every stored copy consistently. This is
   // not product repair or a measured duration/capacity experiment.
-  await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
+  await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
     state.storage.sql.exec("UPDATE candidate_transactions SET created_at_ms = 0, local_witness_json = json_set(local_witness_json, '$.identityTimeMs', 0) WHERE tx_id = ?", id));
   for (const root of roots) {
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, root)), (_instance, state) =>
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) =>
       state.storage.sql.exec("UPDATE tree_reservations SET created_at_ms = 0 WHERE tx_id = ?", id));
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) =>
       state.storage.sql.exec(`UPDATE shard_transactions SET created_at_ms = 0,
@@ -63,6 +66,256 @@ async function expireAnchor(graph: string, id: string, roots: readonly ReturnTyp
 }
 
 describe("integrated storage authority", () => {
+  it("observes active fields and root value tags at an exact leased snapshot vector", async () => {
+    const graph = `test-${crypto.randomUUID()}`, entity = "wiki:person:schema-observation";
+    const writeFacts = [
+      {source: "agent:schema", entity, field: "wiki:observed:text", value: {type: "text", value: "present"}, retraction: false},
+      {source: "agent:schema", entity, field: "wiki:observed:number", value: {type: "number", value: "42"}, retraction: false},
+      {source: "agent:schema", entity, field: "wiki:observed:list", value: {type: "list", value: [{type: "text", value: "nested"}]}, retraction: false},
+    ];
+    const writeResponse = await exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/transactions`, {
+      method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({facts: writeFacts}),
+    }));
+    expect(writeResponse.status, await writeResponse.clone().text()).toBe(200);
+    expect(Object.keys(await writeResponse.json() as Record<string, unknown>)).toEqual(["txId"]);
+
+    const schemaRequest = () => exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/schema`, {
+      method: "POST", headers: {"content-type": "application/json"}, body: "{}",
+    }));
+    const first = await schemaRequest();
+    expect(first.status).toBe(200);
+    const observed = await first.json() as {snapshotSeq: number; sequenceScope: string; snapshotVector: readonly unknown[];
+      fields: readonly {field: string; valueTags: readonly string[]}[]};
+    expect(observed.sequenceScope).toBe("subtree-vector");
+    expect(observed.snapshotVector).toHaveLength(16);
+    expect(observed.snapshotSeq).toBe(Math.max(...observed.snapshotVector.map(owner => (owner as {sequence: number}).sequence)));
+    expect(new Map(observed.fields.map(field => [field.field, field.valueTags]))).toEqual(new Map([
+      ["wiki:observed:list", ["list"]], ["wiki:observed:number", ["number"]], ["wiki:observed:text", ["text"]],
+    ]));
+
+    const retract = await exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/transactions`, {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({facts: [{...writeFacts[0]!, retraction: true}]}),
+    }));
+    expect(retract.status).toBe(200);
+    const afterRetraction = await schemaRequest();
+    const remaining = await afterRetraction.json() as typeof observed;
+    expect(remaining.fields.map(field => field.field)).toEqual(["wiki:observed:list", "wiki:observed:number"]);
+  });
+
+  it("routes a tokenized public write through coordinator, same-ledger mapping, tree, and shard roles", async () => {
+    const graph = `test-${crypto.randomUUID()}`, token = `integration:chain:${crypto.randomUUID()}`;
+    const facade = env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph));
+    let facadeCalls = 0, originalFetch: unknown;
+    await runInDurableObject(facade, instance => {
+      originalFetch = Reflect.get(instance, "fetch");
+      Reflect.set(instance, "fetch", async (request: Request) => {
+        if (new URL(request.url).pathname.endsWith("/transactions")) facadeCalls++;
+        return (originalFetch as (this: unknown, request: Request) => Promise<Response>).call(instance, request);
+      });
+    });
+    const response = await exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/transactions`, {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({clientRequestToken: token, facts: [fact("wiki:person:role-chain")]}),
+    }));
+    expect(response.status, await response.clone().text()).toBe(200);
+    const txId = (await response.json() as {txId: string}).txId;
+    await runInDurableObject(facade, instance => Reflect.set(instance, "fetch", originalFetch));
+    expect(facadeCalls).toBe(1);
+
+    const ledgerName = await tokenLedgerName(graph, token);
+    expect(await transactionCoordinatorName(graph, txId)).toBe(ledgerName);
+    const ledger = env.GRAPH_LEDGERS.getByName(ledgerName);
+    await runInDurableObject(ledger, (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT phase FROM candidate_transactions WHERE tx_id = ?", txId).one())
+        .toEqual({phase: "complete"});
+      expect(state.storage.sql.exec("SELECT terminal_status FROM client_request_tokens WHERE tx_id = ?", txId).one())
+        .toEqual({terminal_status: "committed"});
+    });
+  });
+
+  it("reconciles durable request-token outcomes and prunes expired missing transactions", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first} = await fixtures(graph);
+    const send = async (body: unknown) => exports.default.fetch(new Request(
+      `https://database.test/v1/graphs/${graph}/transactions`,
+      {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body)},
+    ));
+    expect((await send({txId: "caller:chosen", facts: [fact(first)]})).status).toBe(400);
+    const noToken = await send({facts: [fact(first)]});
+    expect(noToken.status).toBe(200);
+    const noTokenReceipt = await noToken.json() as Record<string, unknown>;
+    expect(Object.keys(noTokenReceipt)).toEqual(["txId"]);
+    expect(noTokenReceipt["txId"]).toMatch(/^poneglyph:tx:/);
+    const parallelTokens: string[] = [];
+    let sharedCoordinator = "";
+    for (let candidate = 0; parallelTokens.length < 8; candidate += 1) {
+      const token = `integration:parallel:${candidate}`;
+      const coordinator = await tokenLedgerName(graph, token);
+      if (sharedCoordinator === "") sharedCoordinator = coordinator;
+      if (coordinator === sharedCoordinator) parallelTokens.push(token);
+    }
+    const parallelReceipts = await Promise.all(parallelTokens.map(async (clientRequestToken, index) => {
+      const response = await send({clientRequestToken, facts: [fact(`wiki:person:parallel-${index}`)]});
+      expect(response.status).toBe(200);
+      return (await response.json() as {txId: string}).txId;
+    }));
+    expect(new Set(parallelReceipts).size).toBe(parallelTokens.length);
+    const committedToken = "integration:token:committed";
+    const committed = await send({clientRequestToken: committedToken, facts: [fact(first)]});
+    expect(committed.status).toBe(200);
+    const committedTxId = (await committed.json() as {txId: string}).txId;
+    const committedCoordinator = env.GRAPH_LEDGERS.getByName(await tokenLedgerName(graph, committedToken));
+    let originalStatusFor: unknown;
+    await runInDurableObject(committedCoordinator, (instance, state) => {
+      expect(state.storage.sql.exec("SELECT terminal_status FROM client_request_tokens WHERE tx_id = ?", committedTxId).one())
+        .toEqual({terminal_status: "committed"});
+      state.storage.sql.exec("UPDATE client_request_tokens SET terminal_at_ms = NULL, terminal_status = NULL WHERE tx_id = ?", committedTxId);
+      const ledger = Reflect.get(instance, "ledger");
+      originalStatusFor = Reflect.get(ledger, "statusFor");
+      Reflect.set(ledger, "statusFor", async () => ({phase: "missing"}));
+    });
+    await runDurableObjectAlarm(committedCoordinator);
+    await runInDurableObject(committedCoordinator, (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT terminal_at_ms, terminal_status FROM client_request_tokens WHERE tx_id = ?", committedTxId).one())
+        .toEqual({terminal_at_ms: null, terminal_status: null});
+      Reflect.set(Reflect.get(_instance, "ledger"), "statusFor", originalStatusFor);
+    });
+    await runDurableObjectAlarm(committedCoordinator);
+    await runInDurableObject(committedCoordinator, (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT terminal_status FROM client_request_tokens WHERE tx_id = ?", committedTxId).one())
+        .toEqual({terminal_status: "committed"});
+    });
+
+    const oversizedToken = "integration:token:oversized";
+    const oversized = await send({clientRequestToken: oversizedToken, facts: [fact(first, false, "x".repeat(MAX_TRANSACTION_BYTES - 100))]});
+    expect(oversized.status).toBe(413);
+    const correctedPayload = await send({clientRequestToken: oversizedToken, facts: [fact(first)]});
+    expect(correctedPayload.status).toBe(200);
+
+    const abortedToken = "integration:token:aborted";
+    const abortedTokenHash = await sha256Hex(`${graph}\u0000${abortedToken}`);
+    const aborted = await send({clientRequestToken: abortedToken, facts: [fact("wiki:person:never-asserted", true)]});
+    expect(aborted.status).toBe(422);
+    const abortedCoordinator = env.GRAPH_LEDGERS.getByName(await tokenLedgerName(graph, abortedToken));
+    await runInDurableObject(abortedCoordinator, (_instance, state) => {
+      state.storage.sql.exec("UPDATE client_request_tokens SET terminal_at_ms = NULL, terminal_status = NULL WHERE token_hash = ?", abortedTokenHash);
+    });
+    await runDurableObjectAlarm(abortedCoordinator);
+    await runInDurableObject(abortedCoordinator, (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT terminal_status FROM client_request_tokens WHERE token_hash = ?", abortedTokenHash).one())
+        .toEqual({terminal_status: "aborted"});
+      state.storage.sql.exec("UPDATE client_request_tokens SET tx_id = ?, created_at_ms = ?, terminal_at_ms = NULL, terminal_status = NULL WHERE token_hash = ?",
+        "poneglyph:tx:missing-pending", Date.now() - 1_000, abortedTokenHash);
+    });
+    await runDurableObjectAlarm(abortedCoordinator);
+    await runInDurableObject(abortedCoordinator, (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT terminal_at_ms, terminal_status FROM client_request_tokens WHERE token_hash = ?", abortedTokenHash).one())
+        .toEqual({terminal_at_ms: null, terminal_status: null});
+      state.storage.sql.exec("UPDATE client_request_tokens SET tx_id = ?, created_at_ms = ? WHERE token_hash = ?",
+        "poneglyph:tx:missing-expired", Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS - 1, abortedTokenHash);
+    });
+    await runDurableObjectAlarm(abortedCoordinator);
+    await runInDurableObject(abortedCoordinator, (_instance, state) => {
+      expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM client_request_tokens WHERE token_hash = ?", abortedTokenHash).one().count).toBe(0);
+    });
+  });
+
+  it("fails closed at the request-token bucket retention allocation", async () => {
+    const graph = `test-${crypto.randomUUID()}`;
+    const token = `integration:capacity:${crypto.randomUUID()}`;
+    const tokenHash = await sha256Hex(`${graph}\u0000${token}`);
+    const bucket = tokenHash[0]!;
+    const coordinator = env.GRAPH_LEDGERS.getByName(await tokenLedgerName(graph, token));
+    const bucketLimit = Math.floor(MAX_RETAINED_TRANSACTION_OUTCOMES / 16);
+    await runInDurableObject(coordinator, (_instance, state) => {
+      state.storage.transactionSync(() => {
+        state.storage.sql.exec("INSERT INTO ledger_context VALUES (1, ?, ?)", graph, bucket);
+        const now = Date.now();
+        state.storage.sql.exec(`INSERT INTO candidate_transactions
+          (tx_id, graph_id, payload_hash, batch_json, trees_json, phase, commit_seq, statement_time_ms, created_at_ms, next_recovery_at_ms)
+          VALUES ('poneglyph:tx:capacity-ledger', ?, ?, '{}', '[]', 'complete', 1, 1, ?, ?)`, graph, "b".repeat(64), now, now);
+        for (let index = 0; index < bucketLimit - 1; index += 1) {
+          const retainedHash = `${bucket}${index.toString(16).padStart(63, "0")}`;
+          state.storage.sql.exec(`INSERT INTO client_request_tokens
+            (token_hash, payload_hash, tx_id, created_at_ms, terminal_at_ms, terminal_status)
+            VALUES (?, ?, ?, ?, ?, 'committed')`, retainedHash, "a".repeat(64), `poneglyph:tx:capacity-${index}`, now, now);
+        }
+      });
+    });
+    let ledgerTxId = "";
+    for (let index = 0; ledgerTxId === ""; index += 1) {
+      const candidate = `poneglyph:tx:capacity-probe:${index}`;
+      if (await transactionCoordinatorName(graph, candidate) === await tokenLedgerName(graph, token)) ledgerTxId = candidate;
+    }
+    expect((await write(graph, ledgerTxId, [fact("wiki:person:capacity-probe-ledger")])).status).toBe(429);
+    const response = await exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/transactions`, {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({clientRequestToken: token, facts: [fact("wiki:person:capacity-probe")]}),
+    }));
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({retryable: false});
+    await runInDurableObject(coordinator, (_instance, state) => {
+      expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM client_request_tokens").one().count)
+        .toBe(bucketLimit - 1);
+      expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions").one().count).toBe(1);
+      expect(state.storage.sql.exec<{count: number}>(
+        "SELECT (SELECT COUNT(*) FROM candidate_transactions) + (SELECT COUNT(*) FROM client_request_tokens) AS count",
+      ).one().count).toBe(bucketLimit);
+      expect(state.storage.sql.exec("SELECT 1 FROM client_request_tokens WHERE token_hash = ?", tokenHash).toArray())
+        .toHaveLength(0);
+    });
+  });
+
+  it("reserves both ledger outcome slots for a token before it creates the journal", async () => {
+    const graph = `test-${crypto.randomUUID()}`;
+    const token = `integration:capacity-reservation:${crypto.randomUUID()}`;
+    const bucket = (await sha256Hex(`${graph}\u0000${token}`))[0]!;
+    const ledger = env.GRAPH_LEDGERS.getByName(await tokenLedgerName(graph, token));
+    const bucketLimit = Math.floor(MAX_RETAINED_TRANSACTION_OUTCOMES / 16);
+    await runInDurableObject(ledger, (_instance, state) => {
+      state.storage.transactionSync(() => {
+        state.storage.sql.exec("INSERT INTO ledger_context VALUES (1, ?, ?)", graph, bucket);
+        const now = Date.now();
+        for (let index = 0; index < bucketLimit - 2; index += 1) {
+          state.storage.sql.exec(`INSERT INTO candidate_transactions
+            (tx_id, graph_id, payload_hash, batch_json, trees_json, phase, commit_seq, statement_time_ms, created_at_ms, next_recovery_at_ms)
+            VALUES (?, ?, ?, '{}', '[]', 'complete', 1, 1, ?, ?)`,
+          `poneglyph:tx:capacity-reservation:${index}`, graph, "b".repeat(64), now, now);
+        }
+      });
+    });
+
+    const response = await exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/transactions`, {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({clientRequestToken: token, facts: [fact("wiki:person:capacity-reserved")]}),
+    }));
+    expect(response.status).toBe(200);
+    const receipt = await response.json() as {txId: string};
+    expect(receipt.txId).toMatch(new RegExp(`^poneglyph:tx:token:${bucket}:`));
+
+    let ordinaryTxId = "";
+    for (let index = 0; ordinaryTxId === ""; index += 1) {
+      const candidate = `poneglyph:tx:capacity-reservation-probe:${index}`;
+      if (await transactionCoordinatorName(graph, candidate) === await tokenLedgerName(graph, token)) ordinaryTxId = candidate;
+    }
+    expect((await write(graph, ordinaryTxId, [fact("wiki:person:capacity-reservation-probe")])).status).toBe(429);
+    await runInDurableObject(ledger, (_instance, state) => {
+      expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions").one().count)
+        .toBe(bucketLimit - 1);
+      expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM client_request_tokens").one().count).toBe(1);
+      expect(state.storage.sql.exec<{count: number}>(`SELECT
+        (SELECT COUNT(*) FROM candidate_transactions)
+        + (SELECT COUNT(*) FROM client_request_tokens)
+        + (SELECT COUNT(*) FROM client_request_tokens t
+           WHERE NOT EXISTS (SELECT 1 FROM candidate_transactions c WHERE c.tx_id = t.tx_id)) AS count`).one().count)
+        .toBe(bucketLimit);
+      expect(state.storage.sql.exec<{phase: string}>("SELECT phase FROM candidate_transactions WHERE tx_id = ?", receipt.txId).one().phase)
+        .toBe("complete");
+      expect(state.storage.sql.exec<{terminal_status: string}>("SELECT terminal_status FROM client_request_tokens WHERE tx_id = ?", receipt.txId).one().terminal_status)
+        .toBe("committed");
+    });
+  });
+
   it("atomically commits complete single-leaf mutations and payload-bound replay", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:atomic";
     expect(await writeStatus(graph, id, [fact(first), fact(same)])).toMatchObject({status: 200});
@@ -94,7 +347,7 @@ describe("integrated storage authority", () => {
   it("uses pooled distributed authority and owner-local publication for multiple leaves", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph), id = "integrated:distributed";
     expect(await writeStatus(graph, id, [fact(first), fact(other)])).toMatchObject({status: 200});
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) => {
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT phase, participant_witness, local_witness_json FROM candidate_transactions WHERE tx_id = ?", id).one())
         .toMatchObject({phase: "complete", participant_witness: 1, local_witness_json: null});
       expect(state.storage.sql.exec("SELECT * FROM ledger_context").toArray()).toHaveLength(1);
@@ -107,7 +360,7 @@ describe("integrated storage authority", () => {
           .toMatchObject({status: "committed", decision_kind: "distributed", owner_released: 1, reserved_mutation_bytes: 0});
         expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1);
       });
-      await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, owner)), (_instance, state) => {
+      await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) => {
         expect(state.storage.sql.exec("SELECT phase FROM tree_reservations").one()).toMatchObject({phase: "complete"});
         expect(state.storage.sql.exec("SELECT * FROM entity_write_locks").toArray()).toHaveLength(0);
       });
@@ -147,7 +400,7 @@ describe("integrated storage authority", () => {
       expect(state.storage.sql.exec("SELECT owner_released FROM shard_transactions").one()).toMatchObject({owner_released: 0});
     });
     const busy = await query(graph); expect(busy.status).toBe(423); await busy.text();
-    await evictDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)));
+    await evictDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)));
     await evictDurableObject(leaf);
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1));
@@ -171,7 +424,7 @@ describe("integrated storage authority", () => {
         expect(await writeStatus(graph, id, [fact(same)])).toMatchObject({status: 409});
         const busy = await query(graph); expect(busy.status).toBe(423); await busy.text();
         expect(await split(graph, root)).toMatchObject({status: 423});
-        await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, root)), (_owner, ownerState) => {
+        await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_owner, ownerState) => {
           expect(ownerState.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 2});
           expect(ownerState.storage.sql.exec("SELECT ticket_seq, phase FROM tree_reservations WHERE tx_id = ?", id).one())
             .toMatchObject({ticket_seq: 1, phase: "preparing"});
@@ -228,7 +481,7 @@ describe("integrated storage authority", () => {
     await runInDurableObject(leaf, (_instance, state) => expect(state.storage.sql.exec("SELECT status, owner_released FROM shard_transactions").one())
       .toMatchObject({status: abort ? "cancelled" : "committed", owner_released: 0}));
     await recover(graph, id);
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
       expect(state.storage.sql.exec("SELECT phase FROM candidate_transactions WHERE tx_id = ?", id).one()).toMatchObject({phase: abort ? "aborted" : "complete"}));
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(abort ? 0 : 1));
   });
@@ -273,7 +526,7 @@ describe("integrated storage authority", () => {
       expect(state.storage.sql.exec<{bytes: number}>("SELECT reserved_mutation_bytes AS bytes FROM shard_transactions").one().bytes).toBeGreaterThan(0);
       expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0);
     });
-    await evictDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)));
+    await evictDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)));
     await evictDurableObject(firstLeaf); await evictDurableObject(second);
     expect(await writeStatus(graph, id, [fact(first), fact(other)])).toMatchObject({status: 200});
     for (const owner of [root, otherRoot]) await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, owner)), (_instance, state) => {
@@ -302,12 +555,12 @@ describe("integrated storage authority", () => {
 
   it("rejects A/B1 marker reinterpretation synchronously without poisoning an input gate", async () => {
     const graph = `test-${crypto.randomUUID()}`;
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(storage.coordinatorObjectName(graph)), (_instance, state) => {
-      state.storage.sql.exec("UPDATE poneglyph_schema SET kind = 'candidate-coordinator', version = 2");
-      try {expect(() => ensureCoordinatorSchema(state.storage)).toThrow(/unsupported g-coordinator/);}
-      finally {state.storage.sql.exec("UPDATE poneglyph_schema SET kind = 'g-coordinator', version = 7");}
-    });
     const {root} = await fixtures(graph);
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
+      state.storage.sql.exec("UPDATE poneglyph_schema SET kind = 'candidate-tree', version = 2");
+      try {expect(() => ensureTreeSchema(state.storage)).toThrow(/unsupported g-tree/);}
+      finally {state.storage.sql.exec("UPDATE poneglyph_schema SET kind = 'g-tree', version = 1");}
+    });
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) => {
       state.storage.sql.exec("UPDATE poneglyph_schema SET kind = 'candidate-shard', version = 2");
       try {expect(() => ensureShardSchema(state.storage)).toThrow(/unsupported g-shard/);}
@@ -319,7 +572,7 @@ describe("integrated storage authority", () => {
     const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph), id = "integrated:lost-publication";
     const roots = distributed ? [root, otherRoot].sort() : [root], published = roots[0]!;
     const facts = distributed ? [fact(first), fact(other)] : [fact(first)];
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, published)), async instance => {
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, published)), async instance => {
       const control = Reflect.get(instance, "treeControl");
       Reflect.set(instance, "treeControl", async (request: Request) => {
         const answer = await control.call(instance, request);
@@ -329,13 +582,13 @@ describe("integrated storage authority", () => {
       try {expect(await writeStatus(graph, id, facts)).toMatchObject({status: 503});}
       finally {Reflect.set(instance, "treeControl", control);}
     });
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) => {
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) => {
       const row = state.storage.sql.exec("SELECT phase, participant_witness, local_witness_json FROM candidate_transactions WHERE tx_id = ?", id).one();
       expect(row).toMatchObject({phase: distributed ? "committing" : "atomic-delegated", participant_witness: distributed ? 1 : 0});
       if (!distributed) expect(row["local_witness_json"]).not.toBeNull();
     });
     expect(await split(graph, published)).toMatchObject({status: 200});
-    await evictDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)));
+    await evictDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)));
     const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, published));
     await runInDurableObject(leaf, async (instance, state) => {
       const method = distributed ? "commit" : "atomic", original = Reflect.get(instance, method);
@@ -354,7 +607,7 @@ describe("integrated storage authority", () => {
     const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph), id = "integrated:lost-cancel-release";
     expect(await writeStatus(graph, "integrated:seed-before-cancel", [fact(first), fact(other)])).toMatchObject({status: 200});
     const released = [root, otherRoot].sort()[0]!;
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, released)), async instance => {
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, released)), async instance => {
       const control = Reflect.get(instance, "treeControl");
       Reflect.set(instance, "treeControl", async (request: Request) => {
         const answer = await control.call(instance, request);
@@ -364,7 +617,7 @@ describe("integrated storage authority", () => {
       try {expect(await writeStatus(graph, id, [fact(first, false, "new"), fact(other, true, "missing")])).toMatchObject({status: 503});}
       finally {Reflect.set(instance, "treeControl", control);}
     });
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
       expect(state.storage.sql.exec("SELECT phase, participant_witness FROM candidate_transactions WHERE tx_id = ?", id).one()).toMatchObject({phase: "cancelling", participant_witness: 1}));
     expect(await split(graph, released)).toMatchObject({status: 200});
     await recover(graph, id);
@@ -383,7 +636,7 @@ describe("integrated storage authority", () => {
       const held = write(graph, id, [fact(first)]);
       try {
         await entered;
-        await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, root)), (_owner, state) => {
+        await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_owner, state) => {
           expect(state.storage.sql.exec("SELECT * FROM entity_write_locks").toArray()).toHaveLength(0);
           expect(state.storage.sql.exec("SELECT * FROM tree_reservations").toArray()).toHaveLength(0);
         });
@@ -393,7 +646,7 @@ describe("integrated storage authority", () => {
       } finally {release(); Reflect.set(instance, "preflight", preflight);}
       const stale = await held; expect(stale.status).toBe(409); expect(await stale.json()).toMatchObject({retryable: true});
     });
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
       expect(state.storage.sql.exec("SELECT * FROM candidate_transactions WHERE tx_id = ?", id).toArray()).toHaveLength(0));
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
     const read = await query(graph); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
@@ -402,7 +655,7 @@ describe("integrated storage authority", () => {
   it("cancels stranded unadmitted reservations after interrupted release rather than delivering new input on alarm", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph), id = "integrated:stranded-reserving";
     const [earlier, later] = [root, otherRoot].sort();
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, earlier!)), async earlierInstance => {
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, earlier!)), async earlierInstance => {
       const earlierControl = Reflect.get(earlierInstance, "treeControl");
       Reflect.set(earlierInstance, "treeControl", async (request: Request) => {
         const answer = await earlierControl.call(earlierInstance, request);
@@ -410,7 +663,7 @@ describe("integrated storage authority", () => {
         return answer;
       });
       try {
-        await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, later!)), async laterInstance => {
+        await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, later!)), async laterInstance => {
           const laterControl = Reflect.get(laterInstance, "treeControl");
           Reflect.set(laterInstance, "treeControl", (request: Request) => new URL(request.url).pathname === "/_tree-lock"
             ? new Response(JSON.stringify({error: "injected contention", retryable: true}), {status: 423}) : laterControl.call(laterInstance, request));
@@ -419,12 +672,12 @@ describe("integrated storage authority", () => {
         });
       } finally {Reflect.set(earlierInstance, "treeControl", earlierControl);}
     });
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
       expect(state.storage.sql.exec("SELECT phase FROM candidate_transactions WHERE tx_id = ?", id).one()).toMatchObject({phase: "reserving"}));
     await recover(graph, id);
     expect(await writeStatus(graph, id, [fact(first), fact(other)])).toMatchObject({status: 422});
     for (const prefix of [root, otherRoot]) {
-      await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, prefix)), (_instance, state) =>
+      await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, prefix)), (_instance, state) =>
         expect(state.storage.sql.exec("SELECT * FROM entity_write_locks").toArray()).toHaveLength(0));
       await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix)), (_instance, state) =>
         expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0));
@@ -450,7 +703,7 @@ describe("integrated storage authority", () => {
   it("fences writes/splits with live owner leases and rejects an expired physical read", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph);
     expect(await writeStatus(graph, "integrated:lease-seed", [fact(first)])).toMatchObject({status: 200});
-    const owner = env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, root));
+    const owner = env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root));
     const response = await owner.fetch("https://owner.internal/_tree-read", {method: "POST", body: JSON.stringify({graphId: graph, prefix: root})});
     expect(response.status).toBe(200); const lease = await response.json() as {readId: string; snapshotSeq: number; directoryEpoch: number};
     expect(await writeStatus(graph, "integrated:lease-write", [fact(first, false, "later")])).toMatchObject({status: 423});
@@ -560,7 +813,7 @@ describe("integrated storage authority", () => {
       try {expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 503});}
       finally {Reflect.set(instance, "atomic", atomic);}
     });
-    const ledger = env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id));
+    const ledger = env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id));
     const original = await runInDurableObject(ledger, (_instance, state) => {
       const json = state.storage.sql.exec<{batch_json: string}>("SELECT batch_json FROM candidate_transactions WHERE tx_id = ?", id).one().batch_json;
       state.storage.sql.exec("UPDATE candidate_transactions SET batch_json = 'null' WHERE tx_id = ?", id); return json;
@@ -610,7 +863,7 @@ describe("integrated storage authority", () => {
 
   it("binds owner entity sets and stays fail-closed if a pending reservation loses its durable lock", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:owner-invariant", hash = "1".repeat(64), anchor = Date.now();
-    const owner = env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, root));
+    const owner = env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root));
     const control = async (action: string, extra: object = {}) => {
       const response = await owner.fetch(`https://owner.internal/${action}`, {method: "POST", body: JSON.stringify({graphId: graph, prefix: root,
         txId: id, payloadHash: hash, identityTimeMs: anchor, directoryEpoch: 0, ...extra})});
@@ -641,30 +894,31 @@ describe("integrated storage authority", () => {
       const parsed = parseFactBatch({txId: id, facts: [fact(first)]}); if (!parsed.ok) throw new Error(parsed.error.message);
       const json = canonicalBatchJson(parsed.value); return {id, json, hash: await sha256Hex(json)};
     }));
-    const ledger = env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, seed));
-    await runInDurableObject(ledger, async (instance: storage.GraphCoordinatorDO, state) => {
+    const ledger = env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, seed));
+    await runInDurableObject(ledger, async (instance: storage.GraphLedgerDO, state) => {
       // Metadata-only admission fixtures, not delivered writes or load evidence.
       for (const row of rows) state.storage.sql.exec(`INSERT INTO candidate_transactions
         (tx_id, graph_id, payload_hash, batch_json, trees_json, phase, commit_seq, statement_time_ms, created_at_ms, next_recovery_at_ms)
         VALUES (?, ?, ?, ?, '[]', 'planning', 0, 0, ?, 0)`, row.id, graph, row.hash, row.json, Date.now());
       const pool = Reflect.get(instance, "ledger"), execute = Reflect.get(pool, "execute");
+      const runAlarm = Reflect.get(instance, "alarm") as () => Promise<void>;
       let calls = 0, live = 0, peak = 0;
       Reflect.set(pool, "execute", async (...args: unknown[]) => {
         calls++; live++; peak = Math.max(peak, live);
         try {return await execute.apply(pool, args);} finally {live--;}
       });
-      try {await Reflect.get(instance, "alarm").call(instance); expect(calls).toBe(100); expect(peak).toBeLessThanOrEqual(6);}
+      try {await runAlarm.call(instance); expect(calls).toBe(100); expect(peak).toBeLessThanOrEqual(6);}
       finally {Reflect.set(pool, "execute", execute);}
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions WHERE phase = 'planning'").one().count).toBe(5);
-      await Reflect.get(instance, "alarm").call(instance);
+      await runAlarm.call(instance);
       // Remaining deadlines are due now but may have moved once; force the fixture.
       state.storage.sql.exec("UPDATE candidate_transactions SET next_recovery_at_ms = 0 WHERE phase = 'planning'");
-      await Reflect.get(instance, "alarm").call(instance);
+      await runAlarm.call(instance);
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions WHERE phase = 'aborted'").one().count).toBe(105);
       state.storage.sql.exec("UPDATE candidate_transactions SET created_at_ms = 0 WHERE phase = 'aborted'");
-      await Reflect.get(instance, "alarm").call(instance);
+      await runAlarm.call(instance);
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions WHERE phase = 'aborted'").one().count).toBe(5);
-      await Reflect.get(instance, "alarm").call(instance);
+      await runAlarm.call(instance);
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions WHERE phase = 'aborted'").one().count).toBe(0);
     });
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) =>
@@ -680,21 +934,23 @@ describe("integrated storage authority", () => {
       finally {Reflect.set(instance, "finalizeDecision", finalize);}
     });
     await runInDurableObject(leaf, async (instance: storage.GraphShardDO, state) => {
-      const prove = Reflect.get(instance, "proveOwnerRelease"); let calls = 0, live = 0, peak = 0;
+      const prove = Reflect.get(instance, "proveOwnerRelease");
+      const runAlarm = Reflect.get(instance, "alarm") as () => Promise<void>;
+      let calls = 0, live = 0, peak = 0;
       Reflect.set(instance, "proveOwnerRelease", async (...args: unknown[]) => {
         calls++; live++; peak = Math.max(peak, live);
         try {return await prove.apply(instance, args);} finally {live--;}
       });
-      try {await Reflect.get(instance, "alarm").call(instance); expect(calls).toBe(100); expect(peak).toBeLessThanOrEqual(6);}
+      try {await runAlarm.call(instance); expect(calls).toBe(100); expect(peak).toBeLessThanOrEqual(6);}
       finally {Reflect.set(instance, "proveOwnerRelease", prove);}
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM shard_transactions WHERE owner_released = 0").one().count).toBe(5);
-      await Reflect.get(instance, "alarm").call(instance);
+      await runAlarm.call(instance);
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM shard_transactions WHERE owner_released = 0").one().count).toBe(0);
       // Expired terminal metadata exercises only the synthetic sweep page bound.
       state.storage.sql.exec("UPDATE shard_transactions SET created_at_ms = 0");
-      await Reflect.get(instance, "alarm").call(instance);
+      await runAlarm.call(instance);
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM shard_transactions").one().count).toBe(5);
-      await Reflect.get(instance, "alarm").call(instance);
+      await runAlarm.call(instance);
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM shard_transactions").one().count).toBe(0);
       expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0);
     });
@@ -714,7 +970,7 @@ describe("integrated storage authority", () => {
     expect(await split(graph, root, 1)).toMatchObject({status: 503});
     expect(await writeStatus(graph, "integrated:other-during-split", [fact(other)])).toMatchObject({status: 200});
     const busy = await query(graph); expect(busy.status).toBe(423); await busy.text();
-    await evictDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, root)));
+    await evictDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)));
     expect(await split(graph, root)).toMatchObject({status: 200});
     expect(await writeStatus(graph, id, [fact(first), fact(same)])).toMatchObject({status: 200});
     const read = await query(graph); expect(read.status).toBe(200); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(3);
@@ -725,7 +981,7 @@ describe("integrated storage authority", () => {
     expect(await writeStatus(graph, "integrated:multileaf-seed", [fact(first), fact(same)])).toMatchObject({status: 200});
     expect(await split(graph, root)).toMatchObject({status: 200});
     expect(await writeStatus(graph, id, [fact(first, false, "later"), fact(same, false, "later")])).toMatchObject({status: 200});
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) => {
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) => {
       const row = state.storage.sql.exec<{plan_json: string; participant_witness: number; local_witness_json: string | null}>(
         "SELECT plan_json, participant_witness, local_witness_json FROM candidate_transactions WHERE tx_id = ?", id).one();
       const plan = JSON.parse(row.plan_json) as {owners: unknown[]; participants: unknown[]};
@@ -738,7 +994,7 @@ describe("integrated storage authority", () => {
   it("replays a lost final graph receipt after eviction without allowing identity to escape to another owner", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, other, root} = await fixtures(graph), id = "integrated:lost-graph-receipt";
     const lost = await write(graph, id, [fact(first)]); expect(lost.status).toBe(200); await lost.text();
-    await evictDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)));
+    await evictDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)));
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
     expect(await writeStatus(graph, id, [fact(other)])).toMatchObject({status: 409});
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) =>
@@ -754,7 +1010,7 @@ describe("integrated storage authority", () => {
         expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 503});
         expect(state.storage.sql.exec("SELECT * FROM shard_transactions").toArray()).toHaveLength(0);
         expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0);
-        await runInDurableObject(env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graph, id)), (_coordinator, ledger) =>
+        await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_coordinator, ledger) =>
           expect(ledger.storage.sql.exec("SELECT phase FROM candidate_transactions WHERE tx_id = ?", id).one()).toMatchObject({phase: "atomic-delegated"}));
       } finally {Reflect.set(instance, "atomic", atomic); state.storage.sql.exec("UPDATE shard_identity SET generation = 0");}
     });
@@ -773,7 +1029,7 @@ describe("integrated storage authority", () => {
     // The authoritative window expired. This is a new identity incarnation,
     // not an idempotent replay within the window; its ticket cannot be reused.
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 503});
-    await runInDurableObject(env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graph, root)), (_instance, state) =>
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) =>
       expect(state.storage.sql.exec("SELECT phase, ticket_seq FROM tree_reservations WHERE tx_id = ?", id).one()).toMatchObject({phase: "preparing", ticket_seq: 2}));
     await runDurableObjectAlarm(leaf);
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});

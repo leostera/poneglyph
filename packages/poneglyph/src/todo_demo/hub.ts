@@ -6,7 +6,6 @@ export type TodoInvalidation = Readonly<{
   type: "invalidate";
   graphId: string;
   txId: string;
-  commitSeq: number;
   changedLists: readonly string[];
 }>;
 
@@ -30,7 +29,7 @@ export class TodoHubDO extends DurableObject<Env> {
     const input = await readJsonBody(request, 4_096);
     if (!input.ok || !isRecord(input.value) || input.value["type"] !== "invalidate" ||
         typeof input.value["graphId"] !== "string" || typeof input.value["txId"] !== "string" ||
-        typeof input.value["commitSeq"] !== "number" || !Array.isArray(input.value["changedLists"]) ||
+        !Array.isArray(input.value["changedLists"]) ||
         !input.value["changedLists"].every((list) => typeof list === "string")) {
       return jsonResponse({ error: "invalid invalidation event" }, 400);
     }

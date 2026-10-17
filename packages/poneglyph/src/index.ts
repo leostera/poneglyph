@@ -2,6 +2,7 @@ export * from "./domain/fact.js";
 export * from "./domain/graph-id.js";
 export * from "./domain/fact-value.js";
 export * from "./domain/identifiers.js";
+export * from "./domain/schema-observation.js";
 export * from "./datalog/ast.js";
 export * from "./datalog/evaluator.js";
 export * from "./datalog/fact-source.js";

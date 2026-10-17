@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { coordinatorObjectName, prefixOfKey, virtualKeyForEntity } from "../src/storage/keys.js";
+import { bitAt, coordinatorObjectName, prefixOfKey, virtualKeyForEntity } from "../src/storage/keys.js";
+import { TREE_DEPTH, TREE_PREFIXES } from "../src/storage/forest.js";
 
 const RUN_BENCHMARK = (env as unknown as { PONEGLYPH_RUN_BENCH?: string }).PONEGLYPH_RUN_BENCH === "1";
 const transactionCount = boundedInteger("PONEGLYPH_BENCH_TRANSACTIONS", 40, 4, 500);
@@ -41,7 +42,7 @@ describe.skipIf(!RUN_BENCHMARK)("repeatable local throughput benchmark", () => {
         queryRepetitions: queryCount,
         writeConcurrency: concurrency,
         queryConcurrency: concurrency,
-        retryPolicy: "same txId/payload; bounded exponential backoff on coordinator busy responses",
+        retryPolicy: "same clientRequestToken/facts; bounded exponential backoff on coordinator busy responses",
       },
       results: [single, cross],
       caveat: "Local workerd results are repeatability evidence only; they are not Cloudflare production capacity or latency guarantees.",
@@ -53,11 +54,11 @@ describe.skipIf(!RUN_BENCHMARK)("repeatable local throughput benchmark", () => {
 
 async function measureWorkload(name: string, graphId: string, split: boolean): Promise<RunResult> {
   if (split) {
-    const coordinator = env.GRAPH_COORDINATORS.getByName(coordinatorObjectName(graphId));
+    const coordinator = env.GRAPH_FACADES.getByName(coordinatorObjectName(graphId));
     const response = await coordinator.fetch("https://coordinator.internal/_split", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ graphId, prefix: "", force: true }),
+      body: JSON.stringify({graphId, prefix: TREE_PREFIXES[0], force: true}),
     });
     if (!response.ok) throw new Error(`benchmark split failed: ${response.status} ${await response.text()}`);
   }
@@ -74,7 +75,7 @@ async function measureWorkload(name: string, graphId: string, split: boolean): P
       const [left, right] = entityPairs[index] ?? [];
       if (left === undefined || right === undefined) throw new Error("missing benchmark entity pair");
       const batch = {
-        txId: `poneglyph:tx:${graphId}:${index}`,
+        clientRequestToken: `poneglyph:request:${graphId}:${index}`,
         facts: [
           fact(left, "bench:value", { type: "text", value: `value-${index}` }),
           fact(left, "bench:edge", { type: "reference", value: right }),
@@ -138,7 +139,7 @@ async function measureWorkload(name: string, graphId: string, split: boolean): P
   };
 }
 
-async function retryWrite(graphId: string, batch: Readonly<{ txId: string; facts: readonly InputFact[] }>): Promise<number> {
+async function retryWrite(graphId: string, batch: Readonly<{clientRequestToken: string; facts: readonly InputFact[]}>): Promise<number> {
   const payload = JSON.stringify(batch);
   const started = performance.now();
   for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -147,7 +148,7 @@ async function retryWrite(graphId: string, batch: Readonly<{ txId: string; facts
     }));
     if (response.ok) {
       const result: unknown = await response.json();
-      if (!isRecord(result) || result["txId"] !== batch.txId || result["status"] !== "committed") {
+      if (!isRecord(result) || typeof result["txId"] !== "string" || Object.keys(result).length !== 1) {
         throw new Error(`unexpected benchmark transaction outcome: ${JSON.stringify(result)}`);
       }
       return performance.now() - started;
@@ -156,7 +157,7 @@ async function retryWrite(graphId: string, batch: Readonly<{ txId: string; facts
     if (response.status !== 423 && response.status < 500) throw new Error(`benchmark write rejected (${response.status}): ${detail}`);
     await delay(Math.min(1 + attempt, 20));
   }
-  throw new Error(`transaction ${batch.txId} did not commit after bounded retries`);
+  throw new Error(`request ${batch.clientRequestToken} did not commit after bounded retries`);
 }
 
 async function runQuery(graphId: string, query: string): Promise<Record<string, unknown>> {
@@ -169,19 +170,24 @@ async function runQuery(graphId: string, query: string): Promise<Record<string, 
 }
 
 async function findCrossShardEntityPairs(graphId: string, count: number): Promise<readonly (readonly [string, string])[]> {
+  const owner = TREE_PREFIXES[0]!;
   const pairs: (readonly [string, string])[] = [];
+  let leftOrdinal = 0, rightOrdinal = 0;
   for (let index = 0; index < count; index += 1) {
-    const left = `bench:cross:left:${index}`;
-    const leftPrefix = prefixOfKey(await virtualKeyForEntity(graphId, left), 1);
-    let right: string | undefined;
-    for (let candidate = index; candidate < index + 256; candidate += 1) {
-      const proposed = `bench:cross:right:${candidate}`;
-      if (prefixOfKey(await virtualKeyForEntity(graphId, proposed), 1) !== leftPrefix) {
-        right = proposed;
-        break;
-      }
+    let left: string | undefined, leftBranch: string | undefined;
+    for (let attempts = 0; attempts < 4096 && left === undefined; attempts++, leftOrdinal++) {
+      const candidate = `bench:cross:left:${leftOrdinal}`;
+      const key = await virtualKeyForEntity(graphId, candidate);
+      if (prefixOfKey(key, TREE_DEPTH) === owner) {left = candidate; leftBranch = bitAt(key, TREE_DEPTH);}
     }
-    if (right === undefined) throw new Error("could not find an entity in the other root split branch");
+    if (left === undefined || leftBranch === undefined) throw new Error("could not find an entity in the selected owner tree");
+    let right: string | undefined;
+    for (let attempts = 0; attempts < 4096 && right === undefined; attempts++, rightOrdinal++) {
+      const candidate = `bench:cross:right:${rightOrdinal}`;
+      const key = await virtualKeyForEntity(graphId, candidate);
+      if (prefixOfKey(key, TREE_DEPTH) === owner && bitAt(key, TREE_DEPTH) !== leftBranch) right = candidate;
+    }
+    if (right === undefined) throw new Error("could not find an entity in the other leaf below the selected owner tree");
     pairs.push([left, right]);
   }
   return pairs;

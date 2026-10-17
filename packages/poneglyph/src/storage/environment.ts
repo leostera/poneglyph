@@ -2,6 +2,8 @@
 import type { FetchNamespace } from "../storage-namespace.js";
 
 export type StorageEnv = Readonly<{
+  GRAPH_FACADES: FetchNamespace;
+  GRAPH_LEDGERS: FetchNamespace;
+  GRAPH_TREES: FetchNamespace;
   GRAPH_SHARDS: FetchNamespace;
-  GRAPH_COORDINATORS: FetchNamespace;
 }>;

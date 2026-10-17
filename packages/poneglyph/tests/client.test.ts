@@ -59,12 +59,8 @@ describe("Poneglyph TypeScript HTTP client", () => {
       } else await expect(result).rejects.toThrow(/query (timing|metric)/);
     }
   });
-  it("writes validated facts with a stable txId and exposes the commit receipt", async () => {
-    const network = createFetch(() => jsonResponse({
-      txId: "release:seed-001",
-      commitSeq: 7,
-      status: "committed",
-    }));
+  it("sends facts and an optional request token, returning only the server-minted transaction ID", async () => {
+    const network = createFetch(() => jsonResponse({txId: "poneglyph:tx:server-minted"}));
     const db = createDatabase({
       url: "https://poneglyph.example/api/",
       graphId: "release-assistant",
@@ -72,24 +68,24 @@ describe("Poneglyph TypeScript HTTP client", () => {
       fetch: network.fetch,
     });
 
-    const txId = await db.state(facts, { txId: "release:seed-001" });
+    const first = await db.transact(facts, {clientRequestToken: "release:seed-001"});
 
-    expect(txId).toBe("release:seed-001");
+    expect(first).toEqual({txId: "poneglyph:tx:server-minted"});
     expect(network.requests).toHaveLength(1);
     expect(network.requests[0]?.url).toBe("https://poneglyph.example/api/v1/graphs/release-assistant/transactions");
     const headers = new Headers(network.requests[0]?.init.headers);
     expect(headers.get("authorization")).toBe("Bearer test-token");
     const body: unknown = JSON.parse(String(network.requests[0]?.init.body));
     expect(body).toMatchObject({
-      txId: "release:seed-001",
+      clientRequestToken: "release:seed-001",
       facts: [
         { field: "app:service:blocked-by", retraction: false },
         { field: "app:task:status", retraction: false },
       ],
     });
 
-    const receipt = await db.transact(facts, { txId: "release:seed-001" });
-    expect(receipt).toEqual({ txId: "release:seed-001", commitSeq: 7, status: "committed" });
+    const receipt = await db.transact(facts, {clientRequestToken: "release:seed-001"});
+    expect(receipt).toEqual({txId: "poneglyph:tx:server-minted"});
   });
 
   it("creates a graph-scoped client without making a network request", async () => {
@@ -103,7 +99,31 @@ describe("Poneglyph TypeScript HTTP client", () => {
 
     expect(graph.id).toBe("team-memory");
     expect(network.requests).toHaveLength(0);
-    expect(await graph.state(facts, { txId: "graph:tx:1" })).toBe("graph:tx:1");
+    expect(await graph.transact(facts)).toEqual({txId: "graph:tx:1"});
+  });
+
+  it("parses an observed schema with its exact subtree snapshot vector", async () => {
+    const schema = {
+      snapshotSeq: 9,
+      sequenceScope: "subtree-vector",
+      snapshotVector: [
+        {prefix: "0000", sequence: 9, epoch: 2},
+        {prefix: "0001", sequence: 7, epoch: 2},
+      ],
+      fields: [
+        {field: "wiki:page:title", valueTags: ["text"]},
+        {field: "wiki:page:type", valueTags: ["text", "list"]},
+      ],
+    };
+    const network = createFetch(() => jsonResponse(schema));
+    const graph = createDatabase({url: "https://poneglyph.example", graphId: "team-memory", fetch: network.fetch});
+    expect(await graph.getSchema()).toEqual(schema);
+    expect(network.requests[0]?.url).toBe("https://poneglyph.example/v1/graphs/team-memory/schema");
+    expect(JSON.parse(String(network.requests[0]?.init.body))).toEqual({});
+
+    const malformed = createDatabase({url: "https://poneglyph.example", graphId: "team-memory",
+      fetch: createFetch(() => jsonResponse({...schema, snapshotSeq: 7})).fetch});
+    await expect(malformed.getSchema()).rejects.toMatchObject({name: "PoneglyphProtocolError"});
   });
 
   it("parses query bindings, the pinned snapshot, and access metrics", async () => {
@@ -134,11 +154,22 @@ describe("Poneglyph TypeScript HTTP client", () => {
     });
   });
 
+  it("bounds client request tokens by UTF-8 bytes before network admission", async () => {
+    const network = createFetch(() => jsonResponse({txId: "poneglyph:tx:valid-token"}));
+    const graph = createDatabase({url: "https://poneglyph.example", graphId: "team-memory", fetch: network.fetch});
+    await expect(graph.transact(facts, {clientRequestToken: ""})).rejects.toBeInstanceOf(PoneglyphInputError);
+    await expect(graph.transact(facts, {clientRequestToken: "é".repeat(129)})).rejects.toBeInstanceOf(PoneglyphInputError);
+    const valid = "é".repeat(128); // exactly 256 UTF-8 bytes
+    await expect(graph.transact(facts, {clientRequestToken: valid})).resolves.toEqual({txId: "poneglyph:tx:valid-token"});
+    expect(network.requests).toHaveLength(1);
+    expect(JSON.parse(String(network.requests[0]?.init.body))).toMatchObject({clientRequestToken: valid});
+  });
+
   it("rejects malformed writes and queries before performing network requests", async () => {
     const network = createFetch(() => jsonResponse({}));
     const graph = createDatabase({ url: "https://poneglyph.example", graphId: "team-memory", fetch: network.fetch });
 
-    await expect(graph.state([{
+    await expect(graph.transact([{
       source: "agent:release-assistant",
       entity: "not-a-uri",
       field: "app:task:status",
@@ -148,22 +179,20 @@ describe("Poneglyph TypeScript HTTP client", () => {
     expect(network.requests).toHaveLength(0);
   });
 
-  it("keeps the txId available for safe retry after network and retryable HTTP failures", async () => {
+  it("does not expose internal transaction IDs when delivery may be unknown", async () => {
     const failedNetwork = createFetch(() => Promise.reject(new Error("connection reset")));
     const networkDb = createDatabase({ url: "https://poneglyph.example", graphId: "team-memory", fetch: failedNetwork.fetch });
-    await expect(networkDb.state(facts, { txId: "retry:tx:1" })).rejects.toMatchObject({
+    await expect(networkDb.transact(facts, {clientRequestToken: "retry:logical-operation"})).rejects.toMatchObject({
       name: "PoneglyphNetworkError",
-      txId: "retry:tx:1",
     });
 
     const failedResponse = createFetch(() => jsonResponse({ error: "writer busy" }, 423, { "retry-after": "1" }));
     const responseDb = createDatabase({ url: "https://poneglyph.example", graphId: "team-memory", fetch: failedResponse.fetch });
-    await expect(responseDb.state(facts, { txId: "retry:tx:2" })).rejects.toMatchObject({
+    await expect(responseDb.transact(facts, {clientRequestToken: "retry:logical-operation"})).rejects.toMatchObject({
       name: "PoneglyphRequestError",
       status: 423,
       retryable: true,
       retryAfter: "1",
-      txId: "retry:tx:2",
     });
   });
 
@@ -177,20 +206,17 @@ describe("Poneglyph TypeScript HTTP client", () => {
     ]) {
       const network = createFetch(() => jsonResponse({ error: "test failure", retryable: sample.hint }, sample.status));
       const graph = createDatabase({ url: "https://poneglyph.example", graphId: "team-memory", fetch: network.fetch });
-      await expect(graph.stateFacts(facts, { txId: "retry:hint:1" })).rejects.toMatchObject({
-        name: "PoneglyphRequestError", status: sample.status, retryable: sample.expected, txId: "retry:hint:1",
+      await expect(graph.transact(facts, {clientRequestToken: "retry:hint:1"})).rejects.toMatchObject({
+        name: "PoneglyphRequestError", status: sample.status, retryable: sample.expected,
       });
       expect(network.requests).toHaveLength(1);
     }
   });
 
   it("rejects malformed successful server responses instead of asserting a commit", async () => {
-    const network = createFetch(() => jsonResponse({ txId: "wrong:tx:1", commitSeq: 1, status: "committed" }));
+    const network = createFetch(() => jsonResponse({}));
     const graph = createDatabase({ url: "https://poneglyph.example", graphId: "team-memory", fetch: network.fetch });
 
-    await expect(graph.state(facts, { txId: "expected:tx:1" })).rejects.toMatchObject({
-      name: "PoneglyphProtocolError",
-      txId: "expected:tx:1",
-    });
+    await expect(graph.transact(facts)).rejects.toMatchObject({name: "PoneglyphProtocolError"});
   });
 });

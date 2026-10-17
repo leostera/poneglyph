@@ -1,36 +1,45 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 import {
-  createDatabase, parseTransactionId, PoneglyphInputError, PoneglyphNetworkError,
+  createDatabase, PoneglyphInputError, PoneglyphNetworkError,
   PoneglyphProtocolError, PoneglyphRequestError, type FactInput, type GraphClient,
-  type GraphId, type TransactionReceipt,
+  type GraphId, type TransactionOptions, type TransactionReceipt, type GraphSchemaObservation, parseClientRequestToken,
 } from "@leostera/poneglyph";
 import type { InferEnv } from "cf/config";
 import type { serviceWorker } from "../cloudflare.config.ts";
 import { dispatchGraphRequest } from "../../poneglyph/src/storage/implementation.js";
+import { dispatchInternalTransaction } from "../../poneglyph/src/storage/transaction-request.js";
+import { parseFactBatch } from "../../poneglyph/src/domain/fact.js";
+import { parseTransactionId } from "../../poneglyph/src/domain/identifiers.js";
 import type { StorageEnv } from "../../poneglyph/src/storage/environment.js";
 import { authorizeGraph, GraphAuthorizationError, parseGraphRequest, parseIdentity, staticAuthorizer } from "./authorization.js";
 
-export { GraphCoordinatorDO, GraphShardDO } from "../../poneglyph/src/storage/implementation.js";
+export { GraphCoordinatorDO, GraphLedgerDO, GraphTreeDO, GraphShardDO } from "../../poneglyph/src/storage/implementation.js";
 export { staticAuthorizer, type GraphAuthorizer, type GraphGrants } from "./authorization.js";
-export type GraphWriteOptions = Readonly<{ txId: string }>;
+export type GraphWriteOptions = Readonly<{ clientRequestToken?: string }>;
+export type ApprovedBatchReceipt = Readonly<{txId: string; commitSeq: number; status: "committed"}>;
 type ServiceEnv = InferEnv<{ env: typeof serviceWorker.env }>;
 
 // Only safe, small serializable public error fields cross RPC. In particular,
 // never serialize backend causes/stacks. Disconnection still means unknown
-// write delivery: callers retain their required original transaction identity.
-async function runGraphOperation<T>(run: () => Promise<T>): Promise<T> {
+// write delivery: callers may only safely replay with the same request token/facts.
+async function runGraphOperation<T>(run: () => Promise<T>, operation: "read" | "write" = "read"): Promise<T> {
   try { return await run(); }
   catch (error) {
     if (error instanceof PoneglyphInputError) throw new PoneglyphInputError(error.message);
     if (error instanceof PoneglyphRequestError) throw new PoneglyphRequestError({
       status: error.status, retryable: error.retryable,
-      message: error.status < 500 ? error.message : "Graph operation failed; write delivery may be unknown",
-      ...(error.txId === undefined ? {} : { txId: error.txId }),
+      message: error.status < 500 ? error.message : operation === "write"
+        ? "Graph write failed; delivery may be unknown"
+        : "Graph read failed; a complete answer is unavailable",
       ...(error.retryAfter === undefined ? {} : { retryAfter: error.retryAfter }),
     });
-    if (error instanceof PoneglyphProtocolError) throw new PoneglyphProtocolError("Graph did not return a valid complete answer; write delivery may be unknown", error.txId);
-    if (error instanceof PoneglyphNetworkError) throw new PoneglyphNetworkError("Graph delivery is unavailable; write outcome may be unknown", undefined, error.txId);
-    throw new Error("Graph operation failed; write delivery may be unknown");
+    if (error instanceof PoneglyphProtocolError) throw new PoneglyphProtocolError(operation === "write"
+      ? "Graph write did not return a valid receipt; delivery may be unknown"
+      : "Graph did not return a valid complete read answer");
+    if (error instanceof PoneglyphNetworkError) throw new PoneglyphNetworkError(operation === "write"
+      ? "Graph delivery is unavailable; write outcome may be unknown"
+      : "Graph read is unavailable", undefined);
+    throw new Error(operation === "write" ? "Graph write failed; delivery may be unknown" : "Graph read failed; a complete answer is unavailable");
   }
 }
 function bindGraph(env: StorageEnv, graphId: GraphId): GraphClient {
@@ -42,13 +51,15 @@ function bindGraph(env: StorageEnv, graphId: GraphId): GraphClient {
 }
 
 function parseWriteOptions(input: unknown): GraphWriteOptions {
-  if (typeof input !== "object" || input === null || Array.isArray(input)) throw new PoneglyphInputError("RPC writes require { txId }");
-  if (!("txId" in input) || !Object.hasOwn(input, "txId") || Object.keys(input).some(key => key !== "txId")) {
-    throw new PoneglyphInputError("RPC writes require { txId } and do not accept transport signals");
+  if (typeof input !== "object" || input === null || Array.isArray(input) ||
+      Object.keys(input).some(key => key !== "clientRequestToken")) {
+    throw new PoneglyphInputError("RPC writes accept only an optional clientRequestToken");
   }
-  const txId = parseTransactionId(input.txId, "options.txId");
-  if (!txId.ok) throw new PoneglyphInputError(txId.error.message, txId.error);
-  return Object.freeze({ txId: txId.value });
+  const token = "clientRequestToken" in input && input.clientRequestToken !== undefined
+    ? parseClientRequestToken(input.clientRequestToken)
+    : undefined;
+  if (token !== undefined && !token.ok) throw new PoneglyphInputError(token.error.message, token.error);
+  return Object.freeze(token === undefined ? {} : {clientRequestToken: token.value});
 }
 
 export class ReadGraph extends RpcTarget {
@@ -63,19 +74,46 @@ export class ReadGraph extends RpcTarget {
       return { rows: result.rows.map(row => ({ ...row })), snapshotSeq: result.snapshotSeq, metrics: { ...result.metrics } };
     });
   }
+  getSchema(): Promise<GraphSchemaObservation> {
+    return runGraphOperation(() => this.#graph.getSchema());
+  }
   // Stable API shape, but no write implementation/capability on a read handle.
-  async transact(_facts: readonly FactInput[], _options: GraphWriteOptions): Promise<TransactionReceipt> { throw new GraphAuthorizationError(); }
-  async stateFacts(facts: readonly FactInput[], options: GraphWriteOptions) { return (await this.transact(facts, options)).txId; }
-  state(facts: readonly FactInput[], options: GraphWriteOptions) { return this.stateFacts(facts, options); }
+  async transact(_facts: readonly FactInput[], _options?: GraphWriteOptions): Promise<TransactionReceipt> { throw new GraphAuthorizationError(); }
+  async transactApprovedBatch(_facts: readonly FactInput[], _options: Readonly<{txId: string}>): Promise<ApprovedBatchReceipt> {
+    throw new GraphAuthorizationError();
+  }
 }
 export class ReadWriteGraph extends ReadGraph {
   #graph: GraphClient;
-  constructor(graph: GraphClient) { super(graph); this.#graph = graph; }
-  transact(facts: readonly FactInput[], options: GraphWriteOptions) {
-    // A server-minted ID could disappear with a lost RPC reply. Never admit a
-    // write for which the caller cannot reconcile the original exact identity.
+  #env: StorageEnv;
+  constructor(graph: GraphClient, env: StorageEnv) { super(graph); this.#graph = graph; this.#env = env; }
+  transact(facts: readonly FactInput[], options: GraphWriteOptions = {}) {
     const parsed = parseWriteOptions(options);
-    return runGraphOperation(() => this.#graph.transact(facts, parsed));
+    return runGraphOperation(() => this.#graph.transact(facts, parsed), "write");
+  }
+  transactApprovedBatch(facts: readonly FactInput[], options: Readonly<{txId: string}>): Promise<ApprovedBatchReceipt> {
+    const txId = parseTransactionId(options?.txId, "options.txId");
+    if (!txId.ok) throw new PoneglyphInputError(txId.error.message, txId.error);
+    const batch = parseFactBatch({
+      txId: txId.value,
+      facts: facts.map(fact => ({...fact, retraction: fact.retraction ?? false})),
+    });
+    if (!batch.ok) throw new PoneglyphInputError(batch.error.message, batch.error);
+    return runGraphOperation(async () => {
+      const response = await dispatchInternalTransaction(this.#env, this.#graph.id, batch.value);
+      const body: unknown = await response.json().catch(() => undefined);
+      if (!response.ok) {
+        const message = typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+          ? body.error : "Approved transaction was not acknowledged";
+        throw new PoneglyphRequestError({status: response.status, message, retryable: response.status >= 500});
+      }
+      if (typeof body !== "object" || body === null || !("txId" in body) || body.txId !== txId.value ||
+          !("status" in body) || body.status !== "committed" || !("commitSeq" in body) ||
+          typeof body.commitSeq !== "number" || !Number.isSafeInteger(body.commitSeq) || body.commitSeq < 1) {
+        throw new PoneglyphProtocolError("Approved transaction returned an invalid internal receipt");
+      }
+      return {txId: txId.value, commitSeq: body.commitSeq, status: "committed"};
+    }, "write");
   }
 }
 
@@ -87,7 +125,7 @@ export default class PoneglyphService extends WorkerEntrypoint<ServiceEnv> {
     const permissions = await authorizeGraph(authorizer, identity, request);
     // Acquiring a capability creates no durable objects or graph data.
     const graph = bindGraph(this.env, request.graphId);
-    return permissions.includes("write") ? new ReadWriteGraph(graph) : new ReadGraph(graph);
+    return permissions.includes("write") ? new ReadWriteGraph(graph, this.env) : new ReadGraph(graph);
   }
   async fetch(): Promise<Response> { return new Response("Not found", { status: 404 }); }
 }

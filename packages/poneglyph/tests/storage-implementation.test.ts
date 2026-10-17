@@ -1,13 +1,15 @@
 import {describe, expect, it} from "vitest";
 import * as worker from "../src/worker.js";
-import {GraphCoordinatorDO, GraphShardDO} from "../src/storage/implementation.js";
-import {ensureCoordinatorSchema, ensureShardSchema} from "../src/storage/sql.js";
+import {GraphCoordinatorDO, GraphLedgerDO, GraphTreeDO, GraphShardDO} from "../src/storage/implementation.js";
+import {ensureLedgerSchema, ensureTreeSchema, ensureShardSchema} from "../src/storage/sql.js";
 describe("canonical storage composition", () => {
-  it("exports the only coordinator and shard directly from the production Worker", () => {
+  it("exports the four storage roles directly from the production Worker", () => {
     expect(worker.GraphCoordinatorDO).toBe(GraphCoordinatorDO);
+    expect(worker.GraphLedgerDO).toBe(GraphLedgerDO);
+    expect(worker.GraphTreeDO).toBe(GraphTreeDO);
     expect(worker.GraphShardDO).toBe(GraphShardDO);
   });
-  it.each([ensureCoordinatorSchema, ensureShardSchema])("rejects incompatible persisted markers before any DDL", initialize => {
+  it.each([ensureLedgerSchema, ensureTreeSchema, ensureShardSchema])("rejects incompatible persisted markers before any DDL", initialize => {
     const statements: string[] = [];
     const storage = {transactionSync: (callback: () => unknown) => callback(), sql: {exec(statement: string) {
       statements.push(statement);

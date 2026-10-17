@@ -1,4 +1,4 @@
-import { GraphCoordinatorDO } from "./coordinator.js";
+import { GraphCoordinatorDO } from "./coordinator-facade.js";
 import { GraphShardDO } from "./shard.js";
 import { auditFactStorage } from "../testing/storage-audit.js";
 import { TREE_DEPTH, TREE_PREFIXES, LEDGER_BUCKETS, ledgerCoordinatorName, treeCoordinatorName, transactionCoordinatorName } from "./forest.js";
@@ -7,17 +7,15 @@ import { isRecord } from "../domain/result.js";
 
 export class BenchCoordinatorDO extends GraphCoordinatorDO {
   async transactionState(txId: string, graphId: string) {
-    const response = await this.env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graphId, txId)).fetch(`https://transaction.internal/_transaction-audit?txId=${encodeURIComponent(txId)}`, {method: "POST"});
+    const response = await this.env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graphId, txId)).fetch(`https://transaction.internal/_transaction-audit?txId=${encodeURIComponent(txId)}`, {method: "POST"});
     if (!response.ok) throw new Error("transaction audit failed");
     return response.json();
   }
   async audit() {
-    const graph = this.ctx.storage.sql.exec<{graph_id: string}>("SELECT graph_id FROM graph_identity").toArray()[0]?.graph_id;
-    // Writes bypass the facade entirely. Bench env supplies the graph explicitly
-    // for a fresh/read-only facade that has not acquired its first read cut.
-    const graphId = graph ?? (this.env as typeof this.env & {GRAPH_ID: string}).GRAPH_ID;
+    // The facade owns no database; the benchmark supplies its fixed graph identity.
+    const graphId = (this.env as typeof this.env & {GRAPH_ID: string}).GRAPH_ID;
     const trees = await Promise.all(TREE_PREFIXES.map(async prefix => {
-      const response = await this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graphId, prefix)).fetch("https://tree.internal/_tree-audit", {
+      const response = await this.env.GRAPH_TREES.getByName(treeCoordinatorName(graphId, prefix)).fetch("https://tree.internal/_tree-audit", {
         method: "POST", body: JSON.stringify({ graphId, prefix }),
       });
       if (!response.ok) throw new Error("subtree audit failed");
@@ -33,12 +31,12 @@ export class BenchCoordinatorDO extends GraphCoordinatorDO {
     // Every admitted transaction referenced by an owner must have a terminal,
     // payload-bound per-transaction record too. No audit repairs state.
     for (const txId of ids) {
-      const response = await this.env.GRAPH_COORDINATORS.getByName(await transactionCoordinatorName(graphId, txId)).fetch(`https://transaction.internal/_transaction-audit?txId=${encodeURIComponent(txId)}`, { method: "POST" });
+      const response = await this.env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graphId, txId)).fetch(`https://transaction.internal/_transaction-audit?txId=${encodeURIComponent(txId)}`, { method: "POST" });
       const rows = await response.json() as {phase: string}[];
       if (!response.ok || rows.length !== 1 || !["complete", "aborted"].includes(rows[0]!.phase)) throw new Error(`unresolved transaction coordinator ${txId}`);
     }
     const ledgers = await Promise.all(LEDGER_BUCKETS.map(async bucket => {
-      const response = await this.env.GRAPH_COORDINATORS.getByName(ledgerCoordinatorName(graphId, bucket)).fetch("https://ledger.internal/_ledger-audit", {method: "POST"});
+      const response = await this.env.GRAPH_LEDGERS.getByName(ledgerCoordinatorName(graphId, bucket)).fetch("https://ledger.internal/_ledger-audit", {method: "POST"});
       if (!response.ok) throw new Error("ledger audit failed");
       const summary = await response.json() as {phases: {phase: string; count: number}[]; databaseBytes: number};
       for (const state of summary.phases) {
@@ -94,7 +92,7 @@ export class BenchShardDO extends GraphShardDO {
     }
     const atomicDecisions = this.ctx.storage.sql.exec("SELECT status, COUNT(*) AS count FROM shard_transactions WHERE decision_kind = 'atomic' GROUP BY status").toArray();
     if (!identity.length) result.identity = [{role: "leaf", prefix}];
-    const response = await this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(graphId, prefix.slice(0, TREE_DEPTH) as typeof prefix)).fetch("https://tree.internal/_tree-audit", {
+    const response = await this.env.GRAPH_TREES.getByName(treeCoordinatorName(graphId, prefix.slice(0, TREE_DEPTH) as typeof prefix)).fetch("https://tree.internal/_tree-audit", {
       method: "POST", body: JSON.stringify({graphId, prefix: prefix.slice(0, TREE_DEPTH)}),
     });
     const state: unknown = await response.json();

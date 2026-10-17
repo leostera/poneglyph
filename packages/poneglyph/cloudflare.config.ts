@@ -21,10 +21,9 @@ export default defineConfig(({ mode }) => {
       env: cleanupMode
         ? {}
         : {
-            GRAPH_COORDINATORS: bindings.durableObject({
-              worker: workerName,
-              exportName: "GraphCoordinatorDO",
-            }),
+            GRAPH_FACADES: bindings.durableObject({ worker: workerName, exportName: "GraphCoordinatorDO" }),
+            GRAPH_LEDGERS: bindings.durableObject({ worker: workerName, exportName: "GraphLedgerDO" }),
+            GRAPH_TREES: bindings.durableObject({ worker: workerName, exportName: "GraphTreeDO" }),
             GRAPH_SHARDS: bindings.durableObject({
               worker: workerName,
               exportName: "GraphShardDO",
@@ -37,11 +36,15 @@ export default defineConfig(({ mode }) => {
       exports: cleanupMode
         ? {
             GraphCoordinatorDO: exports.durableObject({ state: "deleted" }),
+            GraphLedgerDO: exports.durableObject({ state: "deleted" }),
+            GraphTreeDO: exports.durableObject({ state: "deleted" }),
             GraphShardDO: exports.durableObject({ state: "deleted" }),
             TodoHubDO: exports.durableObject({ state: "deleted" }),
           }
         : {
             GraphCoordinatorDO: exports.durableObject({ storage: "sqlite" }),
+            GraphLedgerDO: exports.durableObject({ storage: "sqlite" }),
+            GraphTreeDO: exports.durableObject({ storage: "sqlite" }),
             GraphShardDO: exports.durableObject({ storage: "sqlite" }),
             TodoHubDO: exports.durableObject({ storage: "sqlite" }),
           },

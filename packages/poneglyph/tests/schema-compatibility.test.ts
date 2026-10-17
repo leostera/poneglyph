@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ensureCoordinatorSchema, ensureShardSchema } from "../src/storage/sql.js";
+import { ensureLedgerSchema, ensureTreeSchema, ensureShardSchema } from "../src/storage/sql.js";
 
 type SchemaInitializer = (storage: DurableObjectStorage) => void;
 
@@ -8,7 +8,8 @@ const initializers: readonly Readonly<{
   existingTable: string;
   initialize: SchemaInitializer;
 }>[] = [
-  { kind: "coordinator", existingTable: "graph_state", initialize: ensureCoordinatorSchema },
+  { kind: "ledger", existingTable: "candidate_transactions", initialize: ensureLedgerSchema },
+  { kind: "tree", existingTable: "graph_state", initialize: ensureTreeSchema },
   { kind: "shard", existingTable: "shard_identity", initialize: ensureShardSchema },
 ];
 

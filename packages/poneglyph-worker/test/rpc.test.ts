@@ -18,9 +18,12 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     runtime = new Miniflare({ host: "127.0.0.1", port: 0, resourcePersistencePath: resolve(directory, "state"), telemetry: { enabled: false }, log: new Log(LogLevel.WARN), workers: [
       { config: { name: "driver", manifest: await manifest("driver"), compatibilityDate: "2026-10-13", compatibilityFlags: ["nodejs_compat"], env: { READER: binding({ clientId: "reader" }), WRITER: binding({ clientId: "writer" }), UNKNOWN: binding({ clientId: "unknown" }), MISSING: binding(), MALFORMED: binding({ clientId: "writer", permissions: ["write"] }), NO_STORAGE: { ...binding({ clientId: "reader" }), worker: "no-storage" } } } },
       { config: { name: "service", manifest: await manifest("service"), compatibilityDate: "2026-10-13", compatibilityFlags: ["nodejs_compat"], env: {
-        GRAPH_COORDINATORS: { type: "durable-object", worker: "service", exportName: "GraphCoordinatorDO" }, GRAPH_SHARDS: { type: "durable-object", worker: "service", exportName: "GraphShardDO" },
+        GRAPH_FACADES: { type: "durable-object", worker: "service", exportName: "GraphCoordinatorDO" },
+        GRAPH_LEDGERS: { type: "durable-object", worker: "service", exportName: "GraphLedgerDO" },
+        GRAPH_TREES: { type: "durable-object", worker: "service", exportName: "GraphTreeDO" },
+        GRAPH_SHARDS: { type: "durable-object", worker: "service", exportName: "GraphShardDO" },
         GRAPH_GRANTS: { type: "json", value: { reader: { example: ["read"] }, writer: { example: ["read", "write"], other: ["read", "write"] } } },
-      }, exports: { GraphCoordinatorDO: { type: "durable-object", storage: "sqlite" }, GraphShardDO: { type: "durable-object", storage: "sqlite" } } } },
+      }, exports: { GraphCoordinatorDO: { type: "durable-object", storage: "sqlite" }, GraphLedgerDO: { type: "durable-object", storage: "sqlite" }, GraphTreeDO: { type: "durable-object", storage: "sqlite" }, GraphShardDO: { type: "durable-object", storage: "sqlite" } } } },
       // No storage bindings at all: handle acquisition and denial must still
       // succeed, proving neither path touches durable state.
       { config: { name: "no-storage", manifest: await manifest("service"), compatibilityDate: "2026-10-13", compatibilityFlags: ["nodejs_compat"], env: { GRAPH_GRANTS: { type: "json", value: { reader: { example: ["read"] } } } } } },
@@ -28,7 +31,7 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     await runtime.ready;
     const active = runtime;
     const call = async (path: string) => { const response = await active.dispatchFetch(`https://driver.test${path}`); return { status: response.status, body: await response.json() }; };
-    for (const path of ["/unknown", "/missing", "/malformed", "/forbidden-graph", "/write", "/state", "/stateFacts", "/deny-before-storage"]) {
+    for (const path of ["/unknown", "/missing", "/malformed", "/forbidden-graph", "/write", "/deny-before-storage"]) {
       assert.deepEqual(await call(path), { status: 400, body: { name: "GraphAuthorizationError", message: "Graph access denied" } });
     }
     assert.deepEqual(await call("/identity"), { status: 200, body: { id: "example" } });
@@ -40,9 +43,15 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     assert.equal(badWrite.status, 400);
     assert.ok(typeof badWrite.body === "object" && badWrite.body !== null && "name" in badWrite.body);
     assert.equal(badWrite.body.name, "PoneglyphInputError");
+    const concurrent = await call("/parallel-seed");
+    assert.equal(concurrent.status, 200);
+    assert.ok(Array.isArray(concurrent.body));
+    assert.equal(concurrent.body.length, 2);
+    assert.deepEqual(concurrent.body[0], concurrent.body[1], "simultaneous identical token requests share one durable outcome");
+    assert.match(String((concurrent.body[0] as {txId: unknown}).txId), /^poneglyph:tx:/);
     const first = await call("/seed");
-    assert.deepEqual(first, { status: 200, body: { txId: "test:original", commitSeq: 1, status: "committed" } });
-    assert.deepEqual(await call("/seed"), first); // explicit original-ID replay
+    assert.equal(first.status, 200);
+    assert.deepEqual(first.body, concurrent.body[0]); // later request-token replay returns the original witness
     const title = await call("/query");
     assert.equal(title.status, 200, JSON.stringify(title.body));
     assert.ok(typeof title.body === "object" && title.body !== null && "rows" in title.body);
@@ -53,6 +62,12 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     const integer = await call("/integer");
     assert.ok(typeof integer.body === "object" && integer.body !== null && "rows" in integer.body);
     assert.deepEqual(integer.body.rows, [{ Value: { type: "integer", value: "9007199254740993" } }]);
+    const schema = await call("/schema");
+    assert.equal(schema.status, 200);
+    assert.ok(typeof schema.body === "object" && schema.body !== null && "fields" in schema.body && "snapshotVector" in schema.body);
+    const observed = schema.body as {fields: readonly {field: string; valueTags: readonly string[]}[]; snapshotVector: readonly unknown[]};
+    assert.equal(observed.snapshotVector.length, 16);
+    assert.ok(observed.fields.some(field => field.field === "test:title" && field.valueTags.includes("text")));
     const invalid = await call("/bad-query");
     assert.equal(invalid.status, 400);
     assert.ok(typeof invalid.body === "object" && invalid.body !== null && "name" in invalid.body);
@@ -66,8 +81,8 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     ]);
     const conflict = await call("/conflict");
     assert.equal(conflict.status, 400);
-    assert.ok(typeof conflict.body === "object" && conflict.body !== null && "status" in conflict.body && "txId" in conflict.body && "retryable" in conflict.body);
-    assert.equal(conflict.body.status, 409); assert.equal(conflict.body.txId, "test:original"); assert.equal(conflict.body.retryable, false);
+    assert.ok(typeof conflict.body === "object" && conflict.body !== null && "status" in conflict.body && "retryable" in conflict.body);
+    assert.equal(conflict.body.status, 409); assert.equal(conflict.body.retryable, false);
     const service = await active.getWorker("service");
     for (const path of ["/v1/graphs/example/query", "/v1/graphs/example/transactions", "/_transact", "/__e2e/inspect"]) {
       const denied = await service.fetch(`https://private.test${path}`, { method: "POST", body: "{}" });

@@ -4,15 +4,18 @@ import { parsed, rejected, type ParseResult } from "./result.js";
 declare const uriBrand: unique symbol;
 declare const factIdBrand: unique symbol;
 declare const transactionIdBrand: unique symbol;
+declare const clientRequestTokenBrand: unique symbol;
 declare const statedAtBrand: unique symbol;
 
 export type Uri = string & { readonly [uriBrand]: "Uri" };
 export type FactId = Uri & { readonly [factIdBrand]: "FactId" };
 export type TransactionId = Uri & { readonly [transactionIdBrand]: "TransactionId" };
+export type ClientRequestToken = string & { readonly [clientRequestTokenBrand]: "ClientRequestToken" };
 export type StatedAt = string & { readonly [statedAtBrand]: "StatedAt" };
 
 export const MAX_URI_LENGTH = 2_048;
 export const MAX_TRANSACTION_ID_BYTES = 256;
+export const MAX_CLIENT_REQUEST_TOKEN_BYTES = 256;
 
 export function parseUri(input: unknown, path = "uri"): ParseResult<Uri> {
   if (typeof input !== "string" || input.length === 0) {
@@ -43,6 +46,19 @@ export function parseTransactionId(
   }
   const uri = parseUri(input, path);
   return uri.ok ? parsed(uri.value as TransactionId) : uri;
+}
+
+export function parseClientRequestToken(
+  input: unknown,
+  path = "clientRequestToken",
+): ParseResult<ClientRequestToken> {
+  if (typeof input !== "string" || input.length === 0) {
+    return rejected(path, "expected a non-empty client request token");
+  }
+  if (new TextEncoder().encode(input).byteLength > MAX_CLIENT_REQUEST_TOKEN_BYTES) {
+    return rejected(path, `client request token cannot exceed ${MAX_CLIENT_REQUEST_TOKEN_BYTES} UTF-8 bytes`);
+  }
+  return parsed(input as ClientRequestToken);
 }
 
 export function parseStatedAt(input: unknown, path = "statedAt"): ParseResult<StatedAt> {

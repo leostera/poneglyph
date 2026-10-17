@@ -21,8 +21,26 @@ export function ledgerCoordinatorName(graphId: string, bucket: string): string {
   if (!LEDGER_BUCKETS.includes(bucket)) throw new TypeError("invalid ledger bucket");
   return `${coordinatorObjectName(graphId)}:ledger:${bucket}`;
 }
+export async function ledgerBucketForRequestToken(graphId: string, token: string): Promise<string> {
+  return (await sha256Hex(`${graphId}\u0000${token}`)).slice(0, 1);
+}
+
+export async function ledgerBucketForTransactionId(txId: string): Promise<string> {
+  const tokenRoutedBucket = /^poneglyph:tx:token:([0-9a-f]):[0-9a-f-]{36}$/.exec(txId)?.[1];
+  return tokenRoutedBucket ?? (await sha256Hex(txId)).slice(0, 1);
+}
+
 export async function transactionCoordinatorName(graphId: string, txId: string): Promise<string> {
-  return ledgerCoordinatorName(graphId, (await sha256Hex(txId)).slice(0, 1));
+  return ledgerCoordinatorName(graphId, await ledgerBucketForTransactionId(txId));
+}
+
+export async function tokenLedgerName(graphId: string, token: string): Promise<string> {
+  return ledgerCoordinatorName(graphId, await ledgerBucketForRequestToken(graphId, token));
+}
+
+export function transactionIdForLedgerBucket(bucket: string): string {
+  if (!LEDGER_BUCKETS.includes(bucket)) throw new TypeError("invalid ledger bucket");
+  return `poneglyph:tx:token:${bucket}:${crypto.randomUUID()}`;
 }
 export type TreeSnapshot = Readonly<{
   prefix: VirtualPrefix; readId: string; snapshotSeq: number; directoryEpoch: number; expiresAtMs: number;

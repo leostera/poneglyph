@@ -1,5 +1,22 @@
-const COORDINATOR_SCHEMA = [
+const LEDGER_SCHEMA = [
   `CREATE TABLE ledger_context (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), graph_id TEXT NOT NULL, bucket TEXT NOT NULL)`,
+  `CREATE TABLE client_request_tokens (
+    token_hash TEXT PRIMARY KEY CHECK (length(token_hash) = 64), payload_hash TEXT NOT NULL CHECK (length(payload_hash) = 64),
+    tx_id TEXT NOT NULL UNIQUE, created_at_ms INTEGER NOT NULL, terminal_at_ms INTEGER,
+    terminal_status TEXT CHECK (terminal_status IS NULL OR terminal_status IN ('committed', 'aborted'))
+  )`,
+  `CREATE INDEX client_request_tokens_by_expiry ON client_request_tokens (created_at_ms, token_hash) WHERE terminal_at_ms IS NOT NULL`,
+  `CREATE INDEX client_request_tokens_pending ON client_request_tokens (created_at_ms) WHERE terminal_at_ms IS NULL`,
+  `CREATE TABLE candidate_transactions (tx_id TEXT PRIMARY KEY, graph_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
+    batch_json TEXT NOT NULL, trees_json TEXT NOT NULL, plan_json TEXT, phase TEXT NOT NULL,
+    commit_seq INTEGER NOT NULL, statement_time_ms INTEGER NOT NULL, created_at_ms INTEGER NOT NULL,
+    next_recovery_at_ms INTEGER NOT NULL, local_witness_json TEXT,
+    participant_witness INTEGER NOT NULL DEFAULT 0 CHECK (participant_witness IN (0, 1)))`,
+  `CREATE INDEX candidate_transactions_by_recovery ON candidate_transactions (next_recovery_at_ms) WHERE phase NOT IN ('complete', 'aborted')`,
+  `CREATE INDEX candidate_transactions_by_expiry ON candidate_transactions (created_at_ms) WHERE phase IN ('complete', 'aborted')`,
+];
+
+const TREE_SCHEMA = [
   `CREATE TABLE tree_context (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), prefix TEXT NOT NULL)`,
   `CREATE TABLE tree_reservations (tx_id TEXT PRIMARY KEY, payload_hash TEXT NOT NULL,
     entities_json TEXT NOT NULL, ticket_seq INTEGER NOT NULL UNIQUE CHECK (ticket_seq > 0), directory_epoch INTEGER NOT NULL,
@@ -8,61 +25,27 @@ const COORDINATOR_SCHEMA = [
   `CREATE INDEX tree_reservations_pending ON tree_reservations (phase) WHERE phase = 'preparing'`,
   `CREATE TABLE entity_write_locks (entity TEXT PRIMARY KEY, tx_id TEXT NOT NULL, payload_hash TEXT NOT NULL)`,
   `CREATE INDEX entity_write_locks_by_transaction ON entity_write_locks (tx_id)`,
-  `CREATE TABLE candidate_transactions (tx_id TEXT PRIMARY KEY, graph_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
-    batch_json TEXT NOT NULL, trees_json TEXT NOT NULL, plan_json TEXT, phase TEXT NOT NULL,
-    commit_seq INTEGER NOT NULL, statement_time_ms INTEGER NOT NULL, created_at_ms INTEGER NOT NULL,
-    next_recovery_at_ms INTEGER NOT NULL, local_witness_json TEXT,
-    participant_witness INTEGER NOT NULL DEFAULT 0 CHECK (participant_witness IN (0, 1)))`,
-  `CREATE INDEX candidate_transactions_by_recovery ON candidate_transactions (next_recovery_at_ms) WHERE phase NOT IN ('complete', 'aborted')`,
-  `CREATE INDEX candidate_transactions_by_expiry ON candidate_transactions (created_at_ms) WHERE phase IN ('complete', 'aborted')`,
   `CREATE TABLE IF NOT EXISTS graph_identity (
-    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-    graph_id TEXT NOT NULL,
-    routing_version INTEGER NOT NULL
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1), graph_id TEXT NOT NULL, routing_version INTEGER NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS graph_state (
-    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-    visible_seq INTEGER NOT NULL,
-    directory_epoch INTEGER NOT NULL,
-    writer_tx_id TEXT,
-    topology_op_id TEXT,
-    next_statement_time_ms INTEGER NOT NULL,
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1), visible_seq INTEGER NOT NULL, directory_epoch INTEGER NOT NULL,
+    writer_tx_id TEXT, topology_op_id TEXT, next_statement_time_ms INTEGER NOT NULL,
     next_write_seq INTEGER NOT NULL DEFAULT 0 CHECK (next_write_seq >= visible_seq)
   )`,
   `INSERT OR IGNORE INTO graph_state
    (singleton, visible_seq, directory_epoch, writer_tx_id, topology_op_id, next_statement_time_ms)
    VALUES (1, 0, 0, NULL, NULL, 0)`,
-  `CREATE TABLE IF NOT EXISTS graph_transactions (
-    tx_id TEXT PRIMARY KEY,
-    payload_hash TEXT NOT NULL,
-    batch_json TEXT,
-    participants_json TEXT NOT NULL,
-    directory_epoch INTEGER NOT NULL,
-    statement_time_ms INTEGER NOT NULL,
-    commit_seq INTEGER NOT NULL,
-    phase TEXT NOT NULL CHECK (phase IN ('preparing', 'committing', 'cancelling', 'complete', 'aborted')),
-    created_at_ms INTEGER NOT NULL
-  )`,
   `CREATE TABLE IF NOT EXISTS graph_read_leases (
-    read_id TEXT PRIMARY KEY,
-    snapshot_seq INTEGER NOT NULL,
-    directory_epoch INTEGER NOT NULL,
-    expires_at_ms INTEGER NOT NULL
+    read_id TEXT PRIMARY KEY, snapshot_seq INTEGER NOT NULL, directory_epoch INTEGER NOT NULL, expires_at_ms INTEGER NOT NULL
   )`,
-  `CREATE INDEX IF NOT EXISTS graph_read_leases_by_expiry
-   ON graph_read_leases (expires_at_ms, snapshot_seq, directory_epoch)`,
+  `CREATE INDEX IF NOT EXISTS graph_read_leases_by_expiry ON graph_read_leases (expires_at_ms, snapshot_seq, directory_epoch)`,
   `CREATE TABLE IF NOT EXISTS graph_splits (
-    migration_id TEXT PRIMARY KEY,
-    source_prefix TEXT NOT NULL,
-    source_generation INTEGER NOT NULL,
-    left_prefix TEXT NOT NULL,
-    right_prefix TEXT NOT NULL,
-    base_visible_seq INTEGER NOT NULL,
-    old_directory_epoch INTEGER NOT NULL,
-    split_epoch INTEGER NOT NULL,
+    migration_id TEXT PRIMARY KEY, source_prefix TEXT NOT NULL, source_generation INTEGER NOT NULL,
+    left_prefix TEXT NOT NULL, right_prefix TEXT NOT NULL, base_visible_seq INTEGER NOT NULL,
+    old_directory_epoch INTEGER NOT NULL, split_epoch INTEGER NOT NULL,
     phase TEXT NOT NULL CHECK (phase IN ('copying', 'ready', 'cutover', 'retired')),
-    force INTEGER NOT NULL DEFAULT 0,
-    created_at_ms INTEGER NOT NULL
+    force INTEGER NOT NULL DEFAULT 0, created_at_ms INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS graph_splits_by_phase ON graph_splits (phase, created_at_ms)`,
 ];
@@ -191,20 +174,24 @@ const SHARD_SCHEMA = [
   `INSERT OR IGNORE INTO shard_accounting (singleton, migration_reserved_bytes) VALUES (1, 0)`,
 ];
 
-const PONEGLYPH_SCHEMA_VERSION = 7;
+const SHARD_SCHEMA_VERSION = 8;
+const ROLE_SCHEMA_VERSION = 1;
 
-// Unified G persistence cannot reinterpret any earlier candidate schema.
-type SchemaKind = "g-coordinator" | "g-shard";
+type SchemaKind = "g-ledger" | "g-tree" | "g-shard";
 
-export function ensureCoordinatorSchema(storage: DurableObjectStorage): void {
-  ensureSchema(storage, "g-coordinator", COORDINATOR_SCHEMA);
+export function ensureLedgerSchema(storage: DurableObjectStorage): void {
+  ensureSchema(storage, "g-ledger", ROLE_SCHEMA_VERSION, LEDGER_SCHEMA);
+}
+
+export function ensureTreeSchema(storage: DurableObjectStorage): void {
+  ensureSchema(storage, "g-tree", ROLE_SCHEMA_VERSION, TREE_SCHEMA);
 }
 
 export function ensureShardSchema(storage: DurableObjectStorage): void {
-  ensureSchema(storage, "g-shard", SHARD_SCHEMA);
+  ensureSchema(storage, "g-shard", SHARD_SCHEMA_VERSION, SHARD_SCHEMA);
 }
 
-function ensureSchema(storage: DurableObjectStorage, kind: SchemaKind, statements: readonly string[]): void {
+function ensureSchema(storage: DurableObjectStorage, kind: SchemaKind, version: number, statements: readonly string[]): void {
   storage.transactionSync(() => {
     const schemaMarkerExists = storage.sql.exec<{ name: string }>(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'poneglyph_schema'",
@@ -214,7 +201,7 @@ function ensureSchema(storage: DurableObjectStorage, kind: SchemaKind, statement
       const marker = storage.sql.exec<{ kind: string; version: number }>(
         "SELECT kind, version FROM poneglyph_schema WHERE singleton = 1",
       ).toArray()[0];
-      if (marker?.kind !== kind || marker.version !== PONEGLYPH_SCHEMA_VERSION) {
+      if (marker?.kind !== kind || marker.version !== version) {
         throw new Error(`unsupported ${kind} Durable Object schema marker; refusing to reinterpret persisted data`);
       }
       return;
@@ -240,7 +227,7 @@ function ensureSchema(storage: DurableObjectStorage, kind: SchemaKind, statement
     storage.sql.exec(
       "INSERT INTO poneglyph_schema (singleton, kind, version) VALUES (1, ?, ?)",
       kind,
-      PONEGLYPH_SCHEMA_VERSION,
+      version,
     );
   });
 }

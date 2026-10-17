@@ -19,10 +19,12 @@ import {
   TRANSACTION_IDEMPOTENCY_RETENTION_MS,
   SHARD_SCAN_PAGE_SIZE,
   SPLIT_COPY_PAGE_SIZE,
+  MAX_QUERY_RESULTS,
+  MAX_QUERY_RESPONSE_BYTES,
 } from "./constants.js";
 import { accountStorage, estimateMutationFootprint } from "./capacity.js";
 import { MIGRATION_TABLES, migrationRowBytes, parseMigrationTable, virtualKeyRange, type MigrationTable, type MigrationRow } from "./migration.js";
-import { canonicalBatchJson, jsonResponse, readJsonBody, sha256Hex } from "./http.js";
+import { canonicalBatchJson, jsonResponse, jsonStringResponse, readJsonBody, sha256Hex } from "./http.js";
 import { matchesPrefix, parseVirtualKey, parseVirtualPrefix, virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
 import { parseParticipantBatch, parseScanRequest, type ParticipantBatch, type ScanRequest } from "./protocol.js";
 import { ensureShardSchema } from "./sql.js";
@@ -105,6 +107,7 @@ export class GraphShardDO extends DurableObject<Env> {
       if (request.method === "POST" && path === "/_cancel") return await this.cancel(request);
       if (request.method === "POST" && path === "/_scan") return await this.scan(request);
       if (request.method === "POST" && path === "/_entity") return await this.getEntity(request);
+      if (request.method === "POST" && path === "/_schema") return await this.observeSchema(request);
       if (request.method === "POST" && path === "/_prune") return await this.prune(request);
       return jsonResponse({ error: "not found" }, 404);
     } catch (error) {
@@ -211,7 +214,7 @@ export class GraphShardDO extends DurableObject<Env> {
 
   private async proveOwnerRelease(row: AtomicRecord, identity: ShardIdentity): Promise<void> {
     const context = this.outcomeContext(row, identity), prefix = identity.prefix.slice(0, TREE_DEPTH) as VirtualPrefix;
-    const response = await this.env.GRAPH_COORDINATORS.getByName(treeCoordinatorName(identity.graph_id, prefix)).fetch("https://owner.internal/_tree-atomic-proof", {
+    const response = await this.env.GRAPH_TREES.getByName(treeCoordinatorName(identity.graph_id, prefix)).fetch("https://owner.internal/_tree-atomic-proof", {
       method: "POST", body: JSON.stringify({...context, prefix, decision: row.status === "committed" ? "committed" : "aborted"}),
     });
     const proof: unknown = await response.json();
@@ -423,6 +426,44 @@ export class GraphShardDO extends DurableObject<Env> {
         "cache-control": "no-store",
       },
     });
+  }
+
+  private async observeSchema(request: Request): Promise<Response> {
+    const input = await readJsonBody(request, 4_096);
+    if (!input.ok || !isRecord(input.value) || Object.keys(input.value).some(key =>
+      !["graphId", "shardPrefix", "shardGeneration", "directoryEpoch", "snapshotSeq", "leaseExpiresAtMs"].includes(key))) {
+      return jsonResponse({error: "invalid schema observation request"}, 400);
+    }
+    const graphId = parseGraphId(input.value["graphId"]);
+    const shardPrefix = parseVirtualPrefix(input.value["shardPrefix"]);
+    const shardGeneration = readNonNegativeInteger(input.value["shardGeneration"]);
+    const directoryEpoch = readNonNegativeInteger(input.value["directoryEpoch"]);
+    const snapshotSeq = readNonNegativeInteger(input.value["snapshotSeq"]);
+    const leaseExpiresAtMs = readNonNegativeInteger(input.value["leaseExpiresAtMs"]);
+    if (!graphId.ok || !shardPrefix.ok || !shardGeneration.ok || !directoryEpoch.ok || !snapshotSeq.ok || !leaseExpiresAtMs.ok) {
+      return jsonResponse({error: "invalid schema observation identity"}, 400);
+    }
+    this.assertReadableIdentity(graphId.value, shardPrefix.value, shardGeneration.value, directoryEpoch.value);
+    if (leaseExpiresAtMs.value <= Date.now()) return jsonResponse({error: "read snapshot lease expired"}, 410);
+
+    const observations = this.ctx.storage.sql.exec<{field: string; valueTag: string}>(
+      `SELECT field, json_extract(value_json, '$.type') AS valueTag FROM active_facts
+       WHERE valid_from_seq <= ? AND (valid_to_seq IS NULL OR valid_to_seq > ?)
+       GROUP BY field, valueTag ORDER BY field, valueTag LIMIT ?`,
+      snapshotSeq.value, snapshotSeq.value, MAX_QUERY_RESULTS + 1,
+    ).toArray();
+    if (observations.length > MAX_QUERY_RESULTS) return jsonResponse({error: "schema observation exceeds the per-shard field/tag budget"}, 413);
+    for (const observation of observations) {
+      const field = parseUri(observation.field);
+      if (!field.ok || field.value !== observation.field || typeof observation.valueTag !== "string") {
+        throw new ShardProtocolError(500, "stored field/tag observation is corrupt");
+      }
+    }
+    const body = JSON.stringify({observations});
+    if (new TextEncoder().encode(body).byteLength > MAX_QUERY_RESPONSE_BYTES) {
+      return jsonResponse({error: "complete shard schema observation exceeds the response byte budget"}, 413);
+    }
+    return jsonStringResponse(body);
   }
 
   private async getEntity(request: Request): Promise<Response> {

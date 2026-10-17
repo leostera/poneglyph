@@ -17,7 +17,9 @@ export default defineConfig({
           PONEGLYPH_RUN_BENCH: runBenchmark ? "1" : "0",
         },
         durableObjects: {
-          GRAPH_COORDINATORS: { className: "GraphCoordinatorDO", useSQLite: true },
+          GRAPH_FACADES: { className: "GraphCoordinatorDO", useSQLite: true },
+          GRAPH_LEDGERS: { className: "GraphLedgerDO", useSQLite: true },
+          GRAPH_TREES: { className: "GraphTreeDO", useSQLite: true },
           GRAPH_SHARDS: { className: "GraphShardDO", useSQLite: true },
           TODO_HUBS: { className: "TodoHubDO", useSQLite: true },
         },

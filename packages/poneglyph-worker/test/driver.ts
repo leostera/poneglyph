@@ -12,7 +12,7 @@ export default {
     try {
       if (path === "/acquire-only" || path === "/deny-before-storage") {
         using graph = await env.NO_STORAGE.getGraph({ graphId: "example" });
-        if (path === "/deny-before-storage") return Response.json(await graph.transact(facts, { txId: "test:denied" }));
+        if (path === "/deny-before-storage") return Response.json(await graph.transact(facts));
         return Response.json({ id: await graph.id });
       }
       if (path === "/raw-selection") {
@@ -21,21 +21,33 @@ export default {
       }
       if (path === "/bad-write" || path === "/conflict") {
         using graph = await env.WRITER.getGraph({ graphId: "example" });
-        return Response.json(await graph.transact([{ ...facts[0], value: { type: "text", value: "changed" } }], { txId: path === "/bad-write" ? "" : "test:original" }));
+        return Response.json(await graph.transact(
+          [{...facts[0], value: {type: "text", value: "changed"}}],
+          {clientRequestToken: path === "/bad-write" ? "" : "test:original"},
+        ));
+      }
+      if (path === "/parallel-seed") {
+        const write = async () => {
+          using graph = await env.WRITER.getGraph({graphId: "example"});
+          return graph.transact(facts, {clientRequestToken: "test:original"});
+        };
+        return Response.json(await Promise.all([write(), write()]));
       }
       if (path === "/seed" || path === "/second") {
         using graph = await env.WRITER.getGraph({ graphId: path === "/seed" ? "example" : "other" });
-        return Response.json(await graph.transact(path === "/second" ? facts.map(fact => ({ ...fact, source: "test:other", value: { type: "text", value: "other" } })) : facts, { txId: "test:original" }));
+        return Response.json(await graph.transact(
+          path === "/second" ? facts.map(fact => ({...fact, source: "test:other", value: {type: "text", value: "other"}})) : facts,
+          {clientRequestToken: "test:original"},
+        ));
       }
       if (path === "/unknown") { using graph = await env.UNKNOWN.getGraph({ graphId: "example" }); return Response.json(await graph.query("test:title(E, T)")); }
       if (path === "/missing") { using graph = await env.MISSING.getGraph({ graphId: "example" }); return Response.json(await graph.query("test:title(E, T)")); }
       if (path === "/malformed") { using graph = await env.MALFORMED.getGraph({ graphId: "example" }); return Response.json(await graph.query("test:title(E, T)")); }
       using graph = await env.READER.getGraph({ graphId: path === "/forbidden-graph" ? "other" : "example" });
-      if (path === "/write") return Response.json(await graph.transact(facts, { txId: "test:reader-write" }));
-      if (path === "/state") return Response.json(await graph.state(facts, { txId: "test:reader-state" }));
-      if (path === "/stateFacts") return Response.json(await graph.stateFacts(facts, { txId: "test:reader-state-facts" }));
+      if (path === "/write") return Response.json(await graph.transact(facts));
       if (path === "/bad-query") return Response.json(await graph.query("not Datalog"));
       if (path === "/integer") return Response.json(await graph.query('test:bytes("test:e", Value)'));
+      if (path === "/schema") return Response.json(await graph.getSchema());
       if (path === "/identity") return Response.json({ id: await graph.id });
       return Response.json(await graph.query("test:title(E, T)"));
     } catch (error) {
