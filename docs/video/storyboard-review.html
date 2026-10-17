@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Build a Linked-Notes App — Storyboard Review</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08090a; --surface: #111415; --surface-2: #0b0d0e; --line: #303637;
+      --text: #e7e5df; --muted: #9ca19e; --dim: #68706d;
+      --gold: #d7c978; --blue: #78a9bd; --coral: #c88b83; --green: #82a88b;
+      --serif: Georgia, "Times New Roman", serif;
+      --sans: "Avenir Next", Avenir, Inter, system-ui, sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.55; }
+    header { padding: 54px max(28px, calc((100vw - 1160px) / 2)) 34px; border-bottom: 1px solid var(--line); background: radial-gradient(ellipse at 50% -40%, #30362d 0, transparent 60%); }
+    .eyebrow, .scene-number, .label, nav a { color: var(--gold); font: 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+    h1 { max-width: 850px; margin: 12px 0 10px; font: italic 46px/1.1 var(--serif); letter-spacing: -.03em; }
+    .lede { max-width: 790px; margin: 0; color: var(--muted); font-size: 16px; }
+    .status { display: inline-flex; gap: 9px; align-items: center; margin-top: 20px; padding: 7px 11px; border: 1px solid #546b58; border-radius: 999px; color: #b6d0bb; font: 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    nav { position: sticky; top: 0; z-index: 5; display: flex; gap: 9px; overflow-x: auto; padding: 11px max(28px, calc((100vw - 1160px) / 2)); border-bottom: 1px solid var(--line); background: rgb(8 9 10 / 93%); backdrop-filter: blur(12px); }
+    nav a { flex: 0 0 auto; padding: 7px 10px; border: 1px solid transparent; border-radius: 4px; color: var(--muted); text-decoration: none; letter-spacing: .04em; }
+    nav a:hover { border-color: var(--line); color: var(--text); }
+    main { max-width: 1220px; margin: 0 auto; padding: 26px 30px 80px; }
+    .scene { scroll-margin-top: 72px; margin: 0 0 22px; padding: 23px; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(145deg, #111415, #0d0f10 70%); }
+    .scene-head { display: flex; align-items: baseline; gap: 13px; flex-wrap: wrap; padding-bottom: 17px; border-bottom: 1px solid var(--line); }
+    .scene-head h2 { margin: 0; font: italic 25px var(--serif); }
+    .time { margin-left: auto; color: var(--muted); font: 12px var(--mono); }
+    .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 19px; padding-top: 19px; }
+    .column { min-width: 0; padding: 17px; border: 1px solid #282e2f; border-radius: 6px; background: rgb(0 0 0 / 18%); }
+    .label { display: block; margin-bottom: 14px; color: var(--dim); }
+    .visual { min-height: 242px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); text-align: center; }
+    .caption { color: var(--muted); font: italic 14px var(--serif); }
+    blockquote { margin: 0; color: #d9d9d1; font: 16px/1.72 var(--serif); }
+    blockquote p { margin: 0; }
+    .mono { font: 10px/1.6 var(--mono); }
+    .app-frame { width: min(100%, 440px); overflow: hidden; border: 1px solid #424a49; border-radius: 5px; background: var(--surface-2); text-align: left; }
+    .app-top { padding: 7px 11px; border-bottom: 1px solid var(--line); color: var(--dim); font: 10px var(--mono); }
+    .app-content { padding: 12px 15px; color: var(--muted); font: 12px/1.8 var(--mono); }
+    .app-content strong { color: var(--text); font-weight: 500; }
+    .link { color: var(--blue); text-decoration: underline; text-decoration-color: #78a9bd66; }
+    .node-row, .option-row, .shard-row, .arch-row { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .node { min-width: 110px; padding: 10px 8px; border: 1px solid var(--blue); border-radius: 4px; background: #142027; color: var(--text); font: 10px/1.5 var(--mono); }
+    .node.gold { border-color: var(--gold); background: #211f16; }
+    .node.coral { border-color: var(--coral); background: #211817; }
+    .node.green { border-color: var(--green); background: #172019; }
+    .arrow { color: var(--gold); font: 22px var(--serif); }
+    .down { color: var(--green); font: 20px var(--serif); }
+    .option { width: min(100%, 470px); padding: 10px 12px; border: 1px solid #303738; border-radius: 4px; background: var(--surface-2); text-align: left; }
+    .option-label { margin-bottom: 7px; color: var(--dim); font: 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .option-lane { position: relative; display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; }
+    .small-box { min-width: 135px; padding: 8px 10px; border: 1px solid var(--blue); border-radius: 4px; color: var(--text); background: #11191d; font: 10px/1.5 var(--mono); text-align: center; }
+    .small-box.gold { border-color: var(--gold); background: #201e17; }
+    .write-packet { position: absolute; left: 37%; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 12px var(--gold); animation: save-to-store 3.8s ease-in-out infinite; }
+    .option:nth-child(2) .write-packet { animation-delay: 1.9s; }
+    .partition-box { width: 112px; min-height: 67px; padding: 8px 6px; border: 1px solid #394344; border-radius: 4px; background: #101516; color: var(--muted); font: 9px/1.5 var(--mono); transition: border-color .2s, background .2s; }
+    .partition-box strong { color: var(--text); font-weight: 500; }
+    .boundary { color: var(--coral); font: 18px var(--mono); }
+    .cte-rail { position: relative; width: min(100%, 430px); height: 28px; display: flex; align-items: center; border-bottom: 1px solid #536060; color: var(--dim); font: 9px var(--mono); }
+    .cte-scope { position: absolute; left: 0; bottom: -1px; width: 34%; height: 3px; background: var(--blue); }
+    .cte-wall { position: absolute; left: 34%; bottom: -7px; width: 2px; height: 17px; background: var(--coral); box-shadow: 0 0 9px #c88b8377; }
+    .cte-dot { position: absolute; left: 5%; bottom: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 9px var(--blue); animation: local-query-stop 4.4s ease-in-out infinite; }
+    .fanout-line { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; color: var(--dim); font: 9px var(--mono); }
+    .fanout-line::after { content: ""; position: absolute; left: 9%; top: 50%; width: 8px; height: 8px; transform: translateY(-50%); border-radius: 50%; background: var(--gold); box-shadow: 0 0 12px var(--gold); animation: cross-shards 4.8s linear infinite; }
+    .fact-map { width: min(100%, 560px); display: grid; grid-template-columns: minmax(0, 1fr) 22px minmax(105px, .8fr) 22px minmax(0, 1fr); align-items: center; gap: 7px; }
+    .fact-stack { display: grid; gap: 12px; }
+    .fact-card { padding: 9px; border: 1px solid #3c4747; border-radius: 4px; color: #c8dbe1; background: #101719; font: 9px/1.55 var(--mono); text-align: left; opacity: 0; animation: fact-appear 5.2s ease-in-out infinite; }
+    .fact-stack:last-child .fact-card:nth-child(2) { animation-delay: .5s; }
+    .fact-stack:first-child .fact-card:nth-child(2) { animation-delay: 1s; }
+    .fact-stack:last-child .fact-card:first-child { animation-delay: 1.5s; }
+    .fact-card em { display: block; margin-top: 4px; color: var(--dim); font-style: normal; font-size: 8px; }
+    .fact-arrow { color: var(--green); font: 17px var(--serif); transform: scaleX(0); transform-origin: center; animation: draw-arrow 5.2s ease-in-out infinite; }
+    .note-anchor { padding: 14px 7px; border: 1px solid var(--gold); border-radius: 6px; background: #211f16; color: var(--text); font: 10px/1.5 var(--mono); box-shadow: 0 0 0 #d7c97800; animation: note-focus 5.2s ease-in-out infinite; }
+    .note-anchor strong { display: block; color: var(--gold); font-weight: 500; }
+    .query-code { padding: 8px 11px; border-left: 2px solid var(--gold); background: #0a0c0d; color: #c5ccc8; font: 9px/1.65 var(--mono); text-align: left; }
+    .graph-coordinator { width: fit-content; margin: 0 auto 12px; padding: 7px 11px; border: 1px solid var(--gold); border-radius: 4px; color: var(--gold); background: #201e17; font: 9px var(--mono); animation: coordinator-pulse 4.6s ease-in-out infinite; }
+    .query-result { padding: 6px 10px; border: 1px solid var(--green); color: var(--green); font: 9px var(--mono); opacity: 0; animation: result-appear 4.6s ease-in-out infinite; }
+    .architecture { width: min(100%, 490px); display: grid; justify-items: center; gap: 7px; }
+    .arch-box { min-width: 155px; padding: 8px 11px; border: 1px solid #3d4949; border-radius: 4px; color: var(--text); background: #111718; font: 9px/1.5 var(--mono); text-align: center; }
+    .arch-box.gold { border-color: var(--gold); }
+    .arch-box.active-one { animation: arch-glow 5s ease-in-out infinite; }
+    .arch-box.active-two { animation: arch-glow 5s ease-in-out infinite 1s; }
+    .arch-box.active-three { animation: arch-glow 5s ease-in-out infinite 2s; }
+    .arch-shards { display: flex; justify-content: center; gap: 10px; }
+    .commit-line { width: min(100%, 430px); height: 1px; background: #394140; }
+    .commit-mark { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px var(--green); animation: commit-publish 5s ease-in-out infinite; }
+    .quiet { color: var(--dim); font: 9px var(--mono); }
+    #scene-1 .node:nth-of-type(1) { animation: note-pulse 4.8s ease-in-out infinite; }
+    #scene-1 .node:nth-of-type(2) { animation: note-pulse 4.8s ease-in-out infinite 1s; }
+    #scene-1 .node:nth-of-type(3) { animation: note-pulse 4.8s ease-in-out infinite 2s; }
+    #scene-5 .partition-box:first-child { animation: shard-read 4.6s ease-in-out infinite; }
+    #scene-5 .partition-box:last-child { animation: shard-read 4.6s ease-in-out infinite 1.2s; }
+    #scene-5 .arrow { animation: arrow-flash 4.6s ease-in-out infinite 1s; }
+    #scene-5 .query-code { animation: query-reveal 4.6s ease-in-out infinite; }
+    @keyframes save-to-store { 0%, 10% { transform: translateX(0); opacity: 0; } 18% { opacity: 1; } 72% { transform: translateX(105px); opacity: 1; } 86%, 100% { transform: translateX(105px); opacity: 0; } }
+    @keyframes note-pulse { 0%, 18% { box-shadow: 0 0 0 #d7c97800; } 30%, 53% { box-shadow: 0 0 18px #d7c97844; } 68%, 100% { box-shadow: 0 0 0 #d7c97800; } }
+    @keyframes shard-read { 0%, 14% { border-color: #394344; box-shadow: 0 0 0 #d7c97800; } 28%, 55% { border-color: var(--gold); box-shadow: 0 0 16px #d7c97833; } 72%, 100% { border-color: #394344; box-shadow: 0 0 0 #d7c97800; } }
+    @keyframes arrow-flash { 0%, 20% { opacity: .35; } 40%, 70% { opacity: 1; color: var(--green); } 90%, 100% { opacity: .35; } }
+    @keyframes query-reveal { 0%, 20% { opacity: .35; transform: translateY(4px); } 40%, 76% { opacity: 1; transform: translateY(0); } 94%, 100% { opacity: .35; transform: translateY(4px); } }
+    @keyframes local-query-stop { 0%, 8% { left: 5%; opacity: 0; } 15% { opacity: 1; } 50%, 70% { left: 31%; opacity: 1; } 85%, 100% { left: 31%; opacity: 0; } }
+    @keyframes cross-shards { 0%, 12% { left: 8%; opacity: 0; } 18% { opacity: 1; } 85% { left: 90%; opacity: 1; } 100% { left: 90%; opacity: 0; } }
+    @keyframes fact-appear { 0%, 12% { opacity: 0; transform: translateY(7px); } 28%, 75% { opacity: 1; transform: translateY(0); } 92%, 100% { opacity: 0; transform: translateY(-4px); } }
+    @keyframes draw-arrow { 0%, 16% { transform: scaleX(0); opacity: 0; } 38%, 78% { transform: scaleX(1); opacity: 1; } 95%, 100% { transform: scaleX(0); opacity: 0; } }
+    @keyframes note-focus { 0%, 10% { box-shadow: 0 0 0 #d7c97800; } 25%, 76% { box-shadow: 0 0 20px #d7c97822; } 94%, 100% { box-shadow: 0 0 0 #d7c97800; } }
+    @keyframes coordinator-pulse { 0%, 14% { box-shadow: 0 0 0 #d7c97800; } 24%, 72% { box-shadow: 0 0 18px #d7c97844; } 90%, 100% { box-shadow: 0 0 0 #d7c97800; } }
+    @keyframes result-appear { 0%, 58% { opacity: 0; transform: translateY(5px); } 76%, 90% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; } }
+    @keyframes arch-glow { 0%, 10% { box-shadow: 0 0 0 #d7c97800; } 22%, 48% { border-color: var(--gold); box-shadow: 0 0 16px #d7c97833; } 60%, 100% { box-shadow: 0 0 0 #d7c97800; } }
+    @keyframes commit-publish { 0%, 65% { transform: translateX(-170px); opacity: .25; } 84%, 100% { transform: translateX(170px); opacity: 1; } }
+    footer { max-width: 1220px; margin: 0 auto; padding: 0 30px 55px; color: var(--dim); font: 11px var(--mono); }
+    @media (max-width: 780px) {
+      header { padding: 38px 22px 28px; } h1 { font-size: 36px; }
+      nav { padding-inline: 16px; } main { padding: 18px 14px 54px; }
+      .scene { padding: 16px; } .columns { grid-template-columns: 1fr; }
+      .time { width: 100%; margin-left: 0; } blockquote { font-size: 15px; }
+      .partition-box { width: 96px; } .fact-map { grid-template-columns: 1fr 15px 105px 15px 1fr; gap: 4px; }
+      footer { padding-inline: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+      .fact-card { opacity: 1; transform: none; }
+      .fact-arrow { opacity: 1; transform: scaleX(1); }
+      .query-result { opacity: 1; transform: none; }
+    }
+    @media print {
+      :root { color-scheme: light; --bg: white; --text: #111; --muted: #444; --line: #bbb; }
+      body, .scene, .column { background: white; color: #111; } nav { display: none; }
+      .scene { break-inside: avoid; } blockquote { color: #222; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">Poneglyph explainer · storyboard review</div>
+    <h1>Build a linked-notes app</h1>
+    <p class="lede">Follow one app from its first note save to a cross-shard relationship query. The left side previews visual movement; the right side is the voice-over draft.</p>
+    <div class="status">Motion sketches · auto-playing</div>
+  </header>
+
+  <nav aria-label="Jump to scene">
+    <a href="#scene-1">01 · The app</a><a href="#scene-2">02 · Store notes</a>
+    <a href="#scene-3">03 · Cross the boundary</a><a href="#scene-4">04 · Facts</a>
+    <a href="#scene-5">05 · Query across shards</a><a href="#scene-6">06 · Cloudflare</a>
+  </nav>
+
+  <main>
+    <section class="scene" id="scene-1">
+      <div class="scene-head"><span class="scene-number">01</span><h2>Start with the app: a notebook whose notes link</h2><span class="time">0:00–0:50</span></div>
+      <div class="columns">
+        <div class="column"><span class="label">Motion sketch</span>
+          <div class="visual">
+            <div class="app-frame">
+              <div class="app-top">MY NOTEBOOK / EDIT NOTE</div>
+              <div class="app-content"><strong>Heat on my block</strong><br>Afternoons are much hotter near the parking lot…<br>See also: <span class="link">[[Tree canopy]]</span></div>
+            </div>
+            <div class="node-row">
+              <div class="node gold">Heat on my block</div><span class="arrow">→</span>
+              <div class="node">Tree canopy</div><span class="arrow">→</span>
+              <div class="node coral">Cool roofs</div>
+            </div>
+            <div class="caption">The typed link becomes a relationship in the notebook.</div>
+          </div>
+        </div>
+        <div class="column"><span class="label">Voice-over</span>
+          <blockquote><p>We’re building a note-taking app. You write about the heat on your block, link that note to “Tree canopy,” and connect that note to “Cool roofs.” The app stores notes and links so people can follow ideas through their notebook. A single note and its direct backlinks are simple. The interesting database question comes when those notes are stored in different places, but users still expect one connected notebook.</p></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene" id="scene-2">
+      <div class="scene-head"><span class="scene-number">02</span><h2>Store the notes with D1 or a Durable Object</h2><span class="time">0:50–1:40</span></div>
+      <div class="columns">
+        <div class="column"><span class="label">Motion sketch</span>
+          <div class="visual">
+            <div class="option">
+              <div class="option-label">Option A · D1</div>
+              <div class="option-lane"><div class="small-box gold">Notes app / Worker</div><span class="arrow">→</span><div class="small-box">D1 database<br>notes + note_links</div><i class="write-packet"></i></div>
+            </div>
+            <div class="option">
+              <div class="option-label">Option B · SQLite-backed DO</div>
+              <div class="option-lane"><div class="small-box gold">Notes app / Worker</div><span class="arrow">→</span><div class="small-box">Notebook DO<br>notes + note_links</div><i class="write-packet"></i></div>
+            </div>
+            <div class="caption">A save pulse writes note content and its links to either store.</div>
+          </div>
+        </div>
+        <div class="column"><span class="label">Voice-over</span>
+          <blockquote><p>For a first version, use a Worker and D1: put note content in a `notes` table and links in a `note_links` table. Save the note and its links together; index the destination for direct backlinks. Or store a notebook’s notes and links in a SQLite-backed Durable Object. That gives the notebook a durable home and a single place to coordinate its updates. Both are sound ways to build the app. While the data and query fit one database, regular SQL is a natural choice.</p></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene" id="scene-3">
+      <div class="scene-head"><span class="scene-number">03</span><h2>The links cross storage boundaries</h2><span class="time">1:40–2:30</span></div>
+      <div class="columns">
+        <div class="column"><span class="label">Motion sketch</span>
+          <div class="visual">
+            <div class="shard-row">
+              <div class="partition-box"><strong>DO A · SQLite</strong><br>Heat → Canopy</div><span class="arrow">→</span>
+              <div class="partition-box"><strong>DO B · SQLite</strong><br>Canopy → Cool roofs</div><span class="arrow">→</span>
+              <div class="partition-box"><strong>DO C · SQLite</strong><br>Cool roofs</div>
+            </div>
+            <div class="cte-rail"><span>recursive CTE in DO A</span><i class="cte-scope"></i><i class="cte-wall"></i><i class="cte-dot"></i></div>
+            <div class="fanout-line"><span>App Worker</span><span>→ DO A → DO B → DO C</span></div>
+            <div class="caption">The local query stops at the red boundary; the app must route between objects.</div>
+          </div>
+        </div>
+        <div class="column"><span class="label">Voice-over</span>
+          <blockquote><p>As the notebook grows, you partition it across several D1 databases or separate Durable Objects. A note in DO A links to one in DO B, which links to another in DO C. A recursive CTE can follow links inside one SQLite database; it cannot join against B’s or C’s private storage. Even a fixed two-hop question now asks the app to route between stores, fetch edges, join results, and keep the read coherent. The challenge is relationships across storage boundaries. A graph query layer can handle that relationship work across the distributed data.</p></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene" id="scene-4">
+      <div class="scene-head"><span class="scene-number">04</span><h2>Represent a note as sourced facts</h2><span class="time">2:30–3:20</span></div>
+      <div class="columns">
+        <div class="column"><span class="label">Motion sketch</span>
+          <div class="visual">
+            <div class="fact-map">
+              <div class="fact-stack">
+                <div class="fact-card">note:heat-17<br>isA → note<em>source: field-research</em></div>
+                <div class="fact-card">note:heat-17<br>hasTitle → “Heat on my block”<em>source: field-research</em></div>
+              </div>
+              <span class="fact-arrow">←</span>
+              <div class="note-anchor"><strong>NOTE</strong>note:heat-17<br>Heat on my block</div>
+              <span class="fact-arrow">→</span>
+              <div class="fact-stack">
+                <div class="fact-card">note:heat-17<br>linksTo → note:canopy-3<em>source: field-research</em></div>
+                <div class="fact-card">note:heat-17<br>hasBody → “Hot near lot…”<em>source: field-research</em></div>
+              </div>
+            </div>
+            <div class="caption">One note in the center · its sourced facts appear around it.</div>
+          </div>
+        </div>
+        <div class="column"><span class="label">Voice-over</span>
+          <blockquote><p>In Poneglyph, a note is an entity, and its details are facts. For `note:heat-17`, the app can assert “is a note,” “has title ‘Heat on my block,’” and “links to `note:canopy-3`.” Each fact carries its source, entity, field, and typed value. The app sends the note and its links through the typed client and gets a committed receipt. Later corrections add evidence rather than silently replacing history. Poneglyph stores the connected data; your app still owns the editor and the note-taking experience.</p></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene" id="scene-5">
+      <div class="scene-head"><span class="scene-number">05</span><h2>Query relationships across shard DOs</h2><span class="time">3:20–4:10</span></div>
+      <div class="columns">
+        <div class="column"><span class="label">Motion sketch</span>
+          <div class="visual">
+            <div class="graph-coordinator">GraphCoordinatorDO · snapshot 42</div>
+            <div class="shard-row">
+              <div class="partition-box"><strong>Shard DO A</strong><br>Heat → Canopy</div><span class="arrow">⇄</span>
+              <div class="partition-box"><strong>Shard DO B</strong><br>Canopy → Cool roofs</div>
+            </div>
+            <div class="query-code">notes:links-to(Note, Mid),<br>notes:links-to(Mid, Related)</div>
+            <div class="query-result">Related note: Cool roofs</div>
+            <div class="caption">Bind Mid on one shard · route the next clause · join the result.</div>
+          </div>
+        </div>
+        <div class="column"><span class="label">Voice-over</span>
+          <blockquote><p>Now the app asks a two-link question: from “Heat on my block,” follow a link to `Mid`, then follow `Mid` to another note. Poneglyph expresses that as two relationship clauses. It scans for the first link, binds `Mid`, routes that note to its owning shard, and checks the second link there. The matching results join across Durable Objects on one consistent snapshot. Your application asks about the relationship pattern; Poneglyph handles the bounded routing and join.</p></blockquote>
+        </div>
+      </div>
+    </section>
+
+    <section class="scene" id="scene-6">
+      <div class="scene-head"><span class="scene-number">06</span><h2>Cloudflare path—and when it fits</h2><span class="time">4:10–5:00</span></div>
+      <div class="columns">
+        <div class="column"><span class="label">Motion sketch</span>
+          <div class="visual">
+            <div class="architecture">
+              <div class="arch-box gold active-one">Linked-notes app</div><span class="down">↓</span>
+              <div class="arch-box active-two">Poneglyph Worker API</div><span class="down">↓</span>
+              <div class="arch-box active-three">Graph coordinator DO · commit sequence</div><span class="down">↓</span>
+              <div class="arch-shards"><div class="arch-box">Shard DO · SQLite</div><div class="arch-box">Shard DO · SQLite</div></div>
+              <div class="commit-line"></div><div class="commit-mark"></div>
+              <div class="quiet">publish the read-visible sequence after shard apply</div>
+            </div>
+          </div>
+        </div>
+        <div class="column"><span class="label">Voice-over</span>
+          <blockquote><p>On Cloudflare, the notes app calls Poneglyph’s Worker API. A graph coordinator routes writes and queries to SQLite-backed shard Durable Objects, and publishes a commit only when the participating shards have applied it. The graph can expand across shards; queries remain bounded and writes pass through one coordinator. Use D1 for conventional note storage in one database. Use a Durable Object when a notebook needs its own coordinated state. Consider Poneglyph when sourced links and cross-shard relationship queries are central to the app. Start with stable note IDs, explicit link facts, and the query patterns your users actually need.</p></blockquote>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer>Review draft · Auto-playing motion sketches show the intended visual beats; final Remotion animation and voice-over wait for approval.</footer>
+</body>
+</html>

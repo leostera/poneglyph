@@ -1,0 +1,56 @@
+{
+  "title": "Poneglyph: a database developers build software with",
+  "audience": "Software developers evaluating a connected-facts database for applications on Cloudflare Workers",
+  "purpose": "Explain Poneglyph from the developer's point of view: what the app writes and reads, why and when to use it, how to use it safely, how the prototype works on Cloudflare, and where its limits matter.",
+  "durationSeconds": 300,
+  "scenes": [
+    {
+      "id": "connections",
+      "title": "A database your app builds with",
+      "viewerQuestion": "What is Poneglyph, and what problem does it solve for my software?",
+      "visualAction": "Open on Jedi and padawan tables in D1, or SQLite coordinated by a Durable Object; turn a fixed join into an expanding mentor path that reaches a dark-side Jedi at unknown depth.",
+      "transition": "Let the lineage graph resolve into the same connected-facts problem in a release-readiness application, then move into the fact object its developer writes.",
+      "narration": "Your Jedi archive gets a new question: find every Padawan whose mentor chain eventually reaches a Jedi who went dark—and show the path. In D1, people and padawan links fit in tables; fixed-depth joins are easy. A Durable Object can coordinate one archive's writes around SQLite. For any depth, a recursive CTE can do it—but now you're managing path traversal and cycle handling. That's not impossible; it's a clue: relationships are the product. Poneglyph is an experimental database your Cloudflare app uses to store connected, sourced facts—not a dashboard. We'll trace its developer workflow using release readiness, and be clear about its current query limits."
+    },
+    {
+      "id": "facts",
+      "title": "Start with the developer's request",
+      "viewerQuestion": "What does an application actually send to the database?",
+      "visualAction": "Show a typed fact with source, entity, field, and reference value; then reveal the stateFacts call and a committed receipt.",
+      "transition": "Zoom into the source field and let the assertion continue into the append-only log.",
+      "narration": "Point the typed client at your Poneglyph Worker, then define a graph such as release-readiness. That handle is local configuration; it doesn't register a schema or send a request. The app records two facts: the auth API is blocked by the rotate-key task, and that task is open. Each fact has a source, entity, field, and typed value. Store the relationship as a reference, not copied text. Send related facts together with graph.stateFacts(facts, { txId }). The client checks the batch, posts it to the Worker, and waits for a committed receipt. Your UI can now show an open blocker—the product experience belongs to your application. Log the transaction ID to trace a retry."
+    },
+    {
+      "id": "history",
+      "title": "Facts keep their evidence",
+      "viewerQuestion": "How do corrections and retries preserve what happened?",
+      "visualAction": "Append an open-status assertion, a retraction, and a done-status assertion; distinguish the durable log from the current projection.",
+      "transition": "Follow the current projection into the query that answers the release question.",
+      "narration": "Source metadata lets the application explain where an answer came from. Each fact records who asserted what about which entity and field. If the rotate-key task is completed, Poneglyph doesn't silently rewrite the old assertion. A correction is new evidence; a retraction is another fact linked to the claim it removes. The fact log stays append-only. Current entity views and query indexes are derived projections that can be rebuilt from that log. For a network timeout, keep the same transaction ID and resend the identical batch; the client does not retry automatically. During the seven-day idempotency window, reusing that ID with changed content conflicts. Ordinary queries read current state, not arbitrary historical snapshots."
+    },
+    {
+      "id": "queries",
+      "title": "Ask across the connections",
+      "viewerQuestion": "How does the app find an open blocker across different entities?",
+      "visualAction": "Join the service's blocked-by relation to the task's status relation through the shared Task variable; show the returned row and snapshot sequence.",
+      "transition": "Pull back from the query result to reveal the Worker and durable storage that served it.",
+      "narration": "Now the app asks across those facts. A bounded Datalog query can match a service's blocker to tasks whose status is open: app:service:blocked-by(Service, Task), app:task:status(Task, “open”). The shared variable, Task, makes the relationships meet. The client returns rows, a snapshot sequence, and access metrics, so the application can see which consistent committed view it read. Poneglyph is not general SQL: queries support positive relations and bounded constraints, not arbitrary recursive rules or historical snapshots. Keep queries selective and follow references. Results are buffered, not a streaming cursor. Broad scans cost more and can hit explicit budgets; Poneglyph returns an error rather than quietly handing back a partial answer."
+    },
+    {
+      "id": "transactions",
+      "title": "How it runs on Cloudflare",
+      "viewerQuestion": "What happens between the Worker request and a consistent database read?",
+      "visualAction": "Trace a request from the Worker API to a per-graph coordinator Durable Object and SQLite-backed shard Durable Objects; reveal the commit watermark only after both participants apply.",
+      "transition": "Turn the shard map into the final use-it-or-not decision and make the limits visible.",
+      "narration": "Here is the Cloudflare path. Your application calls the Poneglyph Worker API. The Worker routes each graph request to its Durable Object coordinator. The coordinator sequences graph writes; shard Durable Objects store facts in SQLite. For a multi-shard change, participants prepare invisibly. The coordinator makes a durable commit decision and advances the visible sequence only after every participant applies. A query pins one snapshot and routing epoch, so it doesn't combine old and new pieces. Stable entity hashes route through an expandable prefix directory. When a leaf nears its operating target, the split process fences writes, copies and verifies a bounded snapshot, then switches routing. More leaves expand data placement—not the single graph write sequencer."
+    },
+    {
+      "id": "sharding",
+      "title": "When a graph database fits",
+      "viewerQuestion": "When should I choose Poneglyph, and what should I watch out for?",
+      "visualAction": "Balance connected, sourced application facts against explicit limits: one coordinator, bounded transaction participants, bounded query fan-out, and experimental status. Close on the Poneglyph logo.",
+      "transition": "Hold on the logo as the final recommendation lands.",
+      "narration": "Choose Poneglyph when provenance and relationships drive a feature: release readiness, team workflows, or project memory. Skip it for ordinary SQL, unbounded analytics, historical queries, or high write throughput in one graph. Each graph has one serialized coordinator. A transaction can touch at most thirty-two shard leaves; a query can fan out to at most two hundred fifty-six. Those are real design limits, not fine print. For best results, use stable entity and field identifiers, group related facts into small transactions, reuse transaction IDs for safe retries, and write focused queries. The package and runtime are experimental, not a production SLA. Measure your workload, secure the Worker endpoint, and choose Poneglyph when connected, traceable facts are worth these tradeoffs."
+    }
+  ]
+}

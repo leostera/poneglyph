@@ -1,0 +1,21 @@
+{
+  "name": "poneglyph-explainer-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.tsx",
+    "voiceover": "node scripts/generate-voiceover.mjs",
+    "render": "node scripts/render.mjs voiceover",
+    "render:preview": "node scripts/render.mjs preview"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.386",
+    "remotion": "^4.0.386",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "typescript": "^5.9.3"
+  }
+}
