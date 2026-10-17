@@ -122,6 +122,7 @@ export class GraphShardDO extends DurableObject<Env> {
     const parsed = parseParticipantBatch(raw.value);
     if (!parsed.ok) return jsonResponse({error: parsed.error.message}, 400);
     const batch = parsed.value;
+    if (batch.commitSeq < 1) return jsonResponse({error: "atomic publication revision must be positive"}, 400);
     for (const [index, entry] of batch.facts.entries()) {
       if (entry.index !== index || await virtualKeyForEntity(batch.graphId, entry.fact.entity) !== entry.virtualKey || !matchesPrefix(entry.virtualKey, batch.shardPrefix))
         return jsonResponse({error: "atomic message is not a complete ordered local batch"}, 409);
@@ -304,6 +305,7 @@ export class GraphShardDO extends DurableObject<Env> {
     const control = await this.readControl(request);
     if (!control.ok) return control.response;
     const { graphId, shardPrefix, shardGeneration, txId, payloadHash, commitSeq } = control.value;
+    if (commitSeq < 1) return jsonResponse({error: "commit publication revision must be positive"}, 400);
     const result = this.ctx.storage.transactionSync(() => {
       this.assertWritableIdentity(graphId, shardPrefix, shardGeneration);
       const row = this.ctx.storage.sql.exec<{
@@ -312,19 +314,25 @@ export class GraphShardDO extends DurableObject<Env> {
         status: string; decision_kind: string; decision_context_json: string | null;
       }>("SELECT payload_hash, payload_json, status, decision_kind, decision_context_json FROM shard_transactions WHERE tx_id = ?", txId).toArray()[0];
       if (row === undefined) throw new ShardProtocolError(409, "transaction was not prepared on this shard");
-      if (row.payload_hash !== payloadHash || row.decision_kind !== "distributed" || row.decision_context_json !== decisionContext(control.value))
+      if (row.payload_hash !== payloadHash || row.decision_kind !== "distributed")
         throw new ShardProtocolError(409, "participant authority/identity context mismatch");
-      if (row.status === "committed") return "committed";
-      if (row.status !== "prepared" || row.payload_json === null) {
-        throw new ShardProtocolError(409, "transaction is not in the prepared state");
+      if (row.status === "committed") {
+        if (row.decision_context_json !== decisionContext(control.value))
+          throw new ShardProtocolError(409, "committed participant revision changed on retry");
+        return "committed";
+      }
+      const preparingContext = decisionContext({...control.value, commitSeq: 0});
+      if (row.status !== "prepared" || row.payload_json === null || row.decision_context_json !== preparingContext) {
+        throw new ShardProtocolError(409, "transaction is not prepared for this publication revision");
       }
 
       const batch = this.decodePrepared(row.payload_json);
-      if (decisionContext(batch) !== decisionContext(control.value)) throw new ShardProtocolError(409, "prepared context binding mismatch");
-      this.applyParticipantBatch(batch);
+      if (decisionContext(batch) !== preparingContext) throw new ShardProtocolError(409, "prepared context binding mismatch");
+      const committedBatch = {...batch, commitSeq};
+      this.applyParticipantBatch(committedBatch);
       this.ctx.storage.sql.exec(
-        `UPDATE shard_transactions SET payload_json = NULL, status = 'committed', reserved_mutation_bytes = 0 WHERE tx_id = ?`,
-        txId,
+        `UPDATE shard_transactions SET payload_json = NULL, status = 'committed', reserved_mutation_bytes = 0, decision_context_json = ? WHERE tx_id = ?`,
+        decisionContext(control.value), txId,
       );
       return "committed";
     });
@@ -827,7 +835,7 @@ export class GraphShardDO extends DurableObject<Env> {
     const directoryEpoch = readNonNegativeInteger(input.value["directoryEpoch"]);
     const txId = parseTransactionId(input.value["txId"]);
     const payloadHash = input.value["payloadHash"];
-    const commitSeq = readPositiveInteger(input.value["commitSeq"]);
+    const commitSeq = readNonNegativeInteger(input.value["commitSeq"]);
     const statementTimeMs = readNonNegativeInteger(input.value["statementTimeMs"]), identityTimeMs = readNonNegativeInteger(input.value["identityTimeMs"]);
     if (!statementTimeMs.ok || !identityTimeMs.ok) return {ok: false, response: jsonResponse({error: "invalid decision timestamps"}, 400)};
     if (!graphId.ok || !shardPrefix.ok || !shardGeneration.ok || !directoryEpoch.ok || !txId.ok || !commitSeq.ok || typeof payloadHash !== "string" || !/^[a-f0-9]{64}$/.test(payloadHash)) {
@@ -1344,7 +1352,7 @@ function decodeDecisionContext(input: unknown): DecisionControl {
     return value;
   };
   return {graphId: graph.value, shardPrefix: prefix.value, txId: id.value, payloadHash: hash,
-    shardGeneration: integer("shardGeneration"), directoryEpoch: integer("directoryEpoch"), commitSeq: integer("commitSeq", 1),
+    shardGeneration: integer("shardGeneration"), directoryEpoch: integer("directoryEpoch"), commitSeq: integer("commitSeq"),
     statementTimeMs: integer("statementTimeMs"), identityTimeMs: integer("identityTimeMs")};
 }
 

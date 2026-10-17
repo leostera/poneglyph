@@ -18,16 +18,31 @@ import { jsonResponse, jsonStringResponse, readJsonBody, requestObject } from ".
 import { parseVirtualPrefix, shardObjectName, virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
 import { listShardLeaves, resolveEntityLeaf } from "./routing.js";
 import { dispatchPublicTransaction } from "./transaction-request.js";
+import { ensureFacadeSchema } from "./sql.js";
 import { TREE_PREFIXES, TREE_DEPTH, treeCoordinatorName, treeForKey, parseTreeSnapshot, type TreeSnapshot } from "./forest.js";
+
+type SafeVectorRow = Readonly<{prefix: string; directory_epoch: number; visible_seq: number}>;
+type SafeFrontierRow = Readonly<{frontier: number}>;
 
 type FacadeEnv = Env;
 
 /** Graph-facing request surface. Durable state lives in ledgers, trees, and shards. */
 export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
-  constructor(ctx: DurableObjectState, env: FacadeEnv) { super(ctx, env); }
+  constructor(ctx: DurableObjectState, env: FacadeEnv) {
+    super(ctx, env);
+    void ctx.blockConcurrencyWhile(async () => {
+      ensureFacadeSchema(ctx.storage);
+      ctx.storage.transactionSync(() => {
+        for (const prefix of TREE_PREFIXES) ctx.storage.sql.exec(
+          "INSERT OR IGNORE INTO graph_safe_vector (prefix, directory_epoch, visible_seq) VALUES (?, 0, 0)", prefix);
+      });
+    });
+  }
 
   override async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname;
+    if (request.method === "POST" && path === "/_publish-vector") return await this.publishSafeVector(request);
+    if (request.method === "POST" && path === "/_advance-vector-epoch") return await this.advanceSafeVectorEpoch(request);
     if (request.method === "POST" && path === "/_split") {
       const raw = await readJsonBody(request, 8_192);
       if (!raw.ok || !isRecord(raw.value)) return jsonResponse({error: "invalid split envelope"}, 400);
@@ -56,6 +71,103 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
       const status = error instanceof CoordinatorError ? error.status : 503;
       return jsonResponse({error: errorMessage(error), retryable: error instanceof CoordinatorError ? error.retryable : true}, status);
     }
+  }
+
+  private async publishSafeVector(request: Request): Promise<Response> {
+    const raw = await readJsonBody(request, 8_192);
+    if (!raw.ok || !isRecord(raw.value) || !Array.isArray(raw.value["owners"])) return jsonResponse({error: "invalid safe-vector publication"}, 400);
+    const graph = parseGraphId(raw.value["graphId"]);
+    if (!graph.ok || raw.value["owners"].length < 1 || raw.value["owners"].length > TREE_PREFIXES.length)
+      return jsonResponse({error: "invalid safe-vector identity"}, 400);
+    const owners: {prefix: VirtualPrefix; directoryEpoch: number; publicationSeq: number}[] = [];
+    for (const rawOwner of raw.value["owners"]) {
+      if (!isRecord(rawOwner)) return jsonResponse({error: "invalid safe-vector owner"}, 400);
+      const prefix = parseVirtualPrefix(rawOwner["prefix"]), epoch = rawOwner["directoryEpoch"], seq = rawOwner["publicationSeq"];
+      if (!prefix.ok || !TREE_PREFIXES.includes(prefix.value) || !isCounter(epoch) || !isCounter(seq, 1))
+        return jsonResponse({error: "invalid safe-vector owner revision"}, 400);
+      owners.push({prefix: prefix.value, directoryEpoch: epoch, publicationSeq: seq});
+    }
+    if (new Set(owners.map(owner => owner.prefix)).size !== owners.length) return jsonResponse({error: "duplicate safe-vector owner"}, 400);
+    try {
+      const result = this.ctx.storage.transactionSync(() => {
+        this.assertFacadeIdentity(graph.value);
+        let changed = false;
+        for (const owner of owners) {
+          const current = this.ctx.storage.sql.exec<SafeVectorRow>("SELECT * FROM graph_safe_vector WHERE prefix = ?", owner.prefix).toArray()[0];
+          if (!current || current.directory_epoch !== owner.directoryEpoch || owner.publicationSeq < current.visible_seq)
+            throw new CoordinatorError(409, "safe-vector owner epoch or revision regressed");
+          if (owner.publicationSeq === current.visible_seq) continue;
+          this.ctx.storage.sql.exec("UPDATE graph_safe_vector SET visible_seq = ? WHERE prefix = ?", owner.publicationSeq, owner.prefix);
+          changed = true;
+        }
+        if (changed) this.advanceSafeFrontier();
+        return {frontier: this.readSafeFrontier()};
+      });
+      return jsonResponse(result);
+    } catch (error) {
+      return jsonResponse({error: errorMessage(error)}, error instanceof CoordinatorError ? error.status : 503);
+    }
+  }
+
+  private async advanceSafeVectorEpoch(request: Request): Promise<Response> {
+    const raw = await readJsonBody(request, 4_096);
+    if (!raw.ok || !isRecord(raw.value)) return jsonResponse({error: "invalid safe-vector epoch update"}, 400);
+    const graph = parseGraphId(raw.value["graphId"]), prefix = parseVirtualPrefix(raw.value["prefix"]);
+    const epoch = raw.value["directoryEpoch"], seq = raw.value["visibleSeq"];
+    if (!graph.ok || !prefix.ok || !TREE_PREFIXES.includes(prefix.value) || !isCounter(epoch) || epoch < 1 || !isCounter(seq))
+      return jsonResponse({error: "invalid safe-vector epoch identity"}, 400);
+    try {
+      const result = this.ctx.storage.transactionSync(() => {
+        this.assertFacadeIdentity(graph.value);
+        const current = this.ctx.storage.sql.exec<SafeVectorRow>("SELECT * FROM graph_safe_vector WHERE prefix = ?", prefix.value).toArray()[0];
+        if (!current || epoch < current.directory_epoch || seq < current.visible_seq)
+          throw new CoordinatorError(409, "safe-vector topology epoch or revision regressed");
+        const changed = epoch !== current.directory_epoch || seq !== current.visible_seq;
+        if (changed) {
+          this.ctx.storage.sql.exec("UPDATE graph_safe_vector SET directory_epoch = ?, visible_seq = ? WHERE prefix = ?",
+            epoch, seq, prefix.value);
+          this.advanceSafeFrontier();
+        }
+        return {frontier: this.readSafeFrontier()};
+      });
+      return jsonResponse(result);
+    } catch (error) {
+      return jsonResponse({error: errorMessage(error)}, error instanceof CoordinatorError ? error.status : 503);
+    }
+  }
+
+  private assertFacadeIdentity(graphId: GraphId): void {
+    const identity = this.ctx.storage.sql.exec<{graph_id: string}>("SELECT graph_id FROM graph_facade_identity WHERE singleton = 1").toArray()[0];
+    if (identity && identity.graph_id !== graphId) throw new CoordinatorError(409, "facade graph identity mismatch");
+    if (!identity) this.ctx.storage.sql.exec("INSERT INTO graph_facade_identity (singleton, graph_id) VALUES (1, ?)", graphId);
+  }
+
+  private readSafeFrontier(): number {
+    return this.ctx.storage.sql.exec<SafeFrontierRow>("SELECT frontier FROM graph_safe_frontier WHERE singleton = 1").one().frontier;
+  }
+
+  private advanceSafeFrontier(): void {
+    const current = this.readSafeFrontier();
+    if (!Number.isSafeInteger(current) || current >= Number.MAX_SAFE_INTEGER)
+      throw new CoordinatorError(429, "cluster safe frontier space is exhausted");
+    this.ctx.storage.sql.exec("UPDATE graph_safe_frontier SET frontier = ? WHERE singleton = 1", current + 1);
+  }
+
+  private readSafeVector(): readonly SafeVectorRow[] {
+    return this.ctx.storage.sql.exec<SafeVectorRow>("SELECT prefix, directory_epoch, visible_seq FROM graph_safe_vector ORDER BY prefix").toArray();
+  }
+
+  private cachedSafeVector(graphId: GraphId): Readonly<{frontier: number; vector: readonly SafeVectorRow[]}> {
+    return this.ctx.storage.transactionSync(() => {
+      this.assertFacadeIdentity(graphId);
+      const vector = this.readSafeVector();
+      if (vector.length !== TREE_PREFIXES.length || vector.some((owner, index) =>
+          owner.prefix !== TREE_PREFIXES[index] || !isCounter(owner.directory_epoch) || !isCounter(owner.visible_seq)))
+        throw new CoordinatorError(503, "cached safe vector is incomplete or corrupt");
+      const frontier = this.readSafeFrontier();
+      if (!isCounter(frontier)) throw new CoordinatorError(503, "cached safe frontier is corrupt");
+      return {frontier, vector};
+    });
   }
 
   private async observeGraphSchema(request: Request, graphId: GraphId): Promise<Response> {
@@ -262,13 +374,27 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   }
 
   private async acquireReadCut(graphId: GraphId, prefixes: readonly VirtualPrefix[] = TREE_PREFIXES): Promise<TreeSnapshot[]> {
-    return acquireParallelReadCut(async prefix => {
+    const cached = this.cachedSafeVector(graphId);
+    const cut = await acquireParallelReadCut(async prefix => {
+      const owner = cached.vector.find(entry => entry.prefix === prefix);
+      if (!owner) throw new CoordinatorError(503, "cached safe vector is missing a selected owner");
       const response = await this.env.GRAPH_TREES.getByName(treeCoordinatorName(graphId, prefix)).fetch("https://tree.internal/_tree-read", {
-        method: "POST", body: JSON.stringify({ graphId, prefix }),
+        method: "POST", body: JSON.stringify({graphId, prefix, snapshotSeq: owner.visible_seq, directoryEpoch: owner.directory_epoch}),
       });
       if (!response.ok) throw new CoordinatorError(423, "cannot acquire an atomic subtree read cut");
       return parseTreeSnapshot(await response.json(), prefix);
-    }, cut => this.releaseReadCut(graphId, cut), prefixes);
+    }, leases => this.releaseReadCut(graphId, leases), prefixes);
+    try {
+      for (const lease of cut) {
+        const owner = cached.vector.find(entry => entry.prefix === lease.prefix);
+        if (!owner || lease.directoryEpoch !== owner.directory_epoch || lease.snapshotSeq !== owner.visible_seq)
+          throw new CoordinatorError(503, "tree lease is behind the durable cluster safe vector");
+      }
+      return cut;
+    } catch (error) {
+      await this.releaseReadCut(graphId, cut);
+      throw error;
+    }
   }
 
   private async releaseReadCut(graphId: GraphId, cut: readonly TreeSnapshot[]): Promise<void> {
@@ -305,6 +431,10 @@ class CoordinatorError extends Error {
     super(message);
     this.name = "CoordinatorError";
   }
+}
+
+function isCounter(value: unknown, minimum = 0): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= minimum;
 }
 
 function errorMessage(error: unknown): string {

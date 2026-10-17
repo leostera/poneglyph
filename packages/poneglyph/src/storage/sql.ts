@@ -1,3 +1,11 @@
+const FACADE_SCHEMA = [
+  `CREATE TABLE graph_facade_identity (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), graph_id TEXT NOT NULL)`,
+  `CREATE TABLE graph_safe_frontier (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), frontier INTEGER NOT NULL CHECK (frontier >= 0))`,
+  `INSERT INTO graph_safe_frontier (singleton, frontier) VALUES (1, 0)`,
+  `CREATE TABLE graph_safe_vector (prefix TEXT PRIMARY KEY, directory_epoch INTEGER NOT NULL CHECK (directory_epoch >= 0),
+    visible_seq INTEGER NOT NULL CHECK (visible_seq >= 0))`,
+];
+
 const LEDGER_SCHEMA = [
   `CREATE TABLE ledger_context (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), graph_id TEXT NOT NULL, bucket TEXT NOT NULL)`,
   `CREATE TABLE client_request_tokens (
@@ -23,6 +31,12 @@ const TREE_SCHEMA = [
     phase TEXT NOT NULL CHECK (phase IN ('preparing', 'complete', 'aborted')),
     commit_seq INTEGER NOT NULL DEFAULT 0, created_at_ms INTEGER NOT NULL)`,
   `CREATE INDEX tree_reservations_pending ON tree_reservations (phase) WHERE phase = 'preparing'`,
+  `CREATE UNIQUE INDEX tree_reservations_by_publication_seq ON tree_reservations (commit_seq) WHERE phase = 'complete'`,
+  `CREATE TABLE tree_publication_gates (
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1), tx_id TEXT NOT NULL UNIQUE, payload_hash TEXT NOT NULL,
+    reservation_ticket INTEGER NOT NULL CHECK (reservation_ticket > 0), publication_seq INTEGER NOT NULL CHECK (publication_seq > 0),
+    directory_epoch INTEGER NOT NULL CHECK (directory_epoch >= 0), created_at_ms INTEGER NOT NULL
+  )`,
   `CREATE TABLE entity_write_locks (entity TEXT PRIMARY KEY, tx_id TEXT NOT NULL, payload_hash TEXT NOT NULL)`,
   `CREATE INDEX entity_write_locks_by_transaction ON entity_write_locks (tx_id)`,
   `CREATE TABLE IF NOT EXISTS graph_identity (
@@ -31,7 +45,8 @@ const TREE_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS graph_state (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1), visible_seq INTEGER NOT NULL, directory_epoch INTEGER NOT NULL,
     writer_tx_id TEXT, topology_op_id TEXT, next_statement_time_ms INTEGER NOT NULL,
-    next_write_seq INTEGER NOT NULL DEFAULT 0 CHECK (next_write_seq >= visible_seq)
+    next_write_seq INTEGER NOT NULL DEFAULT 0 CHECK (next_write_seq >= visible_seq),
+    min_retained_seq INTEGER NOT NULL DEFAULT 0 CHECK (min_retained_seq >= 0 AND min_retained_seq <= visible_seq)
   )`,
   `INSERT OR IGNORE INTO graph_state
    (singleton, visible_seq, directory_epoch, writer_tx_id, topology_op_id, next_statement_time_ms)
@@ -175,16 +190,22 @@ const SHARD_SCHEMA = [
 ];
 
 const SHARD_SCHEMA_VERSION = 8;
-const ROLE_SCHEMA_VERSION = 1;
+const FACADE_SCHEMA_VERSION = 2;
+const LEDGER_SCHEMA_VERSION = 1;
+const TREE_SCHEMA_VERSION = 4;
 
-type SchemaKind = "g-ledger" | "g-tree" | "g-shard";
+type SchemaKind = "g-facade" | "g-ledger" | "g-tree" | "g-shard";
+
+export function ensureFacadeSchema(storage: DurableObjectStorage): void {
+  ensureSchema(storage, "g-facade", FACADE_SCHEMA_VERSION, FACADE_SCHEMA);
+}
 
 export function ensureLedgerSchema(storage: DurableObjectStorage): void {
-  ensureSchema(storage, "g-ledger", ROLE_SCHEMA_VERSION, LEDGER_SCHEMA);
+  ensureSchema(storage, "g-ledger", LEDGER_SCHEMA_VERSION, LEDGER_SCHEMA);
 }
 
 export function ensureTreeSchema(storage: DurableObjectStorage): void {
-  ensureSchema(storage, "g-tree", ROLE_SCHEMA_VERSION, TREE_SCHEMA);
+  ensureSchema(storage, "g-tree", TREE_SCHEMA_VERSION, TREE_SCHEMA);
 }
 
 export function ensureShardSchema(storage: DurableObjectStorage): void {

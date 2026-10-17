@@ -6,7 +6,7 @@ import { accountStorage } from "./capacity.js";
 import { canonicalBatchJson, jsonResponse, sha256Hex } from "./http.js";
 import { LEDGER_OUTCOME_LIMIT, LEDGER_RECOVERY_DELAY_MS, treeCoordinatorName } from "./forest.js";
 import { retainedLedgerOutcomeCount } from "./ledger-capacity.js";
-import { shardObjectName } from "./keys.js";
+import { coordinatorObjectName, shardObjectName } from "./keys.js";
 import { factAsJson } from "./protocol.js";
 import { integer, planBatch, parseWritePlan, type WritePlan, type OwnerPlan, type ParticipantPlan } from "./plan.js";
 import type { StorageEnv } from "./environment.js";
@@ -110,7 +110,8 @@ export class DistributedTransaction {
     return this.env.GRAPH_SHARDS.getByName(shardObjectName(intent.graph_id, participant.address.prefix)).fetch(`https://shard.internal/${action}`, {
       method: "POST", body: JSON.stringify({graphId: intent.graph_id, shardPrefix: participant.address.prefix,
         shardGeneration: participant.address.generation, directoryEpoch: owner.directoryEpoch, txId: this.txId, payloadHash: intent.payload_hash,
-        commitSeq: owner.commitSeq || 1, statementTimeMs: intent.statement_time_ms, identityTimeMs: intent.created_at_ms,
+        commitSeq: action === "_preflight" || action === "_prepare" || action === "_cancel" ? 0 : owner.publicationSeq,
+        statementTimeMs: intent.statement_time_ms, identityTimeMs: intent.created_at_ms,
         ...(action === "_preflight" || action === "_prepare" || action === "_atomic" ? {facts: participant.entries.map(entry =>
           ({...entry, fact: factAsJson(batch.facts[entry.index]!)}))} : {})}),
     });
@@ -184,11 +185,11 @@ export class DistributedTransaction {
           return jsonResponse(isRecord(value) ? value : {error: "owner reservation rejected", retryable: true}, response.status);
         }
         if (!isRecord(value) || integer(value["directoryEpoch"]) !== owner.directoryEpoch) throw new Error("provisional owner epoch changed");
-        owners.push({...owner, commitSeq: integer(value["commitSeq"], 1)});
+        owners.push({...owner, reservationTicket: integer(value["reservationTicket"], 1)});
       }
       plan = {...plan, owners};
-      this.storage.sql.exec(`UPDATE candidate_transactions SET phase = 'preparing', plan_json = ?, commit_seq = ?, statement_time_ms = ? WHERE tx_id = ?`,
-        JSON.stringify(plan), Math.max(...owners.map(o => o.commitSeq)), Date.now(), this.txId);
+      this.storage.sql.exec(`UPDATE candidate_transactions SET phase = 'preparing', plan_json = ?, commit_seq = 0, statement_time_ms = ? WHERE tx_id = ?`,
+        JSON.stringify(plan), Date.now(), this.txId);
       intent = this.read()!;
       freshlyReserved = true;
       // A provisional rejection is not authoritative after visibility changed.
@@ -217,7 +218,7 @@ export class DistributedTransaction {
       if (!freshlyReserved) for (const owner of plan.owners) {
         const response = await this.tree(intent, owner, "_tree-lock", {entities: owner.entities, directoryEpoch: owner.directoryEpoch});
         const value: unknown = await response.json();
-        if (!response.ok || !isRecord(value) || value["commitSeq"] !== owner.commitSeq || value["directoryEpoch"] !== owner.directoryEpoch)
+        if (!response.ok || !isRecord(value) || value["reservationTicket"] !== owner.reservationTicket || value["directoryEpoch"] !== owner.directoryEpoch)
           throw new Error("admitted prepare lost its exact owner reservation");
       }
       if (plan.participants.length === 1) intent = this.phase("atomic-delegated");
@@ -244,9 +245,14 @@ export class DistributedTransaction {
         intent = this.phase("committing");
       }
     }
-    if (intent.phase === "atomic-delegated") return this.finishAtomic(intent, plan, batch);
+    if (intent.phase === "atomic-delegated") {
+      plan = await this.acquirePublicationGates(intent, plan);
+      return this.finishAtomic(this.read()!, plan, batch);
+    }
     if (intent.phase === "cancelling") {await this.cancel(intent, plan, batch); return this.aborted(this.read()!);}
     if (intent.phase !== "committing") throw new Error("unsupported durable transaction phase");
+    plan = await this.acquirePublicationGates(intent, plan);
+    intent = this.read()!;
     if (intent.participant_witness !== 1) {
       const replies = await Promise.all(plan.participants.map(p => this.participant(intent, plan, p, batch, "_commit")));
       const incomplete = replies.some(r => !r.ok); await Promise.all(replies.map(r => r.arrayBuffer()));
@@ -254,6 +260,8 @@ export class DistributedTransaction {
       this.storage.sql.exec("UPDATE candidate_transactions SET participant_witness = 1 WHERE tx_id = ?", this.txId);
     }
     await this.publish(intent, plan);
+    await this.publishSafeVector(intent, plan);
+    await this.releasePublicationGates(intent, plan);
     const terminal = this.phase("complete");
     await this.finalize(intent, plan, batch);
     return this.receipt(terminal);
@@ -263,7 +271,7 @@ export class DistributedTransaction {
     if (!isRecord(value) || value["status"] !== "committed" && value["status"] !== "aborted") throw new Error("invalid local decision witness");
     const participant = plan.participants[0]!, owner = plan.owners[0]!;
     const expected = {txId: this.txId, graphId: intent.graph_id, payloadHash: intent.payload_hash,
-      commitSeq: owner.commitSeq, statementTimeMs: intent.statement_time_ms, identityTimeMs: intent.created_at_ms,
+      commitSeq: owner.publicationSeq, statementTimeMs: intent.statement_time_ms, identityTimeMs: intent.created_at_ms,
       shardPrefix: participant.address.prefix, shardGeneration: participant.address.generation, directoryEpoch: owner.directoryEpoch,
       factCount: value["status"] === "committed" ? batch.facts.length : 0};
     for (const [key, field] of Object.entries(expected)) if (value[key] !== field) throw new Error("local decision witness changed its authority tuple");
@@ -289,11 +297,15 @@ export class DistributedTransaction {
       // must not require re-mutating a leaf that can now have become a router.
       this.storage.sql.exec("UPDATE candidate_transactions SET local_witness_json = ? WHERE tx_id = ?", JSON.stringify(witness), this.txId);
     }
-    if (witness.status === "committed") await this.publish(intent, plan);
-    else {
+    if (witness.status === "committed") {
+      await this.publish(intent, plan);
+      await this.publishSafeVector(intent, plan);
+      await this.releasePublicationGates(intent, plan);
+    } else {
       console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "atomic",
         reasonCode: classifyParticipantFailure(rejectionStatus, rejection), rejectionStatus}));
       await this.release(intent, plan, true);
+      await this.releasePublicationGates(intent, plan);
     }
     const terminal = this.phase(witness.status === "committed" ? "complete" : "aborted");
     await this.finalize(intent, plan, batch);
@@ -310,8 +322,52 @@ export class DistributedTransaction {
   }
   private async publish(intent: Intent, plan: WritePlan): Promise<void> {
     for (const owner of plan.owners) {
-      const response = await this.tree(intent, owner, "_tree-finish", {commitSeq: owner.commitSeq});
+      const response = await this.tree(intent, owner, "_tree-finish", {
+        reservationTicket: owner.reservationTicket, publicationSeq: owner.publicationSeq,
+      });
       const ok = response.ok; await response.arrayBuffer(); if (!ok) throw new Error("owner publication incomplete");
+    }
+  }
+  private async acquirePublicationGates(intent: Intent, initialPlan: WritePlan): Promise<WritePlan> {
+    let plan = initialPlan;
+    for (const owner of plan.owners) {
+      if (owner.publicationSeq > 0) continue;
+      let value: unknown;
+      let response: Response;
+      for (let attempt = 0; ; attempt++) {
+        response = await this.tree(intent, owner, "_tree-gate", {
+          reservationTicket: owner.reservationTicket, directoryEpoch: owner.directoryEpoch,
+        });
+        if (response.status !== 423 || attempt >= 11) { value = await response.json(); break; }
+        await response.arrayBuffer();
+        await new Promise(resolve => setTimeout(resolve, Math.min(100, 10 + attempt * 10)));
+      }
+      if (!response.ok || !isRecord(value) || value["reservationTicket"] !== owner.reservationTicket ||
+          value["directoryEpoch"] !== owner.directoryEpoch) throw new Error("owner publication gate acquisition failed");
+      const publicationSeq = integer(value["publicationSeq"], 1);
+      if (publicationSeq <= owner.visibleSeq) throw new Error("owner publication revision did not advance its captured frontier");
+      const owners = plan.owners.map(candidate => candidate.prefix === owner.prefix ? {...candidate, publicationSeq} : candidate);
+      plan = {...plan, owners};
+      this.storage.sql.exec("UPDATE candidate_transactions SET plan_json = ?, commit_seq = ? WHERE tx_id = ?",
+        JSON.stringify(plan), Math.max(...owners.map(candidate => candidate.publicationSeq)), this.txId);
+    }
+    return plan;
+  }
+  private async publishSafeVector(intent: Intent, plan: WritePlan): Promise<void> {
+    const response = await this.env.GRAPH_FACADES.getByName(coordinatorObjectName(intent.graph_id)).fetch("https://graph.internal/_publish-vector", {
+      method: "POST", body: JSON.stringify({graphId: intent.graph_id, owners: plan.owners.map(owner => ({
+        prefix: owner.prefix, directoryEpoch: owner.directoryEpoch, publicationSeq: owner.publicationSeq,
+      }))}),
+    });
+    const ok = response.ok; await response.arrayBuffer();
+    if (!ok) throw new Error("cluster safe-vector publication incomplete");
+  }
+  private async releasePublicationGates(intent: Intent, plan: WritePlan): Promise<void> {
+    for (const owner of plan.owners) {
+      const response = await this.tree(intent, owner, "_tree-release-gate", {
+        reservationTicket: owner.reservationTicket, publicationSeq: owner.publicationSeq,
+      });
+      const ok = response.ok; await response.arrayBuffer(); if (!ok) throw new Error("owner publication gate release incomplete");
     }
   }
   private async release(intent: Intent, plan: WritePlan, abort: boolean): Promise<void> {

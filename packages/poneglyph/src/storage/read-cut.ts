@@ -1,9 +1,9 @@
 import { TREE_PREFIXES, type TreeSnapshot } from "./forest.js";
 import type { VirtualPrefix } from "./keys.js";
 
-// Every successful lease fences writes/topology until release. Only evaluate
-// after all requested owners settle: at that instant the selected vector is
-// pinned. A failed sibling must not cause cleanup before a late success settles.
+// Leases pin exact MVCC components and fence topology/history pruning, not
+// writes. Only evaluate after every requested owner settles; a failed sibling
+// must not cause cleanup before a late successful pin settles.
 export async function acquireParallelReadCut(
   acquire: (prefix: VirtualPrefix) => Promise<TreeSnapshot>,
   release: (cut: readonly TreeSnapshot[]) => Promise<void>,

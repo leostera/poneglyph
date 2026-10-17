@@ -56,8 +56,10 @@ async function expireAnchor(graph: string, id: string, roots: readonly ReturnTyp
   await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
     state.storage.sql.exec("UPDATE candidate_transactions SET created_at_ms = 0, local_witness_json = json_set(local_witness_json, '$.identityTimeMs', 0) WHERE tx_id = ?", id));
   for (const root of roots) {
-    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) =>
-      state.storage.sql.exec("UPDATE tree_reservations SET created_at_ms = 0 WHERE tx_id = ?", id));
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
+      state.storage.sql.exec("UPDATE tree_reservations SET created_at_ms = 0 WHERE tx_id = ?", id);
+      state.storage.sql.exec("UPDATE tree_publication_gates SET created_at_ms = 0 WHERE tx_id = ?", id);
+    });
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) =>
       state.storage.sql.exec(`UPDATE shard_transactions SET created_at_ms = 0,
         decision_context_json = json_set(decision_context_json, '$.identityTimeMs', 0),
@@ -84,11 +86,14 @@ describe("integrated storage authority", () => {
     }));
     const first = await schemaRequest();
     expect(first.status).toBe(200);
-    const observed = await first.json() as {snapshotSeq: number; sequenceScope: string; snapshotVector: readonly unknown[];
+    const observed = await first.json() as {snapshotSeq: number; sequenceScope: string;
+      snapshotVector: readonly {prefix: string; sequence: number; epoch: number}[];
       fields: readonly {field: string; valueTags: readonly string[]}[]};
     expect(observed.sequenceScope).toBe("subtree-vector");
     expect(observed.snapshotVector).toHaveLength(16);
-    expect(observed.snapshotSeq).toBe(Math.max(...observed.snapshotVector.map(owner => (owner as {sequence: number}).sequence)));
+    expect(observed.snapshotVector.filter(owner => owner.sequence > 0)).toHaveLength(1);
+    expect(observed.snapshotVector.find(owner => owner.sequence > 0)).toMatchObject({sequence: 1});
+    expect(observed.snapshotSeq).toBe(Math.max(...observed.snapshotVector.map(owner => owner.sequence)));
     expect(new Map(observed.fields.map(field => [field.field, field.valueTags]))).toEqual(new Map([
       ["wiki:observed:list", ["list"]], ["wiki:observed:number", ["number"]], ["wiki:observed:text", ["text"]],
     ]));
@@ -101,6 +106,8 @@ describe("integrated storage authority", () => {
     const afterRetraction = await schemaRequest();
     const remaining = await afterRetraction.json() as typeof observed;
     expect(remaining.fields.map(field => field.field)).toEqual(["wiki:observed:list", "wiki:observed:number"]);
+    expect(remaining.snapshotVector.filter(owner => owner.sequence > 0)).toHaveLength(1);
+    expect(remaining.snapshotVector.find(owner => owner.sequence > 0)).toMatchObject({sequence: 2});
   });
 
   it("routes a tokenized public write through coordinator, same-ledger mapping, tree, and shard roles", async () => {
@@ -354,6 +361,15 @@ describe("integrated storage authority", () => {
       const row = state.storage.sql.exec<{plan_json: string}>("SELECT plan_json FROM candidate_transactions WHERE tx_id = ?", id).one();
       expect(row.plan_json).not.toContain('"fact":');
     });
+    await runInDurableObject(env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)), (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT frontier FROM graph_safe_frontier WHERE singleton = 1").one())
+        .toMatchObject({frontier: 1});
+      const vector = state.storage.sql.exec<{prefix: string; directory_epoch: number; visible_seq: number}>(
+        "SELECT prefix, directory_epoch, visible_seq FROM graph_safe_vector ORDER BY prefix").toArray();
+      expect(vector).toHaveLength(16);
+      expect(vector.filter(owner => owner.prefix === root || owner.prefix === otherRoot))
+        .toEqual([root, otherRoot].sort().map(prefix => ({prefix, directory_epoch: 0, visible_seq: 1})));
+    });
     for (const owner of [root, otherRoot]) {
       await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, owner)), (_instance, state) => {
         expect(state.storage.sql.exec("SELECT status, decision_kind, owner_released, reserved_mutation_bytes FROM shard_transactions").one())
@@ -363,9 +379,114 @@ describe("integrated storage authority", () => {
       await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) => {
         expect(state.storage.sql.exec("SELECT phase FROM tree_reservations").one()).toMatchObject({phase: "complete"});
         expect(state.storage.sql.exec("SELECT * FROM entity_write_locks").toArray()).toHaveLength(0);
+        expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0);
+        expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 1});
       });
     }
     const read = await query(graph); expect(read.status).toBe(200); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
+  });
+
+  it("keeps owner gates through lost atomic cached-vector publication and recovers idempotently", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph), id = "integrated:lost-vector-publication";
+    const facade = env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph));
+    let originalFetch: unknown, lost = false;
+    await runInDurableObject(facade, instance => {
+      originalFetch = Reflect.get(instance, "fetch");
+      Reflect.set(instance, "fetch", async (request: Request) => {
+        const response = await (originalFetch as (this: unknown, request: Request) => Promise<Response>).call(instance, request);
+        if (new URL(request.url).pathname === "/_publish-vector" && !lost) {
+          lost = true; await response.text(); return new Response("lost safe-vector reply", {status: 503});
+        }
+        return response;
+      });
+    });
+    try { expect(await writeStatus(graph, id, [fact(first), fact(other)])).toMatchObject({status: 503}); }
+    finally { await runInDurableObject(facade, instance => Reflect.set(instance, "fetch", originalFetch)); }
+    expect(lost).toBe(true);
+    for (const owner of [root, otherRoot]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 1});
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(1);
+    });
+    const committedView = await query(graph); expect(committedView.status).toBe(200);
+    expect((await committedView.json() as {rows: unknown[]}).rows).toHaveLength(2);
+    await recover(graph, id);
+    for (const owner of [root, otherRoot]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0));
+    await runInDurableObject(facade, (_instance, state) => expect(state.storage.sql.exec("SELECT frontier FROM graph_safe_frontier").one())
+      .toMatchObject({frontier: 1}));
+    const read = await query(graph); expect(read.status).toBe(200);
+    expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
+  });
+
+  it("recovers an owner-publication whose successful reply was lost", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph), id = "integrated:lost-owner-publication";
+    const orderedOwners = [root, otherRoot].sort(), firstOwner = orderedOwners[0]!, secondOwner = orderedOwners[1]!;
+    const secondTree = env.GRAPH_TREES.getByName(treeCoordinatorName(graph, secondOwner));
+    let originalFetch: unknown, lost = false;
+    await runInDurableObject(secondTree, instance => {
+      originalFetch = Reflect.get(instance, "fetch");
+      Reflect.set(instance, "fetch", async (request: Request) => {
+        const response = await (originalFetch as (this: unknown, request: Request) => Promise<Response>).call(instance, request);
+        if (new URL(request.url).pathname === "/_tree-finish" && !lost) {
+          lost = true; await response.text();
+          return new Response(JSON.stringify({error: "injected lost owner-publication reply"}), {status: 503,
+            headers: {"content-type": "application/json"}});
+        }
+        return response;
+      });
+    });
+    try { expect(await writeStatus(graph, id, [fact(first), fact(other)])).toMatchObject({status: 503}); }
+    finally { await runInDurableObject(secondTree, instance => Reflect.set(instance, "fetch", originalFetch)); }
+    expect(lost).toBe(true);
+    for (const owner of [firstOwner, secondOwner]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 1});
+      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_gates").one()).toMatchObject({count: 1});
+    });
+    await runInDurableObject(env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT frontier FROM graph_safe_frontier").one()).toMatchObject({frontier: 0}));
+    const oldView = await query(graph); expect(oldView.status).toBe(200);
+    expect((await oldView.json() as {rows: unknown[]}).rows).toHaveLength(0);
+    await recover(graph, id);
+    const read = await query(graph); expect(read.status).toBe(200);
+    expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
+    for (const owner of [firstOwner, secondOwner]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0));
+  });
+
+  it("recovers a partial owner-gate acquisition without exposing participants", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph), id = "integrated:partial-owner-gates";
+    const orderedOwners = [root, otherRoot].sort(), firstOwner = orderedOwners[0]!, secondOwner = orderedOwners[1]!;
+    const secondTree = env.GRAPH_TREES.getByName(treeCoordinatorName(graph, secondOwner));
+    let originalFetch: unknown, injected = false;
+    await runInDurableObject(secondTree, instance => {
+      originalFetch = Reflect.get(instance, "fetch");
+      Reflect.set(instance, "fetch", async (request: Request) => {
+        if (new URL(request.url).pathname === "/_tree-gate" && !injected) {
+          injected = true;
+          return new Response(JSON.stringify({error: "injected later-owner gate failure"}), {status: 503,
+            headers: {"content-type": "application/json"}});
+        }
+        return (originalFetch as (this: unknown, request: Request) => Promise<Response>).call(instance, request);
+      });
+    });
+    try { expect(await writeStatus(graph, id, [fact(first), fact(other)])).toMatchObject({status: 503}); }
+    finally { await runInDurableObject(secondTree, instance => Reflect.set(instance, "fetch", originalFetch)); }
+    expect(injected).toBe(true);
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, firstOwner)), (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_gates").one()).toMatchObject({count: 1});
+      expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 0});
+    });
+    await runInDurableObject(secondTree, (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_gates").one()).toMatchObject({count: 0});
+      expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 0});
+    });
+    const oldView = await query(graph); expect(oldView.status).toBe(200);
+    expect((await oldView.json() as {rows: unknown[]}).rows).toHaveLength(0);
+    await recover(graph, id);
+    const read = await query(graph); expect(read.status).toBe(200);
+    expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
+    for (const owner of [firstOwner, secondOwner]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0));
   });
 
   it("records a sanitized atomic-abort diagnostic and releases all owner fences", async () => {
@@ -386,6 +507,12 @@ describe("integrated storage authority", () => {
         .toMatchObject({status: "cancelled", decision_kind: "atomic", owner_released: 1});
       expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0);
     });
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT phase FROM tree_reservations WHERE tx_id = ?", id).one()).toMatchObject({phase: "aborted"});
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0);
+    });
+    await runInDurableObject(env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT frontier FROM graph_safe_frontier").one()).toMatchObject({frontier: 0}));
     const read = await query(graph); expect(read.status).toBe(200); await read.text();
   });
 
@@ -399,14 +526,15 @@ describe("integrated storage authority", () => {
       finally {Reflect.set(instance, "atomic", atomic);}
       expect(state.storage.sql.exec("SELECT owner_released FROM shard_transactions").one()).toMatchObject({owner_released: 0});
     });
-    const busy = await query(graph); expect(busy.status).toBe(423); await busy.text();
+    const oldView = await query(graph); expect(oldView.status).toBe(200);
+    expect((await oldView.json() as {rows: unknown[]}).rows).toHaveLength(0);
     await evictDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)));
     await evictDurableObject(leaf);
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1));
   });
 
-  it("allows same-leaf/shared-AV disjoint progress and higher-ticket publication without exposing a fractured read", async () => {
+  it("allows disjoint reservation but serializes same-owner publication without exposing a fractured read", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:held-low-ticket";
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), async (instance, state) => {
       const atomic = Reflect.get(instance, "atomic");
@@ -417,25 +545,80 @@ describe("integrated storage authority", () => {
         if (body.txId === id) {enter(); await gate;} return atomic.call(instance, request);
       });
       const held = write(graph, id, [fact(first)]);
+      const higher = writeStatus(graph, "integrated:higher-ticket", [fact(same)]);
       try {
         await entered;
-        expect(await writeStatus(graph, "integrated:higher-ticket", [fact(same)])).toMatchObject({status: 200});
+        await new Promise(resolve => setTimeout(resolve, 20));
+        expect(await Promise.race([higher.then(() => "settled"), new Promise<string>(resolve => setTimeout(() => resolve("waiting"), 20))]))
+          .toBe("waiting");
         expect(await writeStatus(graph, "integrated:overlap-field", [{...fact(first), field: "wiki:person:other"}])).toMatchObject({status: 423});
         expect(await writeStatus(graph, id, [fact(same)])).toMatchObject({status: 409});
-        const busy = await query(graph); expect(busy.status).toBe(423); await busy.text();
+        const oldView = await query(graph); expect(oldView.status).toBe(200);
+        expect((await oldView.json() as {rows: unknown[]}).rows).toHaveLength(0);
         expect(await split(graph, root)).toMatchObject({status: 423});
         await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_owner, ownerState) => {
-          expect(ownerState.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 2});
+          expect(ownerState.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 0});
           expect(ownerState.storage.sql.exec("SELECT ticket_seq, phase FROM tree_reservations WHERE tx_id = ?", id).one())
             .toMatchObject({ticket_seq: 1, phase: "preparing"});
         });
-        expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1);
-      } finally {release(); Reflect.set(instance, "atomic", atomic); const answer = await held; expect(answer.status).toBe(200); await answer.text();}
+        expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0);
+      } finally {
+        release(); Reflect.set(instance, "atomic", atomic);
+        const [answer, higherAnswer] = await Promise.all([held, higher]);
+        expect(answer.status).toBe(200); await answer.text();
+        expect(higherAnswer.status).toBe(200);
+      }
     });
     const read = await query(graph); expect(read.status).toBe(200); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
   });
 
-  it("interleaves same-bucket IDs while isolating a held execution and binding changed payloads", async () => {
+  it("finalizes disjoint roots concurrently while readers retain the prior closed vector", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, other, root, otherRoot} = await fixtures(graph);
+    expect(root).not.toBe(otherRoot);
+    const firstId = "integrated:disjoint-root-a";
+    let secondId = "integrated:disjoint-root-b";
+    for (let index = 0; await transactionCoordinatorName(graph, firstId) === await transactionCoordinatorName(graph, secondId); index++)
+      secondId = `integrated:disjoint-root-b-${index}`;
+    const roots = [root, otherRoot] as const;
+    const leaves = roots.map(owner => env.GRAPH_SHARDS.getByName(shardObjectName(graph, owner)));
+    const originals: unknown[] = [];
+    await Promise.all(leaves.map((leaf, index) => runInDurableObject(leaf, instance => {
+      const atomic = Reflect.get(instance, "atomic"); originals[index] = atomic;
+      Reflect.set(instance, "atomic", async (request: Request) => {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return atomic.call(instance, request);
+      });
+    })));
+    const writes = Promise.all([
+      writeStatus(graph, firstId, [fact(first)]),
+      writeStatus(graph, secondId, [fact(other)]),
+    ]);
+    try {
+      let bothGated = false;
+      for (let attempt = 0; attempt < 50 && !bothGated; attempt++) {
+        const counts = await Promise.all(roots.map(owner => runInDurableObject(
+          env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) =>
+            state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_publication_gates").one().count)));
+        bothGated = counts.every(count => count === 1);
+        if (!bothGated) await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      expect(bothGated).toBe(true);
+      const oldView = await query(graph); expect(oldView.status).toBe(200);
+      expect((await oldView.json() as {rows: unknown[]}).rows).toHaveLength(0);
+      const answers = await writes;
+      expect(answers.map(answer => answer.status)).toEqual([200, 200]);
+    } finally {
+      await writes;
+      await Promise.all(leaves.map((leaf, index) => runInDurableObject(leaf, instance => Reflect.set(instance, "atomic", originals[index]))));
+    }
+    await runInDurableObject(env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)), (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT frontier FROM graph_safe_frontier").one()).toMatchObject({frontier: 2});
+      const vector = state.storage.sql.exec<{prefix: string; visible_seq: number}>("SELECT prefix, visible_seq FROM graph_safe_vector").toArray();
+      for (const owner of roots) expect(vector.find(entry => entry.prefix === owner)?.visible_seq).toBe(1);
+    });
+  });
+
+  it("queues same-owner same-bucket publication while isolating a held execution and binding changed payloads", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:pooled-held";
     const bucket = (await sha256Hex(id))[0]; let second = "";
     for (let i = 0; !second; i++) {const next = `integrated:pooled-${i}`; if ((await sha256Hex(next))[0] === bucket) second = next;}
@@ -447,12 +630,20 @@ describe("integrated storage authority", () => {
         if ((await request.clone().json() as {txId: string}).txId === id) {enter(); await gate;} return atomic.call(instance, request);
       });
       const held = write(graph, id, [fact(first)]);
+      const queued = writeStatus(graph, second, [fact(same)]);
       try {
         await entered;
-        expect(await writeStatus(graph, second, [fact(same)])).toMatchObject({status: 200});
+        await new Promise(resolve => setTimeout(resolve, 20));
+        expect(await Promise.race([queued.then(() => "settled"), new Promise<string>(resolve => setTimeout(() => resolve("waiting"), 20))]))
+          .toBe("waiting");
         expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 423});
         expect(await writeStatus(graph, id, [fact(same)])).toMatchObject({status: 409});
-      } finally {release(); Reflect.set(instance, "atomic", atomic); const answer = await held; expect(answer.status).toBe(200); await answer.text();}
+      } finally {
+        release(); Reflect.set(instance, "atomic", atomic);
+        const [answer, queuedAnswer] = await Promise.all([held, queued]);
+        expect(answer.status).toBe(200); await answer.text();
+        expect(queuedAnswer.status).toBe(200);
+      }
     });
   });
 
@@ -544,11 +735,13 @@ describe("integrated storage authority", () => {
     });
     await expireAnchor(graph, id, [root, otherRoot]);
     const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)); await runDurableObjectAlarm(leaf);
-    expect(await writeStatus(graph, "integrated:disjoint-after-apply", [fact(same)])).toMatchObject({status: 200});
+    expect(await writeStatus(graph, "integrated:disjoint-after-apply", [fact(same)])).toMatchObject({status: 503});
     await runInDurableObject(leaf, (_instance, state) => expect(state.storage.sql.exec("SELECT status, owner_released FROM shard_transactions WHERE tx_id = ?", id).one())
       .toMatchObject({status: "committed", owner_released: 0}));
-    const busy = await query(graph); expect(busy.status).toBe(423); await busy.text();
+    const oldView = await query(graph); expect(oldView.status).toBe(200);
+    expect((await oldView.json() as {rows: unknown[]}).rows).toHaveLength(0);
     await recover(graph, id);
+    expect(await writeStatus(graph, "integrated:disjoint-after-apply", [fact(same)])).toMatchObject({status: 200});
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(2));
     const read = await query(graph); expect(read.status).toBe(200); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(3);
   });
@@ -587,6 +780,8 @@ describe("integrated storage authority", () => {
       expect(row).toMatchObject({phase: distributed ? "committing" : "atomic-delegated", participant_witness: distributed ? 1 : 0});
       if (!distributed) expect(row["local_witness_json"]).not.toBeNull();
     });
+    expect(await split(graph, published)).toMatchObject({status: 423});
+    await recover(graph, id);
     expect(await split(graph, published)).toMatchObject({status: 200});
     await evictDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)));
     const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, published));
@@ -700,21 +895,28 @@ describe("integrated storage authority", () => {
     });
   });
 
-  it("fences writes/splits with live owner leases and rejects an expired physical read", async () => {
+  it("pins MVCC history across writes, fences topology, and rejects an expired physical read", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph);
     expect(await writeStatus(graph, "integrated:lease-seed", [fact(first)])).toMatchObject({status: 200});
     const owner = env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root));
-    const response = await owner.fetch("https://owner.internal/_tree-read", {method: "POST", body: JSON.stringify({graphId: graph, prefix: root})});
+    const response = await owner.fetch("https://owner.internal/_tree-read", {method: "POST", body: JSON.stringify({
+      graphId: graph, prefix: root, snapshotSeq: 1, directoryEpoch: 0,
+    })});
     expect(response.status).toBe(200); const lease = await response.json() as {readId: string; snapshotSeq: number; directoryEpoch: number};
-    expect(await writeStatus(graph, "integrated:lease-write", [fact(first, false, "later")])).toMatchObject({status: 423});
+    expect(await writeStatus(graph, "integrated:lease-write", [fact(first, false, "later")])).toMatchObject({status: 200});
     expect(await split(graph, root)).toMatchObject({status: 423});
+    const historical = await env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)).fetch("https://leaf.internal/_entity", {
+      method: "POST", body: JSON.stringify({graphId: graph, entity: first, shardPrefix: root, shardGeneration: 0,
+        directoryEpoch: lease.directoryEpoch, snapshotSeq: lease.snapshotSeq, leaseExpiresAtMs: Date.now() + 10_000}),
+    });
+    expect(historical.status).toBe(200);
+    expect(await historical.json()).toMatchObject({lastProcessedTxId: "integrated:lease-seed", snapshotSeq: lease.snapshotSeq});
     await runInDurableObject(owner, (_instance, state) => state.storage.sql.exec("UPDATE graph_read_leases SET expires_at_ms = 0 WHERE read_id = ?", lease.readId));
     const expired = await env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)).fetch("https://leaf.internal/_entity", {
       method: "POST", body: JSON.stringify({graphId: graph, entity: first, shardPrefix: root, shardGeneration: 0,
         directoryEpoch: lease.directoryEpoch, snapshotSeq: lease.snapshotSeq, leaseExpiresAtMs: 0}),
     });
     expect(expired.status).toBe(410); await expired.text();
-    expect(await writeStatus(graph, "integrated:lease-write", [fact(first, false, "later")])).toMatchObject({status: 200});
   });
 
   it("publishes different owner tickets as a vector rather than a graph-global scalar order", async () => {
@@ -821,7 +1023,8 @@ describe("integrated storage authority", () => {
     await evictDurableObject(ledger);
     try {
       expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 503});
-      const busy = await query(graph); expect(busy.status).toBe(423); await busy.text();
+      const oldView = await query(graph); expect(oldView.status).toBe(200);
+      expect((await oldView.json() as {rows: unknown[]}).rows).toHaveLength(0);
       await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1));
     } finally {await runInDurableObject(ledger, (_instance, state) => state.storage.sql.exec("UPDATE candidate_transactions SET batch_json = ? WHERE tx_id = ?", original, id));}
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
@@ -873,7 +1076,8 @@ describe("integrated storage authority", () => {
     expect(await control("_tree-lock", {entities: [first, same].sort()})).toMatchObject({status: 409});
     await runInDurableObject(owner, (_instance, state) => state.storage.sql.exec("DELETE FROM entity_write_locks WHERE tx_id = ?", id));
     try {
-      const read = await query(graph); expect(read.status).toBe(423); await read.text();
+      const read = await query(graph); expect(read.status).toBe(200);
+      expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(0);
       expect(await split(graph, root)).toMatchObject({status: 423});
       const proof = await control("_tree-atomic-proof", {commitSeq: 1, decision: "committed"});
       expect(proof.status).toBe(200); expect(JSON.parse(proof.body)).toMatchObject({authorityReleased: false});

@@ -11,7 +11,7 @@ import {
   MAX_READ_LEASES, MAX_TRANSACTION_BYTES, MAX_TRANSACTION_FACTS, READ_LEASE_TTL_MS,
   ROUTING_VERSION, TRANSACTION_IDEMPOTENCY_RETENTION_MS,
 } from "./constants.js";
-import { parseVirtualPrefix, shardObjectName, virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
+import { coordinatorObjectName, parseVirtualPrefix, shardObjectName, virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
 import { listShardLeaves } from "./routing.js";
 import { TREE_DEPTH, TREE_OUTCOME_LIMIT, treeForKey } from "./forest.js";
 
@@ -79,14 +79,42 @@ export class GraphTreeDO extends DurableObject<Env> {
       prefix: prefix.value,
       directoryEpoch: current.directory_epoch,
     });
-    if (route["kind"] === "router") {
+    if (route["kind"] === "router" && current.topology_op_id === null) {
+      await this.publishTopologyVector(graphId.value, prefix.value, current.directory_epoch, current.visible_seq);
+      await this.pruneVersions();
       return jsonResponse({ status: "already-split", prefix: prefix.value, directoryEpoch: current.directory_epoch, visibleSeq: current.visible_seq });
+    }
+    if (route["kind"] === "router" && current.topology_op_id !== null) {
+      const pending = this.readSplit(current.topology_op_id);
+      if (pending?.source_prefix === prefix.value && pending.phase === "cutover" && current.directory_epoch === pending.split_epoch) {
+        await this.publishTopologyVector(graphId.value, prefix.value, current.directory_epoch, current.visible_seq);
+        this.finishTopology(current.topology_op_id);
+        await this.pruneVersions();
+        return jsonResponse({status: "already-split", prefix: prefix.value, directoryEpoch: current.directory_epoch, visibleSeq: current.visible_seq});
+      }
     }
     const migrationId = this.reserveSplit(prefix.value, force);
     const interrupted = await this.performSplit(migrationId, stopAfterPages as number | undefined);
     if (interrupted instanceof Response) return interrupted;
     const state = this.readGraphState();
+    await this.publishTopologyVector(graphId.value, prefix.value, state.directory_epoch, state.visible_seq);
+    this.finishTopology(migrationId);
+    await this.pruneVersions();
     return jsonResponse({ status: "split", prefix: prefix.value, directoryEpoch: state.directory_epoch, visibleSeq: state.visible_seq });
+  }
+
+  private finishTopology(migrationId: string): void {
+    this.ctx.storage.transactionSync(() => {
+      this.ctx.storage.sql.exec("UPDATE graph_state SET topology_op_id = NULL WHERE singleton = 1 AND topology_op_id = ?", migrationId);
+    });
+  }
+
+  private async publishTopologyVector(graphId: GraphId, prefix: VirtualPrefix, directoryEpoch: number, visibleSeq: number): Promise<void> {
+    const response = await this.env.GRAPH_FACADES.getByName(coordinatorObjectName(graphId)).fetch("https://graph.internal/_advance-vector-epoch", {
+      method: "POST", body: JSON.stringify({graphId, prefix, directoryEpoch, visibleSeq}),
+    });
+    const ok = response.ok; await response.arrayBuffer();
+    if (!ok) throw new CoordinatorError(503, "topology safe-vector publication incomplete");
   }
 
   private reserveSplit(prefix: VirtualPrefix, force: boolean): string {
@@ -254,15 +282,14 @@ export class GraphTreeDO extends DurableObject<Env> {
           throw new CoordinatorError(500, "graph state changed during a fenced topology operation");
         }
         this.ctx.storage.sql.exec(
-          "UPDATE graph_state SET directory_epoch = ?, topology_op_id = NULL WHERE singleton = 1",
+          "UPDATE graph_state SET directory_epoch = ? WHERE singleton = 1",
           split.split_epoch,
         );
-      } else if (state.directory_epoch !== split.split_epoch) {
+      } else if (state.directory_epoch !== split.split_epoch || state.topology_op_id !== migrationId) {
         throw new CoordinatorError(500, "directory epoch changed unexpectedly during split recovery");
       }
       this.ctx.storage.sql.exec("UPDATE graph_splits SET phase = 'cutover' WHERE migration_id = ?", migrationId);
     });
-    await this.pruneVersions();
     return undefined;
   }
 
@@ -296,10 +323,16 @@ export class GraphTreeDO extends DurableObject<Env> {
     });
   }
 
-  private beginReadLease(): ReadLease {
+  private beginReadLease(requestedSnapshotSeq: number, requestedDirectoryEpoch: number): ReadLease {
     return this.ctx.storage.transactionSync(() => {
       const state = this.readGraphState();
-      if (state.writer_tx_id !== null || this.ownerWrites.hasWriters() || state.topology_op_id !== null) throw new CoordinatorError(423, "subtree writer/topology operation is active");
+      if (state.topology_op_id !== null) throw new CoordinatorError(423, "subtree topology operation is active");
+      const snapshotSeq = requestedSnapshotSeq;
+      const directoryEpoch = requestedDirectoryEpoch;
+      if (directoryEpoch !== state.directory_epoch || snapshotSeq > state.visible_seq)
+        throw new CoordinatorError(423, "cached read-cut component is not yet visible");
+      const retained = this.ctx.storage.sql.exec<{min_retained_seq: number}>("SELECT min_retained_seq FROM graph_state WHERE singleton = 1").one();
+      if (snapshotSeq < retained.min_retained_seq) throw new CoordinatorError(410, "cached read-cut history has expired");
       const now = Date.now();
       this.ctx.storage.sql.exec("DELETE FROM graph_read_leases WHERE expires_at_ms <= ?", now);
       const leaseCount = this.ctx.storage.sql.exec<{ count: number }>(
@@ -307,17 +340,16 @@ export class GraphTreeDO extends DurableObject<Env> {
         now,
       ).toArray()[0]?.count ?? 0;
       if (leaseCount >= MAX_READ_LEASES) throw new CoordinatorError(429, "graph has reached its concurrent read-lease limit");
-      const graph = this.readGraphState();
       const readId = crypto.randomUUID();
       const expiresAtMs = now + READ_LEASE_TTL_MS;
       this.ctx.storage.sql.exec(
         "INSERT INTO graph_read_leases (read_id, snapshot_seq, directory_epoch, expires_at_ms) VALUES (?, ?, ?, ?)",
         readId,
-        graph.visible_seq,
-        graph.directory_epoch,
+        snapshotSeq,
+        directoryEpoch,
         expiresAtMs,
       );
-      return { readId, snapshotSeq: graph.visible_seq, directoryEpoch: graph.directory_epoch, expiresAtMs };
+      return {readId, snapshotSeq, directoryEpoch, expiresAtMs};
     });
   }
 
@@ -339,6 +371,8 @@ export class GraphTreeDO extends DurableObject<Env> {
 
   private async pruneVersions(minSnapshotSeq?: number, minDirectoryEpoch?: number): Promise<void> {
     const minimum = minSnapshotSeq ?? this.minimumSnapshotSeq();
+    this.ctx.storage.transactionSync(() => this.ctx.storage.sql.exec(
+      "UPDATE graph_state SET min_retained_seq = MAX(min_retained_seq, ?) WHERE singleton = 1", minimum));
     const graphId = this.readGraphIdentity();
     const state = this.readGraphState();
     if (state.topology_op_id !== null) return;
@@ -484,7 +518,13 @@ export class GraphTreeDO extends DurableObject<Env> {
       reservations: this.ctx.storage.sql.exec("SELECT phase, COUNT(*) AS count FROM tree_reservations GROUP BY phase").toArray(),
       transactions: this.ctx.storage.sql.exec("SELECT tx_id, phase FROM tree_reservations").toArray(),
       databaseBytes: this.ctx.storage.sql.databaseSize });
-    if (action === "/_tree-read") return jsonResponse({ prefix: prefix.value, ...this.beginReadLease() });
+    if (action === "/_tree-read") {
+      const snapshotSeq = body["snapshotSeq"], directoryEpoch = body["directoryEpoch"];
+      if (typeof snapshotSeq !== "number" || !Number.isSafeInteger(snapshotSeq) || snapshotSeq < 0 ||
+          typeof directoryEpoch !== "number" || !Number.isSafeInteger(directoryEpoch) || directoryEpoch < 0)
+        throw new CoordinatorError(400, "invalid cached read-cut component");
+      return jsonResponse({prefix: prefix.value, ...this.beginReadLease(snapshotSeq, directoryEpoch)});
+    }
     if (action === "/_tree-release-read") {
       if (typeof body["readId"] !== "string") throw new CoordinatorError(400, "invalid read ID");
       this.releaseReadLease(body["readId"]); return jsonResponse({ status: "released" });
@@ -518,15 +558,32 @@ export class GraphTreeDO extends DurableObject<Env> {
       const unique = [...new Set(entities)].sort();
       return jsonResponse(this.ownerWrites.reserve(txId, hash, unique, epoch, identityTime));
     }
+    if (action === "/_tree-gate") {
+      const ticket = body["reservationTicket"], epoch = body["directoryEpoch"];
+      if (typeof ticket !== "number" || !Number.isSafeInteger(ticket) || ticket < 1 ||
+          typeof epoch !== "number" || !Number.isSafeInteger(epoch) || epoch < 0)
+        throw new CoordinatorError(400, "invalid publication gate identity");
+      return jsonResponse(this.ownerWrites.acquirePublicationGate(txId, hash, ticket, epoch, identityTime));
+    }
     if (action === "/_tree-unlock") {
       this.ownerWrites.release(txId, hash, identityTime, body["abort"] === true);
       return jsonResponse({status: "released"});
     }
     if (action === "/_tree-finish") {
-      const seq = body["commitSeq"];
-      if (typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1) throw new CoordinatorError(400, "invalid publication sequence");
-      this.ownerWrites.publish(txId, hash, seq, identityTime);
+      const ticket = body["reservationTicket"], seq = body["publicationSeq"];
+      if (typeof ticket !== "number" || !Number.isSafeInteger(ticket) || ticket < 1 ||
+          typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1)
+        throw new CoordinatorError(400, "invalid owner publication identity");
+      this.ownerWrites.publish(txId, hash, ticket, seq, identityTime);
       return jsonResponse({status: "complete"});
+    }
+    if (action === "/_tree-release-gate") {
+      const ticket = body["reservationTicket"], seq = body["publicationSeq"];
+      if (typeof ticket !== "number" || !Number.isSafeInteger(ticket) || ticket < 1 ||
+          typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1)
+        throw new CoordinatorError(400, "invalid publication gate identity");
+      this.ownerWrites.releasePublicationGate(txId, hash, ticket, seq, identityTime);
+      return jsonResponse({status: "released"});
     }
     throw new CoordinatorError(404, "unknown tree operation");
   }

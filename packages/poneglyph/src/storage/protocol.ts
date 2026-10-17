@@ -56,8 +56,8 @@ export function parseParticipantBatch(input: unknown): ParseResult<ParticipantBa
   const identityTimeMs = readNonNegativeInteger(input["identityTimeMs"]);
   if (identityTimeMs === undefined) return rejected("participant.identityTimeMs", "expected an identity-window timestamp");
   const commitSeq = input["commitSeq"];
-  if (!Number.isSafeInteger(commitSeq) || typeof commitSeq !== "number" || commitSeq < 1) {
-    return rejected("participant.commitSeq", "expected a positive safe integer sequence");
+  if (!Number.isSafeInteger(commitSeq) || typeof commitSeq !== "number" || commitSeq < 0) {
+    return rejected("participant.commitSeq", "expected a non-negative safe integer sequence");
   }
   if (!Array.isArray(input["facts"]) || input["facts"].length === 0) {
     return rejected("participant.facts", "expected a non-empty fact list");

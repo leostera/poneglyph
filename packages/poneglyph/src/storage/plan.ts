@@ -8,7 +8,8 @@ import { parseVirtualKey, parseVirtualPrefix, matchesPrefix, virtualKeyForEntity
 import { resolveEntityLeaf, type LeafAddress } from "./routing.js";
 import type { StorageEnv } from "./environment.js";
 
-export type OwnerPlan = Readonly<{prefix: VirtualPrefix; directoryEpoch: number; visibleSeq: number; commitSeq: number; entities: readonly Uri[]}>;
+export type OwnerPlan = Readonly<{prefix: VirtualPrefix; directoryEpoch: number; visibleSeq: number;
+  reservationTicket: number; publicationSeq: number; entities: readonly Uri[]}>;
 export type ParticipantPlan = Readonly<{address: LeafAddress; owner: VirtualPrefix; entries: readonly Readonly<{index: number; virtualKey: VirtualKey}>[]}>;
 export type WritePlan = Readonly<{owners: readonly OwnerPlan[]; participants: readonly ParticipantPlan[]}>;
 
@@ -18,7 +19,7 @@ export async function planBatch(env: StorageEnv, graphId: string, batch: FactBat
   const keyByEntity = new Map<Uri, VirtualKey>();
   for (const fact of batch.facts) if (!keyByEntity.has(fact.entity)) keyByEntity.set(fact.entity, await virtualKeyForEntity(graph.value, fact.entity));
   const prefixes = [...new Set([...keyByEntity.values()].map(treeForKey))].sort();
-  const owners = await Promise.all(prefixes.map(async prefix => ({prefix, ...await directory(prefix), commitSeq: 0,
+  const owners = await Promise.all(prefixes.map(async prefix => ({prefix, ...await directory(prefix), reservationTicket: 0, publicationSeq: 0,
     entities: [...keyByEntity].filter(([, key]) => treeForKey(key) === prefix).map(([entity]) => entity).sort()})));
   const groups = new Map<VirtualPrefix, {address: LeafAddress; owner: VirtualPrefix; entries: {index: number; virtualKey: VirtualKey}[]}>();
   const routes = new Map<Uri, LeafAddress>();
@@ -44,7 +45,8 @@ export async function parseWritePlan(json: string, graphId: string, batch: FactB
     if (!prefix.ok || prefix.value.length !== TREE_DEPTH || !Array.isArray(value["entities"]) || !value["entities"].length) throw new Error("invalid owner identity");
     const entities = value["entities"].map(entity => {const parsed = parseUri(entity); if (!parsed.ok) throw new Error("invalid durable entity"); return parsed.value;});
     if (JSON.stringify([...new Set(entities)].sort()) !== JSON.stringify(entities)) throw new Error("unordered owner entities");
-    owners.push({prefix: prefix.value, entities, directoryEpoch: integer(value["directoryEpoch"]), visibleSeq: integer(value["visibleSeq"]), commitSeq: integer(value["commitSeq"], admitted ? 1 : 0)});
+    owners.push({prefix: prefix.value, entities, directoryEpoch: integer(value["directoryEpoch"]), visibleSeq: integer(value["visibleSeq"]),
+      reservationTicket: integer(value["reservationTicket"], admitted ? 1 : 0), publicationSeq: integer(value["publicationSeq"])});
   }
   if (!owners.length || new Set(owners.map(o => o.prefix)).size !== owners.length || owners.length > 16 ||
       JSON.stringify(owners.map(o => o.prefix)) !== JSON.stringify(owners.map(o => o.prefix).sort())) throw new Error("invalid owner partition");
