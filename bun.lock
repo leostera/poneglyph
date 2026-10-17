@@ -148,7 +148,7 @@
         "typescript": "5.9.3",
       },
     },
-    "sites/playground.poneglyph.leostera.dev": {
+    "sites/onepiece.poneglyph.dev": {
       "name": "@poneglyph/site-playground",
       "dependencies": {
         "@leostera/poneglyph": "workspace:*",
@@ -403,7 +403,7 @@
 
     "@poneglyph/example-onepiece-load": ["@poneglyph/example-onepiece-load@workspace:examples/onepiece-load"],
 
-    "@poneglyph/site-playground": ["@poneglyph/site-playground@workspace:sites/playground.poneglyph.leostera.dev"],
+    "@poneglyph/site-playground": ["@poneglyph/site-playground@workspace:sites/onepiece.poneglyph.dev"],
 
     "@poneglyph/write-path-bench": ["@poneglyph/write-path-bench@workspace:packages/write-path-bench"],
 
