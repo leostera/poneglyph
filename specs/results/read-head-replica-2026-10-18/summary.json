@@ -1,0 +1,77 @@
+{
+  "kind": "inactive-metadata-head-role-local-regressions",
+  "sourceBaseCommit": "759f6dbd6f972b6a4c5ad39511779113ab723f8a",
+  "sourceSnapshot": "uncommitted implementation captured by exact source hashes below",
+  "sourceHashes": {
+    "packages/poneglyph/src/storage/read-head-placement.ts": "aeca727639a2401b403c11ca1ae1601d33f1f04085557f3b5e770dac238153a3",
+    "packages/poneglyph/src/storage/read-head-replica.ts": "5bd64450f14e37cb8aa6ae80d948a27ff0183626228975d936c8548626f7d962",
+    "packages/poneglyph/src/storage/coordinator-facade.ts": "7a453bdb98c5662a462d128f54c773a85860a9585661230144d7d4838ae5cb19",
+    "packages/poneglyph/src/storage/http.ts": "694590db12d2d1594c6dbd207b2dfb455af5f0faea12f9573b2825d57025db61",
+    "packages/poneglyph/src/storage/read-head-parent.ts": "3840aa9de121dd82c140ab73fa202376269760589df5c26e135918bb8df530ab",
+    "packages/poneglyph/src/storage/read-head-state.ts": "cffc172a44b0800ff142b2df3c8599fda6f034121252aaca7274b4972a44d37e",
+    "packages/poneglyph/src/storage/read-identity.ts": "a6bdb1c032983005b7053c9b2d4cb4ce046315b8f529056f5c0ffdbc3d07e238",
+    "packages/poneglyph/src/storage/environment.ts": "71491432519e07089eb7a3359a907a70387a8772f60d6856eab1cee21aa719f6",
+    "packages/poneglyph/src/storage/sql.ts": "6a33df64d28b601d061fe991cb49ad44bcfa14c5f2ecdc62199a8aba9d056363",
+    "packages/poneglyph/tests/read-head-replica.test.ts": "4e6ee5d8d7fc601101ebea47a03f4fdc896e75e5aceb38bd7aafac91d7b4c9d0",
+    "packages/poneglyph/tests/read-head-kv-atomicity.test.ts": "267a6dcad5d6af2f73aa862fabe9f544b4eb70943325c81a5b0c25a56bf7ac73",
+    "packages/poneglyph/tests/read-head-durability.test.ts": "c1d52f13f7f4a8bc2cd725c0fe9d5ce45ede97cb10998f6f3d52d52748b9adf2",
+    "packages/poneglyph/tests/read-head-parent.test.ts": "1a9010d22c2bb52b52710486ab685a5064150bf46f64cc17b380007be1119e04",
+    "packages/poneglyph/tests/read-head-state.test.ts": "f15b1da103aedc63f4dce5da1873e4296fba66a3858c0629e940efefc5f76f47",
+    "packages/poneglyph/tests/read-identity.test.ts": "6d3082dfa3e5b071321438ce673d27afdf61801318a84b0a990a3e54a0fe25bb",
+    "packages/poneglyph/tests/control-plane.test.ts": "958daaf0fe859bd57786a1139eb13582d4dd882480afbc98c12385c2056ab9ef",
+    "packages/poneglyph/vitest.config.ts": "fbd63371aeb1b6966a32084d56bae3b482087de96a4f8231001e1efc6c9c975c"
+  },
+  "runtime": {
+    "bun": "1.4.2",
+    "node": "v26.11.0"
+  },
+  "targetedTests": 38,
+  "replicaRoleTests": 5,
+  "canonicalFocusedCases": {
+    "warmPassed": 10,
+    "coldPassed": 10,
+    "report": "packages/conformance/results/focused-controls-2026-10-18T04-11-49.576Z/report.json.gz",
+    "file": "report.json.gz",
+    "sha256": "4cccf5c6c4e1dcc19f128ebc6b8b8765bcc4da857f75119f0d7f3c6a674bebb2",
+    "uncompressedSha256": "91e8ff8711e194929bbb5d4c3a289a3f64246a1283aadf886d10d99cdcd3d7ff",
+    "notCertification": true
+  },
+  "logs": [
+    {
+      "file": "targeted.log.gz",
+      "command": "bun run --cwd packages/poneglyph test -- tests/read-head-replica.test.ts tests/read-head-kv-atomicity.test.ts tests/read-head-durability.test.ts tests/read-head-parent.test.ts tests/read-head-state.test.ts tests/read-identity.test.ts tests/control-plane.test.ts",
+      "status": "passed",
+      "sha256": "8f6a0e77c2caf7048700f475f2872bc3fdfdc35a26cc12669e04121dbd5fb3f5",
+      "uncompressedSha256": "af02f18a714b97c9b8bad100c71c5b74c353b8220f230aaf6bdaa9dcd95e57bb"
+    },
+    {
+      "file": "root-check.log.gz",
+      "command": "bun run check",
+      "status": "passed",
+      "sha256": "e5c36fabf195917e8ce0e28cef2c1edf8eb1a330ed42d261a2140908c2aed609",
+      "uncompressedSha256": "ef165c52e99746d5ff7963c9d653b688300fea7b517437df4a9af45829669695"
+    },
+    {
+      "file": "root-build.log.gz",
+      "command": "bun run build",
+      "status": "passed",
+      "sha256": "41dee5dc6f1eee98de6e15433390388ec3fc2f0dcf30b0f07fb86d2ec5d99e1f",
+      "uncompressedSha256": "52285c09c403f6096c6ea25dfc988c0a7d157dc31144215d962fc49b91a4c703"
+    },
+    {
+      "file": "focused.log.gz",
+      "command": "bun run test:focused",
+      "status": "passed",
+      "sha256": "4ad92af90cf45c339643c964d70d1cb20d0222a924b4fb9389c0e472052af0cd",
+      "uncompressedSha256": "c988dcbaff5dd743f5b870fd74459c9ca52040f3fa03a2c428cc4a2229c17c0f"
+    }
+  ],
+  "limitations": [
+    "Real local replica handlers/inter-DO fetch/persistence; parent admission is a test-only authority seam, not production root integration.",
+    "No canonical root journal, publication/topology hook, activation endpoint, alarms, Worker routing, head discovery or live opt-in.",
+    "Canonical parent has no authorization endpoint yet, so normal deployments cannot activate heads.",
+    "Durable role identity covers idFromString restart and blocks canonical routes; state contains no canonical fact or entity store.",
+    "Old publishing code must be fenced before live enablement; KV/SQL atomicity does not establish rollback/mixed-version safety.",
+    "No new hosted measurements, namespace allocation, deployment or corpus writes; no infinite-capacity or p99-target claim."
+  ]
+}

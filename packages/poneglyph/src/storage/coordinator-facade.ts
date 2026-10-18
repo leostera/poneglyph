@@ -22,6 +22,8 @@ import { listShardLeaves, resolveEntityLeaf } from "./routing.js";
 import { dispatchPublicTransaction } from "./transaction-request.js";
 import { ensureFacadeSchema } from "./sql.js";
 import { TREE_PREFIXES, TREE_DEPTH, treeCoordinatorName, treeForKey, parseTreeSnapshot, type TreeSnapshot } from "./forest.js";
+import { resolveReadHeadReplicaIdentity } from "./read-head-placement.js";
+import { ReadHeadReplica } from "./read-head-replica.js";
 
 type SafeVectorRow = Readonly<{prefix: string; directory_epoch: number; visible_seq: number}>;
 type SafeFrontierRow = Readonly<{frontier: number}>;
@@ -35,11 +37,17 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   private readonly queryCache = new BoundedReadCache<CachedQueryResult>(MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_BYTES);
   private readonly queryOwnerCache = new BoundedReadCache<readonly VirtualPrefix[]>(MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_BYTES);
   private safeSnapshot: Readonly<{graphId: GraphId; snapshot: SafeSnapshot}> | undefined;
+  private readHeadReplica: ReadHeadReplica | undefined;
 
   constructor(ctx: DurableObjectState, env: FacadeEnv) {
     super(ctx, env);
     void ctx.blockConcurrencyWhile(async () => {
       ensureFacadeSchema(ctx.storage);
+      const replica = resolveReadHeadReplicaIdentity(ctx);
+      if (replica !== null) {
+        this.readHeadReplica = new ReadHeadReplica(ctx, env, replica);
+        return;
+      }
       ctx.storage.transactionSync(() => {
         for (const prefix of TREE_PREFIXES) ctx.storage.sql.exec(
           "INSERT OR IGNORE INTO graph_safe_vector (prefix, directory_epoch, visible_seq) VALUES (?, 0, 0)", prefix);
@@ -48,6 +56,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   }
 
   override async fetch(request: Request): Promise<Response> {
+    if (this.readHeadReplica !== undefined) return this.readHeadReplica.fetch(request);
     const path = new URL(request.url).pathname;
     if (request.method === "POST" && path === "/_publish-vector") return await this.publishSafeVector(request);
     if (request.method === "POST" && path === "/_advance-vector-epoch") return await this.advanceSafeVectorEpoch(request);
