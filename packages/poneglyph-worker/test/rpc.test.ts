@@ -151,7 +151,8 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
       assert.ok(isRecord(result.body));
       assert.ok(typeof result.body["admissionCalls"] === "number");
       assert.ok(typeof result.body["publicationCalls"] === "number");
-      return {admissionCalls: result.body["admissionCalls"], publicationCalls: result.body["publicationCalls"],
+      assert.ok(typeof result.body["readCutCalls"] === "number");
+      return {admissionCalls: result.body["admissionCalls"], publicationCalls: result.body["publicationCalls"], readCutCalls: result.body["readCutCalls"],
         parent: result.body["parent"] === null ? null : parseReadHeadParent(result.body["parent"]),
         head: result.body["head"] === null ? null : parseReadHeadState(result.body["head"])};
     };
@@ -227,6 +228,14 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     assert.deepEqual(await post("/one-shot-write", lost), reconciled);
     assert.deepEqual(await readMarker("test:publication-lost"), present);
 
+    const beforePrewarm = await writeState();
+    assert.equal(beforePrewarm.parent, null);
+    assert.deepEqual(await call("/prewarm-head"), {status: 200, body: {canonical: true}},
+      "reader-first actor creation must not grant freshness or membership authority");
+    assert.equal((await writeState(true)).head, null, "pre-creation persists no serving checkpoint");
+    const afterPrewarm = await writeState();
+    assert.equal(afterPrewarm.parent, null, "pre-creation does not opt the graph in");
+    assert.equal(afterPrewarm.readCutCalls, beforePrewarm.readCutCalls, "empty-head validation does not consult canonical read authority");
     assert.deepEqual(await call("/enable-head"), {status: 200, body: {member: 1, generation: 1, pending: false}});
     const beforeHead = await writeState();
     assert.ok(beforeHead.parent !== null);
