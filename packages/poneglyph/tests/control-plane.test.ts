@@ -1,7 +1,9 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { treeForKey } from "../src/storage/forest.js";
+import { treeForKey, type TreeSnapshot } from "../src/storage/forest.js";
+import { releaseParallelReadCut } from "../src/storage/read-cut.js";
+import { parseGraphId } from "../src/domain/graph-id.js";
 import { coordinatorObjectName, virtualKeyForEntity } from "../src/storage/keys.js";
 
 type ControlFactValue =
@@ -149,6 +151,43 @@ const oneSetting = (entityKind: "config" | "credential", field: "enabled" | "sta
     : `control:credential:tenant(Settings, Tenant), control:credential:${field}(Settings, State)`;
 
 describe("integrated control-plane settings", () => {
+  it("validates cache identity at one closed vector and rejects malformed coverage", async () => {
+    const fixture = await makeFixture();
+    await commit(fixture.graph, `control:cache-seed:${crypto.randomUUID()}`, initialStateFacts(fixture));
+    const facade = env.GRAPH_FACADES.getByName(coordinatorObjectName(fixture.graph));
+    const graph = parseGraphId(fixture.graph);
+    if (!graph.ok) throw new Error("invalid test graph");
+    const query = `control:config:enabled(${JSON.stringify(fixture.featureEntity)}, Enabled), control:credential:token-version(${JSON.stringify(fixture.credentialEntity)}, Token)`;
+    const acquire = (knownSnapshot?: unknown) => facade.fetch("https://facade.internal/_query-read-cut", {
+      method: "POST", headers: {"content-type": "application/json"},
+      body: JSON.stringify({graphId: fixture.graph, query, ...(knownSnapshot === undefined ? {} : {knownSnapshot})}),
+    });
+    const response = await acquire();
+    expect(response.status).toBe(200);
+    const first = await response.json<{snapshotSeq: number; cut: TreeSnapshot[]}>();
+    expect(first.cut).toHaveLength(2);
+    const identity = first.cut.map(({prefix, snapshotSeq, directoryEpoch}) => ({prefix, snapshotSeq, directoryEpoch}));
+    // Release before validation: a completed answer does not rely on history
+    // leases remaining alive, only on the current authoritative identity.
+    await releaseParallelReadCut(env, graph.value, first.cut);
+    const same = await acquire(identity);
+    expect(same.status).toBe(200);
+    expect(await same.json()).toEqual({unchanged: true, snapshotSeq: first.snapshotSeq});
+    for (const malformed of [[], identity.slice(1), [identity[0], identity[0]], [{...identity[0], snapshotSeq: -1}, identity[1]]]) {
+      const rejected = await acquire(malformed);
+      expect(rejected.status).toBe(400);
+      await rejected.body?.cancel();
+    }
+    await commit(fixture.graph, `control:cache-rotate:${crypto.randomUUID()}`, enableAndRotateFacts(fixture));
+    const advanced = await acquire(identity);
+    expect(advanced.status).toBe(200);
+    const next = await advanced.json<{snapshotSeq: number; cut: TreeSnapshot[]}>();
+    expect(next.cut).toHaveLength(2);
+    expect(next.snapshotSeq).toBe(2);
+    expect(next.cut.every(owner => owner.snapshotSeq === 2)).toBe(true);
+    await releaseParallelReadCut(env, graph.value, next.cut);
+  });
+
   it("enables a feature, rotates a fake token, then disables and revokes after acknowledgement", async () => {
     const fixture = await makeFixture();
     expect(fixture.featureRoot).not.toBe(fixture.credentialRoot);

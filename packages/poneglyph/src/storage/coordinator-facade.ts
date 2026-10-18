@@ -1,5 +1,6 @@
 import { DurableObject, tracing } from "cloudflare:workers";
 import { acquireParallelReadCut, queryReadPrefixes, releaseParallelReadCut } from "./read-cut.js";
+import { parseReadIdentity, readIdentityMatches, type ReadIdentity } from "./read-identity.js";
 import type { StorageEnv as Env } from "./environment.js";
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseUri } from "../domain/identifiers.js";
@@ -80,16 +81,30 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
 
   private async acquireWorkerQueryCut(request: Request): Promise<Response> {
     const raw = await readJsonBody(request, 16_384);
-    if (!raw.ok || !isRecord(raw.value) || Object.keys(raw.value).some(key => key !== "graphId" && key !== "query")) {
+    if (!raw.ok || !isRecord(raw.value) || Object.keys(raw.value).some(key => key !== "graphId" && key !== "query" && key !== "knownSnapshot")) {
       return jsonResponse({error: "invalid query read-cut envelope"}, 400);
     }
     const graph = parseGraphId(raw.value["graphId"]);
     if (!graph.ok || typeof raw.value["query"] !== "string") return jsonResponse({error: "invalid query read-cut identity"}, 400);
     const query = parseDatalogQuery(raw.value["query"]);
     if (!query.ok) return jsonResponse({error: query.error.message, offset: query.error.offset}, 400);
+    const prefixes = await queryReadPrefixes(graph.value, query.value);
+    let knownSnapshot: ReadIdentity | undefined;
+    if (raw.value["knownSnapshot"] !== undefined) {
+      try {
+        knownSnapshot = parseReadIdentity(raw.value["knownSnapshot"], prefixes);
+      } catch {
+        return jsonResponse({error: "invalid known snapshot"}, 400);
+      }
+    }
     try {
+      // Linearization point for both cache validation and ordinary lease reads.
+      // Never read owner heads independently to assemble a 'current' vector.
       const safeVector = this.cachedSafeVector(graph.value);
-      const cut = await this.acquireQueryReadCut(graph.value, query.value, safeVector);
+      if (knownSnapshot !== undefined && readIdentityMatches(knownSnapshot, safeVector.vector)) {
+        return jsonResponse({unchanged: true, snapshotSeq: Math.max(...knownSnapshot.map(owner => owner.snapshotSeq))});
+      }
+      const cut = await this.acquireReadCut(graph.value, prefixes, safeVector);
       return jsonResponse({snapshotSeq: Math.max(...cut.map(lease => lease.snapshotSeq)), cut});
     } catch (error) {
       const status = error instanceof CoordinatorError ? error.status : 503;

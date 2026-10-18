@@ -23,6 +23,16 @@ import {
 } from "../../poneglyph/src/storage/constants.js";
 import { isRecord } from "../../poneglyph/src/domain/result.js";
 import { readFailureDiagnostic } from "../../poneglyph/src/storage/read-diagnostics.js";
+import { BoundedReadCache, utf8Bytes } from "../../poneglyph/src/storage/read-cache.js";
+import type { ReadIdentity } from "../../poneglyph/src/storage/read-identity.js";
+import { MAX_QUERY_CACHE_BYTES, MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_ENTRY_BYTES } from "../../poneglyph/src/storage/constants.js";
+
+type CompletedQuery = Readonly<{rowsJson: string; identity: ReadIdentity}>;
+// Completed immutable data only: never retain promises, streams, stubs, leases,
+// or request-owned I/O in module state. Every reuse requires a fresh facade check.
+// Current authorization is graph-wide read access, checked before this executor.
+const completedQueries = new BoundedReadCache<CompletedQuery>(MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_BYTES);
+type WorkerReadCut = Readonly<{snapshotSeq: number; cut: readonly TreeSnapshot[]}> | Readonly<{snapshotSeq: number; unchanged: true}>;
 
 /**
  * Stateless query execution for the Worker RPC surface. The facade remains the
@@ -45,15 +55,34 @@ export async function executeWorkerQuery(
   return tracing.enterSpan("poneglyph.query", async () => {
     const started = Date.now();
     const expectedPrefixes = await queryReadPrefixes(graphId, parsedQuery.value);
-    const {snapshotSeq, cut} = await tracing.enterSpan("poneglyph.query.snapshot", async () => {
+    const cacheKey = JSON.stringify(["worker-query-v1", "graph-read", graphId, parsedQuery.value]);
+    const candidate = completedQueries.get(cacheKey);
+    // Adding a cache hint must not make an otherwise valid envelope too large.
+    const cached = candidate !== undefined && utf8Bytes(JSON.stringify({graphId, query: sourceText, knownSnapshot: candidate.identity})) <= 16_384
+      ? candidate : undefined;
+    const acquired = await tracing.enterSpan("poneglyph.query.snapshot", async () => {
       try {
-        return await acquireWorkerQueryCut(env, graphId, sourceText, expectedPrefixes);
+        return await acquireWorkerQueryCut(env, graphId, sourceText, expectedPrefixes, cached?.identity);
       } catch (error) {
         console.error(readFailureDiagnostic("snapshot", error instanceof PoneglyphNetworkError ? error.cause : error));
         throw error;
       }
     });
     const snapshotMs = Date.now() - started;
+    if ("unchanged" in acquired) {
+      if (cached === undefined) throw new PoneglyphProtocolError("Graph facade validated an unknown cached result");
+      // Parse our own completed serialization to give every caller an isolated
+      // copy. History retention is irrelevant: no storage is read on this path.
+      const rows = JSON.parse(cached.rowsJson) as QueryResult["rows"];
+      tracing.getActiveSpan()?.setAttribute("poneglyph.query.cache.hit", true);
+      return {rows, snapshotSeq: acquired.snapshotSeq, metrics: {
+        scanCalls: 0, shardRequests: 0, distinctShardsTouched: 0, treeReadLeaseAcquisitions: 0,
+        tuplesRead: 0, bytesRead: 0, directoryRequests: 0, cacheHits: 1,
+        timing: {executionMs: Date.now() - started, snapshotMs, evaluationMs: 0, releaseMs: 0},
+      }};
+    }
+    tracing.getActiveSpan()?.setAttribute("poneglyph.query.cache.hit", false);
+    const {snapshotSeq, cut} = acquired;
     const leaseExpiresAtMs = Math.min(...cut.map(lease => lease.expiresAtMs));
     const source = new DistributedFactSource(env, graphId, snapshotSeq, 0, leaseExpiresAtMs, undefined, cut);
     source.metrics.treeReadLeaseAcquisitions = cut.length;
@@ -109,6 +138,12 @@ export async function executeWorkerQuery(
       });
     }
     tracing.getActiveSpan()?.setAttribute("poneglyph.query.rows", rows.length);
+    const entry: CompletedQuery = {
+      rowsJson: JSON.stringify(rows),
+      identity: Object.freeze(cut.map(({prefix, snapshotSeq, directoryEpoch}) => Object.freeze({prefix, snapshotSeq, directoryEpoch}))),
+    };
+    const entryBytes = utf8Bytes(entry.rowsJson) + utf8Bytes(JSON.stringify(entry.identity));
+    if (utf8Bytes(cacheKey) + entryBytes <= MAX_QUERY_CACHE_ENTRY_BYTES) completedQueries.set(cacheKey, entry, entryBytes);
     return result;
   });
 }
@@ -118,13 +153,14 @@ async function acquireWorkerQueryCut(
   graphId: GraphId,
   query: string,
   expectedPrefixes: readonly VirtualPrefix[],
-): Promise<Readonly<{snapshotSeq: number; cut: readonly TreeSnapshot[]}>> {
+  knownSnapshot?: ReadIdentity,
+): Promise<WorkerReadCut> {
   let response: Response;
   try {
     response = await env.GRAPH_FACADES.getByName(coordinatorObjectName(graphId)).fetch("https://facade.internal/_query-read-cut", {
       method: "POST",
       headers: {"content-type": "application/json"},
-      body: JSON.stringify({graphId, query}),
+      body: JSON.stringify({graphId, query, ...(knownSnapshot === undefined ? {} : {knownSnapshot})}),
     });
   } catch (cause) {
     throw new PoneglyphNetworkError("Graph read is unavailable", cause);
@@ -146,6 +182,13 @@ async function acquireWorkerQueryCut(
     throw new PoneglyphRequestError({status: response.status, message, retryable});
   }
   try {
+    if (isRecord(body) && body["unchanged"] === true) {
+      if (knownSnapshot === undefined || Object.keys(body).some(key => key !== "unchanged" && key !== "snapshotSeq") ||
+          body["snapshotSeq"] !== Math.max(...knownSnapshot.map(owner => owner.snapshotSeq))) {
+        throw new PoneglyphProtocolError("Graph facade returned an invalid cache validation");
+      }
+      return {unchanged: true, snapshotSeq: Math.max(...knownSnapshot.map(owner => owner.snapshotSeq))};
+    }
     return parseWorkerQueryCut(body, expectedPrefixes);
   } catch (error) {
     const knownLeases = readKnownLeasesForCleanup(body);

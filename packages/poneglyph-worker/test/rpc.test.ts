@@ -14,11 +14,11 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
   let runtime: Miniflare | undefined;
   let complete = false;
   try {
-    await build({ absWorkingDir: resolve(import.meta.dirname, ".."), entryPoints: { service: "src/index.ts", driver: "test/driver.ts" }, outdir: directory, outExtension: { ".js": ".mjs" }, bundle: true, format: "esm", platform: "browser", target: "es2024", external: ["cloudflare:*", "node:*"], conditions: ["workerd", "worker", "browser"] });
+    await build({ absWorkingDir: resolve(import.meta.dirname, ".."), entryPoints: { service: "test/cache-test-service.ts", driver: "test/driver.ts" }, outdir: directory, outExtension: { ".js": ".mjs" }, bundle: true, format: "esm", platform: "browser", target: "es2024", external: ["cloudflare:*", "node:*"], conditions: ["workerd", "worker", "browser"] });
     const manifest = async (name: string) => ({ mainModule: "index.mjs", modules: { "index.mjs": { type: "esm" as const, contents: await readFile(resolve(directory, `${name}.mjs`), "utf8") } } });
     const binding = (props?: Record<string, unknown>) => ({ type: "worker" as const, worker: "service", ...(props === undefined ? {} : { props }) });
     runtime = new Miniflare({ host: "127.0.0.1", port: 0, resourcePersistencePath: resolve(directory, "state"), telemetry: { enabled: false }, log: new Log(LogLevel.WARN), workers: [
-      { config: { name: "driver", manifest: await manifest("driver"), compatibilityDate: "2026-10-13", compatibilityFlags: ["nodejs_compat"], env: { READER: binding({ clientId: "reader" }), WRITER: binding({ clientId: "writer" }), UNKNOWN: binding({ clientId: "unknown" }), MISSING: binding(), MALFORMED: binding({ clientId: "writer", permissions: ["write"] }), NO_STORAGE: { ...binding({ clientId: "reader" }), worker: "no-storage" } } } },
+      { config: { name: "driver", manifest: await manifest("driver"), compatibilityDate: "2026-10-13", compatibilityFlags: ["nodejs_compat"], env: { TEST_FACADE: {type: "durable-object", worker: "service", exportName: "GraphCoordinatorDO"}, READER: binding({ clientId: "reader" }), WRITER: binding({ clientId: "writer" }), UNKNOWN: binding({ clientId: "unknown" }), MISSING: binding(), MALFORMED: binding({ clientId: "writer", permissions: ["write"] }), NO_STORAGE: { ...binding({ clientId: "reader" }), worker: "no-storage" } } } },
       { config: { name: "service", manifest: await manifest("service"), compatibilityDate: "2026-10-13", compatibilityFlags: ["nodejs_compat"], env: {
         GRAPH_FACADES: { type: "durable-object", worker: "service", exportName: "GraphCoordinatorDO" },
         GRAPH_LEDGERS: { type: "durable-object", worker: "service", exportName: "GraphLedgerDO" },
@@ -77,9 +77,40 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     ]);
     const oneShot = await call("/one-shot");
     assert.equal(oneShot.status, 200, JSON.stringify(oneShot.body));
-    assert.ok(typeof oneShot.body === "object" && oneShot.body !== null && "rows" in oneShot.body && "snapshotSeq" in oneShot.body);
+    assert.ok(typeof oneShot.body === "object" && oneShot.body !== null && "rows" in oneShot.body && "snapshotSeq" in oneShot.body && "metrics" in oneShot.body);
     assert.deepEqual(oneShot.body.rows, pointed.body.rows);
     assert.equal(oneShot.body.snapshotSeq, pointed.body.snapshotSeq);
+    assert.equal((oneShot.body.metrics as {cacheHits: number}).cacheHits, 1, "fresh authoritative validation enables completed Worker result reuse");
+    assert.equal((oneShot.body.metrics as {treeReadLeaseAcquisitions: number}).treeReadLeaseAcquisitions, 0);
+    assert.deepEqual(await call("/one-shot-unknown"), {status: 400, body: {name: "GraphAuthorizationError", message: "Graph access denied"}},
+      "warming another principal's graph cache never supplies authority");
+    assert.equal((await call("/change-pointed")).status, 200);
+    const changed = await call("/one-shot");
+    assert.equal(changed.status, 200, JSON.stringify(changed.body));
+    assert.ok(typeof changed.body === "object" && changed.body !== null && "rows" in changed.body && "metrics" in changed.body);
+    assert.deepEqual(changed.body.rows, [
+      {T: {type: "string", value: "hello"}, S: {type: "string", value: "inactive"}},
+      {T: {type: "string", value: "hello"}, S: {type: "string", value: "inactive"}},
+    ], "a selected-owner write acknowledged before a cache check cannot return stale rows");
+    assert.equal((changed.body.metrics as {cacheHits: number}).cacheHits, 0);
+    const changedWarm = await call("/one-shot");
+    assert.ok(typeof changedWarm.body === "object" && changedWarm.body !== null && "rows" in changedWarm.body && "metrics" in changedWarm.body);
+    assert.deepEqual(changedWarm.body.rows, changed.body.rows);
+    assert.equal((changedWarm.body.metrics as {cacheHits: number}).cacheHits, 1);
+    assert.equal((await call("/cache-unavailable")).status, 200);
+    const unavailableCache = await call("/one-shot");
+    assert.equal(unavailableCache.status, 400);
+    assert.deepEqual(unavailableCache.body, {name: "PoneglyphRequestError", message: "Graph read failed; a complete answer is unavailable", status: 503, retryable: true},
+      "a warm result cannot bypass unavailable freshness authority or expose backend details");
+    assert.equal((await call("/cache-malformed")).status, 200);
+    const malformedCache = await call("/one-shot");
+    assert.equal(malformedCache.status, 400);
+    assert.deepEqual(malformedCache.body, {name: "PoneglyphProtocolError", message: "Graph did not return a valid complete read answer"});
+    assert.equal((await call("/cache-reset")).status, 200);
+    const restoredCache = await call("/one-shot");
+    assert.equal(restoredCache.status, 200);
+    assert.ok(typeof restoredCache.body === "object" && restoredCache.body !== null && "rows" in restoredCache.body);
+    assert.deepEqual(restoredCache.body.rows, changed.body.rows);
     const forgedQuery = await active.dispatchFetch("https://driver.test/one-shot-forged", {method: "POST", body: JSON.stringify({graphId: "example", query: "test:title(E, T)", permissions: ["write"]})});
     assert.equal(forgedQuery.status, 400);
     const owners = new Set(await Promise.all(["test:e", "test:e2"].map(async entity => treeForKey(await virtualKeyForEntity("example", entity)))));

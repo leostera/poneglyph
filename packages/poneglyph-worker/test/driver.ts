@@ -1,6 +1,7 @@
 import type PoneglyphService from "../src/index.js";
+import { coordinatorObjectName } from "../../poneglyph/src/storage/keys.js";
 
-type Env = { READER: Service<PoneglyphService>; WRITER: Service<PoneglyphService>; UNKNOWN: Service<PoneglyphService>; MISSING: Service<PoneglyphService>; MALFORMED: Service<PoneglyphService>; NO_STORAGE: Service<PoneglyphService> };
+type Env = { TEST_FACADE: DurableObjectNamespace; READER: Service<PoneglyphService>; WRITER: Service<PoneglyphService>; UNKNOWN: Service<PoneglyphService>; MISSING: Service<PoneglyphService>; MALFORMED: Service<PoneglyphService>; NO_STORAGE: Service<PoneglyphService> };
 const facts = [
   { source: "test:a", entity: "test:e", field: "test:title", value: { type: "text" as const, value: "hello" } },
   { source: "test:b", entity: "test:e", field: "test:title", value: { type: "text" as const, value: "hello" } },
@@ -11,6 +12,16 @@ export default {
   async fetch(request: Request, env: Env) {
     const path = new URL(request.url).pathname;
     try {
+      if (["/cache-unavailable", "/cache-malformed", "/cache-reset"].includes(path)) {
+        return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch(`https://test.internal/_test-${path.slice(1)}`);
+      }
+      if (path === "/change-pointed") {
+        using graph = await env.WRITER.getGraph({graphId: "example"});
+        return Response.json(await graph.transact([
+          {source: "test:a", entity: "test:e2", field: "test:status", value: {type: "text", value: "active"}, retraction: true},
+          {source: "test:a", entity: "test:e2", field: "test:status", value: {type: "text", value: "inactive"}},
+        ], {clientRequestToken: "test:change-pointed"}));
+      }
       if (path === "/one-shot") return Response.json(await env.READER.query({graphId: "example", query: 'test:title("test:e", T), test:status("test:e2", S)'}));
       if (path === "/one-shot-denied") return Response.json(await env.READER.query({graphId: "other", query: "test:title(E, T)"}));
       if (path === "/one-shot-unknown") return Response.json(await env.UNKNOWN.query({graphId: "example", query: "test:title(E, T)"}));
