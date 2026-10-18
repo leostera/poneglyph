@@ -1,0 +1,138 @@
+{
+  "service": "poneglyph-mavplus-validation-worker",
+  "timeframe": {
+    "from": "2026-10-18T02:22:00Z",
+    "to": "2026-10-18T02:26:00Z"
+  },
+  "errorLevelEventCount": 0,
+  "calculations": [
+    {
+      "alias": "events",
+      "aggregates": [
+        {
+          "group": "default.jsrpc ⬤ ok",
+          "value": 7522,
+          "count": 7522,
+          "interval": 1.0346629986244842
+        },
+        {
+          "group": "POST /_query-read-cut ⬤ ok",
+          "value": 2801,
+          "count": 2801,
+          "interval": 1.0097332372025956
+        },
+        {
+          "group": "POST /_route ⬤ ok",
+          "value": 14,
+          "count": 14,
+          "interval": 1
+        },
+        {
+          "group": "POST /_tree-release-read ⬤ ok",
+          "value": 23,
+          "count": 23,
+          "interval": 1
+        },
+        {
+          "group": "POST /_tree-read ⬤ ok",
+          "value": 19,
+          "count": 19,
+          "interval": 1
+        },
+        {
+          "group": "POST /_scan ⬤ ok",
+          "value": 39,
+          "count": 39,
+          "interval": 1
+        }
+      ]
+    },
+    {
+      "alias": "p99WallMs",
+      "aggregates": [
+        {
+          "group": "default.jsrpc ⬤ ok",
+          "value": 101,
+          "count": 7522,
+          "interval": 1.0346629986244842
+        },
+        {
+          "group": "POST /_query-read-cut ⬤ ok",
+          "value": 8,
+          "count": 2801,
+          "interval": 1.0097332372025956
+        },
+        {
+          "group": "POST /_route ⬤ ok",
+          "value": 25,
+          "count": 14,
+          "interval": 1
+        },
+        {
+          "group": "POST /_tree-release-read ⬤ ok",
+          "value": 562,
+          "count": 23,
+          "interval": 1
+        },
+        {
+          "group": "POST /_tree-read ⬤ ok",
+          "value": 481,
+          "count": 19,
+          "interval": 1
+        },
+        {
+          "group": "POST /_scan ⬤ ok",
+          "value": 5,
+          "count": 39,
+          "interval": 1
+        }
+      ]
+    },
+    {
+      "alias": "maxWallMs",
+      "aggregates": [
+        {
+          "group": "default.jsrpc ⬤ ok",
+          "value": 1178,
+          "count": 7522,
+          "interval": 1.0346629986244842
+        },
+        {
+          "group": "POST /_query-read-cut ⬤ ok",
+          "value": 510,
+          "count": 2801,
+          "interval": 1.0097332372025956
+        },
+        {
+          "group": "POST /_route ⬤ ok",
+          "value": 25,
+          "count": 14,
+          "interval": 1
+        },
+        {
+          "group": "POST /_tree-release-read ⬤ ok",
+          "value": 562,
+          "count": 23,
+          "interval": 1
+        },
+        {
+          "group": "POST /_tree-read ⬤ ok",
+          "value": 481,
+          "count": 19,
+          "interval": 1
+        },
+        {
+          "group": "POST /_scan ⬤ ok",
+          "value": 5,
+          "count": 39,
+          "interval": 1
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Sampled/weighted aggregates are not exact call counts or per-request reconciliation.",
+    "HTTP 200 or outcome ok does not prove complete response delivery.",
+    "Time window is wider than the measured scaling phases."
+  ]
+}

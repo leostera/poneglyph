@@ -1,0 +1,214 @@
+{
+  "runId": "162a6282-6ea6-4f75-9cb8-2bf5b0c5792f",
+  "source": "sites/onepiece.poneglyph.dev/.artifacts/import/mavplus-validation/independent-scaling-result-162a6282-6ea6-4f75-9cb8-2bf5b0c5792f.json",
+  "sourceRevision": "89ccda3",
+  "deployedVersion": "ab16d5ef-6d24-42c6-a8ea-4e75e7ac0975",
+  "planSha256": "0f78bb623785dac8e5f23c2b133d02c94d95a0f2fc7009e8a8b791597309f9ed",
+  "rawReportSha256": "a363f30c5570dc8edcc81b1e56e209df53d9ad51e3964c19a4d7284d4cb4997d",
+  "planned": 10000,
+  "issued": 7512,
+  "successful": 7475,
+  "failed": 37,
+  "notIssued": 2488,
+  "observedMaxInFlight": 128,
+  "failureClasses": {
+    "TimeoutError": 37
+  },
+  "phases": [
+    {
+      "path": "/point",
+      "requestedConcurrency": 8,
+      "issued": 1000,
+      "successful": 1000,
+      "failed": 0,
+      "phaseElapsedMs": 28745.62325,
+      "successfulWorkerExecutionMs": {
+        "count": 1000,
+        "p50": 8,
+        "p95": 11,
+        "p99": 14,
+        "max": 30
+      },
+      "successfulCallerLatencyMs": {
+        "count": 1000,
+        "p50": 196.25829199999862,
+        "p95": 283.80908400000044,
+        "p99": 294.31541599999764,
+        "max": 302.5796250000021
+      },
+      "allOutcomeCallerLatencyMs": {
+        "count": 1000,
+        "p50": 196.25829199999862,
+        "p95": 283.80908400000044,
+        "p99": 294.31541599999764,
+        "max": 302.5796250000021
+      },
+      "cacheHits": 1000,
+      "completeCallsPerSecond": 34.787904624750134
+    },
+    {
+      "path": "/combined",
+      "requestedConcurrency": 8,
+      "issued": 1000,
+      "successful": 1000,
+      "failed": 0,
+      "phaseElapsedMs": 29062.988250000002,
+      "successfulWorkerExecutionMs": {
+        "count": 1000,
+        "p50": 8,
+        "p95": 12,
+        "p99": 16,
+        "max": 40
+      },
+      "successfulCallerLatencyMs": {
+        "count": 1000,
+        "p50": 197.70283299999574,
+        "p95": 284.14304199999606,
+        "p99": 291.53120800000033,
+        "max": 428.0608330000032
+      },
+      "allOutcomeCallerLatencyMs": {
+        "count": 1000,
+        "p50": 197.70283299999574,
+        "p95": 284.14304199999606,
+        "p99": 291.53120800000033,
+        "max": 428.0608330000032
+      },
+      "cacheHits": 1000,
+      "completeCallsPerSecond": 34.40802409573282
+    },
+    {
+      "path": "/combined",
+      "requestedConcurrency": 16,
+      "issued": 1000,
+      "successful": 1000,
+      "failed": 0,
+      "phaseElapsedMs": 17157.433166999996,
+      "successfulWorkerExecutionMs": {
+        "count": 1000,
+        "p50": 11,
+        "p95": 17,
+        "p99": 23,
+        "max": 302
+      },
+      "successfulCallerLatencyMs": {
+        "count": 1000,
+        "p50": 242.70937499999127,
+        "p95": 315.73779100000684,
+        "p99": 332.893333,
+        "max": 543.7862499999901
+      },
+      "allOutcomeCallerLatencyMs": {
+        "count": 1000,
+        "p50": 242.70937499999127,
+        "p95": 315.73779100000684,
+        "p99": 332.893333,
+        "max": 543.7862499999901
+      },
+      "cacheHits": 992,
+      "completeCallsPerSecond": 58.283776498885906
+    },
+    {
+      "path": "/combined",
+      "requestedConcurrency": 32,
+      "issued": 2000,
+      "successful": 2000,
+      "failed": 0,
+      "phaseElapsedMs": 21515.946666000003,
+      "successfulWorkerExecutionMs": {
+        "count": 2000,
+        "p50": 14,
+        "p95": 28,
+        "p99": 32,
+        "max": 1169
+      },
+      "successfulCallerLatencyMs": {
+        "count": 2000,
+        "p50": 305.77908300000126,
+        "p95": 366.2155000000057,
+        "p99": 376.85854200000176,
+        "max": 1513.1617079999996
+      },
+      "allOutcomeCallerLatencyMs": {
+        "count": 2000,
+        "p50": 305.77908300000126,
+        "p95": 366.2155000000057,
+        "p99": 376.85854200000176,
+        "max": 1513.1617079999996
+      },
+      "cacheHits": 1997,
+      "completeCallsPerSecond": 92.95431109988975
+    },
+    {
+      "path": "/combined",
+      "requestedConcurrency": 64,
+      "issued": 2000,
+      "successful": 2000,
+      "failed": 0,
+      "phaseElapsedMs": 14830.951916999999,
+      "successfulWorkerExecutionMs": {
+        "count": 2000,
+        "p50": 32,
+        "p95": 55,
+        "p99": 105,
+        "max": 108
+      },
+      "successfulCallerLatencyMs": {
+        "count": 2000,
+        "p50": 450.61308400001144,
+        "p95": 500.812042000005,
+        "p99": 627.5249580000091,
+        "max": 632.390167000005
+      },
+      "allOutcomeCallerLatencyMs": {
+        "count": 2000,
+        "p50": 450.61308400001144,
+        "p95": 500.812042000005,
+        "p99": 627.5249580000091,
+        "max": 632.390167000005
+      },
+      "cacheHits": 2000,
+      "completeCallsPerSecond": 134.85311065620118
+    },
+    {
+      "path": "/combined",
+      "requestedConcurrency": 128,
+      "issued": 512,
+      "successful": 475,
+      "failed": 37,
+      "phaseElapsedMs": 32419.486416,
+      "successfulWorkerExecutionMs": {
+        "count": 475,
+        "p50": 64,
+        "p95": 101,
+        "p99": 112,
+        "max": 135
+      },
+      "successfulCallerLatencyMs": {
+        "count": 475,
+        "p50": 753.7172920000012,
+        "p95": 964.3803750000079,
+        "p99": 965.3943330000038,
+        "max": 965.8303330000053
+      },
+      "allOutcomeCallerLatencyMs": {
+        "count": 512,
+        "p50": 756.8374580000091,
+        "p95": 30002.105792000017,
+        "p99": 30003.03349999999,
+        "max": 30003.268542000005
+      },
+      "cacheHits": 475,
+      "completeCallsPerSecond": 14.651681828172736
+    }
+  ],
+  "limitations": [
+    "Closed-loop synchronized request waves, not an open-loop or infinite-capacity test.",
+    "Caller latency includes local remote-binding proxy and network overhead.",
+    "Worker execution measurements exist only for successful caller responses. Failed caller requests have unknown backend result delivery.",
+    "Failure aborts settle caller promises; they do not prove failed backend operations were never executed.",
+    "No retries, no writes; all successful responses passed the fixed expected answer and snapshot validation.",
+    "The original raw report p50/p95/p99/max values excluded failed calls. Use allOutcomeCallerLatencyMs here for outcome-inclusive latency.",
+    "Cloudflare aggregate telemetry is sampled/weighted and cannot reconcile individual caller timeouts."
+  ]
+}

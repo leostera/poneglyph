@@ -1,10 +1,10 @@
-import { runInDurableObject } from "cloudflare:test";
+import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { treeForKey, type TreeSnapshot } from "../src/storage/forest.js";
 import { releaseParallelReadCut } from "../src/storage/read-cut.js";
 import { parseGraphId } from "../src/domain/graph-id.js";
-import { coordinatorObjectName, virtualKeyForEntity } from "../src/storage/keys.js";
+import { bitAt, coordinatorObjectName, virtualKeyForEntity } from "../src/storage/keys.js";
 
 type ControlFactValue =
   | Readonly<{type: "reference"; value: string}>
@@ -115,6 +115,18 @@ function disableAndRevokeFacts(fixture: ControlPlaneFixture): ControlFact[] {
   ];
 }
 
+async function splitCompanion(fixture: ControlPlaneFixture): Promise<ControlFact> {
+  const featureKey = await virtualKeyForEntity(fixture.graph, fixture.featureEntity);
+  for (let attempt = 0; attempt < 1_024; attempt++) {
+    const entity = `${fixture.tenant}:split-companion:${attempt}`;
+    const key = await virtualKeyForEntity(fixture.graph, entity);
+    if (treeForKey(key) === fixture.featureRoot && bitAt(key, fixture.featureRoot.length) !== bitAt(featureKey, fixture.featureRoot.length)) {
+      return settingFact(entity, FEATURE_ENABLED, boolean(false));
+    }
+  }
+  throw new Error("could not find a split companion under the feature owner");
+}
+
 async function commit(graph: string, token: string, facts: readonly ControlFact[]): Promise<Readonly<{txId: string}>> {
   const response = await exports.default.fetch(new Request(`https://database.test/v1/graphs/${graph}/transactions`, {
     method: "POST",
@@ -153,7 +165,7 @@ const oneSetting = (entityKind: "config" | "credential", field: "enabled" | "sta
 describe("integrated control-plane settings", () => {
   it("validates cache identity at one closed vector and rejects malformed coverage", async () => {
     const fixture = await makeFixture();
-    await commit(fixture.graph, `control:cache-seed:${crypto.randomUUID()}`, initialStateFacts(fixture));
+    await commit(fixture.graph, `control:cache-seed:${crypto.randomUUID()}`, [...initialStateFacts(fixture), await splitCompanion(fixture)]);
     const facade = env.GRAPH_FACADES.getByName(coordinatorObjectName(fixture.graph));
     const graph = parseGraphId(fixture.graph);
     if (!graph.ok) throw new Error("invalid test graph");
@@ -186,6 +198,31 @@ describe("integrated control-plane settings", () => {
     expect(next.snapshotSeq).toBe(2);
     expect(next.cut.every(owner => owner.snapshotSeq === 2)).toBe(true);
     await releaseParallelReadCut(env, graph.value, next.cut);
+    const nextIdentity = next.cut.map(({prefix, snapshotSeq, directoryEpoch}) => ({prefix, snapshotSeq, directoryEpoch}));
+    const warmNext = await acquire(nextIdentity);
+    expect(await warmNext.json()).toEqual({unchanged: true, snapshotSeq: 2});
+
+    const split = await facade.fetch("https://facade.internal/_split", {
+      method: "POST", body: JSON.stringify({graphId: fixture.graph, prefix: fixture.featureRoot}),
+    });
+    expect(split.status, await split.text()).toBe(200);
+    const topologyChanged = await acquire(nextIdentity);
+    expect(topologyChanged.status).toBe(200);
+    const moved = await topologyChanged.json<{snapshotSeq: number; cut: TreeSnapshot[]}>();
+    expect(moved.cut).toHaveLength(2);
+    expect(moved.cut.find(owner => owner.prefix === fixture.featureRoot)?.directoryEpoch).toBe(1);
+    expect(moved.snapshotSeq).toBe(2);
+    await releaseParallelReadCut(env, graph.value, moved.cut);
+    const movedIdentity = moved.cut.map(({prefix, snapshotSeq, directoryEpoch}) => ({prefix, snapshotSeq, directoryEpoch}));
+
+    await evictDurableObject(facade);
+    const afterRestart = await acquire(movedIdentity);
+    expect(await afterRestart.json()).toEqual({unchanged: true, snapshotSeq: 2});
+    const wrongGraph = await facade.fetch("https://facade.internal/_query-read-cut", {
+      method: "POST", body: JSON.stringify({graphId: `${fixture.graph}-wrong`, query}),
+    });
+    expect(wrongGraph.status).toBe(409);
+    await wrongGraph.body?.cancel();
   });
 
   it("enables a feature, rotates a fake token, then disables and revokes after acknowledgement", async () => {

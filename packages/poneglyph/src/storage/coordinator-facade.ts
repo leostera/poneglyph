@@ -26,12 +26,15 @@ import { TREE_PREFIXES, TREE_DEPTH, treeCoordinatorName, treeForKey, parseTreeSn
 type SafeVectorRow = Readonly<{prefix: string; directory_epoch: number; visible_seq: number}>;
 type SafeFrontierRow = Readonly<{frontier: number}>;
 type CachedQueryResult = Readonly<{rowsJson: string; snapshotSeq: number; snapshotVectorJson: string}>;
+type SafeSnapshot = Readonly<{frontier: number; vector: readonly SafeVectorRow[]}>;
 
 type FacadeEnv = Env;
 
 /** Graph-facing request surface. Durable state lives in ledgers, trees, and shards. */
 export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   private readonly queryCache = new BoundedReadCache<CachedQueryResult>(MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_BYTES);
+  private readonly queryOwnerCache = new BoundedReadCache<readonly VirtualPrefix[]>(MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_BYTES);
+  private safeSnapshot: Readonly<{graphId: GraphId; snapshot: SafeSnapshot}> | undefined;
 
   constructor(ctx: DurableObjectState, env: FacadeEnv) {
     super(ctx, env);
@@ -86,9 +89,14 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     }
     const graph = parseGraphId(raw.value["graphId"]);
     if (!graph.ok || typeof raw.value["query"] !== "string") return jsonResponse({error: "invalid query read-cut identity"}, 400);
-    const query = parseDatalogQuery(raw.value["query"]);
-    if (!query.ok) return jsonResponse({error: query.error.message, offset: query.error.offset}, 400);
-    const prefixes = await queryReadPrefixes(graph.value, query.value);
+    const ownerCacheKey = JSON.stringify([graph.value, raw.value["query"]]);
+    let prefixes = this.queryOwnerCache.get(ownerCacheKey);
+    if (prefixes === undefined) {
+      const query = parseDatalogQuery(raw.value["query"]);
+      if (!query.ok) return jsonResponse({error: query.error.message, offset: query.error.offset}, 400);
+      prefixes = Object.freeze(await queryReadPrefixes(graph.value, query.value));
+      this.queryOwnerCache.set(ownerCacheKey, prefixes, utf8Bytes(JSON.stringify(prefixes)));
+    }
     let knownSnapshot: ReadIdentity | undefined;
     if (raw.value["knownSnapshot"] !== undefined) {
       try {
@@ -186,6 +194,10 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   }
 
   private advanceSafeFrontier(): void {
+    // Both publication and topology mutation run synchronously in one SQLite
+    // transaction. Invalidate before advancing, including on rollback/error.
+    // No request can observe an old mirror after a successful durable update.
+    this.safeSnapshot = undefined;
     const current = this.readSafeFrontier();
     if (!Number.isSafeInteger(current) || current >= Number.MAX_SAFE_INTEGER)
       throw new CoordinatorError(429, "cluster safe frontier space is exhausted");
@@ -196,8 +208,12 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     return this.ctx.storage.sql.exec<SafeVectorRow>("SELECT prefix, directory_epoch, visible_seq FROM graph_safe_vector ORDER BY prefix").toArray();
   }
 
-  private cachedSafeVector(graphId: GraphId): Readonly<{frontier: number; vector: readonly SafeVectorRow[]}> {
-    return this.ctx.storage.transactionSync(() => {
+  private cachedSafeVector(graphId: GraphId): SafeSnapshot {
+    if (this.safeSnapshot !== undefined) {
+      if (this.safeSnapshot.graphId !== graphId) throw new CoordinatorError(409, "facade graph identity mismatch");
+      return this.safeSnapshot.snapshot;
+    }
+    const snapshot = this.ctx.storage.transactionSync(() => {
       this.assertFacadeIdentity(graphId);
       const vector = this.readSafeVector();
       if (vector.length !== TREE_PREFIXES.length || vector.some((owner, index) =>
@@ -205,8 +221,12 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
         throw new CoordinatorError(503, "cached safe vector is incomplete or corrupt");
       const frontier = this.readSafeFrontier();
       if (!isCounter(frontier)) throw new CoordinatorError(503, "cached safe frontier is corrupt");
-      return {frontier, vector};
+      return Object.freeze({frontier, vector: Object.freeze(vector.map(owner => Object.freeze(owner)))});
     });
+    // This is a mirror of this actor's durable vector, not an independently
+    // assembled owner-head cache. Restarts rebuild it from SQLite.
+    this.safeSnapshot = Object.freeze({graphId, snapshot});
+    return snapshot;
   }
 
   private async observeGraphSchema(request: Request, graphId: GraphId): Promise<Response> {
