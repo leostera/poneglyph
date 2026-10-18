@@ -1,0 +1,21 @@
+{
+  "tool": "TLAPS/tlapm",
+  "version": "901ae51",
+  "releaseTag": "1.6.0-pre",
+  "rollingRelease": true,
+  "platform": "arm64-darwin",
+  "asset": {
+    "id": 647843946,
+    "name": "tlapm-1.6.0-pre-arm64-darwin.tar.gz",
+    "updated_at": "2026-10-16T16:03:41Z",
+    "browser_download_url": "https://github.com/tlaplus/tlapm/releases/download/1.6.0-pre/tlapm-1.6.0-pre-arm64-darwin.tar.gz",
+    "digest": "sha256:d84177fd0984e9e694c9daba2f9872a59d9c2b57741923c86ba569335f23b039"
+  },
+  "verifiedArchiveSha256": "d84177fd0984e9e694c9daba2f9872a59d9c2b57741923c86ba569335f23b039",
+  "smtBackend": "bundled Z3 4.8.9",
+  "bundledZ3Sha256": "0207d927019e8d90c28acd18c4596796baef36a87583e6e853c81487a9cd0c27",
+  "isabelleCertificateRechecked": false,
+  "sourceBaseRevision": "52c449d934748725035483c9d4bc6746ad33af01",
+  "proofSource": "new working-tree source, captured by content hashes",
+  "tla2toolsSha256": "15d103b7e5617780bcc904c0af12f1ad242e2b345c0301136c5be4588f17edac"
+}

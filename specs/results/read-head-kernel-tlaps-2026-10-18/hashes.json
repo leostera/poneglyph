@@ -1,0 +1,84 @@
+{
+  "ReadHeadKernelProofs.tla.gz": {
+    "sha256": "14644de0d1c79f91a908212963ef74539255eeb3a40cdcdac0f93215875215f1",
+    "uncompressedSha256": "9de09121dfebd5cca3694b072101c2ce5f57916a75e01d5e69c37d288abe7a59"
+  },
+  "ReadHeadPublication.availability.cfg.gz": {
+    "sha256": "5899e42b3809e4acb5461c6fbc3d87cdbc51c8032fafa3308ce7a11d274e7ee8",
+    "uncompressedSha256": "e701fb0960c7e8d33757ebe7a20c4e099b84183f855acb92691d0efe04dd50c3"
+  },
+  "ReadHeadPublication.no-fence.cfg.gz": {
+    "sha256": "9e93664c43fe163d0f0b17721e59f569cbe0318984ccff39448321c9da48f94d",
+    "uncompressedSha256": "505f5c29c1976d7f8c08d5b7e8743a2371294a660aab310218f31bd322ae3e1d"
+  },
+  "ReadHeadPublication.no-freeze.cfg.gz": {
+    "sha256": "0c6819e7bffcadbfc6ce438617821a393ad17d6b8f73da97e6bf3991867d78fe",
+    "uncompressedSha256": "9c374efac672ac396dd0a226f53f4b60e14c5b213cfa582ae47b3e0146aa7583"
+  },
+  "ReadHeadPublication.safe.cfg.gz": {
+    "sha256": "6c88d627f9b4b7b242d3b3f61100f5e972d78a147a44249f19de83c25a0a6f0e",
+    "uncompressedSha256": "2f2ec716fbebb92f07a3add7e24218b578f43d8dd4865b71551372b98556e489"
+  },
+  "ReadHeadPublication.three-heads.cfg.gz": {
+    "sha256": "559fc5083b1afe57fa1a343e9ded2e18e2c401de6ceb4826427749a01efab218",
+    "uncompressedSha256": "d2751832467a3dbbe5e84dd927dffe4003557669e94b0bec994785e9af1e3cd9"
+  },
+  "ReadHeadPublication.tla.gz": {
+    "sha256": "7a78506c92b0bbdd0e1cebb39cebb93a86e61b38b9bbaef641bb9ecd1cd44ddb",
+    "uncompressedSha256": "f846ae211b14fb8f7aa390506c602319f152f21f82ab312ba44dc310ce36677d"
+  },
+  "check-read-head-publication.sh.gz": {
+    "sha256": "ac70ee5ca51a4f1758ab9b020fc58cf3ec9c676605582026c1f473bcebe8d05f",
+    "uncompressedSha256": "98f108d60a16c5e696e8afbd386d4e285c7ae5a89cfbd0697011fa8a710b551b"
+  },
+  "check-tlaps.sh.gz": {
+    "sha256": "7eef7e0d19660bf430396a053bc5687ad87486c8dcb64e857ab13a56970238b1",
+    "uncompressedSha256": "da414ac9e2c02c21a986f141bbb00e681935bad5150c433f2d1114b782d50092"
+  },
+  "no-activation-fence.log.gz": {
+    "sha256": "47f8ae4b73b5a9a659187da732bf984ea5f8ed213b968ec7ff6371f32f2f2511",
+    "uncompressedSha256": "453d7be6b5a7b000a2399ade114d263e8acced731830e8fdbd73fc8aa9dd7dcf"
+  },
+  "positive.log.gz": {
+    "sha256": "afbc3dcf212019fee7b3ee72312b1a0b71750b45b03f64726803255f120eaf3b",
+    "uncompressedSha256": "134a80c9bfb544ff612c8ad2ad369fd1a5cce5b02c74ebf88198d824b60c5a0a"
+  },
+  "revive-retired-head.log.gz": {
+    "sha256": "d81b7f2f57bd43cd1f3537d52c254617ad1f3a09cc4fe9df53ee05c3ea8fa016",
+    "uncompressedSha256": "3dc09bfbd7290be6a0d7042004cff6dfb53e0abbef5d92a5df13619c289dbf5a"
+  },
+  "summary.json": {
+    "sha256": "aaa6fcd886fd5bccb7c798449086756c0f63282a10df37de1eb90eb36bf4efd8"
+  },
+  "tlc-availability.log.gz": {
+    "sha256": "fd0ff5caabbe1b09ec6aad05f447051f38c58e0b1d92f0a4a3918326e2b43291",
+    "uncompressedSha256": "31e16e7836170923829042063ca5d34f78b1a5df276c06419264fb8cd652d4a7"
+  },
+  "tlc-no-fence.log.gz": {
+    "sha256": "4663e17f03697ec3a27f51b280df0b0adbff2d08aa267ae0a70e0ecd17b53987",
+    "uncompressedSha256": "0befbe73bf1a5bb6c7b4b016368a0ab8b44bf144e44f6257a129c5b250571100"
+  },
+  "tlc-no-freeze.log.gz": {
+    "sha256": "6b7607350b255088bb2dffa98553d5d8f881d2e0e238bed7d7afbfb678a00ed4",
+    "uncompressedSha256": "9b9f6e10c0c946ea5dfc589431cf2c9660b8d2833a8253d1b8fe55f6b4b39c02"
+  },
+  "tlc-regression.log.gz": {
+    "sha256": "786776b213ee62036f4a9e66b52518f65989a394f93d04061875d9598936d136",
+    "uncompressedSha256": "a15609b039af8eb06f082653f50059f34e69a421e7c3ce2b421bb506fed68c82"
+  },
+  "tlc-safe.log.gz": {
+    "sha256": "af64d443f5d74d0f8b81745f95057924bc46f021018c059cc733d4c8d8bdea85",
+    "uncompressedSha256": "79711915a73adb0d7aa66eed6505384c37ae8ae86d3f75cba9656add5e1738d1"
+  },
+  "tlc-three-heads.log.gz": {
+    "sha256": "e7027da0f06f910072e7fe1daf07591addeacd74efcb6d20d21fc8cc3ec512d9",
+    "uncompressedSha256": "717a593ef25364e8eb564e638af611b5cf9e49448638c7d71819ff0ef17d086a"
+  },
+  "toolchain.json": {
+    "sha256": "34d2128fded507d0e23d1c353090f6ebcae7f20242ed97183313eb8ad352e290"
+  },
+  "unconditional-frozen-validation.log.gz": {
+    "sha256": "5bf4548bbea589fe00d6000515c172b54ef989f9c53b4ef0875a8abd952d22e8",
+    "uncompressedSha256": "84da976fe0c0d192d45b4b7574ec607fdee340950e473881441d6fd0f56b4615"
+  }
+}

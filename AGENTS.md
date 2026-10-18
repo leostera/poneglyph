@@ -25,6 +25,7 @@ Architectural decisions should align with [RFD0003](docs/rfds/RFD0003-cloudflare
 - Harden that implementation against the independent conformance oracle before new benchmark loads. Use focused regressions during development; full tier runs are explicit certification checkpoints, not a default command after every edit.
 - Commit often, commit eagerly, and use conventional commit messages.
 - Prefer small, explicit architectural steps over broad speculative refactors.
+- For new transaction/publication algorithms, pair small TLC models and deliberate counterexamples with TLAPS (`tlapm`) deductive proofs. State assumptions and exact proof coverage; local lemmas or bounded checks are not whole-protocol safety, implementation refinement, liveness, or performance proofs. See `specs/README.md` and RFD0004.
 - Preserve append-only semantics in new designs. Do not introduce mutable source-of-truth entity tables as the primary model.
 - Treat facts as durable truth, entities as derived views, and projections as replayable workers.
 - Keep Cloudflare resource changes scoped to explicitly authorized account/resources. The validation setup uses `*.poneglyph.leostera.dev`; the owner-approved MCP hostname is `onepiece.poneglyph.dev`. Run local gates before deploying; never delete durable resources without separate approval.
