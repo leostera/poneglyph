@@ -35,7 +35,7 @@ The current cases still do **not** complete comprehensive small coverage; broade
 
 ## Retained evidence
 
-New reports produced by local runs are ignored by the root `.gitignore`; they remain local artifacts unless explicitly selected for retention. The result files already tracked in this repository are historical records and are not rewritten by new runs.
+All local run reports are ignored by the root `.gitignore` and are not part of the current tracked tree. Older archived reports remain available in Git history, not in a fresh checkout. Find their containing revision with `git log --all -- packages/conformance/results/<run>/summary.json`, then retrieve with `git show <revision>:packages/conformance/results/<run>/summary.json`. The historical path links below name those past records.
 
 Reports predating the workspace move keep their original digests, identities and recorded `tests/conformance/` paths unchanged. The evidence now lives here; relocation is not a new test run or product replay. Node remains the native host runtime; Bun installs dependencies and orchestrates scripts. New report source identities include the root `bun.lock` and workspace manifest.
 

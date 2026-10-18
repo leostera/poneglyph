@@ -1,6 +1,0 @@
-{
-  "rawSha256": "e91d3842dc5494b779110d16c66e369c29f355526820b932cc8dbe38cf02bd3f",
-  "gzipSha256": "91b8dd51e5fc3834016a63fe718533604deaddac3d1aac6996890741bec900e8",
-  "command": "caffeinate -i -s pnpm --dir tests/conformance test:small",
-  "outerDeadlineSeconds": 3600
-}

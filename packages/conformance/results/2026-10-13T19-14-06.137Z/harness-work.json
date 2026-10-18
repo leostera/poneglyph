@@ -1,9 +1,0 @@
-{
-  "kind": "conformance-harness-work-counts-not-benchmark",
-  "phases": 1496,
-  "writes": 2021,
-  "queries": 84689,
-  "entities": 14894,
-  "authority": 102840,
-  "actualKilledGroups": 33
-}

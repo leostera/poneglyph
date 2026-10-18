@@ -1,6 +1,0 @@
-{
-  "kind": "lossless-native-runtime-log",
-  "log": "run.log.gz",
-  "rawSha256": "4a4ea2ddfab2c41f4694d7eb34b4ba97ffc48be8505756182d2690fdd3803bdf",
-  "gzipSha256": "18461ab806fd472dccc438aeaf717118b8f65f438d2812243bcde08e79071cd6"
-}

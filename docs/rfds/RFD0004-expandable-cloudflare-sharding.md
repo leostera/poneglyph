@@ -606,6 +606,8 @@ bun run dev                             # optional local Vite/workerd server
 
 Cloudflare's cf CLI may warn that auto-configuration is limited when it sees no lockfile inside the package directory; the explicit config still builds successfully. Keep the one root lockfile—do not add a nested lockfile to suppress the warning. Use `bun run --cwd packages/poneglyph <script>` for package-specific commands.
 
+Generated conformance results are ignored and not tracked in the current tree. Historical result paths cited in this RFD refer to reports in earlier revisions; retrieve them with `git log --all -- <path>` and `git show <revision>:<path>`.
+
 Tests use fresh graph IDs and no account resources. `bun run --cwd examples/onepiece-load run` is the separate legacy local corpus/query gate described below, not the concurrent comparison. The formal gate uses `TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check.sh` from the repository root. Normal/cleanup dry runs, model checks, and workload tests are historical validations unless explicitly rerun for the revision under review; do not report them as freshly executed merely because documentation moved.
 
 The corrected revision's latest recorded `pnpm check` passed 39 tests, one optional benchmark skipped, and its write-path harness passed six tests. RFD0005 records four 100k cases passing admitted-write fact/index/transaction and restart audits but failing full delivery. The earlier pre-client operating snapshot had 28 passing tests and one skipped. These scoped checks are not universal implementation proofs; the corrected revision was not deployed to Cloudflare.
