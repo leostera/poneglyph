@@ -204,7 +204,7 @@ export class DistributedTransaction {
       }
     } else {
       if (!intent.plan_json) throw new Error("admitted operation lost its exact plan");
-      plan = await parseWritePlan(intent.plan_json, intent.graph_id, batch, intent.phase !== "reserving");
+      plan = await parseWritePlan(intent.plan_json, intent.graph_id, batch, intent.phase === "reserving" ? "optional" : "required");
     }
     if (intent.phase === "reserving") {
       // Recover uncertain ownership only; no new reservation/admission on alarm.

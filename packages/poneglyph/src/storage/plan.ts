@@ -35,47 +35,104 @@ export async function planBatch(env: StorageEnv, graphId: string, batch: FactBat
 
 // Parse compact durable metadata, then verify its complete partition against
 // the canonical journal before any recovery RPC. It is never a second batch.
-export async function parseWritePlan(json: string, graphId: string, batch: FactBatch, admitted: boolean): Promise<WritePlan> {
+export async function parseWritePlan(
+  json: string,
+  graphId: string,
+  batch: FactBatch,
+  reservation: "optional" | "required",
+): Promise<WritePlan> {
   const raw: unknown = JSON.parse(json);
-  if (!isRecord(raw) || !Array.isArray(raw["owners"]) || !Array.isArray(raw["participants"])) throw new Error("invalid durable plan");
-  const owners: OwnerPlan[] = [], participants: ParticipantPlan[] = [];
-  for (const value of raw["owners"]) {
-    if (!isRecord(value)) throw new Error("invalid durable owner");
-    const prefix = parseVirtualPrefix(value["prefix"]);
-    if (!prefix.ok || prefix.value.length !== TREE_DEPTH || !Array.isArray(value["entities"]) || !value["entities"].length) throw new Error("invalid owner identity");
-    const entities = value["entities"].map(entity => {const parsed = parseUri(entity); if (!parsed.ok) throw new Error("invalid durable entity"); return parsed.value;});
-    if (JSON.stringify([...new Set(entities)].sort()) !== JSON.stringify(entities)) throw new Error("unordered owner entities");
-    owners.push({prefix: prefix.value, entities, directoryEpoch: integer(value["directoryEpoch"]), visibleSeq: integer(value["visibleSeq"]),
-      reservationTicket: integer(value["reservationTicket"], admitted ? 1 : 0), publicationSeq: integer(value["publicationSeq"])});
+  if (!isRecord(raw) || !Array.isArray(raw["owners"]) || !Array.isArray(raw["participants"])) {
+    throw new Error("invalid durable plan");
   }
-  if (!owners.length || new Set(owners.map(o => o.prefix)).size !== owners.length || owners.length > 16 ||
-      JSON.stringify(owners.map(o => o.prefix)) !== JSON.stringify(owners.map(o => o.prefix).sort())) throw new Error("invalid owner partition");
-  for (const value of raw["participants"]) {
-    if (!isRecord(value) || !isRecord(value["address"]) || !Array.isArray(value["entries"]) || !value["entries"].length) throw new Error("invalid participant plan");
-    const prefix = parseVirtualPrefix(value["address"]["prefix"]), owner = parseVirtualPrefix(value["owner"]);
-    if (!prefix.ok || !owner.ok || !owners.some(o => o.prefix === owner.value) || !prefix.value.startsWith(owner.value)) throw new Error("participant escapes owner");
-    const entries = value["entries"].map(entry => {
-      if (!isRecord(entry)) throw new Error("invalid plan index");
-      const key = parseVirtualKey(entry["virtualKey"]);
-      if (!key.ok || !matchesPrefix(key.value, prefix.value) || treeForKey(key.value) !== owner.value) throw new Error("invalid plan key");
-      return {index: integer(entry["index"]), virtualKey: key.value};
-    });
-    if (entries.some((entry, index) => index > 0 && entry.index <= entries[index - 1]!.index)) throw new Error("unordered journal partition");
-    participants.push({address: {prefix: prefix.value, generation: integer(value["address"]["generation"])}, owner: owner.value, entries});
+  const owners = raw["owners"].map(value => parseOwner(value, reservation));
+  if (!owners.length || owners.length > 16 || !isStrictlySorted(owners.map(owner => owner.prefix))) {
+    throw new Error("invalid owner partition");
   }
-  if (!participants.length || participants.length > MAX_TRANSACTION_PARTICIPANTS || new Set(participants.map(p => p.address.prefix)).size !== participants.length) throw new Error("invalid physical partition");
-  const seen = new Set<number>(), entitiesByOwner = new Map<VirtualPrefix, Set<Uri>>(), keys = new Map<Uri, VirtualKey>();
-  for (const participant of participants) for (const entry of participant.entries) {
-    const fact = batch.facts[entry.index];
-    if (!fact || seen.has(entry.index)) throw new Error("incomplete/duplicate journal partition");
-    let key = keys.get(fact.entity); if (!key) {key = await virtualKeyForEntity(graphId, fact.entity); keys.set(fact.entity, key);}
-    if (key !== entry.virtualKey) throw new Error("journal key binding mismatch");
-    seen.add(entry.index);
-    const entities = entitiesByOwner.get(participant.owner) ?? new Set<Uri>(); entities.add(fact.entity); entitiesByOwner.set(participant.owner, entities);
+  const participants = raw["participants"].map(value => parseParticipant(value, owners));
+  if (!participants.length || participants.length > MAX_TRANSACTION_PARTICIPANTS ||
+      new Set(participants.map(participant => participant.address.prefix)).size !== participants.length) {
+    throw new Error("invalid physical partition");
+  }
+  const plan = {owners, participants};
+  await verifyJournalPartition(plan, graphId, batch);
+  return plan;
+}
+
+function parseOwner(value: unknown, reservation: "optional" | "required"): OwnerPlan {
+  if (!isRecord(value)) throw new Error("invalid durable owner");
+  const prefix = parseVirtualPrefix(value["prefix"]);
+  if (!prefix.ok || prefix.value.length !== TREE_DEPTH || !Array.isArray(value["entities"]) || !value["entities"].length) {
+    throw new Error("invalid owner identity");
+  }
+  const entities = value["entities"].map(entity => {
+    const parsed = parseUri(entity);
+    if (!parsed.ok) throw new Error("invalid durable entity");
+    return parsed.value;
+  });
+  if (!isStrictlySorted(entities)) throw new Error("unordered owner entities");
+  return {
+    prefix: prefix.value,
+    entities,
+    directoryEpoch: integer(value["directoryEpoch"]),
+    visibleSeq: integer(value["visibleSeq"]),
+    reservationTicket: integer(value["reservationTicket"], reservation === "required" ? 1 : 0),
+    publicationSeq: integer(value["publicationSeq"]),
+  };
+}
+
+function parseParticipant(value: unknown, owners: readonly OwnerPlan[]): ParticipantPlan {
+  if (!isRecord(value) || !isRecord(value["address"]) || !Array.isArray(value["entries"]) || !value["entries"].length) {
+    throw new Error("invalid participant plan");
+  }
+  const prefix = parseVirtualPrefix(value["address"]["prefix"]);
+  const owner = parseVirtualPrefix(value["owner"]);
+  if (!prefix.ok || !owner.ok || !owners.some(candidate => candidate.prefix === owner.value) || !prefix.value.startsWith(owner.value)) {
+    throw new Error("participant escapes owner");
+  }
+  const entries = value["entries"].map(entry => {
+    if (!isRecord(entry)) throw new Error("invalid plan index");
+    const key = parseVirtualKey(entry["virtualKey"]);
+    if (!key.ok || !matchesPrefix(key.value, prefix.value) || treeForKey(key.value) !== owner.value) throw new Error("invalid plan key");
+    return {index: integer(entry["index"]), virtualKey: key.value};
+  });
+  if (entries.some((entry, index) => index > 0 && entry.index <= entries[index - 1]!.index)) {
+    throw new Error("unordered journal partition");
+  }
+  return {address: {prefix: prefix.value, generation: integer(value["address"]["generation"])}, owner: owner.value, entries};
+}
+
+async function verifyJournalPartition(plan: WritePlan, graphId: string, batch: FactBatch): Promise<void> {
+  const seen = new Set<number>();
+  const entitiesByOwner = new Map<VirtualPrefix, Set<Uri>>();
+  const keys = new Map<Uri, VirtualKey>();
+  for (const participant of plan.participants) {
+    for (const entry of participant.entries) {
+      const fact = batch.facts[entry.index];
+      if (!fact || seen.has(entry.index)) throw new Error("incomplete/duplicate journal partition");
+      let key = keys.get(fact.entity);
+      if (!key) {
+        key = await virtualKeyForEntity(graphId, fact.entity);
+        keys.set(fact.entity, key);
+      }
+      if (key !== entry.virtualKey) throw new Error("journal key binding mismatch");
+      seen.add(entry.index);
+      const entities = entitiesByOwner.get(participant.owner) ?? new Set<Uri>();
+      entities.add(fact.entity);
+      entitiesByOwner.set(participant.owner, entities);
+    }
   }
   if (seen.size !== batch.facts.length) throw new Error("journal partition lost facts");
-  for (const owner of owners) if (JSON.stringify([...(entitiesByOwner.get(owner.prefix) ?? [])].sort()) !== JSON.stringify(owner.entities)) throw new Error("journal entity-set binding mismatch");
-  return {owners, participants};
+  for (const owner of plan.owners) {
+    const entities = [...(entitiesByOwner.get(owner.prefix) ?? [])].sort();
+    if (entities.length !== owner.entities.length || entities.some((entity, index) => entity !== owner.entities[index])) {
+      throw new Error("journal entity-set binding mismatch");
+    }
+  }
+}
+
+function isStrictlySorted(values: readonly string[]): boolean {
+  return values.every((value, index) => index === 0 || values[index - 1]! < value);
 }
 
 export function integer(value: unknown, minimum = 0): number {
