@@ -40,19 +40,9 @@ export function createPoneglyphMcpServer(options: PoneglyphMcpServerOptions): Mc
     annotations: READ_ONLY,
   }, async (_args, extra) => {
     try {
-      const schema = await readSchema(options, extra.mcpReq.signal);
-      const text = JSON.stringify(schema);
-      if (new TextEncoder().encode(text).byteLength > MAX_TOOL_TEXT_BYTES) {
-        return toolError("response_budget_exceeded", "Complete schema observation exceeds the MCP response budget.");
-      }
-      return {content: [{type: "text", text}]};
+      return completeReadResult(await readSchema(options, extra.mcpReq.signal), "schema");
     } catch (error) {
-      const failure = parseQueryFailure(error);
-      if (failure.kind === "input") return toolError("invalid_schema_request", failure.message);
-      if (failure.kind === "rejected") return toolError("schema_rejected", failure.message, {status: failure.status, retryable: failure.retryable});
-      const code = failure.kind === "protocol" ? "invalid_backend_response" : "backend_unavailable";
-      console.error(JSON.stringify({event: "poneglyph-mcp-schema-failed", code, kind: failure.kind === "transport" ? "transport" : "backend"}));
-      return toolError(code, "The database did not return a valid complete schema observation. No automatic retry was performed.");
+      return readToolFailure(error, "schema");
     }
   });
 
@@ -62,21 +52,9 @@ export function createPoneglyphMcpServer(options: PoneglyphMcpServerOptions): Mc
     annotations: READ_ONLY,
   }, async ({ query }, extra) => {
     try {
-      const result = await readQuery(options, query, extra.mcpReq.signal);
-      const text = JSON.stringify(result);
-      // MCP framing adds bytes; keep one complete JSON representation, not two
-      // copies in both content and structuredContent. Never slice successful rows.
-      if (new TextEncoder().encode(text).byteLength > MAX_TOOL_TEXT_BYTES) {
-        return toolError("response_budget_exceeded", "Complete query result exceeds the MCP response budget. Narrow the query.");
-      }
-      return { content: [{ type: "text", text }] };
+      return completeReadResult(await readQuery(options, query, extra.mcpReq.signal), "query");
     } catch (error) {
-      const failure = parseQueryFailure(error);
-      if (failure.kind === "input") return toolError("invalid_query", failure.message);
-      if (failure.kind === "rejected") return toolError("query_rejected", failure.message, { status: failure.status, retryable: failure.retryable });
-      const code = failure.kind === "protocol" ? "invalid_backend_response" : "backend_unavailable";
-      console.error(JSON.stringify({ event: "poneglyph-mcp-query-failed", code, kind: failure.kind === "transport" ? "transport" : "backend" }));
-      return toolError(code, "The database did not return a valid complete answer. No automatic retry was performed.");
+      return readToolFailure(error, "query");
     }
   });
   return server;
@@ -106,6 +84,33 @@ async function readQuery(options: PoneglyphMcpServerOptions, query: string, sign
   const result = await graph.query(query);
   signal.throwIfAborted();
   return result;
+}
+
+type ReadTool = "query" | "schema";
+
+function completeReadResult(result: QueryResult | GraphSchemaObservation, tool: ReadTool) {
+  // One complete JSON representation: no duplicate structuredContent or sliced rows.
+  const text = JSON.stringify(result);
+  if (new TextEncoder().encode(text).byteLength > MAX_TOOL_TEXT_BYTES) {
+    return toolError("response_budget_exceeded", tool === "schema"
+      ? "Complete schema observation exceeds the MCP response budget."
+      : "Complete query result exceeds the MCP response budget. Narrow the query.");
+  }
+  return {content: [{type: "text" as const, text}]};
+}
+
+function readToolFailure(error: unknown, tool: ReadTool) {
+  const failure = parseQueryFailure(error);
+  if (failure.kind === "input") return toolError(tool === "schema" ? "invalid_schema_request" : "invalid_query", failure.message);
+  if (failure.kind === "rejected") {
+    return toolError(tool === "schema" ? "schema_rejected" : "query_rejected", failure.message,
+      {status: failure.status, retryable: failure.retryable});
+  }
+  const code = failure.kind === "protocol" ? "invalid_backend_response" : "backend_unavailable";
+  console.error(JSON.stringify({event: `poneglyph-mcp-${tool}-failed`, code, kind: failure.kind === "transport" ? "transport" : "backend"}));
+  return toolError(code, tool === "schema"
+    ? "The database did not return a valid complete schema observation. No automatic retry was performed."
+    : "The database did not return a valid complete answer. No automatic retry was performed.");
 }
 
 type QueryFailure =

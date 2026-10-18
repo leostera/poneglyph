@@ -98,28 +98,39 @@ test("malformed Datalog fails before storage; tool arguments cannot select a gra
   assert.equal(calls, 0);
 });
 
-test("database budget and busy errors remain errors, not partial or empty successes", async () => {
+test("schema and query budget/busy errors remain errors, not partial or empty successes", async () => {
   for (const status of [413, 429]) {
     await withClient(fakeGraph(async () => Response.json({ error: "query budget or admission rejected", retryable: status === 429 }, { status })), async client => {
-      const result = await client.callTool({ name: "query", arguments: { query: "wiki:page:title(Page, Title)" } });
-      assert.equal(result.isError, true);
-      const payload = toolPayload(result);
-      assert.equal(payload.error.code, "query_rejected");
-      assert.equal(payload.error.status, status);
-      assert.equal("rows" in payload, false);
+      for (const name of ["query", "get_schema"]) {
+        const result = await client.callTool({name, arguments: name === "query" ? {query: "wiki:page:title(Page, Title)"} : {}});
+        assert.equal(result.isError, true);
+        const payload = toolPayload(result);
+        assert.equal(payload.error.code, name === "query" ? "query_rejected" : "schema_rejected");
+        assert.equal(payload.error.status, status);
+        assert.equal(payload.error.retryable, status === 429);
+        assert.equal("rows" in payload, false);
+      }
     });
   }
 });
 
-test("transport failure is surfaced once, without retry or leaking backend details", async () => {
+test("each read-tool failure is logged once, without retry or leaking backend details", async context => {
+  const logs = context.mock.method(console, "error", () => {});
   let calls = 0;
   await withClient(fakeGraph(async () => { calls++; throw new Error("private backend credential must never appear"); }), async client => {
-    const result = await client.callTool({ name: "query", arguments: { query: "wiki:page:title(Page, Title)" } });
-    assert.equal(result.isError, true);
-    assert.equal(toolPayload(result).error.code, "backend_unavailable");
-    assert.doesNotMatch(JSON.stringify(result), /private backend credential/);
+    for (const name of ["query", "get_schema"]) {
+      const result = await client.callTool({name, arguments: name === "query" ? {query: "wiki:page:title(Page, Title)"} : {}});
+      assert.equal(result.isError, true);
+      assert.equal(toolPayload(result).error.code, "backend_unavailable");
+      assert.doesNotMatch(JSON.stringify(result), /private backend credential/);
+    }
   });
-  assert.equal(calls, 1);
+  assert.equal(calls, 2);
+  assert.deepEqual(logs.mock.calls.map(call => {
+    const line: unknown = call.arguments[0];
+    assert.ok(typeof line === "string");
+    return JSON.parse(line);
+  }), ["query", "schema"].map(tool => ({event: `poneglyph-mcp-${tool}-failed`, code: "backend_unavailable", kind: "transport"})));
 });
 
 test("malformed successful backend replies never become valid MCP answers", async () => {
