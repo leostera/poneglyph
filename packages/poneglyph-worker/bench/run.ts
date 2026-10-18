@@ -90,11 +90,15 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.length !== 0 && (args.length !== 2 || args[0] !== "--plan")) throw new Error("Usage: bun run bench:read [--plan path.json]");
   const plan = parseReadPlan(JSON.parse(await readFile(args[1] ? resolve(args[1]) : resolve(bench, "small-plan.json"), "utf8")));
+  const {stdout: cliVersionOutput} = await execute("cf", ["--version"], {env: environment, timeout: 10_000});
+  const controlCliVersion = cliVersionOutput.match(/\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/)?.[0];
+  if (controlCliVersion === undefined) throw new Error("Invalid control CLI version");
   const runId = randomUUID(), versionBefore = await deployment();
   const {stdout: revision} = await execute("git", ["rev-parse", "HEAD"], {cwd: packageRoot});
   const {stdout: changes} = await execute("git", ["status", "--porcelain"], {cwd: packageRoot});
   const manifest = {runId, target, account, versionBefore, sourceRevision: revision.trim(), dirty: changes.trim() !== "",
-    startedAt: new Date().toISOString(), callerMode: "direct-authenticated-preview-http2-native-service-binding", factWrites: 0,
+    startedAt: new Date().toISOString(), nodeVersion: process.versions.node, controlCliVersion,
+    callerMode: "direct-authenticated-preview-http2-native-service-binding", factWrites: 0,
     retries: 0, deadlineMs: 30_000, concurrencyBoundary: "offered-caller-not-simultaneous-backend-execution", plan};
   const artifact = resolve(packageRoot, ".artifacts/read-bench", runId); await mkdir(artifact, {recursive: true});
   await writeFile(resolve(artifact, "plan.json"), JSON.stringify({manifest, sha256: hash(JSON.stringify(manifest))}, null, 2) + "\n");
@@ -148,7 +152,8 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(p
   else await main().catch(error => {
     const safeReasons = new Map([["Private preview unavailable", "preview-deadline"], ["Private preview stopped", "preview-stopped"],
       ["Invalid private preview authority", "preview-authority"], ["Private preview not ready", "preview-readiness"],
-      ["H2 session unavailable", "h2-unavailable"], ["Insufficient H2 stream allocation", "h2-capacity"]]);
+      ["H2 session unavailable", "h2-unavailable"], ["Insufficient H2 stream allocation", "h2-capacity"],
+      ["Deployment metadata unavailable", "deployment-unavailable"], ["Expected a stable 100-percent deployment", "deployment-unstable"]]);
     console.error(JSON.stringify({event: "poneglyph.bench.read_stopped", reason: error instanceof Error ? safeReasons.get(error.message) ?? "unknown" : "unknown"}));
     process.exitCode = 1;
   });
