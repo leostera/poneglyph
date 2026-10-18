@@ -40,6 +40,8 @@ export class ReadHeadReplica {
     if (ctx.id.name !== undefined && ctx.id.name !== readHeadReplicaName(identity.graphId, identity.member)) {
       throw new Error("Read-head physical identity mismatch");
     }
+    const version = ctx.storage.sql.exec<{version: number}>("SELECT version FROM poneglyph_schema WHERE singleton = 1").one().version;
+    if (version !== 2) throw new Error("Read-head replica cannot use a parent protocol fence");
     const raw: unknown = ctx.storage.kv.get(READ_HEAD_STATE_KEY);
     this.state = raw === undefined ? EMPTY_READ_HEAD : parseReadHeadState(raw);
     if (this.state.mode !== "empty" && (this.state.graphId !== identity.graphId || this.state.generation < identity.member)) {

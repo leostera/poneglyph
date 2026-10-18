@@ -115,6 +115,10 @@ export function pendingReadHeadDeliveries(parent: ReadHeadParent): readonly Read
   }));
 }
 
+export function isReadHeadDeliveryPending(parent: ReadHeadParent, delivery: ReadHeadDelivery): boolean {
+  return pendingReadHeadDeliveries(parent).some(item => item.member === delivery.member && sameCommand(item.command, delivery.command));
+}
+
 function sameCommand(left: ReadHeadCommand, right: ReadHeadCommand): boolean {
   if (left.graphId !== right.graphId || left.generation !== right.generation || left.kind !== right.kind) return false;
   if (left.kind === "bootstrap" || left.kind === "prepare") {
@@ -149,8 +153,7 @@ export function acknowledgeReadHeadDelivery(
   parent: ReadHeadParent, delivery: ReadHeadDelivery, outcome: unknown,
 ): ReadHeadParent {
   if (outcome !== "applied" && outcome !== "already-applied") return parent;
-  const expected = pendingReadHeadDeliveries(parent).find(item => item.member === delivery.member && sameCommand(item.command, delivery.command));
-  if (expected === undefined || parent.operation === null) return parent;
+  if (!isReadHeadDeliveryPending(parent, delivery) || parent.operation === null) return parent;
   return parent.operation.kind === "publication" ? acknowledgePublication(parent, parent.operation, delivery.member) :
     acknowledgeMembership(parent, parent.operation);
 }

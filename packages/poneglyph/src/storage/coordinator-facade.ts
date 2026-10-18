@@ -24,6 +24,8 @@ import { ensureFacadeSchema } from "./sql.js";
 import { TREE_PREFIXES, TREE_DEPTH, treeCoordinatorName, treeForKey, parseTreeSnapshot, type TreeSnapshot } from "./forest.js";
 import { resolveReadHeadReplicaIdentity } from "./read-head-placement.js";
 import { ReadHeadReplica } from "./read-head-replica.js";
+import { ReadHeadCoordinator } from "./read-head-coordinator.js";
+import { ReadHeadJournalError } from "./read-head-journal.js";
 
 type SafeVectorRow = Readonly<{prefix: string; directory_epoch: number; visible_seq: number}>;
 type SafeFrontierRow = Readonly<{frontier: number}>;
@@ -38,6 +40,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   private readonly queryOwnerCache = new BoundedReadCache<readonly VirtualPrefix[]>(MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_BYTES);
   private safeSnapshot: Readonly<{graphId: GraphId; snapshot: SafeSnapshot}> | undefined;
   private readHeadReplica: ReadHeadReplica | undefined;
+  private readHeadCoordinator: ReadHeadCoordinator | undefined;
 
   constructor(ctx: DurableObjectState, env: FacadeEnv) {
     super(ctx, env);
@@ -48,16 +51,25 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
         this.readHeadReplica = new ReadHeadReplica(ctx, env, replica);
         return;
       }
+      // Validate fenced journals BEFORE legacy empty-root initialization could
+      // fill a missing vector component and conceal corrupt enabled state.
+      this.readHeadCoordinator = new ReadHeadCoordinator(ctx, env, () => { this.safeSnapshot = undefined; });
       ctx.storage.transactionSync(() => {
         for (const prefix of TREE_PREFIXES) ctx.storage.sql.exec(
           "INSERT OR IGNORE INTO graph_safe_vector (prefix, directory_epoch, visible_seq) VALUES (?, 0, 0)", prefix);
       });
+      await this.readHeadCoordinator.scheduleRecovery();
     });
+  }
+
+  override async alarm(): Promise<void> {
+    await this.readHeadCoordinator?.pump();
   }
 
   override async fetch(request: Request): Promise<Response> {
     if (this.readHeadReplica !== undefined) return this.readHeadReplica.fetch(request);
     const path = new URL(request.url).pathname;
+    if (path.startsWith("/_read-head-")) return this.readHeadCoordinator!.fetch(request);
     if (request.method === "POST" && path === "/_publish-vector") return await this.publishSafeVector(request);
     if (request.method === "POST" && path === "/_advance-vector-epoch") return await this.advanceSafeVectorEpoch(request);
     if (request.method === "POST" && path === "/_query-read-cut") return await this.acquireWorkerQueryCut(request);
@@ -145,6 +157,8 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     }
     if (new Set(owners.map(owner => owner.prefix)).size !== owners.length) return jsonResponse({error: "duplicate safe-vector owner"}, 400);
     try {
+      if (this.readHeadCoordinator?.enabled) return jsonResponse({frontier:
+        await this.readHeadCoordinator.publish(graph.value, {kind: "owners", owners})});
       const result = this.ctx.storage.transactionSync(() => {
         this.assertFacadeIdentity(graph.value);
         let changed = false;
@@ -161,7 +175,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
       });
       return jsonResponse(result);
     } catch (error) {
-      return jsonResponse({error: errorMessage(error)}, error instanceof CoordinatorError ? error.status : 503);
+      return jsonResponse({error: errorMessage(error)}, error instanceof CoordinatorError || error instanceof ReadHeadJournalError ? error.status : 503);
     }
   }
 
@@ -173,6 +187,8 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     if (!graph.ok || !prefix.ok || !TREE_PREFIXES.includes(prefix.value) || !isCounter(epoch) || epoch < 1 || !isCounter(seq))
       return jsonResponse({error: "invalid safe-vector epoch identity"}, 400);
     try {
+      if (this.readHeadCoordinator?.enabled) return jsonResponse({frontier: await this.readHeadCoordinator.publish(graph.value,
+        {kind: "topology", prefix: prefix.value, directoryEpoch: epoch, visibleSeq: seq})});
       const result = this.ctx.storage.transactionSync(() => {
         this.assertFacadeIdentity(graph.value);
         const current = this.ctx.storage.sql.exec<SafeVectorRow>("SELECT * FROM graph_safe_vector WHERE prefix = ?", prefix.value).toArray()[0];
@@ -188,7 +204,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
       });
       return jsonResponse(result);
     } catch (error) {
-      return jsonResponse({error: errorMessage(error)}, error instanceof CoordinatorError ? error.status : 503);
+      return jsonResponse({error: errorMessage(error)}, error instanceof CoordinatorError || error instanceof ReadHeadJournalError ? error.status : 503);
     }
   }
 

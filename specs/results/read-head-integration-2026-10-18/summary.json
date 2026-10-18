@@ -1,0 +1,35 @@
+{
+  "base": "3223262",
+  "deployed": false,
+  "tests": 47,
+  "files": 8,
+  "node": "v26.11.0",
+  "bun": "1.4.2",
+  "sources": {
+    "packages/poneglyph/src/storage/coordinator-facade.ts": "6635826b9e8874c7a85c6a0de4298d007c714f73fa81b65844c2fe1be1124164",
+    "packages/poneglyph/src/storage/sql.ts": "6a190e9e4af0fe839639b4042f6a199874db54b2fe56b668794780a04d35721d",
+    "packages/poneglyph/src/storage/read-head-parent.ts": "af74e3e54f90a09a275d6bf70e4a48fca4f5d775743de42a6ba0f82e263ce46e",
+    "packages/poneglyph/src/storage/read-head-replica.ts": "6c405957d47c452e0b864010ed295fa1f41bfac5cc55b947f206cd7febad1ab7",
+    "packages/poneglyph/src/storage/read-head-journal.ts": "746d5a8caabbc581e0d710c875e3ec8448f0819ce87d2101d0132936942f4343",
+    "packages/poneglyph/src/storage/read-head-coordinator.ts": "baf0708bb0bff753a769505cd5d1bb76e4818f8f9dc998267765a15ab5ba762c",
+    "packages/poneglyph/tests/read-head-integration.test.ts": "ccadbd2a846ce1af7ea0d0b7865af2c6e9c7af6e30b8f62319ab666c6c50feee"
+  },
+  "outputs": {
+    "root-check": {
+      "sha256": "ad17e55989c46e5d5ef5494271bb5ab19be738a22164292df8f0b6733cf18875",
+      "gzipSha256": "9ebd00eefa408a7f3406f0f9fad57c65e94d91da4649048a9368c2b2b38678d7"
+    },
+    "root-build": {
+      "sha256": "bb23b6fb152589e54dde9385f8e62c97a08c47cbd1dc545c2dd09063ba8b358f",
+      "gzipSha256": "89f913fe5633577a8d54a041b17c497da44e6d7aedac8d3730b078a9c347686e"
+    },
+    "all-tests": {
+      "sha256": "9e9fea696b6416351fc4fbb38536a8403dc167f4b7967d1909b8fc1553785c98",
+      "gzipSha256": "8acad6528ecf7e0e0e879f16e0b4bdcfa9b11c341048d4be605c0f2b3f95f044"
+    },
+    "focused": {
+      "sha256": "5471b696260f35769d6f0b5ec4bd8eba2a1c87cb25aee9a5567e3557beabcfea",
+      "gzipSha256": "e0b04c4f579097b9467775bfdfddcbf30a79767d20bcaa5cefd40e126151e7ed"
+    }
+  }
+}
