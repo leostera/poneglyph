@@ -7,10 +7,6 @@ import { build } from "esbuild";
 import { Miniflare, Log, LogLevel } from "miniflare";
 import { treeForKey } from "../../poneglyph/src/storage/forest.js";
 import { virtualKeyForEntity } from "../../poneglyph/src/storage/keys.js";
-import { isRecord } from "../../poneglyph/src/domain/result.js";
-import { parseReadHeadParent } from "../../poneglyph/src/storage/read-head-parent.js";
-import { parseReadHeadState } from "../../poneglyph/src/storage/read-head-state.js";
-import { verifyReadHeadRouting } from "./read-head-rpc.js";
 
 // Finite native RPC + real canonical SQLite, no mocked RpcTarget/transport.
 test("graph-scoped native RPC preserves writes/results and denies ungranted capabilities", async () => {
@@ -141,114 +137,6 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     assert.equal(conflict.status, 400);
     assert.ok(typeof conflict.body === "object" && conflict.body !== null && "status" in conflict.body && "retryable" in conflict.body);
     assert.equal(conflict.body.status, 409); assert.equal(conflict.body.retryable, false);
-    const post = async (path: string, body: unknown) => {
-      const response = await active.dispatchFetch(`https://driver.test${path}`, {method: "POST", body: JSON.stringify(body)});
-      return {status: response.status, body: await response.json()};
-    };
-    const writeState = async (head = false) => {
-      const result = await call(head ? "/head-state" : "/write-state");
-      assert.equal(result.status, 200);
-      assert.ok(isRecord(result.body));
-      assert.ok(typeof result.body["admissionCalls"] === "number");
-      assert.ok(typeof result.body["publicationCalls"] === "number");
-      assert.ok(typeof result.body["readCutCalls"] === "number");
-      return {admissionCalls: result.body["admissionCalls"], publicationCalls: result.body["publicationCalls"], readCutCalls: result.body["readCutCalls"],
-        parent: result.body["parent"] === null ? null : parseReadHeadParent(result.body["parent"]),
-        head: result.body["head"] === null ? null : parseReadHeadState(result.body["head"])};
-    };
-    const marker = (entity: string) => ({source: "test:write-scaling", entity, field: "test:scale-marker", value: {type: "text", value: "present"}});
-    const readMarker = async (entity: string) => {
-      const result = await post("/one-shot-read", {graphId: "example", query: `test:scale-marker(${JSON.stringify(entity)}, Value)`});
-      assert.equal(result.status, 200, JSON.stringify(result.body));
-      assert.ok(isRecord(result.body));
-      return result.body["rows"];
-    };
-    const present = [{Value: {type: "string", value: "present"}}];
-    const denied = {status: 400, body: {name: "GraphAuthorizationError", message: "Graph access denied"}};
-    for (const path of ["/one-shot-write-unknown", "/one-shot-write-missing", "/one-shot-write-malformed"]) {
-      assert.deepEqual(await call(path), denied);
-    }
-    assert.deepEqual(await post("/one-shot-write-denied", {graphId: "example", facts: null, clientRequestToken: ""}), denied,
-      "read-only one-shot writes deny before malformed facts/options or absent storage bindings");
-    assert.deepEqual(await post("/one-shot-write", {graphId: "ungranted", facts: []}), denied);
-    const beforeInvalid = await writeState();
-    for (const input of [null, [], {}, {graphId: "example"}, {graphId: "example", facts: null},
-      ...["clientId", "permissions", "txId", "options", "signal"].map(key => ({graphId: "example", facts: [], [key]: "forged"})),
-      {graphId: "example", facts: [], clientRequestToken: ""}]) {
-      const invalidWrite = await post("/one-shot-write", input);
-      assert.equal(invalidWrite.status, 400);
-      assert.ok(isRecord(invalidWrite.body));
-      assert.equal(invalidWrite.body["name"], "PoneglyphInputError");
-    }
-    assert.deepEqual(await writeState(), beforeInvalid, "invalid or denied calls cannot publish");
-    assert.deepEqual(await call("/one-shot-write-replay"), first, "one-shot and handle writes preserve the same graph-scoped token outcome");
-
-    // Separate incoming invocations, disjoint owners, all responses settled.
-    // This finite fixture is not a throughput measurement or global scheduler.
-    const distinctOwners = new Map<string, string>();
-    for (let i = 0; distinctOwners.size < 4 && i < 1_000; i++) {
-      const entity = `test:independent-${i}`;
-      distinctOwners.set(treeForKey(await virtualKeyForEntity("example", entity)), entity);
-    }
-    assert.equal(distinctOwners.size, 4);
-    const entities = [...distinctOwners.values()];
-    const settled = await Promise.allSettled(entities.map(entity => post("/one-shot-write", {
-      graphId: "example", facts: [marker(entity)], clientRequestToken: `test:independent:${entity}`,
-    })));
-    for (const result of settled) {
-      assert.equal(result.status, "fulfilled");
-      assert.equal(result.value.status, 200, JSON.stringify(result.value.body));
-      assert.ok(isRecord(result.value.body));
-      assert.deepEqual(Object.keys(result.value.body), ["txId"]);
-    }
-    for (const entity of entities) assert.deepEqual(await readMarker(entity), present);
-    const noToken = await post("/one-shot-write", {graphId: "example", facts: [marker("test:untokenized")]});
-    assert.equal(noToken.status, 200, JSON.stringify(noToken.body));
-    assert.deepEqual(await readMarker("test:untokenized"), present);
-
-    const unknownDelivery = {status: 400, body: {name: "PoneglyphRequestError", message: "Graph write failed; delivery may be unknown", status: 503, retryable: true}};
-    const blocked = {graphId: "example", facts: [marker("test:publication-blocked")], clientRequestToken: "test:publication-blocked"};
-    assert.equal((await call("/publication-blocked")).status, 200);
-    assert.deepEqual(await post("/one-shot-write", blocked), unknownDelivery,
-      "direct ledger admission cannot acknowledge before canonical publication or expose backend details/transaction identity");
-    assert.deepEqual(await readMarker("test:publication-blocked"), [], "unpublished owner revisions remain invisible");
-    assert.equal((await call("/publication-reset")).status, 200);
-    // Explicit test-controlled replay of the SAME token/facts, never a fresh ID.
-    const recovered = await post("/one-shot-write", blocked);
-    assert.equal(recovered.status, 200, JSON.stringify(recovered.body));
-    assert.deepEqual(await post("/one-shot-write", blocked), recovered);
-    assert.deepEqual(await readMarker("test:publication-blocked"), present);
-
-    const lost = {graphId: "example", facts: [marker("test:publication-lost")], clientRequestToken: "test:publication-lost"};
-    assert.equal((await call("/publication-lost")).status, 200);
-    assert.deepEqual(await post("/one-shot-write", lost), unknownDelivery);
-    assert.deepEqual(await readMarker("test:publication-lost"), present, "a failed publication reply does not establish abort");
-    const reconciled = await post("/one-shot-write", lost);
-    assert.equal(reconciled.status, 200, JSON.stringify(reconciled.body));
-    assert.deepEqual(await post("/one-shot-write", lost), reconciled);
-    assert.deepEqual(await readMarker("test:publication-lost"), present);
-
-    const beforePrewarm = await writeState();
-    assert.equal(beforePrewarm.parent, null);
-    assert.deepEqual(await call("/prewarm-head"), {status: 200, body: {canonical: true}},
-      "reader-first actor creation must not grant freshness or membership authority");
-    assert.equal((await writeState(true)).head, null, "pre-creation persists no serving checkpoint");
-    const afterPrewarm = await writeState();
-    assert.equal(afterPrewarm.parent, null, "pre-creation does not opt the graph in");
-    assert.equal(afterPrewarm.readCutCalls, beforePrewarm.readCutCalls, "empty-head validation does not consult canonical read authority");
-    assert.deepEqual(await call("/enable-head"), {status: 200, body: {member: 1, generation: 1, pending: false}});
-    const beforeHead = await writeState();
-    assert.ok(beforeHead.parent !== null);
-    assert.equal((await post("/one-shot-write", {graphId: "example", facts: [marker("test:head-publication")], clientRequestToken: "test:head-publication"})).status, 200);
-    const afterHead = await writeState(), replica = await writeState(true);
-    assert.ok(afterHead.parent !== null && replica.head?.mode === "serving");
-    assert.equal(afterHead.parent.operation, null);
-    assert.ok(afterHead.parent.view.frontier > beforeHead.parent.view.frontier);
-    assert.deepEqual(replica.head.view, afterHead.parent.view, "direct admission must still publish and activate an opted-in replica before acknowledgement");
-    assert.deepEqual(await readMarker("test:head-publication"), present);
-    assert.equal(afterHead.admissionCalls, 0, "both RPC write APIs bypass the facade's deliberately failing public admission route");
-    assert.ok(afterHead.publicationCalls >= 10, "the canonical publication authority remains mandatory");
-    await verifyReadHeadRouting(active, entities);
     const service = await active.getWorker("service");
     for (const path of ["/v1/graphs/example/query", "/v1/graphs/example/transactions", "/_transact", "/__e2e/inspect"]) {
       const denied = await service.fetch(`https://private.test${path}`, { method: "POST", body: "{}" });

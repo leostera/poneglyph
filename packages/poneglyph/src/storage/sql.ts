@@ -197,9 +197,7 @@ const TREE_SCHEMA_VERSION = 4;
 type SchemaKind = "g-facade" | "g-ledger" | "g-tree" | "g-shard";
 
 export function ensureFacadeSchema(storage: DurableObjectStorage): void {
-  // Version 3 is an explicit per-graph publication-protocol fence. Older
-  // binaries accept only 2 and must fail closed around enabled read replicas.
-  ensureSchema(storage, "g-facade", FACADE_SCHEMA_VERSION, FACADE_SCHEMA, [2, 3]);
+  ensureSchema(storage, "g-facade", FACADE_SCHEMA_VERSION, FACADE_SCHEMA);
 }
 
 export function ensureLedgerSchema(storage: DurableObjectStorage): void {
@@ -214,10 +212,7 @@ export function ensureShardSchema(storage: DurableObjectStorage): void {
   ensureSchema(storage, "g-shard", SHARD_SCHEMA_VERSION, SHARD_SCHEMA);
 }
 
-function ensureSchema(
-  storage: DurableObjectStorage, kind: SchemaKind, version: number, statements: readonly string[],
-  acceptedVersions: readonly number[] = [version],
-): void {
+function ensureSchema(storage: DurableObjectStorage, kind: SchemaKind, version: number, statements: readonly string[]): void {
   storage.transactionSync(() => {
     const schemaMarkerExists = storage.sql.exec<{ name: string }>(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'poneglyph_schema'",
@@ -227,7 +222,7 @@ function ensureSchema(
       const marker = storage.sql.exec<{ kind: string; version: number }>(
         "SELECT kind, version FROM poneglyph_schema WHERE singleton = 1",
       ).toArray()[0];
-      if (marker?.kind !== kind || !acceptedVersions.includes(marker.version)) {
+      if (marker?.kind !== kind || marker.version !== version) {
         throw new Error(`unsupported ${kind} Durable Object schema marker; refusing to reinterpret persisted data`);
       }
       return;

@@ -26,20 +26,17 @@ import { readFailureDiagnostic } from "../../poneglyph/src/storage/read-diagnost
 import { BoundedReadCache, utf8Bytes } from "../../poneglyph/src/storage/read-cache.js";
 import type { ReadIdentity } from "../../poneglyph/src/storage/read-identity.js";
 import { MAX_QUERY_CACHE_BYTES, MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_ENTRY_BYTES } from "../../poneglyph/src/storage/constants.js";
-import { completedReadHeadRouter } from "./read-head-routing.js";
 
 type CompletedQuery = Readonly<{rowsJson: string; identity: ReadIdentity}>;
 // Completed immutable data only: never retain promises, streams, stubs, leases,
-// or request-owned I/O in module state. Every reuse requires a fresh exact
-// authority check: an integrated read head or the canonical facade.
+// or request-owned I/O in module state. Every reuse requires a fresh facade check.
 // Current authorization is graph-wide read access, checked before this executor.
 const completedQueries = new BoundedReadCache<CompletedQuery>(MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_BYTES);
 type WorkerReadCut = Readonly<{snapshotSeq: number; cut: readonly TreeSnapshot[]}> | Readonly<{snapshotSeq: number; unchanged: true}>;
 
 /**
- * Stateless query execution for the Worker RPC surface. Completed rows may be
- * freshly validated by an integrated read head; the facade still captures safe
- * vectors and grants exact tree leases on every cache miss/fallback. After
+ * Stateless query execution for the Worker RPC surface. The facade remains the
+ * authority that captures a safe vector and grants exact tree leases; after
  * that cut is pinned, query planning, shard fan-out, joins, and response
  * assembly run in the horizontally scalable Worker rather than the facade DO.
  */
@@ -158,14 +155,6 @@ async function acquireWorkerQueryCut(
   expectedPrefixes: readonly VirtualPrefix[],
   knownSnapshot?: ReadIdentity,
 ): Promise<WorkerReadCut> {
-  if (knownSnapshot !== undefined) {
-    const validation = await completedReadHeadRouter.validate(env, graphId, query, knownSnapshot);
-    tracing.getActiveSpan()?.setAttribute("poneglyph.query.read_head.hit", validation.kind === "unchanged");
-    if (validation.kind === "unchanged") {
-      return {unchanged: true, snapshotSeq: Math.max(...knownSnapshot.map(owner => owner.snapshotSeq))};
-    }
-    tracing.getActiveSpan()?.setAttribute("poneglyph.query.read_head.fallback", validation.reason);
-  }
   let response: Response;
   try {
     response = await env.GRAPH_FACADES.getByName(coordinatorObjectName(graphId)).fetch("https://facade.internal/_query-read-cut", {

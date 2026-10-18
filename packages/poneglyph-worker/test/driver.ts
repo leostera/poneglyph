@@ -1,9 +1,5 @@
 import type PoneglyphService from "../src/index.js";
-import type {GraphTransactionRequest} from "../src/index.js";
-import { parseGraphId } from "../../poneglyph/src/domain/graph-id.js";
-import { readHeadReplicaName } from "../../poneglyph/src/storage/read-head-placement.js";
-import { coordinatorObjectName, virtualKeyForEntity } from "../../poneglyph/src/storage/keys.js";
-import {treeForKey} from "../../poneglyph/src/storage/forest.js";
+import { coordinatorObjectName } from "../../poneglyph/src/storage/keys.js";
 
 type Env = { TEST_FACADE: DurableObjectNamespace; READER: Service<PoneglyphService>; WRITER: Service<PoneglyphService>; UNKNOWN: Service<PoneglyphService>; MISSING: Service<PoneglyphService>; MALFORMED: Service<PoneglyphService>; NO_STORAGE: Service<PoneglyphService> };
 const facts = [
@@ -16,47 +12,6 @@ export default {
   async fetch(request: Request, env: Env) {
     const path = new URL(request.url).pathname;
     try {
-      if (path === "/write-state" || path === "/head-state") {
-        const graph = parseGraphId("example");
-        if (!graph.ok) throw new Error("Invalid fixture graph");
-        const name = path === "/head-state" ? readHeadReplicaName(graph.value, 1) : coordinatorObjectName(graph.value);
-        return env.TEST_FACADE.getByName(name).fetch("https://test.internal/_test-write-state");
-      }
-      if (path === "/retire-head") {
-        const body = await request.json<{expectedGeneration: number}>();
-        return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch("https://test.internal/_read-head-retire", {
-          method: "POST", body: JSON.stringify({graphId: "example", member: 1, expectedGeneration: body.expectedGeneration}),
-        });
-      }
-      if (path === "/head-pump") return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch("https://test.internal/_test-head-pump");
-      if (["/head-unavailable", "/head-malformed", "/head-reset", "/head-block-freeze", "/head-block-activate"].includes(path)) {
-        const graph = parseGraphId("example");
-        if (!graph.ok) throw new Error("Invalid fixture graph");
-        return env.TEST_FACADE.getByName(readHeadReplicaName(graph.value, 1)).fetch(`https://test.internal/_test-${path.slice(1)}`);
-      }
-      if (path === "/prewarm-head") {
-        const graph = parseGraphId("example");
-        if (!graph.ok) throw new Error("Invalid fixture graph");
-        const prefix = treeForKey(await virtualKeyForEntity(graph.value, "test:e"));
-        // First physical contact from the reader, NOT canonical membership.
-        // A complete, well-formed identity still cannot authorize an empty head.
-        return env.TEST_FACADE.getByName(readHeadReplicaName(graph.value, 1)).fetch("https://test.internal/_read-head-validate", {
-          method: "POST", body: JSON.stringify({graphId: "example", member: 1, query: 'test:title("test:e", T)',
-            knownSnapshot: [{prefix, snapshotSeq: 0, directoryEpoch: 0}]}),
-        });
-      }
-      if (path === "/enable-head") return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch(
-        "https://test.internal/_read-head-join", {method: "POST", body: JSON.stringify({graphId: "example", expectedGeneration: 0})});
-      if (["/publication-blocked", "/publication-lost", "/publication-reset"].includes(path)) {
-        return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch(`https://test.internal/_test-${path.slice(1)}`);
-      }
-      if (path === "/one-shot-write") return Response.json(await env.WRITER.transact(await request.json<GraphTransactionRequest>()));
-      if (path === "/one-shot-write-replay") return Response.json(await env.WRITER.transact({graphId: "example", facts, clientRequestToken: "test:original"}));
-      if (path === "/one-shot-write-denied") return Response.json(await env.NO_STORAGE.transact(await request.json<GraphTransactionRequest>()));
-      if (path === "/one-shot-write-unknown") return Response.json(await env.UNKNOWN.transact({graphId: "example", facts}));
-      if (path === "/one-shot-write-missing") return Response.json(await env.MISSING.transact({graphId: "example", facts}));
-      if (path === "/one-shot-write-malformed") return Response.json(await env.MALFORMED.transact({graphId: "example", facts}));
-      if (path === "/one-shot-read") return Response.json(await env.READER.query(await request.json<{graphId: string; query: string}>()));
       if (["/cache-unavailable", "/cache-malformed", "/cache-reset"].includes(path)) {
         return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch(`https://test.internal/_test-${path.slice(1)}`);
       }

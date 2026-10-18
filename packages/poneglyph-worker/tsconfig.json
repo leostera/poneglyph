@@ -5,5 +5,5 @@
     "strict": true, "noEmit": true, "allowImportingTsExtensions": true,
     "isolatedModules": true, "verbatimModuleSyntax": true, "skipLibCheck": true
   },
-  "include": ["src", "test", "bench", "cloudflare.config.ts", ".cloudflare/types"]
+  "include": ["src", "test", "cloudflare.config.ts", ".cloudflare/types"]
 }

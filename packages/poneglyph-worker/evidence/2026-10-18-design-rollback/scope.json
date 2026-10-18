@@ -1,0 +1,20 @@
+{
+  "rollbackTarget": "8ed9df0bf28aec43623c4d3e8ed424eabc279e4d",
+  "runtimeSourcesExactlyMatchTarget": true,
+  "preservedExperimentalHistoryThrough": "9627f5839bcb21314b02caf4fc41f31eba07d951",
+  "preserved": "experimental evidence, standalone formal models, generated-metadata ignore rule; experimental runtime/harness entrypoints removed",
+  "gates": {
+    "rootCheck": "passed",
+    "rootBuild": "passed",
+    "focusedControls": "10 warm plus 10 cold passed; not full-tier certification",
+    "facadeSchema": "2 accepted; 3 rejected before DDL",
+    "vectorSafetyDistinctStates": 424784,
+    "vectorRecoveryDistinctStates": 130549,
+    "negativeControls": "expected naive closure counterexample; disjoint finalizer and lease overlap witnesses"
+  },
+  "cloudMutations": 0,
+  "liveDeploymentVerified": false,
+  "lastObservedIsolatedVersion": "b45f2acb-b6fc-4a75-b434-9a3a58b9ea73",
+  "performanceRerun": false,
+  "limitations": "Rollback preserves the strongest measured read baseline, not a proven high-throughput write design. No facts, durable schemas, namespaces, production or public playground were changed."
+}

@@ -3,7 +3,7 @@ import { isRecord, rejected, type ParseResult } from "../domain/result.js";
 import { factAsJson } from "./protocol.js";
 
 export async function readJsonBody(
-  request: Pick<Request, "body">,
+  request: Request,
   maxBytes: number,
 ): Promise<ParseResult<unknown>> {
   if (request.body === null) return rejected("body", "request body is required");

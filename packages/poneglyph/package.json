@@ -28,11 +28,6 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./storage-protocol": {
-      "types": "./dist/storage-protocol.d.ts",
-      "import": "./dist/storage-protocol.js",
-      "default": "./dist/storage-protocol.js"
-    },
     "./package.json": "./package.json"
   },
   "files": [

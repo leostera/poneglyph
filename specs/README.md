@@ -2,11 +2,15 @@
 
 The authoritative protocol and validation scope is in [RFD0004](../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#formal-model-and-validation). These checks do not prove hosted implementation correctness or performance.
 
+## Active source after owner-requested rollback (2026-10-18)
+
+Runtime source is restored to `8ed9df0`; see the [rollback scope in RFD0004](../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#owner-selected-rollback-checkpoint-2026-10-18). Gated canonical vector publication remains implemented. Replicated read heads, direct partitioned Worker write ingress and batching are not in the active runtime. Their models, conditional proofs, negative controls and historical results remain here as experimental records, not implementation or performance certification. Historical source snapshots/digests still refer to their recorded revisions.
+
 ## Write-protocol modeling work (2026-10-18)
 
 Keep three layers distinct:
 
-- **Implemented baseline:** `ReadVectorRecovery` explores gated multi-owner apply/publication/recovery after an irrevocable decision; `ReadHeadPublication` explores replicated freshness and membership. Their omissions include actual storage/RPC scheduling, admission/abort, full topology integration and implementation refinement.
+- **Implemented baseline / historical experiment:** `ReadVectorRecovery` explores the retained gated multi-owner apply/publication/recovery after an irrevocable decision; `ReadHeadPublication` explores replicated freshness and membership removed by the source rollback. Their omissions include actual storage/RPC scheduling, admission/abort, full topology integration and implementation refinement.
 - **Proposed conservative change:** owner-local, independently atomic microbatches interleaved with multi-owner transactions, retaining canonical atomic vector publication. Model mixed success/abort, bounded admission, duplicate/lost replies, exact epoch fencing, incremental projections and publication/release recovery before implementing this path.
 - **Deferred redesign:** distributed publication without the canonical authority. No existing result establishes its correctness or performance.
 
