@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {payload, settings, classify} from "../bench/write/model.js";
 import {settledBurst} from "../bench/write/burst.js";
-import {h2Transport} from "../bench/write/direct.js";
+import {h2Transport} from "../bench/http2.js";
 import {createServer, type ServerHttp2Stream, type IncomingHttpHeaders} from "node:http2";
 
 test("write scope cannot select existing graphs or an unbounded burst", () => {

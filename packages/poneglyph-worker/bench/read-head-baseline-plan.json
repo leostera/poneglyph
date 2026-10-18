@@ -1,0 +1,12 @@
+{
+  "phases": [
+    {"kind": "point", "count": 256, "concurrency": 8},
+    {"kind": "combined", "count": 256, "concurrency": 8},
+    {"kind": "combined", "count": 768, "concurrency": 16},
+    {"kind": "combined", "count": 1024, "concurrency": 32},
+    {"kind": "combined", "count": 1536, "concurrency": 64},
+    {"kind": "combined", "count": 2048, "concurrency": 128},
+    {"kind": "combined", "count": 2048, "concurrency": 256},
+    {"kind": "combined", "count": 2064, "concurrency": 512}
+  ]
+}

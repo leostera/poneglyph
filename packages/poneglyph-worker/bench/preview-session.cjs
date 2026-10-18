@@ -15,9 +15,12 @@ const wrangler = requireCf('wrangler');
   const token = await oauth.s();
   if (typeof token !== 'string' || token.length < 20) throw new Error('Credential unavailable');
   process.env.CLOUDFLARE_API_TOKEN = token;
+  const name = process.env.PONEGLYPH_PREVIEW_NAME;
+  if (!['poneglyph-validation-independent-read-operator', 'poneglyph-validation-independent-write-operator'].includes(name)) throw new Error('Invalid preview role');
   const dev = new wrangler.unstable_DevEnv();
   dev.on('reloadComplete', event => {
-    if (event.config.name === 'poneglyph-validation-independent-write-operator') {
+    console.log(JSON.stringify({stage: 'reload-complete', expectedName: event.config.name === name, hasProxyData: !!event.proxyData}));
+    if (event.config.name === name) {
       process.send?.({type: 'private-preview-ready', proxyData: event.proxyData});
     }
   });
@@ -32,8 +35,8 @@ const wrangler = requireCf('wrangler');
     return dispatch(event);
   };
   const worker = await dev.startWorker({
-    config: process.env.PONEGLYPH_WRITE_OPERATOR_CONFIG,
-    dev: {remote: true, server: {hostname: '127.0.0.1', port: Number(process.env.PONEGLYPH_WRITE_OPERATOR_PORT)},
+    config: process.env.PONEGLYPH_PREVIEW_CONFIG,
+    dev: {remote: true, server: {hostname: '127.0.0.1', port: Number(process.env.PONEGLYPH_PREVIEW_PORT)},
       inspector: false, liveReload: false,
       auth: {accountId: '0f436d2aabf1f872be90b8dd9d5715e6', apiToken: {apiToken: token}}},
   });

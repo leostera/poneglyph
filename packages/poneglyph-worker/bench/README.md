@@ -1,17 +1,20 @@
 # Isolated pointed-read benchmark
 
-Explicit, read-only load against the existing synthetic `control-plane-validation` fixture in the isolated validation Worker. It never seeds, repairs or changes data and is not a default test/build hook. It starts an authenticated ephemeral remote preview with one native service-binding RPC per incoming HTTP request; it creates no public deployment targets, classes or Durable Object namespaces.
+Explicit, read-only load against the existing synthetic `control-plane-validation` fixture in the isolated validation Worker. It never seeds, repairs or changes data and is not a default test/build hook. It starts an authenticated ephemeral remote preview, sends HTTP/2 requests directly to its authenticated remote endpoint (bypassing the localhost proxy), with one native service-binding RPC per incoming HTTP request; it creates no public deployment targets, classes or Durable Object namespaces.
 
 From `packages/poneglyph-worker`:
 
 ```sh
 bun run bench:read                            # 96-call routing smoke
 bun run bench:read --plan bench/scaling-plan.json  # explicit 10,000-call ramp
+bun run bench:read --plan bench/read-head-baseline-plan.json # explicit ramp through 512 offered calls
 ```
 
-Requires Node 26, the root frozen Bun installation, working `cf` authentication, a stable 100% isolated deployment and free localhost port 8879. The runner uses the Wrangler backend pinned by the installed `cf` package. Destination account, Worker, binding identity, graph and two synthetic queries are fixed; the plan controls only counts/concurrency. Harness bounds are operational safety limits, not graph admission limits.
+Requires Node 26, the root frozen Bun installation, working `cf` authentication, a stable 100% isolated deployment and an available ephemeral localhost SDK listener (not used for measured calls). The runner uses the Wrangler backend pinned by the installed `cf` package. Destination account, Worker, binding identity, graph and two synthetic queries are fixed; the plan controls only counts/concurrency. Harness bounds are operational safety limits, not graph admission limits.
 
 The benchmark stops at the first failed wave, settles every issued caller promise and never retries queries. Timeout/cancellation does not establish backend non-execution or delivery. It verifies deployment identity before/after, binds responses to a unique run ID, records actual in-flight concurrency and keeps all-outcome caller latency separate from successful hosted-caller/service latency. Closed-loop waves are not an open-loop, geographic, write-concurrent or infinite-capacity test.
+
+Every phase checkpoints all settled outcomes before deployment/status diagnostics. Reports include whole-phase launch span, actual offered in-flight maximum and the operator's startup colo (not proof that every query ran in that colo). The probe input-bundle/source hashes are recorded; normal pinned-SDK bundling remains enabled, so those are not claimed to be the final hosted bundle digest. No-bundle startup did not complete in initial attempts; those attempts issued zero graph queries and are not architecture/load successes. Only readiness/control-plane metadata may retry; graph query attempts never do.
 
 Reports, verified gzip hashes and private preview logs stay in `.artifacts/read-bench/<run-id>/`. Never paste preview/authentication URLs or tokens from logs. Retain selected redacted evidence separately when recording results.
 

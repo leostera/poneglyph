@@ -22,7 +22,10 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const path = new URL(request.url).pathname;
     if (request.headers.has("origin")) return new Response("Forbidden", {status: 403});
-    if (path === "/health" && request.method === "GET") return Response.json({runId: env.RUN_ID, readOnly: true});
+    if (path === "/health" && request.method === "GET") {
+      const colo = request.cf?.colo;
+      return Response.json({runId: env.RUN_ID, readOnly: true, startupColo: typeof colo === "string" && /^[A-Z]{3}$/.test(colo) ? colo : "unknown"});
+    }
     if (request.method !== "POST" || path !== "/point" && path !== "/combined") return new Response("Not found", {status: 404});
     const started = performance.now();
     try {
