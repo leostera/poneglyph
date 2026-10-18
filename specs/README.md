@@ -16,13 +16,55 @@ Build a shared semantic publication core with an inductive safety proof, then ch
 
 `WritePublicationCore.tla` specifies immutable transaction identities, disjoint durable commit/abort decisions, idempotent participant effects, atomic group publication and successful acknowledgements. `WritePublicationCoreProofs.tla` proves `CoreSpec => []CoreSafety` through an explicit inductive invariant: no aborted effects, transaction-complete published visibility and no successful acknowledgement before publication. The proof is parameterized by arbitrary owner/transaction sets and nonempty immutable participant sets; it has no TLC cardinality bound.
 
-Initial verification discharged **27 TLAPS obligations**, explored **288 distinct TLC states** (6,309 generated), and rejected proof attempts after three deliberate weakenings: conflicting durable decisions, publication before effects, and acknowledgement before publication. This is a semantic core proof, not a proof of numeric revisions, physical exactly-once writes, queues, epochs, predicates, liveness, the TypeScript implementation or latency. The concrete batch model must connect its numeric cuts to this core separately.
+The initial checkpoint discharged 27 TLAPS obligations; the expanded core discharges **33**, including durable decision monotonicity. The small TLC instance explores **288 distinct states** (6,309 generated). Deliberately weakening decision consistency, publication readiness or acknowledgement guards makes the intended proof fail. This is a semantic core proof, not a proof of numeric revisions, physical exactly-once writes, queues, epochs, predicates, liveness, the TypeScript implementation or latency.
+
+### Candidate concrete batch protocol
+
+`WriteBatchProtocol.tla` models the proposed conservative change, not deployed code:
+
+- Fixed, disjoint owner-local batches have separate successful and aborted member outcomes. Multi-owner transactions remain singleton groups.
+- Admission is bounded **per logical admission home**, not by one global active-write counter. The fixture borrows owner labels for home names, not physical placement guarantees.
+- Queued plans can be invalidated by ownership-epoch changes; protected work fences topology changes. Epochs do not move prepared work between physical actors in this model.
+- Owner gates are acquired in a fixed order. Assigned revision ranges are immutable, separate from admission/reservation order, and held through canonical publication.
+- Participant application, receipt confirmation, owner publication, root publication, root-reply confirmation, gate release and caller acknowledgement are separate durable steps. Root delivery can finish while the executor is down. Replay uses the assigned targets, never allocates another range.
+- Canonical facts accumulate independently from incremental views; physical effect counts expose duplicate application. Reads capture a numeric cut and scan retained versions across interleaved commits.
+- Lost caller replies do not roll back committed data. With bounded crashes, recovery and weak fairness, every modeled group eventually settles as done or rejected; this does not promise every submitted request is admitted or acknowledged.
+
+`WriteBatchRefinementProofs.tla` discharges **47 obligations** for semantic refinement to the core and independent outcomes. This is not yet an unbounded proof of `CutMatchesPublication`, epochs, numeric allocation, projections/counts, admission or concrete liveness. `CutMatchesPublication` is the critical bridge between the core's semantic visibility and actual numeric reads; currently TLC checks that bridge.
+
+Reproduce the complete new gate:
 
 ```sh
-TLAPM=/path/to/tlapm
-"$TLAPM" --strict --nofp --cache-dir /tmp/write-core-proofs specs/WritePublicationCoreProofs.tla
-# Run TLC on temporary copies, with WritePublicationCoreMC.cfg and WritePublicationCoreMC.tla.
+TLAPM=/path/to/tlapm TLA2TOOLS_JAR=/path/to/tla2tools.jar \
+  WRITE_PROTOCOL_EVIDENCE_DIR=/tmp/poneglyph-write-protocol \
+  ./specs/check-write-protocol.sh
 ```
+
+The gate separately checks both proof entrypoints (imported proof theorems are not a substitute for checking their defining module), four deliberately broken proof attempts, three positive TLC instances, seven broken-protocol counterexamples and six reachability witnesses. It fails on timeouts/incomplete exploration and uses fresh temporary state. Python 3 and a JDK are required; allow several minutes. It is an explicit formal checkpoint, not a default runtime-test hook or a benchmark.
+
+Retained results: `results/write-batch-protocol-2026-10-18/`:
+
+| Completed instance | Distinct states | Generated | Scope |
+| --- | ---: | ---: | --- |
+| Core | 288 | 6,309 | Arbitrary subsets in a three-transaction fixture |
+| Batch safety | 120,940 | 817,864 | Two owners, three groups, five transactions including one invalid member, partition-local admission, one captured read |
+| Recovery/progress | 192,645 | 1,047,543 | Two owners, two groups/four transactions, one epoch advance per owner, at most one executor/root actor crash, fair recovery/steps |
+
+Broken variants cover partial vector publication, early replies, batch poisoning, duplicate application, duplicate publication, projection replacement losing prior facts and stale planning epochs. Reachability witnesses prevent vacuous success: mixed batch success/abort, disjoint execution, local overload rejection, lost caller reply, unconfirmed durable root publication and aggregate admission above one partition's limit.
+
+### Coverage boundaries
+
+| Area | Evidence / remaining obligation |
+| --- | --- |
+| Existing owner-gated revision protocol | `ReadVectorRecovery` bounded TLC; starts after irrevocable decision and prepares |
+| Existing read-head membership/freshness | `ReadHeadPublication` bounded TLC and three local kernel lemmas; global inductive proof/composition still pending |
+| Schema-3 old-writer exclusion | Runtime integration tests of the old startup predicate; no separately executed old-binary certification or model of platform code handoff |
+| Proposed batch semantic safety and independent outcomes | TLAPS core/refinement proofs; static identities, participant sets and stable validation outcomes |
+| Proposed numeric cuts, epochs, incremental views/counts and recovery | Bounded TLC only; full deductive invariant remains work |
+| Dynamic batch formation, payload/token binding, conditional updates, retractions, predicate conflicts, quotas, physical migration/pruning, native I/O and authorization | Not established by the new models |
+| Hierarchical/decentralized publication, throughput, p99 or capacity | Neither implemented nor proved/measured here |
+
+The semantic model treats each transaction's local effect as all-or-nothing; it does not expand a transaction into individual SQL statements. Crashes interrupt only modeled durable boundaries. Canonical publication remains one atomic authority operation; composition with the asynchronous read-head barrier needs a separate refinement. The model assumes retained history survives logical epoch changes. No performance result follows from the number of explored states.
 
 ## TLC: finite-state exploration
 

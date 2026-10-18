@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "sourceSha256": {
+    "ReadHeadPublication.tla": "f846ae211b14fb8f7aa390506c602319f152f21f82ab312ba44dc310ce36677d",
+    "ReadHeadKernelProofs.tla": "9de09121dfebd5cca3694b072101c2ce5f57916a75e01d5e69c37d288abe7a59",
+    "ReadVectorPublication.tla": "5023fb424b6827da4b62fecee557bf0965e317be63a4e7152a2de778f24b239f",
+    "ReadVectorRecovery.tla": "cd0cabfb83699c8932e6809c6bfe5388e434a16c030f74cd50072100ee3fdf9b",
+    "check-tlaps.sh": "da414ac9e2c02c21a986f141bbb00e681935bad5150c433f2d1114b782d50092",
+    "check-read-head-publication.sh": "98f108d60a16c5e696e8afbd386d4e285c7ae5a89cfbd0697011fa8a710b551b",
+    "check-read-vector-publication.sh": "3fd5a55e87ab26a97bd15f6da998a5f3521c743d267ef2d7f6780445df5958de"
+  },
+  "scope": "Console output of existing formal regression commands; not runtime tests or hosted validation"
+}

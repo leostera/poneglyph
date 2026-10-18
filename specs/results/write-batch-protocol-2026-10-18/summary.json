@@ -1,0 +1,143 @@
+{
+  "status": "passed",
+  "error": null,
+  "tlapm": "901ae51",
+  "tla2toolsSha256": "15d103b7e5617780bcc904c0af12f1ad242e2b345c0301136c5be4588f17edac",
+  "sourceSha256": {
+    "WriteBatchProtocol.recovery.cfg": "efc86ee9ce2a66cc6720a75dbe5def830fa2f42bde7fee78af17a5bb1fe1f75f",
+    "WriteBatchProtocol.safe.cfg": "6741b2f18e1c263644cc61ee8ea6aeb27dd1faa772d03d646f65907fe0215080",
+    "WriteBatchProtocol.tla": "b01f0dd2145791562bc3627cdc6a3aab14a056835af1d31f1ea50ae5c3927151",
+    "WriteBatchProtocolMC.tla": "b06bf3373357311a5833993f8a7552d5d466ebda724fb4f04180157a5a4bd036",
+    "WriteBatchRefinementProofs.tla": "8091abb24f1ea5be001c5038b228e65236b365217458e1ddcb5d31f8847ac0fe",
+    "WritePublicationCore.tla": "fa3f07170a44e152928dd738179004f23247eb05afc0a8ee45696643df99379c",
+    "WritePublicationCoreMC.cfg": "b37d44218ac704d503620e3e3cc0f2a9bac642bfafe7770e71171f471986fae1",
+    "WritePublicationCoreMC.tla": "8b81fa34c38bf6a7b3067b6584305924b76ce19a669641abedd1339513b34a85",
+    "WritePublicationCoreProofs.tla": "9d0a4399f5d3b01d636cf3bcf36f2d11b905d08989a7a57dce46490613d0d629",
+    "check-write-protocol.sh": "6d04a4fa95dc8560ec335e9e0d31dda8c11f0dfa36a770f416d99d14b381d381"
+  },
+  "scope": "Semantic core and batch-to-core refinement proved; numeric cuts, epochs, projection counts, admission and fair recovery checked in bounded TLC instances. No implementation or latency proof.",
+  "results": {
+    "core-proof": {
+      "status": "proved",
+      "obligations": 33,
+      "seconds": 2.825
+    },
+    "batch-refinement-proof": {
+      "status": "proved",
+      "obligations": 47,
+      "seconds": 10.914
+    },
+    "conflicting-decision": {
+      "status": "expected-proof-failure",
+      "seconds": 6.678
+    },
+    "early-publication": {
+      "status": "expected-proof-failure",
+      "seconds": 6.894
+    },
+    "early-ack": {
+      "status": "expected-proof-failure",
+      "seconds": 7.211
+    },
+    "poison-batch-proof": {
+      "status": "expected-proof-failure",
+      "seconds": 41.774
+    },
+    "core-tlc": {
+      "status": "checked",
+      "seconds": 0.663,
+      "generated": 6309,
+      "distinct": 288
+    },
+    "batch-safety": {
+      "status": "checked",
+      "seconds": 17.074,
+      "generated": 817864,
+      "distinct": 120940
+    },
+    "batch-recovery-progress": {
+      "status": "checked",
+      "seconds": 82.827,
+      "generated": 1047543,
+      "distinct": 192645
+    },
+    "partial-vector": {
+      "status": "expected-counterexample",
+      "seconds": 1.193,
+      "generated": 5327,
+      "distinct": 1525
+    },
+    "premature-reply": {
+      "status": "expected-counterexample",
+      "seconds": 0.976,
+      "generated": 925,
+      "distinct": 332
+    },
+    "poison-batch": {
+      "status": "expected-counterexample",
+      "seconds": 0.591,
+      "generated": 534,
+      "distinct": 210
+    },
+    "duplicate-apply": {
+      "status": "expected-counterexample",
+      "seconds": 0.633,
+      "generated": 1459,
+      "distinct": 488
+    },
+    "duplicate-publication": {
+      "status": "expected-counterexample",
+      "seconds": 1.017,
+      "generated": 6758,
+      "distinct": 1882
+    },
+    "overwrite-projection": {
+      "status": "expected-counterexample",
+      "seconds": 1.383,
+      "generated": 28110,
+      "distinct": 6896
+    },
+    "stale-plan": {
+      "status": "expected-counterexample",
+      "seconds": 0.541,
+      "generated": 67,
+      "distinct": 47
+    },
+    "witness-NoMixedBatch": {
+      "status": "expected-counterexample",
+      "seconds": 1.0,
+      "generated": 11960,
+      "distinct": 3162
+    },
+    "witness-NoDisjointExecution": {
+      "status": "expected-counterexample",
+      "seconds": 0.897,
+      "generated": 5410,
+      "distinct": 1549
+    },
+    "witness-NoAdmissionRejection": {
+      "status": "expected-counterexample",
+      "seconds": 0.568,
+      "generated": 7,
+      "distinct": 7
+    },
+    "witness-NoLostReply": {
+      "status": "expected-counterexample",
+      "seconds": 0.968,
+      "generated": 11961,
+      "distinct": 3163
+    },
+    "witness-NoUnconfirmedPublication": {
+      "status": "expected-counterexample",
+      "seconds": 0.823,
+      "generated": 5327,
+      "distinct": 1525
+    },
+    "witness-NoAggregateScaling": {
+      "status": "expected-counterexample",
+      "seconds": 0.514,
+      "generated": 29,
+      "distinct": 22
+    }
+  }
+}
