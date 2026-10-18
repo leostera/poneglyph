@@ -1,0 +1,473 @@
+{
+  "sourceCommit": "a38765e44d95c92794b55a6b7d209ad0ac703349",
+  "runId": "2723982a-fca8-428a-b16f-8b5666e836ff",
+  "originalPrivateReportSha256": "48a4a6bde98b7a32a5a00db9c251c4a4a264f54312d1b8347d088dd3e1486f14",
+  "redactions": [
+    "plan.seedToken omitted from derivative report; original ignored report and identity not modified",
+    "Seed receipt not copied; no rows, query text, credentials or arbitrary upstream errors in measured diagnostics"
+  ],
+  "measured": 10000,
+  "complete": 10000,
+  "failed": 0,
+  "warmups": 512,
+  "warmupsComplete": 512,
+  "architectureCount": 1,
+  "placementLoadRounds": 8,
+  "scope": "One local machine, closed-loop warm reads. No cloud/production resources contacted. This is routing/correctness/transport evidence, not infinite capacity or hosted SLO evidence. Canonical baseline also passes; no causal speedup established.",
+  "toolchain": {
+    "node": "26.11.0",
+    "bun": "1.4.2"
+  },
+  "workerCheck": {
+    "passed": true,
+    "tests": 27
+  },
+  "dataflow": {
+    "headRoutedMeasuredReads": 7500,
+    "canonicalReadCutsDuringHeadRoutedPhases": 0,
+    "canonicalBaselineReadCuts": 2500,
+    "allActualConcurrencyMatchedPlan": true,
+    "allMeasuredWarmCacheHits": true,
+    "allSettledMeasurementsRetainedBeforeDiagnostics": true
+  },
+  "rounds": [
+    {
+      "heads": 0,
+      "phase": {
+        "kind": "point",
+        "concurrency": 16,
+        "count": 1250
+      },
+      "issued": 1250,
+      "completed": 1250,
+      "failed": 0,
+      "observedMaxInFlight": 16,
+      "elapsedMs": 578.0243330000001,
+      "launchSpanMs": 576.815458,
+      "callerAllOutcomes": {
+        "count": 1250,
+        "p50": 6.6399589999998625,
+        "p95": 9.376958000000059,
+        "p99": 10.631291999999917,
+        "max": 10.949791000000005
+      },
+      "nativeSuccessOnly": {
+        "count": 1250,
+        "p50": 2,
+        "p95": 3,
+        "p99": 4,
+        "max": 6
+      },
+      "serviceSuccessOnly": {
+        "count": 1250,
+        "p50": 1,
+        "p95": 2,
+        "p99": 3,
+        "max": 5
+      },
+      "cacheHits": 1250,
+      "rootReadCutCalls": 1250,
+      "discoveryCalls": 0,
+      "headValidations": [],
+      "routingAccountingValid": true,
+      "meetsLocalSampleTarget": true
+    },
+    {
+      "heads": 0,
+      "phase": {
+        "kind": "combined",
+        "concurrency": 128,
+        "count": 1250
+      },
+      "issued": 1250,
+      "completed": 1250,
+      "failed": 0,
+      "observedMaxInFlight": 128,
+      "elapsedMs": 578.9851249999999,
+      "launchSpanMs": 535.5729579999997,
+      "callerAllOutcomes": {
+        "count": 1250,
+        "p50": 56.887666999999965,
+        "p95": 64.51891699999987,
+        "p99": 67.92787499999986,
+        "max": 68.217083
+      },
+      "nativeSuccessOnly": {
+        "count": 1250,
+        "p50": 24,
+        "p95": 28,
+        "p99": 30,
+        "max": 35
+      },
+      "serviceSuccessOnly": {
+        "count": 1250,
+        "p50": 12,
+        "p95": 17,
+        "p99": 18,
+        "max": 20
+      },
+      "cacheHits": 1250,
+      "rootReadCutCalls": 1250,
+      "discoveryCalls": 1,
+      "headValidations": [],
+      "routingAccountingValid": true,
+      "meetsLocalSampleTarget": true
+    },
+    {
+      "heads": 1,
+      "phase": {
+        "kind": "point",
+        "concurrency": 16,
+        "count": 1250
+      },
+      "issued": 1250,
+      "completed": 1250,
+      "failed": 0,
+      "observedMaxInFlight": 16,
+      "elapsedMs": 590.6996250000002,
+      "launchSpanMs": 589.501334,
+      "callerAllOutcomes": {
+        "count": 1250,
+        "p50": 6.8988750000003165,
+        "p95": 9.061333000000104,
+        "p99": 9.685291999999663,
+        "max": 9.792292000000089
+      },
+      "nativeSuccessOnly": {
+        "count": 1250,
+        "p50": 2,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "serviceSuccessOnly": {
+        "count": 1250,
+        "p50": 2,
+        "p95": 3,
+        "p99": 4,
+        "max": 5
+      },
+      "cacheHits": 1250,
+      "rootReadCutCalls": 0,
+      "discoveryCalls": 0,
+      "headValidations": [
+        {
+          "member": 1,
+          "calls": 1250
+        }
+      ],
+      "routingAccountingValid": true,
+      "meetsLocalSampleTarget": true
+    },
+    {
+      "heads": 1,
+      "phase": {
+        "kind": "combined",
+        "concurrency": 128,
+        "count": 1250
+      },
+      "issued": 1250,
+      "completed": 1250,
+      "failed": 0,
+      "observedMaxInFlight": 128,
+      "elapsedMs": 605.1934999999999,
+      "launchSpanMs": 558.4710420000001,
+      "callerAllOutcomes": {
+        "count": 1250,
+        "p50": 59.48545800000011,
+        "p95": 68.33495900000025,
+        "p99": 69.49008299999969,
+        "max": 69.58083299999998
+      },
+      "nativeSuccessOnly": {
+        "count": 1250,
+        "p50": 26,
+        "p95": 30,
+        "p99": 30,
+        "max": 35
+      },
+      "serviceSuccessOnly": {
+        "count": 1250,
+        "p50": 14,
+        "p95": 18,
+        "p99": 18,
+        "max": 22
+      },
+      "cacheHits": 1250,
+      "rootReadCutCalls": 0,
+      "discoveryCalls": 0,
+      "headValidations": [
+        {
+          "member": 1,
+          "calls": 1250
+        }
+      ],
+      "routingAccountingValid": true,
+      "meetsLocalSampleTarget": true
+    },
+    {
+      "heads": 4,
+      "phase": {
+        "kind": "point",
+        "concurrency": 16,
+        "count": 1250
+      },
+      "issued": 1250,
+      "completed": 1250,
+      "failed": 0,
+      "observedMaxInFlight": 16,
+      "elapsedMs": 585.65425,
+      "launchSpanMs": 584.1942499999996,
+      "callerAllOutcomes": {
+        "count": 1250,
+        "p50": 6.7190419999997175,
+        "p95": 9.309624999999869,
+        "p99": 11.663666999999805,
+        "max": 12.221291999999266
+      },
+      "nativeSuccessOnly": {
+        "count": 1250,
+        "p50": 2,
+        "p95": 4,
+        "p99": 5,
+        "max": 5
+      },
+      "serviceSuccessOnly": {
+        "count": 1250,
+        "p50": 2,
+        "p95": 3,
+        "p99": 4,
+        "max": 5
+      },
+      "cacheHits": 1250,
+      "rootReadCutCalls": 0,
+      "discoveryCalls": 0,
+      "headValidations": [
+        {
+          "member": 1,
+          "calls": 337
+        },
+        {
+          "member": 2,
+          "calls": 319
+        },
+        {
+          "member": 3,
+          "calls": 303
+        },
+        {
+          "member": 4,
+          "calls": 291
+        }
+      ],
+      "routingAccountingValid": true,
+      "meetsLocalSampleTarget": true
+    },
+    {
+      "heads": 4,
+      "phase": {
+        "kind": "combined",
+        "concurrency": 128,
+        "count": 1250
+      },
+      "issued": 1250,
+      "completed": 1250,
+      "failed": 0,
+      "observedMaxInFlight": 128,
+      "elapsedMs": 603.864208,
+      "launchSpanMs": 554.7586249999995,
+      "callerAllOutcomes": {
+        "count": 1250,
+        "p50": 59.47533300000032,
+        "p95": 65.91212499999983,
+        "p99": 67.34308400000009,
+        "max": 67.4628330000005
+      },
+      "nativeSuccessOnly": {
+        "count": 1250,
+        "p50": 27,
+        "p95": 31,
+        "p99": 32,
+        "max": 33
+      },
+      "serviceSuccessOnly": {
+        "count": 1250,
+        "p50": 15,
+        "p95": 20,
+        "p99": 21,
+        "max": 22
+      },
+      "cacheHits": 1250,
+      "rootReadCutCalls": 0,
+      "discoveryCalls": 0,
+      "headValidations": [
+        {
+          "member": 1,
+          "calls": 317
+        },
+        {
+          "member": 2,
+          "calls": 290
+        },
+        {
+          "member": 3,
+          "calls": 323
+        },
+        {
+          "member": 4,
+          "calls": 320
+        }
+      ],
+      "routingAccountingValid": true,
+      "meetsLocalSampleTarget": true
+    },
+    {
+      "heads": 8,
+      "phase": {
+        "kind": "point",
+        "concurrency": 16,
+        "count": 1250
+      },
+      "issued": 1250,
+      "completed": 1250,
+      "failed": 0,
+      "observedMaxInFlight": 16,
+      "elapsedMs": 572.3789999999999,
+      "launchSpanMs": 571.1162080000004,
+      "callerAllOutcomes": {
+        "count": 1250,
+        "p50": 6.562415999999757,
+        "p95": 9.03795799999989,
+        "p99": 11.17133399999966,
+        "max": 11.266749999999774
+      },
+      "nativeSuccessOnly": {
+        "count": 1250,
+        "p50": 2,
+        "p95": 4,
+        "p99": 4,
+        "max": 6
+      },
+      "serviceSuccessOnly": {
+        "count": 1250,
+        "p50": 1,
+        "p95": 3,
+        "p99": 3,
+        "max": 5
+      },
+      "cacheHits": 1250,
+      "rootReadCutCalls": 0,
+      "discoveryCalls": 0,
+      "headValidations": [
+        {
+          "member": 1,
+          "calls": 158
+        },
+        {
+          "member": 2,
+          "calls": 142
+        },
+        {
+          "member": 3,
+          "calls": 164
+        },
+        {
+          "member": 4,
+          "calls": 167
+        },
+        {
+          "member": 5,
+          "calls": 146
+        },
+        {
+          "member": 6,
+          "calls": 166
+        },
+        {
+          "member": 7,
+          "calls": 156
+        },
+        {
+          "member": 8,
+          "calls": 151
+        }
+      ],
+      "routingAccountingValid": true,
+      "meetsLocalSampleTarget": true
+    },
+    {
+      "heads": 8,
+      "phase": {
+        "kind": "combined",
+        "concurrency": 128,
+        "count": 1250
+      },
+      "issued": 1250,
+      "completed": 1250,
+      "failed": 0,
+      "observedMaxInFlight": 128,
+      "elapsedMs": 602.8983749999998,
+      "launchSpanMs": 556.2366250000005,
+      "callerAllOutcomes": {
+        "count": 1250,
+        "p50": 59.75233399999979,
+        "p95": 71.4834579999997,
+        "p99": 72.08804200000031,
+        "max": 72.17425000000003
+      },
+      "nativeSuccessOnly": {
+        "count": 1250,
+        "p50": 27,
+        "p95": 31,
+        "p99": 32,
+        "max": 33
+      },
+      "serviceSuccessOnly": {
+        "count": 1250,
+        "p50": 15,
+        "p95": 21,
+        "p99": 22,
+        "max": 23
+      },
+      "cacheHits": 1250,
+      "rootReadCutCalls": 0,
+      "discoveryCalls": 0,
+      "headValidations": [
+        {
+          "member": 1,
+          "calls": 155
+        },
+        {
+          "member": 2,
+          "calls": 145
+        },
+        {
+          "member": 3,
+          "calls": 163
+        },
+        {
+          "member": 4,
+          "calls": 148
+        },
+        {
+          "member": 5,
+          "calls": 176
+        },
+        {
+          "member": 6,
+          "calls": 147
+        },
+        {
+          "member": 7,
+          "calls": 171
+        },
+        {
+          "member": 8,
+          "calls": 145
+        }
+      ],
+      "routingAccountingValid": true,
+      "meetsLocalSampleTarget": true
+    }
+  ]
+}
