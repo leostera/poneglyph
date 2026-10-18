@@ -12,6 +12,7 @@ export default {
     const answer = (body: object, status = 200) => Response.json({runId: scope.runId, case: scope.kind, ...body}, {status});
     if (request.method === "GET" && path === "/health") return answer({graphId: scope.graphId, count: scope.count});
     if (request.method !== "POST") return answer({kind: "not-found"}, 404);
+    if (env.AUDIT_ONLY && path !== "/audit") return answer({kind: "audit-only"}, 403);
     try {
       if (path === "/audit" || path === "/preflight") {
         const totals = Object.fromEntries(phases.map(phase => [phase, 0]));

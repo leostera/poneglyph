@@ -9,6 +9,7 @@ export const writeBindings = {
   RUN_ID: bindings.json(process.env["PONEGLYPH_WRITE_BENCH_RUN_ID"] ?? "unbound"),
   CASE: bindings.json(process.env["PONEGLYPH_WRITE_BENCH_CASE"] ?? "unbound"),
   COUNT: bindings.json(Number(process.env["PONEGLYPH_WRITE_BENCH_COUNT"] ?? "0")),
+  AUDIT_ONLY: bindings.json(process.env["PONEGLYPH_WRITE_BENCH_AUDIT_ONLY"] === "1"),
 };
 export default defineConfig(() => ({worker: {
   name: "poneglyph-validation-independent-write-operator", entrypoint: operator,

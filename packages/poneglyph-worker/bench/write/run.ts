@@ -1,6 +1,6 @@
 import {spawn, execFile} from "node:child_process";
 import {createHash, randomUUID} from "node:crypto";
-import {mkdir, open, writeFile} from "node:fs/promises";
+import {mkdir, open, writeFile, readFile} from "node:fs/promises";
 import {createRequire} from "node:module";
 import {createServer} from "node:net";
 import {dirname, resolve} from "node:path";
@@ -16,10 +16,11 @@ import {settledBurst} from "./burst.js";
 
 const execute = promisify(execFile), here = dirname(fileURLToPath(import.meta.url)), root = resolve(here, "../..");
 const target = "poneglyph-mavplus-validation-worker", account = "0f436d2aabf1f872be90b8dd9d5715e6";
-const port = 8877, base = `http://127.0.0.1:${port}`, environment = {...process.env, CLOUDFLARE_ACCOUNT_ID: account};
+let port = 0, base = "";
+const environment = {...process.env, CLOUDFLARE_ACCOUNT_ID: account};
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 async function deployment() {
-  const {stdout} = await execute("cf", ["workers", "deployments", "list", "--worker", target, "--per-page", "1"], {env: environment});
+  const {stdout} = await execute("cf", ["workers", "deployments", "list", "--worker", target, "--per-page", "1"], {env: environment, timeout: 30_000});
   const data: unknown = JSON.parse(stdout);
   if (!isRecord(data) || !Array.isArray(data["deployments"])) throw new Error("Invalid deployment");
   const first = data["deployments"][0];
@@ -30,13 +31,57 @@ async function deployment() {
 }
 async function portFree() {
   const server = createServer();
-  await new Promise<void>((accept, reject) => { server.once("error", reject); server.listen(port, "127.0.0.1", () => server.close(error => error ? reject(error) : accept())); });
+  await new Promise<void>((accept, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (address === null || typeof address === "string") { server.close(); reject(new Error("Invalid local listener")); return; }
+      port = address.port; base = `http://127.0.0.1:${port}`;
+      server.close(error => error ? reject(error) : accept());
+    });
+  });
 }
 async function probe(scope: ReturnType<typeof settings>, path: string) {
-  const response = await fetch(`${base}/${path}`, {method: path === "health" ? "GET" : "POST", signal: AbortSignal.timeout(60_000)});
+  const response = await fetch(`${base}/${path}`, {method: path === "health" ? "GET" : "POST", signal: AbortSignal.timeout(path === "health" ? 2_000 : 10_000)});
   const body: unknown = await response.json();
   if (response.status !== 200 || !isRecord(body) || body["runId"] !== scope.runId || body["case"] !== scope.kind) throw new Error("Invalid operator probe");
   return body;
+}
+
+async function auditRun(runId: string) {
+  // Resolve only a retained, validated run manifest, never caller-selected graphs.
+  if (!/^[0-9a-f-]{36}$/.test(runId)) throw new Error("Invalid audit run identity");
+  const artifact = resolve(root, ".artifacts/write-bench", runId);
+  const raw: unknown = JSON.parse(await readFile(resolve(artifact, "plan.json"), "utf8"));
+  if (!isRecord(raw) || !isRecord(raw["manifest"])) throw new Error("Missing retained run manifest");
+  const manifest = raw["manifest"], scope = settings(runId, manifest["kind"], manifest["count"]);
+  if (manifest["runId"] !== runId || manifest["graphId"] !== scope.graphId || manifest["target"] !== target || manifest["account"] !== account) throw new Error("Invalid retained audit scope");
+  await portFree();
+  const version = await deployment();
+  const require = createRequire(import.meta.url), cfRequire = createRequire(require.resolve("cf/package.json"));
+  const wrangler = resolve(dirname(cfRequire.resolve("wrangler/package.json")), "bin/wrangler.js");
+  const suffix = Date.now(), log = await open(resolve(artifact, `audit-${suffix}.log`), "w");
+  const child = spawn(process.execPath, [wrangler, "dev", "--remote", "--experimental-new-config", "--port", String(port), "--ip", "127.0.0.1"], {
+    cwd: here, detached: true, stdio: ["ignore", log.fd, log.fd], env: {...environment,
+      PONEGLYPH_WRITE_BENCH_RUN_ID: scope.runId, PONEGLYPH_WRITE_BENCH_CASE: scope.kind,
+      PONEGLYPH_WRITE_BENCH_COUNT: String(scope.count), PONEGLYPH_WRITE_BENCH_AUDIT_ONLY: "1"},
+  });
+  const exited = new Promise<void>(accept => { child.once("exit", () => accept()); child.once("error", () => accept()); });
+  try {
+    for (let attempt = 0; ; attempt++) {
+      if (child.exitCode !== null || child.signalCode !== null || attempt >= 60) throw new Error("Audit operator unavailable");
+      try { await probe(scope, "health"); break; } catch { await sleep(500); }
+    }
+    const audit = await probe(scope, "audit");
+    const report = {runId, version, writesIssued: 0, originalWaveSamplesAvailable: false, audit};
+    await writeFile(resolve(artifact, `audit-${suffix}.json`), JSON.stringify(report, null, 2) + "\n");
+    console.log(JSON.stringify(report));
+  } finally {
+    if (child.pid !== undefined) { try { process.kill(-child.pid, "SIGTERM"); } catch {} }
+    await Promise.race([exited, sleep(2_000)]);
+    if (child.pid !== undefined && child.exitCode === null && child.signalCode === null) { try { process.kill(-child.pid, "SIGKILL"); } catch {} }
+    await log.close();
+  }
 }
 
 async function main() {
@@ -101,6 +146,9 @@ async function main() {
     launchSpanMs = burst.launchSpanMs; elapsedMs = burst.elapsedMs; maxInFlight = burst.observedMaximumCallerInFlight;
     for (const [index, result] of burst.outcomes.entries()) samples.push(result.status === "fulfilled" ? result.value : {index, callerMs: elapsedMs, kind: "harness-failure"});
     stopped = samples.every(sample => sample.kind === "acknowledged") ? null : "failed-burst-no-more-writes";
+    const checkpoint = Buffer.from(JSON.stringify({manifest, stopped, issued: samples.length, maxInFlight, launchSpanMs, elapsedMs, samples}, null, 2) + "\n");
+    await writeFile(resolve(artifact, "burst-checkpoint.json.gz"), gzipSync(checkpoint, {level: 9}));
+    await writeFile(resolve(artifact, "burst-checkpoint.sha256"), hash(checkpoint) + "\n");
     console.log(JSON.stringify({runId: scope.runId, case: scope.kind, issued: samples.length, maxInFlight, launchSpanMs,
       elapsedMs, outcomes: samples.reduce<Record<string, number>>((counts, sample) => { counts[sample.kind] = (counts[sample.kind] ?? 0) + 1; return counts; }, {})}));
     // Observations only, not replays. SQL counts are per-bucket observations,
@@ -112,14 +160,16 @@ async function main() {
         const counts = audit["phases"];
         if (samples.every(sample => sample.kind === "acknowledged") && isRecord(counts) && counts["complete"] === scope.count) break;
       } catch { audits.push({kind: "audit-unavailable", at: new Date().toISOString()}); }
+      await writeFile(resolve(artifact, "audit-checkpoint.json"), JSON.stringify(audits, null, 2) + "\n");
     }
     const acknowledged = samples.filter(sample => sample.kind === "acknowledged");
     if (new Set(acknowledged.map(sample => sample.txId)).size !== acknowledged.length) stopped = "duplicate-acknowledgement-identity";
     const selected = acknowledged.filter((_sample, i) => i % Math.max(1, Math.floor(acknowledged.length / 16)) === 0).slice(0, 16).map(sample => sample.index);
+    const verificationSignal = AbortSignal.timeout(20_000);
     for (const index of selected) {
       let passed = false;
       try {
-        const response = await fetch(`${base}/verify`, {method: "POST", signal: AbortSignal.timeout(60_000),
+        const response = await fetch(`${base}/verify`, {method: "POST", signal: verificationSignal,
           body: JSON.stringify({index, ...(scope.kind === "graph" ? {facts: inputs[index]!.facts} : {})})});
         const body: unknown = await response.json();
         if (response.status !== 200 || !isRecord(body) || body["runId"] !== scope.runId || body["case"] !== scope.kind ||
@@ -133,6 +183,7 @@ async function main() {
         }
       } catch { /* Failed verification is retained, not retried or hidden. */ }
       verifications.push({index, passed});
+      if (!passed) break; // Stop failed read-back work; never retry it.
     }
     if (verifications.some(result => !result.passed)) stopped = "verification-failed";
     versionAfter = await deployment(); if (versionAfter !== versionBefore) stopped = "deployment-drift";
@@ -157,4 +208,11 @@ async function main() {
   }
 }
 if (process.argv.includes("--help")) console.log("bench:write --case hot|graph --count 1..10000: one explicitly authorized write burst to a fresh isolated graph; no retries or corpus repair");
-else await main().catch(() => { console.error("Write benchmark stopped; inspect .artifacts/write-bench. No writes are retried."); process.exitCode = 1; });
+else await (process.argv[2] === "--audit-run" && process.argv.length === 4 ? auditRun(process.argv[3]!) : main())
+  .catch(error => {
+    const messages = ["Invalid audit run identity", "Missing retained run manifest", "Invalid retained audit scope", "Invalid write-bench scope",
+      "Invalid deployment", "Unstable deployment", "Unstable deployment version", "Audit operator unavailable", "Invalid operator probe"];
+    const reason = error instanceof Error && messages.includes(error.message) ? error.message : "external-or-io";
+    const code = isRecord(error) && (typeof error["code"] === "number" || typeof error["code"] === "string" && /^[A-Z_]+$/.test(error["code"])) ? error["code"] : null;
+    console.error(JSON.stringify({event: "write-benchmark-stopped", reason, code, writesRetried: 0})); process.exitCode = 1;
+  });
