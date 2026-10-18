@@ -31,8 +31,19 @@ BY DecidePreserves, ApplyPreserves, PublishPreserves, AckPreserves,
 THEOREM InvariantImpliesSafety == CoreInv => CoreSafety
 BY ParticipantTyping, SMT DEF CoreInv, CoreType, CoreSafety, OwnerTxns
 
+THEOREM InvariantAlways == CoreSpec => []CoreInv
+BY InitialInvariant, NextPreserves, PTL DEF CoreSpec
+
 THEOREM PublicationSafety == CoreSpec => []CoreSafety
-<1>1. CoreSpec => []CoreInv
-  BY InitialInvariant, NextPreserves, PTL DEF CoreSpec
-<1>2. QED BY <1>1, InvariantImpliesSafety, PTL
+BY InvariantAlways, InvariantImpliesSafety, PTL
+
+THEOREM DecisionStepMonotonic ==
+  CoreInv /\ [CoreNext]_CoreVars =>
+    /\ s.committed \subseteq s'.committed
+    /\ s.aborted \subseteq s'.aborted
+BY SMT DEF CoreInv, CoreType, CoreNext, CoreVars, Decide, Apply, Publish, Acknowledge
+
+THEOREM DecisionsNeverForgotten == CoreSpec =>
+  [] [s.committed \subseteq s'.committed /\ s.aborted \subseteq s'.aborted]_CoreVars
+BY InvariantAlways, DecisionStepMonotonic, PTL DEF CoreSpec
 =============================================================================
