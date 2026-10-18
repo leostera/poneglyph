@@ -1,0 +1,11 @@
+{
+  "packages/poneglyph/src/storage/plan.ts": "0fb27563ade1aa92b19835a89dec100a5622aa3a294df2cf49133dba84768a41",
+  "packages/poneglyph/src/storage/protocol.ts": "3a6b1ddd582eaa21a6c7479aa6360c255d725aba95f956a9020edd9ba081c138",
+  "packages/poneglyph/src/storage/shard.ts": "07cd471317f36e665b51f3bd4b8e72355f0235f50f845ab18356820101133146",
+  "packages/poneglyph/src/storage/decision-control.ts": "dec23bb2749d5b7358eb8f3d328d27493b5eb5707f8550041b2eee3f14a69cb3",
+  "packages/poneglyph/tests/write-plan.test.ts": "e93ab696ec22fcf0cd180bd115137f1d68fe58ade0629de8cd53332f7ccbe229",
+  "packages/poneglyph/tests/write-planner.test.ts": "808d9b54d2182af5284ed2c894418fa73ccce3d65d29e91542c9cebb9761ebf9",
+  "packages/poneglyph/tests/decision-control.test.ts": "a8da1eae34b565e7327a06a3d32d4a314f03f807399be95b17c47e3f4d474945",
+  "packages/poneglyph/tests/participant-protocol.test.ts": "4793f66012f962d47a85c83b7873db32adb2563eb0a0da04f475aca7c5219af5",
+  "packages/poneglyph/tests/shard-boundary.test.ts": "4b087101a639080c00d0bb3dd5546ebac18373f5e1db5c35554135fe57efda59"
+}

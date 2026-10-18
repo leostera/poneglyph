@@ -1,0 +1,26 @@
+{
+  "scope": "Second readability/type/boundary pass: storage write planner, participant index parser, shard commit/cancel/finalize request parser, shard method dispatch.",
+  "changes": [
+    "Planning separated into entity-key indexing, logical owner snapshots and physical participant grouping.",
+    "Reuse planned keys for routing; keep canonical owner order, first-encounter participant order, every journal index, duplicate fact events, and pre/post-split epoch semantics.",
+    "Parse decision controls into frozen branded GraphId/TransactionId values before command processing.",
+    "Pin persisted decision_context_json bytes/order and existing malformed-request error precedence.",
+    "Use a method/path switch for shard POST commands; strict ascending participant fact indices without redundant Set."
+  ],
+  "verification": {
+    "targeted": "42 tests passed across five focused core files",
+    "rootCheck": "passed",
+    "rootBuild": "passed",
+    "focused": "10 warm and 10 cold focused controls passed; not full-tier certification"
+  },
+  "unchanged": [
+    "persistent SQL/schema representation",
+    "request field names and decision context serialization bytes",
+    "public API and transaction acknowledgement/publication order",
+    "routing and lease policies",
+    "Cloudflare resources and dependencies",
+    "specifications and prior evidence"
+  ],
+  "cloudMutations": 0,
+  "performanceClaim": null
+}

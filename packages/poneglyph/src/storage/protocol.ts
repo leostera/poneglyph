@@ -66,18 +66,19 @@ export function parseParticipantBatch(input: unknown): ParseResult<ParticipantBa
   }
 
   const facts: IndexedFact[] = [];
-  const indices = new Set<number>();
   for (const [offset, item] of input["facts"].entries()) {
     if (!isRecord(item)) return rejected(`participant.facts[${offset}]`, "expected an indexed fact");
     const index = item["index"];
-    if (!Number.isSafeInteger(index) || typeof index !== "number" || index < 0 || indices.has(index) || (facts.length > 0 && index <= facts[facts.length - 1]!.index)) {
+    // Strictly increasing indices already guarantee uniqueness. Equal fact
+    // contents at different indices must remain separate journal events.
+    const previous = facts[facts.length - 1];
+    if (!Number.isSafeInteger(index) || typeof index !== "number" || index < 0 || (previous !== undefined && index <= previous.index)) {
       return rejected(`participant.facts[${offset}].index`, "expected a unique non-negative fact index");
     }
     const fact = parseFactDraft(item["fact"], `participant.facts[${offset}].fact`);
     if (!fact.ok) return fact;
     const virtualKey = parseVirtualKey(item["virtualKey"]);
     if (!virtualKey.ok) return virtualKey;
-    indices.add(index);
     facts.push(Object.freeze({ index, fact: fact.value, virtualKey: virtualKey.value }));
   }
 

@@ -31,21 +31,13 @@ import { matchesPrefix, parseVirtualKey, parseVirtualPrefix, virtualKeyForEntity
 import { parseParticipantBatch, parseScanRequest, type ParticipantBatch, type ScanRequest } from "./protocol.js";
 import { ensureShardSchema } from "./sql.js";
 import { BoundedReadCache, utf8Bytes } from "./read-cache.js";
+import { decisionContext, parseDecisionControl, type DecisionControl } from "./decision-control.js";
 
 type AtomicRecord = Readonly<{payload_hash: string; status: string; decision_kind: string;
   atomic_commit_seq: number | null; atomic_statement_ms: number | null; atomic_fact_count: number | null;
   atomic_rejection_status: number | null; atomic_error: string | null;
   atomic_generation: number | null; atomic_directory_epoch: number | null; created_at_ms: number;
   decision_context_json: string | null; tx_id: string}>;
-type DecisionControl = Readonly<{graphId: string; shardPrefix: VirtualPrefix; shardGeneration: number;
-  directoryEpoch: number; txId: string; payloadHash: string; commitSeq: number; statementTimeMs: number; identityTimeMs: number}>;
-
-function decisionContext(batch: DecisionControl): string {
-  return JSON.stringify({graphId: batch.graphId, shardPrefix: batch.shardPrefix, shardGeneration: batch.shardGeneration,
-    directoryEpoch: batch.directoryEpoch, txId: batch.txId, payloadHash: batch.payloadHash, commitSeq: batch.commitSeq,
-    statementTimeMs: batch.statementTimeMs, identityTimeMs: batch.identityTimeMs});
-}
-
 type ActiveFactRow = Readonly<{
   source: string;
   entity: string;
@@ -106,26 +98,30 @@ export class GraphShardDO extends DurableObject<Env> {
   override async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname;
     try {
-      if (request.method === "POST" && path === "/_route") return await this.route(request);
-      if (request.method === "POST" && path === "/_preflight") return await this.preflight(request);
-      if (request.method === "POST" && path === "/_begin-split") return await this.beginSplit(request);
-      if (request.method === "POST" && path === "/_init-child") return await this.initChild(request);
-      if (request.method === "POST" && path === "/_export") return await this.exportPage(request);
-      if (request.method === "POST" && path === "/_import") return await this.importPage(request);
-      if (request.method === "POST" && path === "/_finish-child") return await this.finishChild(request);
-      if (request.method === "POST" && path === "/_cutover") return await this.cutover(request);
-      if (request.method === "POST" && path === "/_count") return await this.countRange(request);
-      if (request.method === "POST" && path === "/_abort-split") return await this.abortSplit(request);
-      if (request.method === "POST" && path === "/_retire") return await this.retire(request);
-      if (request.method === "POST" && path === "/_atomic") return await this.atomic(request);
-      if (request.method === "POST" && path === "/_decision-finalize") return await this.finalizeDecision(request);
-      if (request.method === "POST" && path === "/_prepare") return await this.prepare(request);
-      if (request.method === "POST" && path === "/_commit") return await this.commit(request);
-      if (request.method === "POST" && path === "/_cancel") return await this.cancel(request);
-      if (request.method === "POST" && path === "/_scan") return await this.scan(request);
-      if (request.method === "POST" && path === "/_entity") return await this.getEntity(request);
-      if (request.method === "POST" && path === "/_schema") return await this.observeSchema(request);
-      if (request.method === "POST" && path === "/_prune") return await this.prune(request);
+      if (request.method === "POST") {
+        switch (path) {
+          case "/_route": return await this.route(request);
+          case "/_preflight": return await this.preflight(request);
+          case "/_begin-split": return await this.beginSplit(request);
+          case "/_init-child": return await this.initChild(request);
+          case "/_export": return await this.exportPage(request);
+          case "/_import": return await this.importPage(request);
+          case "/_finish-child": return await this.finishChild(request);
+          case "/_cutover": return await this.cutover(request);
+          case "/_count": return await this.countRange(request);
+          case "/_abort-split": return await this.abortSplit(request);
+          case "/_retire": return await this.retire(request);
+          case "/_atomic": return await this.atomic(request);
+          case "/_decision-finalize": return await this.finalizeDecision(request);
+          case "/_prepare": return await this.prepare(request);
+          case "/_commit": return await this.commit(request);
+          case "/_cancel": return await this.cancel(request);
+          case "/_scan": return await this.scan(request);
+          case "/_entity": return await this.getEntity(request);
+          case "/_schema": return await this.observeSchema(request);
+          case "/_prune": return await this.prune(request);
+        }
+      }
       return jsonResponse({ error: "not found" }, 404);
     } catch (error) {
       const status = error instanceof ShardProtocolError ? error.status : 500;
@@ -844,49 +840,13 @@ export class GraphShardDO extends DurableObject<Env> {
   }
 
   private async readControl(request: Request): Promise<
-    | { ok: true; value: Readonly<{
-        graphId: string;
-        shardPrefix: VirtualPrefix;
-        shardGeneration: number;
-        directoryEpoch: number;
-        txId: string;
-        payloadHash: string;
-        commitSeq: number;
-        statementTimeMs: number;
-        identityTimeMs: number;
-      }> }
-    | { ok: false; response: Response }
+    | {ok: true; value: DecisionControl}
+    | {ok: false; response: Response}
   > {
-    const input = await readJsonBody(request, 4_096);
-    if (!input.ok || !isRecord(input.value)) {
-      return { ok: false, response: jsonResponse({ error: input.ok ? "expected a commit object" : input.error.message }, 400) };
-    }
-    const graphId = parseGraphId(input.value["graphId"]);
-    const shardPrefix = parseVirtualPrefix(input.value["shardPrefix"]);
-    const shardGeneration = readNonNegativeInteger(input.value["shardGeneration"]);
-    const directoryEpoch = readNonNegativeInteger(input.value["directoryEpoch"]);
-    const txId = parseTransactionId(input.value["txId"]);
-    const payloadHash = input.value["payloadHash"];
-    const commitSeq = readNonNegativeInteger(input.value["commitSeq"]);
-    const statementTimeMs = readNonNegativeInteger(input.value["statementTimeMs"]), identityTimeMs = readNonNegativeInteger(input.value["identityTimeMs"]);
-    if (!statementTimeMs.ok || !identityTimeMs.ok) return {ok: false, response: jsonResponse({error: "invalid decision timestamps"}, 400)};
-    if (!graphId.ok || !shardPrefix.ok || !shardGeneration.ok || !directoryEpoch.ok || !txId.ok || !commitSeq.ok || typeof payloadHash !== "string" || !/^[a-f0-9]{64}$/.test(payloadHash)) {
-      return { ok: false, response: jsonResponse({ error: "invalid commit request" }, 400) };
-    }
-    return {
-      ok: true,
-      value: {
-        graphId: graphId.value,
-        shardPrefix: shardPrefix.value,
-        shardGeneration: shardGeneration.value,
-        directoryEpoch: directoryEpoch.value,
-        txId: txId.value,
-        payloadHash,
-        commitSeq: commitSeq.value,
-        statementTimeMs: statementTimeMs.value,
-        identityTimeMs: identityTimeMs.value,
-      },
-    };
+    const body = await readJsonBody(request, 4_096);
+    if (!body.ok) return {ok: false, response: jsonResponse({error: body.error.message}, 400)};
+    const control = parseDecisionControl(body.value);
+    return control.ok ? control : {ok: false, response: jsonResponse({error: control.error.message}, 400)};
   }
 
   private async route(request: Request): Promise<Response> {
