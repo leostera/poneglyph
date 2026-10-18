@@ -45,9 +45,20 @@ export async function runLocalReadHeads(count: number): Promise<string> {
     await writeFile(resolve(out, "report.sha256"), createHash("sha256").update(bytes).digest("hex") + "\n");
   };
   try {
-    await build({absWorkingDir: resolve(import.meta.dirname, ".."), entryPoints: {
+    const built = await build({absWorkingDir: resolve(import.meta.dirname, ".."), metafile: true, entryPoints: {
       service: "test/cache-test-service.ts", probe: "bench/operator.ts", admin: "bench/local-head-admin.ts",
     }, outdir: directory, outExtension: {".js": ".mjs"}, bundle: true, format: "esm", platform: "browser", target: "es2024", external: ["cloudflare:*", "node:*"], conditions: ["workerd", "worker", "browser"]});
+    const digest = async (file: string) => createHash("sha256").update(await readFile(file)).digest("hex");
+    const workerInputs = await Promise.all(Object.keys(built.metafile.inputs).map(async file => ({
+      path: file, sha256: await digest(resolve(import.meta.dirname, "..", file)),
+    })));
+    const harnessInputs = await Promise.all(["local-heads.ts", "waves.ts", "plan.ts"].map(async file => ({
+      path: `bench/${file}`, sha256: await digest(resolve(import.meta.dirname, file)),
+    })));
+    const bundles = await Promise.all(["probe", "service", "admin"].map(async name => ({
+      name, sha256: await digest(resolve(directory, `${name}.mjs`)),
+    })));
+    await writeFile(resolve(out, "source-inputs.json"), JSON.stringify({workerInputs, harnessInputs, bundles}, null, 2) + "\n");
     const manifest = async (name: string) => ({mainModule: "index.mjs", modules: {"index.mjs": {type: "esm" as const, contents: await readFile(resolve(directory, `${name}.mjs`), "utf8")}}});
     const probe = await manifest("probe"), service = await manifest("service"), admin = await manifest("admin");
     const binding = {type: "worker" as const, worker: "service", props: {clientId: "local-benchmark"}};
@@ -104,9 +115,10 @@ export async function runLocalReadHeads(count: number): Promise<string> {
       };
       for (const kind of ["point", "combined"] as const) {
         const warm = await settledWaves({kind, count: plan.warmupPerQuery, concurrency: 8}, () => probeCall(kind), wave => wave.every(outcome => outcome.status === "fulfilled" && successful(outcome.value)));
-        warmups.push({heads, kind, observedMaxInFlight: warm.observedMaxInFlight, outcomes: warm.outcomes});
+        const samples: Sample[] = warm.outcomes.map(outcome => outcome.status === "fulfilled" ? outcome.value : {callerMs: outcome.elapsedMs, failure: "protocol"});
+        warmups.push({heads, kind, observedMaxInFlight: warm.observedMaxInFlight, samples});
         await checkpoint();
-        if (warm.outcomes.length !== plan.warmupPerQuery || warm.outcomes.some(outcome => outcome.status !== "fulfilled" || !successful(outcome.value))) throw new Error("Local warmup failed");
+        if (samples.length !== plan.warmupPerQuery || samples.some(sample => !successful(sample))) throw new Error("Local warmup failed");
       }
       for (const phase of plan.roundsPerPlacement) {
         const before = counters(await control("/counts"));
