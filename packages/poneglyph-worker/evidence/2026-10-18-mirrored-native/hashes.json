@@ -1,0 +1,25 @@
+[
+  {
+    "source": "sites/onepiece.poneglyph.dev/.artifacts/import/mavplus-validation/native-scaling-result-41550046-a8ed-4e76-836d-a6b8a8b1280a.json",
+    "archive": "scaling-report.json.gz",
+    "reportSha256": "95d69bee832b241003bb9b5ff517150091937d265a8fa7aeba02d77b8a5ccf4c",
+    "archiveSha256": "afbeaf0eff9c4985e38c28a52cae69662e1f70d9e015bfa2965805b8b5cbec73"
+  },
+  {
+    "source": "sites/onepiece.poneglyph.dev/.artifacts/import/mavplus-validation/native-preview-result-da491a36-508c-47a1-9faf-3fbeba2c9ca1.json",
+    "archive": "smoke-report.json.gz",
+    "reportSha256": "9c2230102aa58ea591578eaa5b488a11566b4279f29df833c1a9e9432f98bd23",
+    "archiveSha256": "0caaed1e2db097f81382c288ce6368cfad259a0091621eafaf5a7040882bff92"
+  },
+  {
+    "source": "sites/onepiece.poneglyph.dev/.artifacts/import/mavplus-validation/local-transport-result-de5861ca-94a5-4b42-9170-85d7c0f2d96c.json",
+    "archive": "local-transport-report.json.gz",
+    "reportSha256": "383799ab94f45f81e765c8a7d823156d28a86fb798bc029e8eec57cdaec32875",
+    "archiveSha256": "14770e8c29b6dae44ab608306b42c936d1b7d3b88655fbd1f483c736e55c72a6"
+  },
+  {
+    "archive": "historical-harness-sources.json.gz",
+    "reportSha256": "740fc0502d85f978ea7dd2668811b0679e32155747024090c3f4143d8a1ce338",
+    "archiveSha256": "0ac3b7960bc115ab56929504210aaff12d18f2f04470699420f2f63ed8243b4b"
+  }
+]

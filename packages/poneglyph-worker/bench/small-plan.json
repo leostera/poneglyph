@@ -1,0 +1,7 @@
+{
+  "phases": [
+    {"kind": "point", "count": 16, "concurrency": 1},
+    {"kind": "combined", "count": 16, "concurrency": 1},
+    {"kind": "combined", "count": 64, "concurrency": 8}
+  ]
+}

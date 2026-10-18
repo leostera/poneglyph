@@ -1,0 +1,205 @@
+{
+  "runId": "41550046-a8ed-4e76-836d-a6b8a8b1280a",
+  "serviceSourceRevision": "8ed9df0",
+  "deployedVersion": "b45f2acb-b6fc-4a75-b434-9a3a58b9ea73",
+  "planSha256": "dd066890d4d841209d023b0a66dcf7b2b0ef7073986540628d71ff266e9e8410",
+  "startedAt": "2026-10-18T02:45:45.589Z",
+  "completedAt": "2026-10-18T02:46:35.973Z",
+  "planned": 10000,
+  "issued": 10000,
+  "successful": 10000,
+  "failed": 0,
+  "retries": 0,
+  "writes": 0,
+  "callerMode": "hosted-private-preview-native-binding",
+  "phases": [
+    {
+      "path": "/point",
+      "issued": 1000,
+      "successful": 1000,
+      "observedMaximumCallerInFlight": 8,
+      "elapsedMs": 11089.6275,
+      "completeCallsPerSecond": 90.1743543685304,
+      "allOutcomeExternalCallerMs": {
+        "count": 1000,
+        "p50": 84.85883300000023,
+        "p95": 92.12862499999937,
+        "p99": 97.12374999999975,
+        "max": 208.56174999999985
+      },
+      "successfulHostedNativeCallerMs": {
+        "count": 1000,
+        "p50": 10,
+        "p95": 14,
+        "p99": 19,
+        "max": 47
+      },
+      "successfulServiceMs": {
+        "count": 1000,
+        "p50": 8,
+        "p95": 12,
+        "p99": 17,
+        "max": 41
+      },
+      "completedResultHits": 1000
+    },
+    {
+      "path": "/combined",
+      "issued": 1000,
+      "successful": 1000,
+      "observedMaximumCallerInFlight": 8,
+      "elapsedMs": 11032.384583,
+      "completeCallsPerSecond": 90.64223536414042,
+      "allOutcomeExternalCallerMs": {
+        "count": 1000,
+        "p50": 84.34112499999901,
+        "p95": 94.43149999999878,
+        "p99": 103.22637500000201,
+        "max": 118.18324999999822
+      },
+      "successfulHostedNativeCallerMs": {
+        "count": 1000,
+        "p50": 10,
+        "p95": 16,
+        "p99": 23,
+        "max": 46
+      },
+      "successfulServiceMs": {
+        "count": 1000,
+        "p50": 8,
+        "p95": 12,
+        "p99": 16,
+        "max": 44
+      },
+      "completedResultHits": 1000
+    },
+    {
+      "path": "/combined",
+      "issued": 1000,
+      "successful": 1000,
+      "observedMaximumCallerInFlight": 16,
+      "elapsedMs": 6691.1005000000005,
+      "completeCallsPerSecond": 149.45224630836137,
+      "allOutcomeExternalCallerMs": {
+        "count": 1000,
+        "p50": 91.9063750000023,
+        "p95": 102.72366599999805,
+        "p99": 334.8299589999988,
+        "max": 359.4986250000002
+      },
+      "successfulHostedNativeCallerMs": {
+        "count": 1000,
+        "p50": 12,
+        "p95": 16,
+        "p99": 85,
+        "max": 227
+      },
+      "successfulServiceMs": {
+        "count": 1000,
+        "p50": 11,
+        "p95": 15,
+        "p99": 83,
+        "max": 211
+      },
+      "completedResultHits": 995
+    },
+    {
+      "path": "/combined",
+      "issued": 2000,
+      "successful": 2000,
+      "observedMaximumCallerInFlight": 32,
+      "elapsedMs": 7167.617459000001,
+      "completeCallsPerSecond": 279.03274853050436,
+      "allOutcomeExternalCallerMs": {
+        "count": 2000,
+        "p50": 105.89233400000376,
+        "p95": 120.44904200000019,
+        "p99": 133.69420900000114,
+        "max": 236.5434580000001
+      },
+      "successfulHostedNativeCallerMs": {
+        "count": 2000,
+        "p50": 20,
+        "p95": 27,
+        "p99": 31,
+        "max": 144
+      },
+      "successfulServiceMs": {
+        "count": 2000,
+        "p50": 19,
+        "p95": 26,
+        "p99": 30,
+        "max": 122
+      },
+      "completedResultHits": 1997
+    },
+    {
+      "path": "/combined",
+      "issued": 2000,
+      "successful": 2000,
+      "observedMaximumCallerInFlight": 64,
+      "elapsedMs": 4741.721958000002,
+      "completeCallsPerSecond": 421.78770027325146,
+      "allOutcomeExternalCallerMs": {
+        "count": 2000,
+        "p50": 137.45008300000336,
+        "p95": 196.57079099999828,
+        "p99": 216.88954200000444,
+        "max": 232.4011660000033
+      },
+      "successfulHostedNativeCallerMs": {
+        "count": 2000,
+        "p50": 35,
+        "p95": 60,
+        "p99": 90,
+        "max": 119
+      },
+      "successfulServiceMs": {
+        "count": 2000,
+        "p50": 34,
+        "p95": 59,
+        "p99": 89,
+        "max": 119
+      },
+      "completedResultHits": 2000
+    },
+    {
+      "path": "/combined",
+      "issued": 3000,
+      "successful": 3000,
+      "observedMaximumCallerInFlight": 128,
+      "elapsedMs": 5493.8166249999995,
+      "completeCallsPerSecond": 546.0684629239878,
+      "allOutcomeExternalCallerMs": {
+        "count": 3000,
+        "p50": 192.06037500000093,
+        "p95": 255.93445800000336,
+        "p99": 340.742333999995,
+        "max": 728.234000000004
+      },
+      "successfulHostedNativeCallerMs": {
+        "count": 3000,
+        "p50": 64,
+        "p95": 93,
+        "p99": 142,
+        "max": 592
+      },
+      "successfulServiceMs": {
+        "count": 3000,
+        "p50": 63,
+        "p95": 93,
+        "p99": 142,
+        "max": 575
+      },
+      "completedResultHits": 2992
+    }
+  ],
+  "limitations": [
+    "Fixed-query closed-loop waves, not infinite, open-loop, geo-distributed, write-concurrent or sustained reliability certification.",
+    "Maximum in-flight is measured at the external caller, not concurrent backend CPU execution.",
+    "Private preview caller measures native service RPC separately from external network/proxy delivery.",
+    "Backend source changed (facade mirror) as well as caller transport; this is not a controlled single-variable causal comparison.",
+    "Earlier 37 remote-binding timeouts are not individually reconciled or proven fixed.",
+    "All returned selected-component snapshot sequences were 1; this is not a global clock."
+  ]
+}
