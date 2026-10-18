@@ -1,0 +1,55 @@
+{
+  "sourceCommit": "3a567b3770408d441c9059de499157d5351eb149",
+  "toolchain": {
+    "bun": "1.4.2",
+    "node": "26.11.0",
+    "tlapm": "901ae51",
+    "tla2toolsSha256": "15d103b7e5617780bcc904c0af12f1ad242e2b345c0301136c5be4588f17edac",
+    "backends": "bundled Z3 4.8.9 and PTL/LS4; no Isabelle certificate recheck"
+  },
+  "sources": {
+    "packages/poneglyph-worker/src/query-coordinator.ts": "ccccfbd265ed333347fb58478f59bd52d5c85cdc1e0179ad5e64554b5d2497a9",
+    "packages/poneglyph-worker/src/read-head-routing.ts": "97f0a174431ec1c140376f8052a5ef3996a7e884a992e50c366bc50eb1c7ab8c",
+    "packages/poneglyph-worker/test/cache-test-service.ts": "96693dcf48d2bc01c03f4ad987d0b31260afbbb940f3dc2bc791e099a9bc87e0",
+    "packages/poneglyph-worker/test/driver.ts": "468cc8177d092e6f56774818465399d20f11c4c6b0142d623cd95d559c5bb1b5",
+    "packages/poneglyph-worker/test/rpc.test.ts": "09f0e2f3294630b8a9452428349f07b850886b3377997d6cbeb14c8219e091a4",
+    "packages/poneglyph-worker/test/read-head-routing.test.ts": "d1168078a421c895da4f238b7c698fc39897d111c8ee4bb4e90904eb34e1b223",
+    "packages/poneglyph-worker/test/read-head-rpc.ts": "d6cbde1ec1cd764883799b2dfcfba24bca9f51ffe520911434db939de881412a",
+    "packages/poneglyph/src/storage/read-head-coordinator.ts": "2525a02b8c9a634644554dfa782a46a14ec658ee2269b458efbf2c27e78d97e2",
+    "packages/poneglyph/src/storage/read-head-placement.ts": "8ad843aed224f5bb41fdb9511c39071d8f81025f5546b0818da23a12b787d65f"
+  },
+  "gates": {
+    "workerCheck": {
+      "passed": true,
+      "tests": 25
+    },
+    "rootCheck": true,
+    "rootBuild": true,
+    "focused": {
+      "passed": true,
+      "cases": 10,
+      "temperatures": [
+        "warm",
+        "cold"
+      ],
+      "report": "packages/conformance/results/focused-controls-2026-10-18T15-39-13.307Z/report.json.gz"
+    },
+    "readHeadKernelRegression": true,
+    "readHeadParentRegression": true
+  },
+  "scope": [
+    "Completed immutable Worker result validation through integrated metadata heads; cold results/scans still canonical",
+    "Discovery hints are bounded, graph-bound, stale-tolerant routing data, not authority or read leases",
+    "26 TLAPS obligations conditional on persistent type and global head-freshness premises",
+    "TLC fixture fixes full-roster hint and cache version zero; two replicas, two publication versions, one possible crash, all nonempty two-owner scopes",
+    "Three weakened proof attempts, three stale-answer TLC counterexamples, four reachability controls",
+    "Native 16-read batch proved per-request fresh head validation without canonical read-cut/discovery traffic",
+    "No deployment, cloud graph opt-in, benchmark cloud writes, hosted capacity/latency claim or push"
+  ],
+  "incomplete": [
+    "Initial unconstrained TLC run timed out; not passing evidence",
+    "Old-binary-on-schema-3 rollout exclusion not certified",
+    "Global deductive head invariant, implementation refinement, infinite capacity and unconditional availability not proved",
+    "Hosted p99 <100ms/completion target still unverified for this architecture"
+  ]
+}
