@@ -6,7 +6,8 @@ import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseUri } from "../domain/identifiers.js";
 import { compareUnicodeScalars } from "../domain/string-order.js";
 import { isRecord } from "../domain/result.js";
-import { evaluateDatalog, QueryResultLimitExceeded } from "../datalog/evaluator.js";
+import { QueryResultLimitExceeded } from "../datalog/evaluator.js";
+import { collectQueryRows, type QueryRows } from "./query-results.js";
 import type { DatalogQuery } from "../datalog/ast.js";
 import { parseDatalogQuery } from "../datalog/parser.js";
 import { DistributedFactSource, type QueryMetrics } from "./distributed-fact-source.js";
@@ -339,28 +340,15 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
 
     const cut = await tracing.enterSpan("poneglyph.query.snapshot", () => this.acquireQueryReadCut(graphId, query.value, safeVector));
     const snapshotMs = Date.now() - started;
-    const lease = { snapshotSeq: Math.max(...cut.map(s => s.snapshotSeq)), directoryEpoch: 0,
-      expiresAtMs: Math.min(...cut.map(s => s.expiresAtMs)) };
+    const snapshotSeq = Math.max(...cut.map(snapshot => snapshot.snapshotSeq));
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new DOMException("query time budget exceeded", "TimeoutError")), QUERY_TIMEOUT_MS);
-    const source = new DistributedFactSource(this.env, graphId, lease.snapshotSeq, lease.directoryEpoch, lease.expiresAtMs, undefined, cut);
-    source.metrics.treeReadLeaseAcquisitions = cut.length;
-    const rows: Record<string, unknown>[] = [];
+    const source = new DistributedFactSource(this.env, graphId, cut);
+    let rows: QueryRows;
     let evaluationMs = 0, releaseMs = 0;
     try {
       const evaluationStarted = Date.now();
-      await tracing.enterSpan("poneglyph.query.evaluate", async () => {
-        let responseBytes = 0;
-        for await (const binding of evaluateDatalog(query.value, source, {
-          maxResults: MAX_QUERY_RESULTS,
-          signal: controller.signal,
-        })) {
-          const row = Object.fromEntries(binding.entries());
-          responseBytes += new TextEncoder().encode(JSON.stringify(row)).byteLength + 1;
-          if (responseBytes > MAX_QUERY_RESPONSE_BYTES) throw new CoordinatorError(413, "query response byte budget exceeded");
-          rows.push(row);
-        }
-      });
+      rows = await tracing.enterSpan("poneglyph.query.evaluate", () => collectQueryRows(query.value, source, controller.signal));
       evaluationMs = Date.now() - evaluationStarted;
     } catch (error) {
       const status = error instanceof QueryResultLimitExceeded || error instanceof QueryScanBudgetExceeded
@@ -370,7 +358,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
           : controller.signal.aborted
             ? 408
             : 502;
-      return jsonResponse({ error: errorMessage(error), snapshotSeq: lease.snapshotSeq }, status);
+      return jsonResponse({ error: errorMessage(error), snapshotSeq }, status);
     } finally {
       clearTimeout(timer);
       const releaseStarted = Date.now();
@@ -381,7 +369,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     tracing.getActiveSpan()?.setAttribute("poneglyph.query.rows", rows.length);
     const serialized = JSON.stringify({
       rows,
-      snapshotSeq: lease.snapshotSeq,
+      snapshotSeq,
       sequenceScope: "subtree-vector",
       snapshotVector: cut.map(s => ({ prefix: s.prefix, sequence: s.snapshotSeq, epoch: s.directoryEpoch })),
       metrics: source.metrics,
@@ -394,7 +382,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     const snapshotVectorJson = JSON.stringify(cut.map(s => ({prefix: s.prefix, sequence: s.snapshotSeq, epoch: s.directoryEpoch})));
     const cacheBytes = utf8Bytes(rowsJson) + utf8Bytes(snapshotVectorJson);
     if (utf8Bytes(cacheKey) + cacheBytes <= MAX_QUERY_CACHE_ENTRY_BYTES) {
-      this.queryCache.set(cacheKey, {rowsJson, snapshotSeq: lease.snapshotSeq, snapshotVectorJson}, cacheBytes);
+      this.queryCache.set(cacheKey, {rowsJson, snapshotSeq, snapshotVectorJson}, cacheBytes);
     }
     return jsonStringResponse(serialized);
   }

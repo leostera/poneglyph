@@ -6,9 +6,9 @@ import {
   PoneglyphRequestError,
   type QueryResult,
 } from "@leostera/poneglyph";
-import { evaluateDatalog, QueryResultLimitExceeded } from "../../poneglyph/src/datalog/evaluator.js";
+import { QueryResultLimitExceeded } from "../../poneglyph/src/datalog/evaluator.js";
+import { collectQueryRows, type QueryRows } from "../../poneglyph/src/storage/query-results.js";
 import { parseDatalogQuery } from "../../poneglyph/src/datalog/parser.js";
-import type { DatalogValue } from "../../poneglyph/src/datalog/value.js";
 import { parseGraphId, type GraphId } from "../../poneglyph/src/domain/graph-id.js";
 import { QueryScanBudgetExceeded } from "../../poneglyph/src/datalog/scan-stream.js";
 import type { StorageEnv } from "../../poneglyph/src/storage/environment.js";
@@ -18,7 +18,6 @@ import { parseTreeSnapshot, TREE_PREFIXES, type TreeSnapshot } from "../../poneg
 import { queryReadPrefixes, releaseParallelReadCut } from "../../poneglyph/src/storage/read-cut.js";
 import {
   MAX_QUERY_RESPONSE_BYTES,
-  MAX_QUERY_RESULTS,
   QUERY_TIMEOUT_MS,
 } from "../../poneglyph/src/storage/constants.js";
 import { isRecord } from "../../poneglyph/src/domain/result.js";
@@ -83,39 +82,23 @@ export async function executeWorkerQuery(
     }
     tracing.getActiveSpan()?.setAttribute("poneglyph.query.cache.hit", false);
     const {snapshotSeq, cut} = acquired;
-    const leaseExpiresAtMs = Math.min(...cut.map(lease => lease.expiresAtMs));
-    const source = new DistributedFactSource(env, graphId, snapshotSeq, 0, leaseExpiresAtMs, undefined, cut);
-    source.metrics.treeReadLeaseAcquisitions = cut.length;
+    const source = new DistributedFactSource(env, graphId, cut);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new DOMException("query time budget exceeded", "TimeoutError")), QUERY_TIMEOUT_MS);
-    const rows: Record<string, DatalogValue>[] = [];
+    let rows: QueryRows;
     let evaluationMs = 0;
     let releaseMs = 0;
-    let failed = false;
-    let failure: unknown;
 
     try {
       const evaluationStarted = Date.now();
-      await tracing.enterSpan("poneglyph.query.evaluate", async () => {
-        let responseBytes = 0;
-        for await (const binding of evaluateDatalog(parsedQuery.value, source, {
-          maxResults: MAX_QUERY_RESULTS,
-          signal: controller.signal,
-        })) {
-          const row = Object.fromEntries(binding.entries()) as Record<string, DatalogValue>;
-          responseBytes += new TextEncoder().encode(JSON.stringify(row)).byteLength + 1;
-          if (responseBytes > MAX_QUERY_RESPONSE_BYTES) throw new QueryResponseTooLarge();
-          rows.push(row);
-        }
-      });
+      rows = await tracing.enterSpan("poneglyph.query.evaluate", () => collectQueryRows(parsedQuery.value, source, controller.signal));
       evaluationMs = Date.now() - evaluationStarted;
     } catch (error) {
       const diagnostic = readFailureDiagnostic("evaluation", error);
       tracing.getActiveSpan()?.setAttribute("poneglyph.read.failure.reason", diagnostic.reason);
       console.error(diagnostic);
-      failed = true;
-      failure = mapQueryFailure(error, controller.signal.aborted);
+      throw mapQueryFailure(error, controller.signal.aborted);
     } finally {
       clearTimeout(timer);
       const releaseStarted = Date.now();
@@ -123,14 +106,13 @@ export async function executeWorkerQuery(
       releaseMs = Date.now() - releaseStarted;
     }
 
-    if (failed) throw failure;
     source.metrics.timing = {executionMs: Date.now() - started, snapshotMs, evaluationMs, releaseMs};
     const result: QueryResult = {
       rows,
       snapshotSeq,
       metrics: {...source.metrics},
     };
-    if (new TextEncoder().encode(JSON.stringify(result)).byteLength > MAX_QUERY_RESPONSE_BYTES) {
+    if (utf8Bytes(JSON.stringify(result)) > MAX_QUERY_RESPONSE_BYTES) {
       throw new PoneglyphRequestError({
         status: 413,
         retryable: false,
@@ -249,7 +231,7 @@ function readKnownLeasesForCleanup(input: unknown): readonly TreeSnapshot[] {
 
 function mapQueryFailure(error: unknown, timedOut: boolean): PoneglyphRequestError {
   if (error instanceof PoneglyphRequestError) return error;
-  const status = error instanceof QueryResultLimitExceeded || error instanceof QueryScanBudgetExceeded || error instanceof QueryResponseTooLarge
+  const status = error instanceof QueryResultLimitExceeded || error instanceof QueryScanBudgetExceeded
     ? 413
     : timedOut
       ? 408
@@ -260,10 +242,4 @@ function mapQueryFailure(error: unknown, timedOut: boolean): PoneglyphRequestErr
 
 function isCounter(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-}
-
-class QueryResponseTooLarge extends Error {
-  constructor() {
-    super("query response byte budget exceeded");
-  }
 }

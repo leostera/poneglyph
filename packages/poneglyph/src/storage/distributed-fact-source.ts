@@ -39,11 +39,8 @@ export class DistributedFactSource implements FactSource {
   constructor(
     private readonly env: Env,
     private readonly graphId: GraphId,
-    private readonly snapshotSeq: number,
-    private readonly directoryEpoch: number,
-    private readonly leaseExpiresAtMs: number,
-    readonly metrics: QueryMetrics = { scanCalls: 0, shardRequests: 0, distinctShardsTouched: 0, treeReadLeaseAcquisitions: 0, tuplesRead: 0, bytesRead: 0, directoryRequests: 0, cacheHits: 0 },
-    private readonly cut: readonly TreeSnapshot[] = [],
+    private readonly cut: readonly TreeSnapshot[],
+    readonly metrics: QueryMetrics = { scanCalls: 0, shardRequests: 0, distinctShardsTouched: 0, treeReadLeaseAcquisitions: cut.length, tuplesRead: 0, bytesRead: 0, directoryRequests: 0, cacheHits: 0 },
   ) {}
 
   private allLeaves: readonly LeafAddress[] | undefined;
@@ -128,25 +125,13 @@ export class DistributedFactSource implements FactSource {
       return { shardPrefix: address.prefix, body: response.body };
     }));
 
-    const responses: { shardPrefix: string; body: ReadableStream<Uint8Array> }[] = [];
-    let openFailure: unknown;
-    let failedToOpen = false;
-    for (const result of opened) {
-      if (result.status === "fulfilled") responses.push(result.value);
-      else if (!failedToOpen) {
-        openFailure = result.reason;
-        failedToOpen = true;
-      }
-    }
-    if (failedToOpen) {
-      await Promise.all(responses.map(async ({ body }) => {
-        try {
-          await body.cancel();
-        } catch {
-          // Closing partially opened scans is best-effort after a sibling fails.
-        }
-      }));
-      throw openFailure;
+    const responses = opened.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
+    const failure = opened.find(result => result.status === "rejected");
+    if (failure !== undefined) {
+      // Drain every open attempt, then close successful siblings even if one
+      // cancellation fails. A rejection with an undefined reason is still failure.
+      await Promise.allSettled(responses.map(async ({body}) => body.cancel()));
+      throw failure.reason;
     }
 
     const iterators = responses.map(({ body }) => readTupleStream(body, this.metrics, {maxBytes: MAX_QUERY_SCAN_BYTES, maxTuples: MAX_QUERY_TUPLES, maxRowBytes: MAX_TRANSACTION_BYTES}, signal)[Symbol.asyncIterator]());
