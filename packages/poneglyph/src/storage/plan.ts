@@ -1,36 +1,90 @@
 import type { FactBatch } from "../domain/fact.js";
-import { parseGraphId } from "../domain/graph-id.js";
+import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseUri, type Uri } from "../domain/identifiers.js";
 import { isRecord } from "../domain/result.js";
 import { MAX_TRANSACTION_PARTICIPANTS } from "./constants.js";
 import { TREE_DEPTH, treeForKey } from "./forest.js";
 import { parseVirtualKey, parseVirtualPrefix, matchesPrefix, virtualKeyForEntity, type VirtualKey, type VirtualPrefix } from "./keys.js";
-import { resolveEntityLeaf, type LeafAddress } from "./routing.js";
+import { resolveKeyLeaf, type LeafAddress } from "./routing.js";
 import type { StorageEnv } from "./environment.js";
 
-export type OwnerPlan = Readonly<{prefix: VirtualPrefix; directoryEpoch: number; visibleSeq: number;
-  reservationTicket: number; publicationSeq: number; entities: readonly Uri[]}>;
-export type ParticipantPlan = Readonly<{address: LeafAddress; owner: VirtualPrefix; entries: readonly Readonly<{index: number; virtualKey: VirtualKey}>[]}>;
+export type OwnerPlan = Readonly<{
+  prefix: VirtualPrefix;
+  directoryEpoch: number;
+  visibleSeq: number;
+  reservationTicket: number;
+  publicationSeq: number;
+  entities: readonly Uri[];
+}>;
+type PlanEntry = Readonly<{index: number; virtualKey: VirtualKey}>;
+export type ParticipantPlan = Readonly<{
+  address: LeafAddress;
+  owner: VirtualPrefix;
+  entries: readonly PlanEntry[];
+}>;
 export type WritePlan = Readonly<{owners: readonly OwnerPlan[]; participants: readonly ParticipantPlan[]}>;
+type ParticipantGroup = {address: LeafAddress; owner: VirtualPrefix; entries: PlanEntry[]};
 
-export async function planBatch(env: StorageEnv, graphId: string, batch: FactBatch,
-  directory: (prefix: VirtualPrefix) => Promise<Readonly<{directoryEpoch: number; visibleSeq: number}>>): Promise<WritePlan> {
-  const graph = parseGraphId(graphId); if (!graph.ok) throw new Error("corrupt journal graph");
-  const keyByEntity = new Map<Uri, VirtualKey>();
-  for (const fact of batch.facts) if (!keyByEntity.has(fact.entity)) keyByEntity.set(fact.entity, await virtualKeyForEntity(graph.value, fact.entity));
-  const prefixes = [...new Set([...keyByEntity.values()].map(treeForKey))].sort();
-  const owners = await Promise.all(prefixes.map(async prefix => ({prefix, ...await directory(prefix), reservationTicket: 0, publicationSeq: 0,
-    entities: [...keyByEntity].filter(([, key]) => treeForKey(key) === prefix).map(([entity]) => entity).sort()})));
-  const groups = new Map<VirtualPrefix, {address: LeafAddress; owner: VirtualPrefix; entries: {index: number; virtualKey: VirtualKey}[]}>();
-  const routes = new Map<Uri, LeafAddress>();
-  for (const [index, fact] of batch.facts.entries()) {
-    const key = keyByEntity.get(fact.entity)!, owner = treeForKey(key), snapshot = owners.find(o => o.prefix === owner)!;
-    let address = routes.get(fact.entity);
-    if (!address) {address = (await resolveEntityLeaf(env, graph.value, fact.entity, snapshot.directoryEpoch)).address; routes.set(fact.entity, address);}
-    const group = groups.get(address.prefix) ?? {address, owner, entries: []};
-    group.entries.push({index, virtualKey: key}); groups.set(address.prefix, group);
+type OwnerDirectory = (prefix: VirtualPrefix) => Promise<Pick<OwnerPlan, "directoryEpoch" | "visibleSeq">>;
+
+export async function planBatch(env: StorageEnv, graphId: string, batch: FactBatch, directory: OwnerDirectory): Promise<WritePlan> {
+  const graph = parseGraphId(graphId);
+  if (!graph.ok) throw new Error("corrupt journal graph");
+  const keys = await indexEntityKeys(graph.value, batch);
+  const owners = await planOwners(keys, directory);
+  const participants = await planParticipants(env, graph.value, batch, keys, owners);
+  return {owners, participants};
+}
+
+async function indexEntityKeys(graphId: GraphId, batch: FactBatch): Promise<ReadonlyMap<Uri, VirtualKey>> {
+  const keys = new Map<Uri, VirtualKey>();
+  for (const fact of batch.facts) {
+    if (!keys.has(fact.entity)) keys.set(fact.entity, await virtualKeyForEntity(graphId, fact.entity));
   }
-  return {owners, participants: [...groups.values()]};
+  return keys;
+}
+
+async function planOwners(keys: ReadonlyMap<Uri, VirtualKey>, directory: OwnerDirectory): Promise<readonly OwnerPlan[]> {
+  const entitiesByOwner = new Map<VirtualPrefix, Uri[]>();
+  for (const [entity, key] of keys) {
+    const prefix = treeForKey(key);
+    const entities = entitiesByOwner.get(prefix) ?? [];
+    entities.push(entity);
+    entitiesByOwner.set(prefix, entities);
+  }
+  const groups = [...entitiesByOwner].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+  return Promise.all(groups.map(async ([prefix, entities]) => ({
+    prefix, ...await directory(prefix), reservationTicket: 0, publicationSeq: 0, entities: entities.sort(),
+  })));
+}
+
+async function planParticipants(
+  env: StorageEnv,
+  graphId: GraphId,
+  batch: FactBatch,
+  keys: ReadonlyMap<Uri, VirtualKey>,
+  owners: readonly OwnerPlan[],
+): Promise<readonly ParticipantPlan[]> {
+  const ownersByPrefix = new Map(owners.map(owner => [owner.prefix, owner]));
+  const routes = new Map<Uri, LeafAddress>();
+  const groups = new Map<VirtualPrefix, ParticipantGroup>();
+  for (const [index, fact] of batch.facts.entries()) {
+    const key = keys.get(fact.entity);
+    if (key === undefined) throw new Error("planned fact has no entity key");
+    const owner = treeForKey(key);
+    const snapshot = ownersByPrefix.get(owner);
+    if (snapshot === undefined) throw new Error("planned fact has no owner snapshot");
+    let address = routes.get(fact.entity);
+    if (address === undefined) {
+      address = (await resolveKeyLeaf(env, graphId, key, snapshot.directoryEpoch)).address;
+      routes.set(fact.entity, address);
+    }
+    // Preserve first-encounter participant order and every canonical fact index.
+    const group = groups.get(address.prefix) ?? {address, owner, entries: []};
+    group.entries.push({index, virtualKey: key});
+    groups.set(address.prefix, group);
+  }
+  return [...groups.values()];
 }
 
 // Parse compact durable metadata, then verify its complete partition against
