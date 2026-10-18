@@ -1,0 +1,138 @@
+{
+  "runId": "977553d8-00ed-47f9-81c9-df88ef2e34d3",
+  "reportOriginalBytesPreserved": true,
+  "originalSourceRevision": "c97efb6b55da1138973fb8285f07223f991aca14",
+  "originalDirtyWorktree": true,
+  "observedBackendVersionUnchanged": true,
+  "backendVersion": "b45f2acb-b6fc-4a75-b434-9a3a58b9ea73",
+  "issued": 96,
+  "completeCorrect": 96,
+  "failed": 0,
+  "latencyTargetMet": false,
+  "newReadHeadBackendMeasured": false,
+  "factWrites": 0,
+  "queryRetries": 0,
+  "currentHarnessCommit": "0db3fe7",
+  "readerFirstRegressionCommit": "6b1a119",
+  "rootCheckBuildFocusedScope": "passed before the later control-CLI diagnostic/provenance and test-only reader-first changes; not full-tier certification",
+  "readerFirstCheckScope": "31 final Worker tests passed, including real native RPC / SQLite, empty-head non-authorization, subsequent admission/publication/fresh validation/retirement",
+  "historicalInputBundleKey": "operatorBundleSha256 means the pre-Wrangler INPUT bundle only; not the final hosted bundle",
+  "operatorSourceVerifiedAgainstGit": "c97efb6:packages/poneglyph-worker/bench/operator.ts",
+  "previewChildVerifiedAgainstCurrentSource": true,
+  "limitations": [
+    "Historical full dirty harness snapshot was not retained; do not attribute this run to an exact clean harness commit.",
+    "Historical startup colo and control CLI version were not captured; do not infer geography.",
+    "No final hosted probe artifact hash; normal pinned-SDK re-bundling was enabled.",
+    "Small closed-loop sample, two cold misses retained, no sustained/open-loop/geo/mixed-load certification.",
+    "Later 10000-call baseline attempts stopped at deployment metadata preflight with zero graph queries. Node HTTPS and curl independently returned connection refused; no hosted read-head rollout occurred."
+  ],
+  "phases": [
+    {
+      "phase": {
+        "kind": "point",
+        "count": 16,
+        "concurrency": 1
+      },
+      "issued": 16,
+      "successful": 16,
+      "failed": 0,
+      "observedMaxInFlight": 1,
+      "launchSpanMs": 5499.039875,
+      "allOutcomeCallerMs": {
+        "count": 16,
+        "p50": 247.49099999999999,
+        "p95": 2024.3508749999992,
+        "p99": 2024.3508749999992,
+        "max": 2024.3508749999992
+      },
+      "successfulHostedCallerMs": {
+        "count": 16,
+        "p50": 115,
+        "p95": 1891,
+        "p99": 1891,
+        "max": 1891
+      },
+      "successfulServiceMs": {
+        "count": 16,
+        "p50": 110,
+        "p95": 1838,
+        "p99": 1838,
+        "max": 1838
+      },
+      "completedResultHits": 15
+    },
+    {
+      "phase": {
+        "kind": "combined",
+        "count": 16,
+        "concurrency": 1
+      },
+      "issued": 16,
+      "successful": 16,
+      "failed": 0,
+      "observedMaxInFlight": 1,
+      "launchSpanMs": 6237.061750000001,
+      "allOutcomeCallerMs": {
+        "count": 16,
+        "p50": 247.2106249999997,
+        "p95": 2449.2812909999993,
+        "p99": 2449.2812909999993,
+        "max": 2449.2812909999993
+      },
+      "successfulHostedCallerMs": {
+        "count": 16,
+        "p50": 115,
+        "p95": 2328,
+        "p99": 2328,
+        "max": 2328
+      },
+      "successfulServiceMs": {
+        "count": 16,
+        "p50": 109,
+        "p95": 2319,
+        "p99": 2319,
+        "max": 2319
+      },
+      "completedResultHits": 15
+    },
+    {
+      "phase": {
+        "kind": "combined",
+        "count": 64,
+        "concurrency": 8
+      },
+      "issued": 64,
+      "successful": 64,
+      "failed": 0,
+      "observedMaxInFlight": 8,
+      "launchSpanMs": 2339.3150830000013,
+      "allOutcomeCallerMs": {
+        "count": 64,
+        "p50": 259.61824999999953,
+        "p95": 417.9014160000006,
+        "p99": 447.71820800000205,
+        "max": 447.71820800000205
+      },
+      "successfulHostedCallerMs": {
+        "count": 64,
+        "p50": 124,
+        "p95": 312,
+        "p99": 333,
+        "max": 333
+      },
+      "successfulServiceMs": {
+        "count": 64,
+        "p50": 113,
+        "p95": 300,
+        "p99": 327,
+        "max": 327
+      },
+      "completedResultHits": 64
+    }
+  ],
+  "finalRegressionInputSha256": {
+    "packages/poneglyph-worker/test/driver.ts": "2d2949fb4b7d7067f2210431ce02294d5ec76396a459674095846760e820a335",
+    "packages/poneglyph-worker/test/rpc.test.ts": "6737822b18a072843f3d54286bd36ecb0b3bf1550284a293e954aa2764082a28",
+    "packages/poneglyph-worker/test/read-head-rpc.ts": "d6cbde1ec1cd764883799b2dfcfba24bca9f51ffe520911434db939de881412a"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "manifest": {
+    "runId": "977553d8-00ed-47f9-81c9-df88ef2e34d3",
+    "target": "poneglyph-mavplus-validation-worker",
+    "account": "0f436d2aabf1f872be90b8dd9d5715e6",
+    "versionBefore": "b45f2acb-b6fc-4a75-b434-9a3a58b9ea73",
+    "sourceRevision": "c97efb6b55da1138973fb8285f07223f991aca14",
+    "dirty": true,
+    "startedAt": "2026-10-18T17:31:03.475Z",
+    "callerMode": "direct-authenticated-preview-http2-native-service-binding",
+    "factWrites": 0,
+    "retries": 0,
+    "deadlineMs": 30000,
+    "concurrencyBoundary": "offered-caller-not-simultaneous-backend-execution",
+    "plan": {
+      "phases": [
+        {
+          "kind": "point",
+          "count": 16,
+          "concurrency": 1
+        },
+        {
+          "kind": "combined",
+          "count": 16,
+          "concurrency": 1
+        },
+        {
+          "kind": "combined",
+          "count": 64,
+          "concurrency": 8
+        }
+      ]
+    }
+  },
+  "sha256": "ac712b9370b908098d85674a2197f98d4d07654f227c15f6e4893541b0812f4e"
+}
