@@ -2,6 +2,16 @@
 
 The authoritative protocol and validation scope is in [RFD0004](../docs/rfds/RFD0004-expandable-cloudflare-sharding.md#formal-model-and-validation). These checks do not prove hosted implementation correctness or performance.
 
+## Write-protocol modeling work (2026-10-18)
+
+Keep three layers distinct:
+
+- **Implemented baseline:** `ReadVectorRecovery` explores gated multi-owner apply/publication/recovery after an irrevocable decision; `ReadHeadPublication` explores replicated freshness and membership. Their omissions include actual storage/RPC scheduling, admission/abort, full topology integration and implementation refinement.
+- **Proposed conservative change:** owner-local, independently atomic microbatches interleaved with multi-owner transactions, retaining canonical atomic vector publication. Model mixed success/abort, bounded admission, duplicate/lost replies, exact epoch fencing, incremental projections and publication/release recovery before implementing this path.
+- **Deferred redesign:** distributed publication without the canonical authority. No existing result establishes its correctness or performance.
+
+Build a shared semantic publication core with an inductive safety proof, then check a numeric-revision batch protocol against that core. A core proof alone does not prove the concrete revision/epoch machinery; record concrete TLC checks and unproved refinement obligations separately. Model commutative independent assertions first: arbitrary conditional updates, predicate locking, entity quotas, dynamic batching and history pruning require additional models.
+
 ## TLC: finite-state exploration
 
 With a locally installed JDK and a verified `tla2tools.jar`:
