@@ -7,7 +7,7 @@ EXTENDS WriteBatchProtocol, WritePublicationCoreProofs, TLAPS
 
 THEOREM BatchStepRefines ==
   CoreType /\ GuardReply /\ [Next]_allvars => [CoreNext]_CoreVars
-BY SMT DEF Next, allvars, CoreNext, CoreVars, CoreType, OwnerTxns,
+BY SMTT(30) DEF Next, allvars, CoreNext, CoreVars, CoreType, OwnerTxns,
   GroupStep, Admit, Reject, Refresh, Prepare, Acquire, ConfirmGate, DecideGroup,
   DeliverApply, ConfirmApply, FinishOwner, ConfirmOwner, DispatchPublish,
   PublishGroup, ConfirmPublication, Release, FinishRelease, Reply, LoseReply,
@@ -40,4 +40,31 @@ BY SemanticStep, BatchInvariantAlways, InitialRefinement, PTL DEF Spec, CoreSpec
 
 THEOREM BatchSemanticSafety == GuardReply /\ Spec => []CoreSafety
 BY BatchRefinesCore, PublicationSafety, PTL
+
+ExpectedInv == BatchCoreInv /\ DecisionsIndependent /\ GuardIndependent
+
+THEOREM ExpectedInitial == GuardReply /\ GuardIndependent /\ Init => ExpectedInv
+BY InitialInvariant, SMT DEF ExpectedInv, BatchCoreInv, DecisionsIndependent, Init, CoreInit
+
+THEOREM IndependentDecision ==
+  ASSUME CoreInv, DecisionsIndependent, GuardIndependent,
+         NEW g, g \in Groups, DecideGroup(g)
+  PROVE DecisionsIndependent'
+BY BatchTyping, SMTT(30) DEF CoreInv, CoreType, DecisionsIndependent,
+  DecideGroup, Decide, Good, Bad
+
+THEOREM DecisionTransitionClass == CoreType /\ GuardReply /\ [Next]_allvars =>
+  (UNCHANGED <<s.committed, s.aborted>>) \/ (\E g \in Groups : DecideGroup(g))
+BY SMTT(30) DEF CoreType, Next, allvars,
+  GroupStep, Admit, Reject, Refresh, Prepare, Acquire, ConfirmGate,
+  DeliverApply, ConfirmApply, FinishOwner, ConfirmOwner, DispatchPublish,
+  PublishGroup, ConfirmPublication, Release, FinishRelease, Reply, LoseReply,
+  AdvanceEpoch, Crash, Recover, Capture, Scan, FinishRead, Apply, Publish, Acknowledge
+
+THEOREM ExpectedStep == ExpectedInv /\ [Next]_allvars => ExpectedInv'
+BY BatchInvariantStep, IndependentDecision, DecisionTransitionClass, SMT
+   DEF ExpectedInv, BatchCoreInv, CoreInv, DecisionsIndependent
+
+THEOREM MixedOutcomesRemainIndependent == GuardReply /\ GuardIndependent /\ Spec => []ExpectedInv
+BY ExpectedInitial, ExpectedStep, PTL DEF Spec
 =============================================================================

@@ -1,6 +1,6 @@
 ------------------------- MODULE WriteBatchProtocol -------------------------
 EXTENDS WritePublicationCore, FiniteSets, Sequences, TLC
-CONSTANTS Groups, Members, Valid, TxnOrder, OwnerOrder, MaxActive, MaxEpoch,
+CONSTANTS Groups, Members, Valid, AdmissionHome, TxnOrder, OwnerOrder, MaxActive, MaxEpoch,
           MaxCrashes, GuardEpoch, GuardClosed, GuardReply, GuardIndependent,
           GuardExactlyOnce, GuardPublishReplay, Incremental
 
@@ -20,6 +20,7 @@ ASSUME BatchTyping ==
   /\ UNION {Members[g] : g \in Groups} = Txns
   /\ \A g, h \in Groups : g # h => Members[g] \cap Members[h] = {}
   /\ Valid \in [Txns -> BOOLEAN]
+  /\ AdmissionHome \in [Groups -> Owners]
   /\ \A g \in Groups : Cardinality(GroupOwners(g)) > 1 => Cardinality(Members[g]) = 1
   /\ TxnOrder \in Seq(Txns) /\ {TxnOrder[i] : i \in 1..Len(TxnOrder)} = Txns
   /\ Len(TxnOrder) = Cardinality(Txns)
@@ -32,6 +33,7 @@ VARIABLE c
 allvars == <<s, c>>
 Phases == {"new", "admitted", "prepared", "decided", "published", "released", "done", "rejected"}
 Active == {g \in Groups : c.phase[g] \notin {"new", "done", "rejected"}}
+ActiveAt(home) == {g \in Active : AdmissionHome[g] = home}
 Protected == {"prepared", "decided", "published"}
 Actors == Groups \cup {"root"}
 NextOwner(g) == IF c.lockIndex[g] <= Len(OwnerOrder) THEN OwnerOrder[c.lockIndex[g]] ELSE "none"
@@ -57,11 +59,11 @@ Init ==
            queryPublished |-> {}, queryAcked |-> {}, scanned |-> {}, seen |-> [o \in Owners |-> {}]]
 
 Admit(g) ==
-  /\ g \in c.up /\ c.phase[g] = "new" /\ Cardinality(Active) < MaxActive
+  /\ g \in c.up /\ c.phase[g] = "new" /\ Cardinality(ActiveAt(AdmissionHome[g])) < MaxActive
   /\ c' = [c EXCEPT !.phase[g] = "admitted", !.planEpoch[g] = c.epoch]
   /\ UNCHANGED s
 Reject(g) ==
-  /\ g \in c.up /\ c.phase[g] = "new" /\ Cardinality(Active) >= MaxActive
+  /\ g \in c.up /\ c.phase[g] = "new" /\ Cardinality(ActiveAt(AdmissionHome[g])) >= MaxActive
   /\ c' = [c EXCEPT !.phase[g] = "rejected"]
   /\ UNCHANGED s
 Refresh(g) ==
@@ -207,7 +209,7 @@ BatchType ==
   /\ c.queryPhase \in {"idle", "captured", "done"}
   /\ c.queryCut \in [Owners -> Nat] /\ c.queryPublished \subseteq Txns /\ c.queryAcked \subseteq Txns
   /\ c.scanned \subseteq Owners /\ c.seen \in [Owners -> SUBSET Txns]
-AdmissionBound == Cardinality(Active) <= MaxActive
+AdmissionBound == \A home \in Owners : Cardinality(ActiveAt(home)) <= MaxActive
 DecisionsIndependent ==
   /\ \A t \in s.committed : Valid[t]
   /\ \A t \in s.aborted : ~Valid[t]
@@ -234,6 +236,7 @@ NoDisjointExecution == ~ (\E g, h \in Groups : g # h
   /\ GroupOwners(g) # {} /\ GroupOwners(h) # {}
   /\ GroupOwners(g) \cap GroupOwners(h) = {})
 NoAdmissionRejection == \A g \in Groups : c.phase[g] # "rejected"
+NoAggregateScaling == Cardinality(Active) <= MaxActive
 NoLostReply == \A g \in Groups : c.phase[g] = "done" => Good(g) \subseteq s.acked
 NoUnconfirmedPublication == \A g \in c.rootPublished : c.phase[g] # "decided"
 =============================================================================

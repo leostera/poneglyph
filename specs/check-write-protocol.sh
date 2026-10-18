@@ -102,6 +102,13 @@ with tempfile.TemporaryDirectory(prefix='poneglyph-write-models-') as temporary:
             offset = proof.index('THEOREM ' + theorem)
             proof_line = proof[:offset + proof[offset:].index('BY ')].count('\n') + 1
             prove(name, 'WritePublicationCoreProofs.tla', (core, before, after), proof_line)
+        batch_proof = (root / 'WriteBatchRefinementProofs.tla').read_text()
+        offset = batch_proof.index('THEOREM IndependentDecision')
+        proof_line = batch_proof[:offset + batch_proof[offset:].index('BY ')].count('\n') + 1
+        prove('poison-batch-proof', 'WriteBatchRefinementProofs.tla',
+              ('WriteBatchProtocol.tla',
+               'THEN Decide(Good(g), Bad(g)) ELSE Decide({}, Members[g])',
+               'THEN Decide({}, Members[g]) ELSE Decide({}, Members[g])'), proof_line)
         tlc('core-tlc', 'WritePublicationCoreMC.tla', (root / 'WritePublicationCoreMC.cfg').read_text())
         base = (root / 'WriteBatchProtocol.safe.cfg').read_text()
         tlc('batch-safety', 'WriteBatchProtocolMC.tla', base)
@@ -119,8 +126,11 @@ with tempfile.TemporaryDirectory(prefix='poneglyph-write-models-') as temporary:
             if guard == 'GuardEpoch':
                 cfg = cfg.replace('MaxEpoch = 0', 'MaxEpoch = 1')
             tlc(name, 'WriteBatchProtocolMC.tla', cfg, invariant)
-        for invariant in ['NoMixedBatch', 'NoDisjointExecution', 'NoAdmissionRejection', 'NoLostReply', 'NoUnconfirmedPublication']:
-            tlc('witness-' + invariant, 'WriteBatchProtocolMC.tla', only_invariant(base, invariant), invariant)
+        for invariant in ['NoMixedBatch', 'NoDisjointExecution', 'NoAdmissionRejection', 'NoLostReply', 'NoUnconfirmedPublication', 'NoAggregateScaling']:
+            cfg = only_invariant(base, invariant)
+            if invariant == 'NoAdmissionRejection':
+                cfg = cfg.replace('MaxActive = 2', 'MaxActive = 1')
+            tlc('witness-' + invariant, 'WriteBatchProtocolMC.tla', cfg, invariant)
     except Exception as caught:
         error = str(caught)
     evidence = {'status': 'failed' if error else 'passed', 'error': error,
