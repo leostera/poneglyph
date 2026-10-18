@@ -59,9 +59,13 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
       { E: { type: "string", value: "test:e" }, T: { type: "string", value: "hello" } },
       { E: { type: "string", value: "test:e" }, T: { type: "string", value: "hello" } },
     ]);
+    assert.equal((title.body as unknown as {metrics: {treeReadLeaseAcquisitions: number}}).metrics.treeReadLeaseAcquisitions, 16,
+      "unbound Worker queries acquire the complete exact read vector");
     const integer = await call("/integer");
     assert.ok(typeof integer.body === "object" && integer.body !== null && "rows" in integer.body);
     assert.deepEqual(integer.body.rows, [{ Value: { type: "integer", value: "9007199254740993" } }]);
+    assert.equal((integer.body as unknown as {metrics: {treeReadLeaseAcquisitions: number}}).metrics.treeReadLeaseAcquisitions, 1,
+      "a single-entity Worker query acquires only its exact owner lease");
     const schema = await call("/schema");
     assert.equal(schema.status, 200);
     assert.ok(typeof schema.body === "object" && schema.body !== null && "fields" in schema.body && "snapshotVector" in schema.body);

@@ -1,5 +1,5 @@
 import { DurableObject, tracing } from "cloudflare:workers";
-import { acquireParallelReadCut } from "./read-cut.js";
+import { acquireParallelReadCut, queryReadPrefixes, releaseParallelReadCut } from "./read-cut.js";
 import type { StorageEnv as Env } from "./environment.js";
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseUri } from "../domain/identifiers.js";
@@ -47,6 +47,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     const path = new URL(request.url).pathname;
     if (request.method === "POST" && path === "/_publish-vector") return await this.publishSafeVector(request);
     if (request.method === "POST" && path === "/_advance-vector-epoch") return await this.advanceSafeVectorEpoch(request);
+    if (request.method === "POST" && path === "/_query-read-cut") return await this.acquireWorkerQueryCut(request);
     if (request.method === "POST" && path === "/_split") {
       const raw = await readJsonBody(request, 8_192);
       if (!raw.ok || !isRecord(raw.value)) return jsonResponse({error: "invalid split envelope"}, 400);
@@ -71,6 +72,25 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
       if (route.action === "schema" && request.method === "POST") return await this.observeGraphSchema(request, route.graphId);
       if (route.action === "entities" && request.method === "GET") return await this.readEntity(request, route.graphId);
       return jsonResponse({error: "method not allowed"}, 405);
+    } catch (error) {
+      const status = error instanceof CoordinatorError ? error.status : 503;
+      return jsonResponse({error: errorMessage(error), retryable: error instanceof CoordinatorError ? error.retryable : true}, status);
+    }
+  }
+
+  private async acquireWorkerQueryCut(request: Request): Promise<Response> {
+    const raw = await readJsonBody(request, 16_384);
+    if (!raw.ok || !isRecord(raw.value) || Object.keys(raw.value).some(key => key !== "graphId" && key !== "query")) {
+      return jsonResponse({error: "invalid query read-cut envelope"}, 400);
+    }
+    const graph = parseGraphId(raw.value["graphId"]);
+    if (!graph.ok || typeof raw.value["query"] !== "string") return jsonResponse({error: "invalid query read-cut identity"}, 400);
+    const query = parseDatalogQuery(raw.value["query"]);
+    if (!query.ok) return jsonResponse({error: query.error.message, offset: query.error.offset}, 400);
+    try {
+      const safeVector = this.cachedSafeVector(graph.value);
+      const cut = await this.acquireQueryReadCut(graph.value, query.value, safeVector);
+      return jsonResponse({snapshotSeq: Math.max(...cut.map(lease => lease.snapshotSeq)), cut});
     } catch (error) {
       const status = error instanceof CoordinatorError ? error.status : 503;
       return jsonResponse({error: errorMessage(error), retryable: error instanceof CoordinatorError ? error.retryable : true}, status);
@@ -396,17 +416,8 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     query: DatalogQuery,
     safeVector: Readonly<{frontier: number; vector: readonly SafeVectorRow[]}>,
   ): Promise<TreeSnapshot[]> {
-    // A single positive relation with a literal entity can only read that
-    // entity's tree. Joins or unbound entities retain the complete owner vector.
-    const clause = query.facts.length === 1 ? query.facts[0] : undefined;
-    if (clause?.entity.kind === "constant" && clause.entity.value.type === "string") {
-      const entity = parseUri(clause.entity.value.value);
-      if (entity.ok) {
-        const key = await virtualKeyForEntity(graphId, entity.value);
-        return this.acquireReadCut(graphId, [treeForKey(key)], safeVector);
-      }
-    }
-    return this.acquireReadCut(graphId, TREE_PREFIXES, safeVector);
+    const prefixes = await queryReadPrefixes(graphId, query);
+    return this.acquireReadCut(graphId, prefixes, safeVector);
   }
 
   private async acquireReadCut(
@@ -438,15 +449,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   }
 
   private async releaseReadCut(graphId: GraphId, cut: readonly TreeSnapshot[]): Promise<void> {
-    const released = await Promise.allSettled(cut.map(async lease => {
-      const response = await this.env.GRAPH_TREES.getByName(treeCoordinatorName(graphId, lease.prefix)).fetch("https://tree.internal/_tree-release-read", {
-        method: "POST", body: JSON.stringify({ graphId, prefix: lease.prefix, readId: lease.readId }),
-      });
-      if (!response.ok) console.warn("subtree read release deferred", lease.prefix);
-    }));
-    for (const result of released) {
-      if (result.status === "rejected") console.warn("subtree read release delivery unknown; lease expiry remains the fence");
-    }
+    return releaseParallelReadCut(this.env, graphId, cut);
   }
 
 

@@ -10,6 +10,7 @@ import { dispatchGraphRequest } from "../../poneglyph/src/storage/implementation
 import { dispatchInternalTransaction } from "../../poneglyph/src/storage/transaction-request.js";
 import { parseFactBatch } from "../../poneglyph/src/domain/fact.js";
 import { parseTransactionId } from "../../poneglyph/src/domain/identifiers.js";
+import { executeWorkerQuery } from "./query-coordinator.js";
 import type { StorageEnv } from "../../poneglyph/src/storage/environment.js";
 import { authorizeGraph, GraphAuthorizationError, parseGraphRequest, parseIdentity, staticAuthorizer } from "./authorization.js";
 
@@ -64,13 +65,12 @@ function parseWriteOptions(input: unknown): GraphWriteOptions {
 
 export class ReadGraph extends RpcTarget {
   #graph: GraphClient;
-  constructor(graph: GraphClient) { super(); this.#graph = graph; }
+  #env: StorageEnv;
+  constructor(graph: GraphClient, env: StorageEnv) { super(); this.#graph = graph; this.#env = env; }
   get id(): GraphId { return this.#graph.id; }
   query(source: string) {
     return runGraphOperation(async () => {
-      const result = await this.#graph.query(source);
-      // Client bindings deliberately have a null prototype. Workers RPC rejects
-      // those objects; copy records without changing tagged values/multiplicity.
+      const result = await executeWorkerQuery(this.#env, this.#graph.id, source);
       return { rows: result.rows.map(row => ({ ...row })), snapshotSeq: result.snapshotSeq, metrics: { ...result.metrics } };
     });
   }
@@ -86,7 +86,7 @@ export class ReadGraph extends RpcTarget {
 export class ReadWriteGraph extends ReadGraph {
   #graph: GraphClient;
   #env: StorageEnv;
-  constructor(graph: GraphClient, env: StorageEnv) { super(graph); this.#graph = graph; this.#env = env; }
+  constructor(graph: GraphClient, env: StorageEnv) { super(graph, env); this.#graph = graph; this.#env = env; }
   transact(facts: readonly FactInput[], options: GraphWriteOptions = {}) {
     const parsed = parseWriteOptions(options);
     return runGraphOperation(() => this.#graph.transact(facts, parsed), "write");
@@ -125,7 +125,7 @@ export default class PoneglyphService extends WorkerEntrypoint<ServiceEnv> {
     const permissions = await authorizeGraph(authorizer, identity, request);
     // Acquiring a capability creates no durable objects or graph data.
     const graph = bindGraph(this.env, request.graphId);
-    return permissions.includes("write") ? new ReadWriteGraph(graph, this.env) : new ReadGraph(graph);
+    return permissions.includes("write") ? new ReadWriteGraph(graph, this.env) : new ReadGraph(graph, this.env);
   }
   async fetch(): Promise<Response> { return new Response("Not found", { status: 404 }); }
 }
