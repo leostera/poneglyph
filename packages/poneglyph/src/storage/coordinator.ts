@@ -80,14 +80,14 @@ export class GraphTreeDO extends DurableObject<Env> {
       directoryEpoch: current.directory_epoch,
     });
     if (route["kind"] === "router" && current.topology_op_id === null) {
-      await this.publishTopologyVector(graphId.value, prefix.value, current.directory_epoch, current.visible_seq);
+      await this.publishTopologyVector(graphId.value, current.directory_epoch, current.visible_seq);
       await this.pruneVersions();
       return jsonResponse({ status: "already-split", prefix: prefix.value, directoryEpoch: current.directory_epoch, visibleSeq: current.visible_seq });
     }
     if (route["kind"] === "router" && current.topology_op_id !== null) {
       const pending = this.readSplit(current.topology_op_id);
       if (pending?.source_prefix === prefix.value && pending.phase === "cutover" && current.directory_epoch === pending.split_epoch) {
-        await this.publishTopologyVector(graphId.value, prefix.value, current.directory_epoch, current.visible_seq);
+        await this.publishTopologyVector(graphId.value, current.directory_epoch, current.visible_seq);
         this.finishTopology(current.topology_op_id);
         await this.pruneVersions();
         return jsonResponse({status: "already-split", prefix: prefix.value, directoryEpoch: current.directory_epoch, visibleSeq: current.visible_seq});
@@ -97,7 +97,7 @@ export class GraphTreeDO extends DurableObject<Env> {
     const interrupted = await this.performSplit(migrationId, stopAfterPages as number | undefined);
     if (interrupted instanceof Response) return interrupted;
     const state = this.readGraphState();
-    await this.publishTopologyVector(graphId.value, prefix.value, state.directory_epoch, state.visible_seq);
+    await this.publishTopologyVector(graphId.value, state.directory_epoch, state.visible_seq);
     this.finishTopology(migrationId);
     await this.pruneVersions();
     return jsonResponse({ status: "split", prefix: prefix.value, directoryEpoch: state.directory_epoch, visibleSeq: state.visible_seq });
@@ -109,7 +109,10 @@ export class GraphTreeDO extends DurableObject<Env> {
     });
   }
 
-  private async publishTopologyVector(graphId: GraphId, prefix: VirtualPrefix, directoryEpoch: number, visibleSeq: number): Promise<void> {
+  private async publishTopologyVector(graphId: GraphId, directoryEpoch: number, visibleSeq: number): Promise<void> {
+    // The facade vector tracks the fixed independent tree root, not the leaf
+    // that happened to split. Nested splits still advance this root's epoch.
+    const prefix = this.treePrefix();
     const response = await this.env.GRAPH_FACADES.getByName(coordinatorObjectName(graphId)).fetch("https://graph.internal/_advance-vector-epoch", {
       method: "POST", body: JSON.stringify({graphId, prefix, directoryEpoch, visibleSeq}),
     });

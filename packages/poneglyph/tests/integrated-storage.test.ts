@@ -1202,6 +1202,21 @@ describe("integrated storage authority", () => {
     const read = await query(graph); expect(read.status).toBe(200); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(3);
   });
 
+  it("publishes a nested split epoch to its fixed tree-root safe-vector entry", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph);
+    expect(await writeStatus(graph, "integrated:nested-split-seed", [fact(first)])).toMatchObject({status: 200});
+    expect(await split(graph, root)).toMatchObject({status: 200});
+
+    const key = await virtualKeyForEntity(graph, first);
+    const child = `${root}${bitAt(key, root.length)}`;
+    expect(await split(graph, child)).toMatchObject({status: 200});
+    const read = await query(graph);
+    expect(read.status).toBe(200);
+    expect((await read.json() as {rows: unknown[]}).rows).toEqual([
+      {Person: {type: "string", value: first}, Status: {type: "string", value: "alive"}},
+    ]);
+  });
+
   it("retains distributed authority for one-owner batches spanning multiple physical leaves", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:one-owner-multileaf";
     expect(await writeStatus(graph, "integrated:multileaf-seed", [fact(first), fact(same)])).toMatchObject({status: 200});
