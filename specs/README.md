@@ -12,6 +12,18 @@ Keep three layers distinct:
 
 Build a shared semantic publication core with an inductive safety proof, then check a numeric-revision batch protocol against that core. A core proof alone does not prove the concrete revision/epoch machinery; record concrete TLC checks and unproved refinement obligations separately. Model commutative independent assertions first: arbitrary conditional updates, predicate locking, entity quotas, dynamic batching and history pruning require additional models.
 
+### Shared write-publication core
+
+`WritePublicationCore.tla` specifies immutable transaction identities, disjoint durable commit/abort decisions, idempotent participant effects, atomic group publication and successful acknowledgements. `WritePublicationCoreProofs.tla` proves `CoreSpec => []CoreSafety` through an explicit inductive invariant: no aborted effects, transaction-complete published visibility and no successful acknowledgement before publication. The proof is parameterized by arbitrary owner/transaction sets and nonempty immutable participant sets; it has no TLC cardinality bound.
+
+Initial verification discharged **27 TLAPS obligations**, explored **288 distinct TLC states** (6,309 generated), and rejected proof attempts after three deliberate weakenings: conflicting durable decisions, publication before effects, and acknowledgement before publication. This is a semantic core proof, not a proof of numeric revisions, physical exactly-once writes, queues, epochs, predicates, liveness, the TypeScript implementation or latency. The concrete batch model must connect its numeric cuts to this core separately.
+
+```sh
+TLAPM=/path/to/tlapm
+"$TLAPM" --strict --nofp --cache-dir /tmp/write-core-proofs specs/WritePublicationCoreProofs.tla
+# Run TLC on temporary copies, with WritePublicationCoreMC.cfg and WritePublicationCoreMC.tla.
+```
+
 ## TLC: finite-state exploration
 
 With a locally installed JDK and a verified `tla2tools.jar`:
