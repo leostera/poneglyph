@@ -40,3 +40,6 @@ node_modules/
 3rdparty
 target
 tests/fixtures/cache/
+
+# Local conformance runner output; tracked historical reports remain unchanged.
+/packages/conformance/results/
