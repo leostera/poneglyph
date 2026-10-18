@@ -7,7 +7,7 @@ import {
 import type { InferEnv } from "cf/config";
 import type { serviceWorker } from "../cloudflare.config.ts";
 import { dispatchGraphRequest } from "../../poneglyph/src/storage/implementation.js";
-import { dispatchInternalTransaction } from "../../poneglyph/src/storage/transaction-request.js";
+import { dispatchInternalTransaction, dispatchPublicTransaction } from "../../poneglyph/src/storage/transaction-request.js";
 import { parseFactBatch } from "../../poneglyph/src/domain/fact.js";
 import { parseTransactionId } from "../../poneglyph/src/domain/identifiers.js";
 import { executeWorkerQuery } from "./query-coordinator.js";
@@ -17,6 +17,11 @@ import { authorizeGraph, GraphAuthorizationError, parseGraphRequest, parseIdenti
 export { GraphCoordinatorDO, GraphLedgerDO, GraphTreeDO, GraphShardDO } from "../../poneglyph/src/storage/implementation.js";
 export { staticAuthorizer, type GraphAuthorizer, type GraphGrants } from "./authorization.js";
 export type GraphWriteOptions = Readonly<{ clientRequestToken?: string }>;
+export type GraphTransactionRequest = Readonly<{
+  graphId: string;
+  facts: readonly FactInput[];
+  clientRequestToken?: string;
+}>;
 export type ApprovedBatchReceipt = Readonly<{txId: string; commitSeq: number; status: "committed"}>;
 type ServiceEnv = InferEnv<{ env: typeof serviceWorker.env }>;
 
@@ -44,10 +49,17 @@ async function runGraphOperation<T>(run: () => Promise<T>, operation: "read" | "
   }
 }
 function bindGraph(env: StorageEnv, graphId: GraphId): GraphClient {
-  // One canonical dispatcher and public client parser, not a second RPC database
-  // implementation. This is an in-process adapter, never public network fetch.
+  // Keep the public parser and canonical ledger protocol. Admission needs no
+  // graph-wide actor; publication still MUST reach the canonical facade before
+  // the ledger can acknowledge. No stubs or request-owned I/O outlive this call.
   return createDatabase({ url: "https://poneglyph.internal", graphId,
-    fetch: (input, init) => dispatchGraphRequest(new Request(input, init), env, graphId),
+    fetch: (input, init) => {
+      const request = new Request(input, init);
+      if (request.method === "POST" && new URL(request.url).pathname === `/v1/graphs/${graphId}/transactions`) {
+        return dispatchPublicTransaction(request, env, graphId);
+      }
+      return dispatchGraphRequest(request, env, graphId);
+    },
   });
 }
 
@@ -130,6 +142,22 @@ export default class PoneglyphService extends WorkerEntrypoint<ServiceEnv> {
     const request = parseGraphRequest({graphId: input.graphId});
     await authorizeGraph(staticAuthorizer(this.env.GRAPH_GRANTS), identity, request);
     return runGraphOperation(() => executeWorkerQuery(this.env, request.graphId, input.query));
+  }
+
+  async transact(input: GraphTransactionRequest): Promise<TransactionReceipt> {
+    const identity = parseIdentity(this.ctx.props);
+    if (typeof input !== "object" || input === null || Array.isArray(input) ||
+        !Object.hasOwn(input, "graphId") || !Object.hasOwn(input, "facts") ||
+        Object.keys(input).some(key => key !== "graphId" && key !== "facts" && key !== "clientRequestToken")) {
+      throw new PoneglyphInputError("transact requires graphId, facts, and an optional clientRequestToken");
+    }
+    const request = parseGraphRequest({graphId: input.graphId});
+    const permissions = await authorizeGraph(staticAuthorizer(this.env.GRAPH_GRANTS), identity, request);
+    // Deny before parsing facts/options or touching any storage binding.
+    if (!permissions.includes("write")) throw new GraphAuthorizationError();
+    const options = parseWriteOptions(Object.hasOwn(input, "clientRequestToken")
+      ? {clientRequestToken: input.clientRequestToken} : {});
+    return runGraphOperation(() => bindGraph(this.env, request.graphId).transact(input.facts, options), "write");
   }
 
   async getGraph(input: { graphId: string }): Promise<ReadGraph> {

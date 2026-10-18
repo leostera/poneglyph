@@ -10,16 +10,21 @@ const receipt = await graph.transact(facts, {clientRequestToken: "my-app:operati
 // receipt is exactly { txId }, minted by the service after commit.
 ```
 
-For independent reads, the service also exposes a one-shot RPC that returns data rather than a capability:
+For independent reads and writes, the service also exposes one-shot RPCs that return data rather than a capability:
 
 ```ts
 const result = await env.PONEGLYPH.query({
   graphId: "onepiece",
   query: 'wiki:page:title("wiki:onepiece:page:Monkey%20D.%20Luffy", Title)',
 });
+const receipt = await env.PONEGLYPH.transact({
+  graphId: "onepiece",
+  facts,
+  clientRequestToken: "my-app:operation:two",
+});
 ```
 
-Each top-level query authenticates/authorizes the binding identity again. Unlike many calls on one long-lived `getGraph` handle, it has its own server execution context and request budgets. The caller still has its own invocation limits: a load generator must issue independent incoming requests, not thousands of calls inside a single Worker request. This API is not a cache, stale-read mode, or latency guarantee. See [RFD0004](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md) for read-plane behavior and validation limits.
+Each top-level operation authenticates/authorizes the binding identity again. One-shot writes require a write grant before fact/option parsing or storage access and accept only `graphId`, `facts` and optional `clientRequestToken`. Unlike many calls on one long-lived `getGraph` handle, it has its own server execution context and request budgets. The caller still has its own invocation limits: a load generator must issue independent incoming requests, not thousands of calls inside a single Worker request. Neither API is a cache, stale-read mode, durable-intake promise, or latency guarantee. Both RPC write APIs dispatch through the canonical public parser directly to partitioned ledgers, avoiding the facade's forwarding-only admission hop. Canonical publication (including an opted-in read-head barrier), gate release and committed acknowledgement remain unchanged. The standalone HTTP dispatcher and current raw-DO write benchmark still enter through the facade; their historical results do not measure this RPC path. See [RFD0004](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md) for write/read-plane behavior and validation limits.
 
 The binding's deployment-controlled `props.clientId` identifies the application. Deployment-owned JSON grants map that identity to allowed graphs and `read`/`write` permissions. Missing/malformed identity/policy, unknown clients and ungranted graphs deny access before storage. The generic runtime contains no application names or One Piece rules; the initial grants live in `cloudflare.config.ts`.
 
