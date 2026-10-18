@@ -1,0 +1,61 @@
+{
+  "sourceCommit": "5f904bffce966a73906cc92816bc66015763c428",
+  "scope": "Local RPC routing/authorization/native SQLite fault coverage only. Not a new transaction algorithm, numeric-cut proof, capacity certification or latency measurement. No cloud operation or push.",
+  "toolchain": {
+    "bun": "1.4.2",
+    "node": "26.11.0",
+    "tlapm": "901ae51",
+    "tla2toolsSha256": "15d103b7e5617780bcc904c0af12f1ad242e2b345c0301136c5be4588f17edac"
+  },
+  "gates": {
+    "workerCheck": {
+      "passed": true,
+      "tests": 16
+    },
+    "rootCheck": {
+      "passed": true
+    },
+    "rootBuild": {
+      "passed": true,
+      "initialAttempt": "npx -c leaked npm exec options; retry directly with pinned Bun succeeded"
+    },
+    "focused": {
+      "passed": true,
+      "cases": 10,
+      "temperatures": [
+        "warm",
+        "cold"
+      ],
+      "report": "packages/conformance/results/focused-controls-2026-10-18T14-01-47.619Z/report.json.gz"
+    },
+    "writeFormalRegression": {
+      "passed": true,
+      "scope": "Same unmodified semantic proofs and finite checks as e604779; does not prove native routing, authorization or numeric-cut preservation.",
+      "sources": "specs/results/write-batch-protocol-2026-10-18/"
+    }
+  },
+  "sources": {
+    "packages/poneglyph-worker/src/index.ts": "5001c63c247a6fc535c3b6af137f9086a1b023d7daaa0020c79af33eaf4f9e3a",
+    "packages/poneglyph-worker/test/cache-test-service.ts": "239604f499686a2894585bfb847df663c9bc238486954db212029d7d66c15efa",
+    "packages/poneglyph-worker/test/driver.ts": "dc02a8f98ea9f4ff29dc23600d8130139377aac22d8a0c0c35acc21b1ccfcf45",
+    "packages/poneglyph-worker/test/rpc.test.ts": "2c58a6fc2b02b80c121eea0d97a06308b1c994127123daa95f4b635ea69ccbf0",
+    "specs/WritePublicationCore.tla": "fa3f07170a44e152928dd738179004f23247eb05afc0a8ee45696643df99379c",
+    "specs/WritePublicationCoreMC.tla": "8b81fa34c38bf6a7b3067b6584305924b76ce19a669641abedd1339513b34a85",
+    "specs/WritePublicationCoreProofs.tla": "9d0a4399f5d3b01d636cf3bcf36f2d11b905d08989a7a57dce46490613d0d629",
+    "specs/WriteBatchProtocol.tla": "b01f0dd2145791562bc3627cdc6a3aab14a056835af1d31f1ea50ae5c3927151",
+    "specs/WriteBatchProtocolMC.tla": "b06bf3373357311a5833993f8a7552d5d466ebda724fb4f04180157a5a4bd036",
+    "specs/WriteBatchRefinementProofs.tla": "8091abb24f1ea5be001c5038b228e65236b365217458e1ddcb5d31f8847ac0fe",
+    "specs/WriteBatchProtocol.recovery.cfg": "efc86ee9ce2a66cc6720a75dbe5def830fa2f42bde7fee78af17a5bb1fe1f75f",
+    "specs/WritePublicationCoreMC.cfg": "b37d44218ac704d503620e3e3cc0f2a9bac642bfafe7770e71171f471986fae1",
+    "specs/WriteBatchProtocol.safe.cfg": "6741b2f18e1c263644cc61ee8ea6aeb27dd1faa772d03d646f65907fe0215080",
+    "specs/check-write-protocol.sh": "6d04a4fa95dc8560ec335e9e0d31dda8c11f0dfa36a770f416d99d14b381d381",
+    "packages/conformance/results/focused-controls-2026-10-18T14-01-47.619Z/report.json.gz": "a535ecaafb017b7528ab5ae6b6ac61d5a37fbc7110c3ddc151f0614db1a6fc1f"
+  },
+  "remaining": [
+    "Canonical facade publication still mandatory",
+    "No active-work bounding, narrower projection conflicts or batching implemented",
+    "Standalone HTTP and raw-DO benchmark still use facade admission",
+    "Read-head old-binary schema-3 rollback certification outstanding",
+    "Candidate numeric proof prototype in /tmp is incomplete and NOT included as passed evidence"
+  ]
+}
