@@ -20,6 +20,8 @@ type LocalWitness = Readonly<{status: "committed" | "aborted"; txId: string; gra
   commitSeq: number; statementTimeMs: number; identityTimeMs: number; shardPrefix: string; shardGeneration: number; directoryEpoch: number; factCount: number}>;
 type ParticipantFailure = Readonly<{participant: number; status: number; reasonCode: ParticipantFailureCode}>;
 type PreflightFailure = Readonly<{participant: number; status: number; reasonCode: ParticipantFailureCode | "split-required" | "capacity-not-admitted" | "invalid-preflight-response"}>;
+type PlanningResult = {kind: "continue"; plan: WritePlan} | {kind: "respond"; response: Response};
+type PreparationResult = {kind: "continue"} | {kind: "respond"; response: Response};
 
 export class DistributedTransaction {
   private active = false;
@@ -151,120 +153,180 @@ export class DistributedTransaction {
   }
 
   private async advance(recovery: boolean): Promise<Response> {
-    let intent = this.read()!;
-    if (recovery && intent.phase === "planning") {
-      console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "planning", reasonCode: "recovery-before-plan"}));
-      return this.aborted(this.phase("aborted"));
-    }
+    let intent = this.read();
+    if (intent === undefined) throw new Error("durable transaction intent is missing");
+    if (recovery && intent.phase === "planning") return this.abortUnplannedRecovery();
+
     const batch = await this.batch(intent);
     let plan: WritePlan;
     let freshlyReserved = false;
     if (intent.phase === "planning") {
-      plan = await planBatch(this.env, intent.graph_id, batch, async prefix => {
-        const response = await this.tree(intent, {prefix}, "_tree-directory");
-        const value: unknown = await response.json();
-        if (!response.ok || !isRecord(value)) throw new Error("provisional owner directory unavailable");
-        return {directoryEpoch: integer(value["directoryEpoch"]), visibleSeq: integer(value["visibleSeq"])};
-      });
-      if (plan.participants.length > MAX_TRANSACTION_PARTICIPANTS) {
-        this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);
-        return jsonResponse({error: "participant limit exceeded", retryable: false}, 413);
-      }
-      const preflightFailures = await this.preflight(intent, plan, batch);
-      // Persist exact possible ownership before the first reservation RPC.
-      this.storage.sql.exec("UPDATE candidate_transactions SET phase = 'reserving', plan_json = ?, trees_json = ? WHERE tx_id = ?",
-        JSON.stringify(plan), JSON.stringify(plan.owners.map(o => o.prefix)), this.txId);
-      intent = this.read()!;
-      const owners: OwnerPlan[] = [];
-      for (const owner of plan.owners) {
-        const response = await this.tree(intent, owner, "_tree-lock", {entities: owner.entities, directoryEpoch: owner.directoryEpoch});
-        const value: unknown = await response.json();
-        if (!response.ok) {
-          await this.release(intent, plan, false);
-          this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);
-          return jsonResponse(isRecord(value) ? value : {error: "owner reservation rejected", retryable: true}, response.status);
-        }
-        if (!isRecord(value) || integer(value["directoryEpoch"]) !== owner.directoryEpoch) throw new Error("provisional owner epoch changed");
-        owners.push({...owner, reservationTicket: integer(value["reservationTicket"], 1)});
-      }
-      plan = {...plan, owners};
-      this.storage.sql.exec(`UPDATE candidate_transactions SET phase = 'preparing', plan_json = ?, commit_seq = 0, statement_time_ms = ? WHERE tx_id = ?`,
-        JSON.stringify(plan), Date.now(), this.txId);
+      const result = await this.planAndReserve(intent, batch);
+      if (result.kind === "respond") return result.response;
+      plan = result.plan;
       intent = this.read()!;
       freshlyReserved = true;
-      // A provisional rejection is not authoritative after visibility changed.
-      // Positive preflight never replaces actual prepare/atomic admission.
-      if (preflightFailures.length > 0) {
-        const recheckFailures = await this.preflight(intent, plan, batch);
-        if (recheckFailures.length > 0) {
-          console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "preflight",
-            reasonCode: "capacity-or-routing-rejected", initialFailures: preflightFailures, recheckFailures}));
-          await this.cancel(this.phase("cancelling"), plan, batch); return this.aborted(this.read()!);
-        }
-      }
     } else {
-      if (!intent.plan_json) throw new Error("admitted operation lost its exact plan");
-      plan = await parseWritePlan(intent.plan_json, intent.graph_id, batch, intent.phase === "reserving" ? "optional" : "required");
+      plan = await this.recoverPlan(intent, batch);
     }
-    if (intent.phase === "reserving") {
-      // Recover uncertain ownership only; no new reservation/admission on alarm.
-      console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "reserving", reasonCode: "recovery-before-prepare"}));
-      await this.release(intent, plan, true); return this.aborted(this.phase("aborted"));
-    }
+
+    if (intent.phase === "reserving") return this.abortUnpreparedRecovery(intent, plan);
     if (intent.phase === "preparing") {
-      // Fresh reservations already validated the tuple and now prevent lease,
-      // split and overlapping writers until this driver finishes. Recovery
-      // revalidates those durable fences without regrouping/rerouting the plan.
-      if (!freshlyReserved) for (const owner of plan.owners) {
-        const response = await this.tree(intent, owner, "_tree-lock", {entities: owner.entities, directoryEpoch: owner.directoryEpoch});
-        const value: unknown = await response.json();
-        if (!response.ok || !isRecord(value) || value["reservationTicket"] !== owner.reservationTicket || value["directoryEpoch"] !== owner.directoryEpoch)
-          throw new Error("admitted prepare lost its exact owner reservation");
-      }
-      if (plan.participants.length === 1) intent = this.phase("atomic-delegated");
-      else {
-        const replies = await Promise.all(plan.participants.map(p => this.participant(intent, plan, p, batch, "_prepare")));
-        const failures = (await Promise.all(replies.map(async (response, participant): Promise<ParticipantFailure | undefined> => {
-          if (response.ok) { await response.arrayBuffer(); return undefined; }
-          const text = await response.text();
-          let body: unknown = text;
-          try { body = JSON.parse(text) as unknown; } catch { /* classify only; never log the raw response */ }
-          return {participant, status: response.status, reasonCode: classifyParticipantFailure(response.status, body)};
-        }))).filter((failure): failure is ParticipantFailure => failure !== undefined);
-        const permanent = failures.some(failure => failure.status >= 400 && failure.status < 500);
-        if (permanent) {
-          console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "prepare", reasonCode: "participant-rejected",
-            failures}));
-          await this.cancel(this.phase("cancelling"), plan, batch); return this.aborted(this.read()!);
-        }
-        if (failures.length > 0) {
-          console.error(JSON.stringify({event: "poneglyph.transaction.incomplete", phase: "prepare", reasonCode: "participant-unavailable",
-            failures}));
-          throw new Error("participant prepare incomplete");
-        }
-        intent = this.phase("committing");
-      }
+      const result = await this.prepareParticipants(intent, plan, batch, freshlyReserved);
+      if (result.kind === "respond") return result.response;
+      intent = this.read()!;
     }
+
     if (intent.phase === "atomic-delegated") {
       plan = await this.acquirePublicationGates(intent, plan);
       return this.finishAtomic(this.read()!, plan, batch);
     }
-    if (intent.phase === "cancelling") {await this.cancel(intent, plan, batch); return this.aborted(this.read()!);}
+    if (intent.phase === "cancelling") {
+      await this.cancel(intent, plan, batch);
+      return this.aborted(this.read()!);
+    }
     if (intent.phase !== "committing") throw new Error("unsupported durable transaction phase");
+
     plan = await this.acquirePublicationGates(intent, plan);
     intent = this.read()!;
-    if (intent.participant_witness !== 1) {
-      const replies = await Promise.all(plan.participants.map(p => this.participant(intent, plan, p, batch, "_commit")));
-      const incomplete = replies.some(r => !r.ok); await Promise.all(replies.map(r => r.arrayBuffer()));
-      if (incomplete) throw new Error("irrevocable commit apply incomplete");
-      this.storage.sql.exec("UPDATE candidate_transactions SET participant_witness = 1 WHERE tx_id = ?", this.txId);
-    }
+    await this.applyParticipants(intent, plan, batch);
     await this.publish(intent, plan);
     await this.publishSafeVector(intent, plan);
     await this.releasePublicationGates(intent, plan);
+
     const terminal = this.phase("complete");
     await this.finalize(intent, plan, batch);
     return this.receipt(terminal);
+  }
+
+  private abortUnplannedRecovery(): Response {
+    console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "planning", reasonCode: "recovery-before-plan"}));
+    return this.aborted(this.phase("aborted"));
+  }
+
+  private async recoverPlan(intent: Intent, batch: FactBatch): Promise<WritePlan> {
+    if (!intent.plan_json) throw new Error("admitted operation lost its exact plan");
+    const reservation = intent.phase === "reserving" ? "optional" : "required";
+    return parseWritePlan(intent.plan_json, intent.graph_id, batch, reservation);
+  }
+
+  private async planAndReserve(intent: Intent, batch: FactBatch): Promise<PlanningResult> {
+    const initialPlan = await planBatch(this.env, intent.graph_id, batch, async prefix => {
+      const response = await this.tree(intent, {prefix}, "_tree-directory");
+      const value: unknown = await response.json();
+      if (!response.ok || !isRecord(value)) throw new Error("provisional owner directory unavailable");
+      return {directoryEpoch: integer(value["directoryEpoch"]), visibleSeq: integer(value["visibleSeq"])};
+    });
+    if (initialPlan.participants.length > MAX_TRANSACTION_PARTICIPANTS) {
+      this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);
+      return {kind: "respond", response: jsonResponse({error: "participant limit exceeded", retryable: false}, 413)};
+    }
+
+    const preflightFailures = await this.preflight(intent, initialPlan, batch);
+    // Persist exact possible ownership before the first reservation RPC.
+    this.storage.sql.exec("UPDATE candidate_transactions SET phase = 'reserving', plan_json = ?, trees_json = ? WHERE tx_id = ?",
+      JSON.stringify(initialPlan), JSON.stringify(initialPlan.owners.map(owner => owner.prefix)), this.txId);
+    intent = this.read()!;
+
+    const owners: OwnerPlan[] = [];
+    for (const owner of initialPlan.owners) {
+      const response = await this.tree(intent, owner, "_tree-lock", {entities: owner.entities, directoryEpoch: owner.directoryEpoch});
+      const value: unknown = await response.json();
+      if (!response.ok) {
+        await this.release(intent, initialPlan, false);
+        this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);
+        return {kind: "respond", response: jsonResponse(
+          isRecord(value) ? value : {error: "owner reservation rejected", retryable: true}, response.status,
+        )};
+      }
+      if (!isRecord(value) || integer(value["directoryEpoch"]) !== owner.directoryEpoch) {
+        throw new Error("provisional owner epoch changed");
+      }
+      owners.push({...owner, reservationTicket: integer(value["reservationTicket"], 1)});
+    }
+
+    const plan = {...initialPlan, owners};
+    this.storage.sql.exec(`UPDATE candidate_transactions SET phase = 'preparing', plan_json = ?, commit_seq = 0, statement_time_ms = ? WHERE tx_id = ?`,
+      JSON.stringify(plan), Date.now(), this.txId);
+    intent = this.read()!;
+
+    // A provisional rejection is not authoritative after visibility changed.
+    // Positive preflight never replaces actual prepare/atomic admission.
+    if (preflightFailures.length > 0) {
+      const recheckFailures = await this.preflight(intent, plan, batch);
+      if (recheckFailures.length > 0) {
+        console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "preflight",
+          reasonCode: "capacity-or-routing-rejected", initialFailures: preflightFailures, recheckFailures}));
+        await this.cancel(this.phase("cancelling"), plan, batch);
+        return {kind: "respond", response: this.aborted(this.read()!)};
+      }
+    }
+    return {kind: "continue", plan};
+  }
+
+  private async abortUnpreparedRecovery(intent: Intent, plan: WritePlan): Promise<Response> {
+    // Recover uncertain ownership only; never create new reservations on alarm.
+    console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "reserving", reasonCode: "recovery-before-prepare"}));
+    await this.release(intent, plan, true);
+    return this.aborted(this.phase("aborted"));
+  }
+
+  private async prepareParticipants(
+    intent: Intent,
+    plan: WritePlan,
+    batch: FactBatch,
+    freshlyReserved: boolean,
+  ): Promise<PreparationResult> {
+    if (!freshlyReserved) await this.verifyOwnerReservations(intent, plan);
+    if (plan.participants.length === 1) {
+      this.phase("atomic-delegated");
+      return {kind: "continue"};
+    }
+
+    const replies = await Promise.all(plan.participants.map(participant =>
+      this.participant(intent, plan, participant, batch, "_prepare")));
+    const failures = (await Promise.all(replies.map(async (response, participant): Promise<ParticipantFailure | undefined> => {
+      if (response.ok) {await response.arrayBuffer(); return undefined;}
+      const text = await response.text();
+      let body: unknown = text;
+      try {body = JSON.parse(text) as unknown;} catch { /* classify only; never log the raw response */ }
+      return {participant, status: response.status, reasonCode: classifyParticipantFailure(response.status, body)};
+    }))).filter((failure): failure is ParticipantFailure => failure !== undefined);
+
+    if (failures.some(failure => failure.status >= 400 && failure.status < 500)) {
+      console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "prepare",
+        reasonCode: "participant-rejected", failures}));
+      await this.cancel(this.phase("cancelling"), plan, batch);
+      return {kind: "respond", response: this.aborted(this.read()!)};
+    }
+    if (failures.length > 0) {
+      console.error(JSON.stringify({event: "poneglyph.transaction.incomplete", phase: "prepare",
+        reasonCode: "participant-unavailable", failures}));
+      throw new Error("participant prepare incomplete");
+    }
+    this.phase("committing");
+    return {kind: "continue"};
+  }
+
+  private async verifyOwnerReservations(intent: Intent, plan: WritePlan): Promise<void> {
+    for (const owner of plan.owners) {
+      const response = await this.tree(intent, owner, "_tree-lock", {entities: owner.entities, directoryEpoch: owner.directoryEpoch});
+      const value: unknown = await response.json();
+      if (!response.ok || !isRecord(value) || value["reservationTicket"] !== owner.reservationTicket ||
+          value["directoryEpoch"] !== owner.directoryEpoch) {
+        throw new Error("admitted prepare lost its exact owner reservation");
+      }
+    }
+  }
+
+  private async applyParticipants(intent: Intent, plan: WritePlan, batch: FactBatch): Promise<void> {
+    if (intent.participant_witness === 1) return;
+    const replies = await Promise.all(plan.participants.map(participant =>
+      this.participant(intent, plan, participant, batch, "_commit")));
+    const incomplete = replies.some(response => !response.ok);
+    await Promise.all(replies.map(response => response.arrayBuffer()));
+    if (incomplete) throw new Error("irrevocable commit apply incomplete");
+    this.storage.sql.exec("UPDATE candidate_transactions SET participant_witness = 1 WHERE tx_id = ?", this.txId);
   }
 
   private witness(value: unknown, intent: Intent, plan: WritePlan, batch: FactBatch): LocalWitness {
