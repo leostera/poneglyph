@@ -1,0 +1,35 @@
+{
+  "kind": "read-head-mixed-kv-sqlite-local-primitive-probe",
+  "sourceBaseCommit": "a47674ba349d4c7662c76235f5304e076004b84d",
+  "sourceHashes": {
+    "packages/poneglyph/tests/read-head-kv-atomicity.test.ts": "267a6dcad5d6af2f73aa862fabe9f544b4eb70943325c81a5b0c25a56bf7ac73",
+    "packages/poneglyph/vitest.config.ts": "fbd63371aeb1b6966a32084d56bae3b482087de96a4f8231001e1efc6c9c975c"
+  },
+  "runtime": {
+    "bun": "1.4.2",
+    "node": "v26.11.0"
+  },
+  "testsPassed": 3,
+  "logs": [
+    {
+      "file": "typecheck.log.gz",
+      "command": "bun run --cwd packages/poneglyph typecheck",
+      "status": "passed",
+      "sha256": "65d8fd1041d19e4d6bba4253b80fab1cf36076152f49a2ba1aa0ea35ba3dfe4f",
+      "uncompressedSha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    {
+      "file": "targeted.log.gz",
+      "command": "bun run --cwd packages/poneglyph test -- tests/read-head-kv-atomicity.test.ts",
+      "status": "passed",
+      "sha256": "c3916db31ebedbce5ae276dd418042d78bd4f3ee385f07ddf691888423f3a191",
+      "uncompressedSha256": "15aa54c94c96030ebe2385d4aa1f50795b8c8aa1cb8b4fc0d4360dc99bbe532b"
+    }
+  ],
+  "limitations": [
+    "Local runtime primitive gate only; no metadata-only facade role, root publication hook, routing or membership implementation.",
+    "Test-only versioned KV key and synthetic local vector mutations; no production or hosted resources, facts or deployment changed.",
+    "Facade SQLite marker remains version 2; atomic KV/SQL behavior is tested, not inferred from schema compatibility.",
+    "No throughput, latency, partition-tolerance or infinite-scaling claim."
+  ]
+}
