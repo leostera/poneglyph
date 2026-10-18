@@ -28,10 +28,12 @@ export default {
     try {
       // One native service-binding RPC in each independent HTTP invocation.
       const result = await env.PONEGLYPH.query({graphId: "control-plane-validation", query: path === "/point" ? point : combined});
-      const row = result.rows[0];
-      const expected = result.snapshotSeq === 1 && result.rows.length === 1 && row?.Enabled?.type === "string" && row.Enabled.value === "false" &&
-        (path === "/point" || row?.Tenant?.value === tenant && row?.Status?.value === "active" &&
-          row?.TokenVersion?.value === "fake-token-test-only-v0-d9d839ba-4c07-41dc-a5bd-77ccc5763413");
+      const row = result.rows[0], keys = path === "/point" ? ["Enabled"] : ["Tenant", "Enabled", "TokenVersion", "Status"];
+      const expected = result.snapshotSeq === 1 && result.rows.length === 1 && row !== undefined &&
+        Object.keys(row).length === keys.length && keys.every(key => Object.hasOwn(row, key) && row[key]?.type === "string") &&
+        row.Enabled?.value === "false" &&
+        (path === "/point" || row.Tenant?.value === tenant && row.Status?.value === "active" &&
+          row.TokenVersion?.value === "fake-token-test-only-v0-d9d839ba-4c07-41dc-a5bd-77ccc5763413");
       if (!expected) return response(env.RUN_ID, {kind: "unexpected-answer", hostedMs: performance.now() - started});
       const {timing, cacheHits, treeReadLeaseAcquisitions} = result.metrics;
       if (timing === undefined || typeof cacheHits !== "number" || typeof treeReadLeaseAcquisitions !== "number") {

@@ -2,8 +2,38 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {latencyStats, parseProbeResult, parseReadPlan, successful, transportFailure, type Sample} from "../bench/plan.js";
 import {settledWaves} from "../bench/waves.js";
+import operator from "../bench/operator.js";
 
 const metrics = {snapshotSeq: 1, hostedMs: 8, serviceMs: 7, snapshotMs: 7, evaluationMs: 0, releaseMs: 0, cacheHits: 1, leases: 0};
+
+test("read probe requires the exact typed row bag, not a matching subset of fields", async () => {
+  const string = (value: string) => ({type: "string", value});
+  const point = {Enabled: string("false")};
+  const combined = {Tenant: string("control:tenant:d9d839ba-4c07-41dc-a5bd-77ccc5763413"), ...point,
+    TokenVersion: string("fake-token-test-only-v0-d9d839ba-4c07-41dc-a5bd-77ccc5763413"), Status: string("active")};
+  const probe = async (path: string, rows: unknown, snapshotSeq = 1) => {
+    const env = {RUN_ID: "oracle-test", PONEGLYPH: {query: async () => ({rows, snapshotSeq, metrics: {
+      timing: {executionMs: 1, snapshotMs: 1, evaluationMs: 0, releaseMs: 0}, cacheHits: 1, treeReadLeaseAcquisitions: 0,
+    }})}} as unknown as Parameters<typeof operator.fetch>[1];
+    const response = await operator.fetch(new Request(`https://local.test/${path}`, {method: "POST"}), env);
+    return {status: response.status, body: await response.json()};
+  };
+  for (const [path, row] of [["point", point], ["combined", combined]] as const) {
+    assert.equal((await probe(path, [row])).status, 200);
+    for (const rows of [[{...row, Unexpected: string("hidden")}], [row, row], [], [{...row, Enabled: {type: "integer", value: "0"}}]]) {
+      const result = await probe(path, rows);
+      assert.equal(result.status, 502);
+      assert.ok(typeof result.body === "object" && result.body !== null && "kind" in result.body);
+      assert.equal(result.body.kind, "unexpected-answer");
+    }
+    assert.equal((await probe(path, [row], 2)).status, 502);
+  }
+});
+
+test("local head benchmark rejects invalid counts before creating a runtime or writing fixtures", async () => {
+  const {runLocalReadHeads} = await import("../bench/local-heads.js");
+  for (const count of [0, -1, 1.5, 1_251, NaN, Infinity]) await assert.rejects(runLocalReadHeads(count), /Expected 1–1250/);
+});
 
 test("read benchmark parses exact bounded plans without exposing destination or query inputs", () => {
   const plan = parseReadPlan({phases: [{kind: "combined", count: 10, concurrency: 8}]});

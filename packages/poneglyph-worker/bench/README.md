@@ -15,4 +15,17 @@ The benchmark stops at the first failed wave, settles every issued caller promis
 
 Reports, verified gzip hashes and private preview logs stay in `.artifacts/read-bench/<run-id>/`. Never paste preview/authentication URLs or tokens from logs. Retain selected redacted evidence separately when recording results.
 
+## Local read-head placement probe
+
+```sh
+bun run bench:read:local-heads               # 8,000 measured reads
+bun run bench:read:local-heads --count 32    # small harness smoke
+```
+
+This separate explicit command uses **only fresh local Miniflare SQLite** and the real native RPC service; it reads no Cloudflare credentials and makes no cloud deployment, graph or namespace changes. It seeds one fixed five-fact synthetic control-plane transaction in a new temporary database, then compares canonical validation and 1/4/8 integrated metadata heads. Worker isolates restart between placements over the same local durable state so stale membership hints do not confound pool selection. Each placement warms both fixed probe queries, then measures point/16 and combined/128 waves, with actual maximum in-flight calls and whole-phase launch span recorded. A smaller `--count` may offer less than the configured concurrency. These are **eight placement/load rounds of one architecture**, not eight architectures or a demonstration of infinite capacity.
+
+The count is 1–1250 per round (at most 10,000 measured reads). Exact typed row keys/values, complete bags and snapshot expectations are checked on every call. All issued calls settle; there are no automatic query/write retries. Raw settled measurements are checkpointed before follow-up counter diagnostics. Failures stop subsequent rounds, return failure and retain local state/original seed identity; successful runs remove only their own newly created local temporary state. Reports and hashes remain in `.artifacts/read-head-local/<run-id>/`. Caller latency includes failures/deadlines; native/service percentiles are explicitly successful-only. Per-head validation counts and canonical read-cut counts distinguish real routing from a nominal head configuration.
+
+A local closed-loop sample cannot certify hosted CPU placement, networking, geographic p99, mixed writes, sustained/open-loop completion or unlimited membership/publication throughput. The canonical baseline may pass the same local latency target: do not attribute an apparent timing difference causally to added replicas without a controlled hosted experiment. The production/default test hooks do not run this experiment.
+
 Architecture, protocol invariants, limitations and experiment evidence belong to [RFD0004](../../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md).
