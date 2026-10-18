@@ -5,7 +5,7 @@ import {jsonResponse, readJsonBody} from "./http.js";
 import {coordinatorObjectName} from "./keys.js";
 import {ReadHeadJournal, ReadHeadJournalError, type ReadHeadPatch} from "./read-head-journal.js";
 import {isReadHeadDeliveryPending, pendingReadHeadDeliveries, type ReadHeadDelivery} from "./read-head-parent.js";
-import {readHeadReplicaName} from "./read-head-placement.js";
+import {readHeadReplicaName, sampleReadHeadMembers} from "./read-head-placement.js";
 import {parseReadHeadCommand} from "./read-head-state.js";
 import {readFailureReason} from "./read-diagnostics.js";
 
@@ -95,11 +95,15 @@ export class ReadHeadCoordinator {
       const graph = parseGraphId(raw.value["graphId"]);
       if (!graph.ok) return jsonResponse({error: "invalid read-head graph"}, 400);
       this.assertRoot(graph.value);
-      if (path === "/_read-head-status" && keys(raw.value, ["graphId"])) {
+      if ((path === "/_read-head-status" || path === "/_read-head-discover") && keys(raw.value, ["graphId"])) {
         const parent = this.journal.state;
         const candidate = parent?.operation?.kind === "join" ? parent.operation.member : undefined;
-        return jsonResponse({enabled: parent !== null, generation: parent?.generation ?? 0,
-          members: parent?.members.filter(member => member !== candidate) ?? []});
+        const registered = parent?.members.filter(member => member !== candidate) ?? [];
+        // A bounded random window per caller, not a fixed prefix of the roster
+        // or a ceiling on membership. Discovery never supplies read authority.
+        const members = path === "/_read-head-discover"
+          ? sampleReadHeadMembers(registered, Math.floor(Math.random() * registered.length)) : registered;
+        return jsonResponse({enabled: parent !== null, generation: parent?.generation ?? 0, members});
       }
       if (path === "/_read-head-join" && keys(raw.value, ["graphId", "expectedGeneration"]) && counter(raw.value["expectedGeneration"])) {
         // First opt-in requires the canonical NAME, not an anonymous alias.

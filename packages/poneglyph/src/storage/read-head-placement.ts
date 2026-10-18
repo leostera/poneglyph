@@ -4,7 +4,17 @@ import {isRecord} from "../domain/result.js";
 
 export const READ_HEAD_IDENTITY_KEY = "read-head-identity/v1";
 export const READ_HEAD_STATE_KEY = "read-head-state/v1";
+// A bounded routing sample, not a limit on registered replicas or active reads.
+export const MAX_READ_HEAD_DISCOVERY_MEMBERS = 256;
 export type ReadHeadReplicaIdentity = Readonly<{graphId: GraphId; member: number}>;
+
+/** Different discovery callers can receive different bounded roster windows. */
+export function sampleReadHeadMembers(members: readonly number[], start: number): readonly number[] {
+  if (members.length === 0) return Object.freeze([]);
+  if (!Number.isSafeInteger(start) || start < 0 || start >= members.length) throw new Error("Invalid read-head discovery offset");
+  const count = Math.min(members.length, MAX_READ_HEAD_DISCOVERY_MEMBERS);
+  return Object.freeze(Array.from({length: count}, (_, offset) => members[(start + offset) % members.length]!));
+}
 
 /** A new metadata-only instance, never the canonical facade for this graph. */
 export function readHeadReplicaName(graphId: GraphId, member: number): string {

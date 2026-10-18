@@ -77,6 +77,19 @@ TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check-read-head-publication.sh
 
 The first script translates temporary copies of the PlusCal publication/recovery models. The second checks read-head membership/publication/recovery and deliberate negative controls. Consult the RFD and retained result directories for exact historical tool digests and bounds; rolling upstream release URLs alone are not pins.
 
+## Read-head routing composition
+
+`ReadHeadRouting.tla` adds one completed-result query, stale routing hints, fresh head validation, canonical fallback and explicit failed reads to `ReadHeadPublication`. Run:
+
+```sh
+TLAPM=/path/to/tlapm TLA2TOOLS_JAR=/path/to/tla2tools.jar ./specs/check-read-head-routing.sh
+# Optional retained fresh logs/sources/hashes:
+TLAPM=/path/to/tlapm TLA2TOOLS_JAR=/path/to/tla2tools.jar \
+  READ_HEAD_ROUTING_EVIDENCE_DIR=/tmp/poneglyph-head-routing ./specs/check-read-head-routing.sh
+```
+
+`ReadHeadRoutingProofs.tla` proves conditional routing composition in **26 obligations**, assuming the global head freshness invariant and state typing hold at every step. It does not prove those premises, correct cache population/authorization, native I/O, MVCC retention or latency. The positive TLC fixture checks **166,702 distinct states / 1,624,192 generated** with two replicas, one possible crash, two publications, all nonempty scopes of the inherited two-owner abstraction, a version-zero cache and a full-roster (possibly stale) hint. `RoutingCheckBound` explicitly supplies the last two fixture constraints; the larger unconstrained cross-product timed out and is not counted. The runner requires three intended failed proof mutations, three stale-answer TLC counterexamples and four reachability witnesses, including a failed query when no suitable authority is available. See RFD0004 for exact architecture/scope; these checks establish neither infinite capacity nor unconditional read availability.
+
 ## TLAPS: deductive proofs
 
 The executable is **`tlapm`**, the TLA+ Proof Manager in [TLAPS](https://github.com/tlaplus/tlapm). It complements TLC; it does not turn passing finite instances into unbounded theorems. Upstream [documentation](https://proofs.tlapl.us/) describes proof syntax and backend trust.

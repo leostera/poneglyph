@@ -10,6 +10,7 @@ import { virtualKeyForEntity } from "../../poneglyph/src/storage/keys.js";
 import { isRecord } from "../../poneglyph/src/domain/result.js";
 import { parseReadHeadParent } from "../../poneglyph/src/storage/read-head-parent.js";
 import { parseReadHeadState } from "../../poneglyph/src/storage/read-head-state.js";
+import { verifyReadHeadRouting } from "./read-head-rpc.js";
 
 // Finite native RPC + real canonical SQLite, no mocked RpcTarget/transport.
 test("graph-scoped native RPC preserves writes/results and denies ungranted capabilities", async () => {
@@ -238,6 +239,7 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     assert.deepEqual(await readMarker("test:head-publication"), present);
     assert.equal(afterHead.admissionCalls, 0, "both RPC write APIs bypass the facade's deliberately failing public admission route");
     assert.ok(afterHead.publicationCalls >= 10, "the canonical publication authority remains mandatory");
+    await verifyReadHeadRouting(active, entities);
     const service = await active.getWorker("service");
     for (const path of ["/v1/graphs/example/query", "/v1/graphs/example/transactions", "/_transact", "/__e2e/inspect"]) {
       const denied = await service.fetch(`https://private.test${path}`, { method: "POST", body: "{}" });

@@ -21,6 +21,18 @@ export default {
         const name = path === "/head-state" ? readHeadReplicaName(graph.value, 1) : coordinatorObjectName(graph.value);
         return env.TEST_FACADE.getByName(name).fetch("https://test.internal/_test-write-state");
       }
+      if (path === "/retire-head") {
+        const body = await request.json<{expectedGeneration: number}>();
+        return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch("https://test.internal/_read-head-retire", {
+          method: "POST", body: JSON.stringify({graphId: "example", member: 1, expectedGeneration: body.expectedGeneration}),
+        });
+      }
+      if (path === "/head-pump") return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch("https://test.internal/_test-head-pump");
+      if (["/head-unavailable", "/head-malformed", "/head-reset", "/head-block-freeze", "/head-block-activate"].includes(path)) {
+        const graph = parseGraphId("example");
+        if (!graph.ok) throw new Error("Invalid fixture graph");
+        return env.TEST_FACADE.getByName(readHeadReplicaName(graph.value, 1)).fetch(`https://test.internal/_test-${path.slice(1)}`);
+      }
       if (path === "/enable-head") return env.TEST_FACADE.getByName(coordinatorObjectName("example")).fetch(
         "https://test.internal/_read-head-join", {method: "POST", body: JSON.stringify({graphId: "example", expectedGeneration: 0})});
       if (["/publication-blocked", "/publication-lost", "/publication-reset"].includes(path)) {
