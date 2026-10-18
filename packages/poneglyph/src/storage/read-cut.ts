@@ -4,16 +4,23 @@ import { parseUri } from "../domain/identifiers.js";
 import type { StorageEnv } from "./environment.js";
 import { TREE_PREFIXES, treeCoordinatorName, treeForKey, type TreeSnapshot } from "./forest.js";
 import { virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
+import { readFailureReason, type ReadFailureReason } from "./read-diagnostics.js";
 
-// A single relation with a literal entity is confined to one root; every
-// broader shape keeps the full vector because it may read across roots.
+// Literal entity terms bound every scan to those owners, even when value
+// variables join across clauses. Capture their union from ONE safe vector;
+// independently capturing each owner would lose transaction closure.
 export async function queryReadPrefixes(graphId: GraphId, query: DatalogQuery): Promise<readonly VirtualPrefix[]> {
-  const clause = query.facts.length === 1 ? query.facts[0] : undefined;
-  if (clause?.entity.kind === "constant" && clause.entity.value.type === "string") {
+  if (query.facts.length === 0) return TREE_PREFIXES;
+  const entities = new Set<string>();
+  for (const clause of query.facts) {
+    if (clause.entity.kind !== "constant" || clause.entity.value.type !== "string") return TREE_PREFIXES;
     const entity = parseUri(clause.entity.value.value);
-    if (entity.ok) return [treeForKey(await virtualKeyForEntity(graphId, entity.value))];
+    if (!entity.ok) return TREE_PREFIXES;
+    entities.add(entity.value);
   }
-  return TREE_PREFIXES;
+  const owners = new Set(await Promise.all([...entities].map(async entity =>
+    treeForKey(await virtualKeyForEntity(graphId, entity)))));
+  return TREE_PREFIXES.filter(prefix => owners.has(prefix));
 }
 
 // Release exact lease identities. Unknown delivery leaves the lease expiry as
@@ -27,10 +34,19 @@ export async function releaseParallelReadCut(
     const response = await env.GRAPH_TREES.getByName(treeCoordinatorName(graphId, lease.prefix)).fetch("https://tree.internal/_tree-release-read", {
       method: "POST", body: JSON.stringify({ graphId, prefix: lease.prefix, readId: lease.readId }),
     });
-    if (!response.ok) console.warn("subtree read release deferred", lease.prefix);
+    // Consume the acknowledgement body to release the connection even though
+    // expiry, not successful cleanup delivery, is the safety fence.
+    await response.body?.cancel();
+    return response.ok;
   }));
+  const failures: Partial<Record<ReadFailureReason | "upstream-status", number>> = {};
   for (const result of released) {
-    if (result.status === "rejected") console.warn("subtree read release delivery unknown; lease expiry remains the fence");
+    const reason = result.status === "rejected" ? readFailureReason(result.reason)
+      : result.value ? undefined : "upstream-status";
+    if (reason !== undefined) failures[reason] = (failures[reason] ?? 0) + 1;
+  }
+  if (Object.keys(failures).length > 0) {
+    console.warn({event: "poneglyph.read.release_deferred", stage: "release", failures, leaseCount: cut.length});
   }
 }
 

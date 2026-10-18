@@ -5,11 +5,16 @@ const facts = [
   { source: "test:a", entity: "test:e", field: "test:title", value: { type: "text" as const, value: "hello" } },
   { source: "test:b", entity: "test:e", field: "test:title", value: { type: "text" as const, value: "hello" } },
   { source: "test:a", entity: "test:e", field: "test:bytes", value: { type: "number" as const, value: "9007199254740993" } },
+  { source: "test:a", entity: "test:e2", field: "test:status", value: { type: "text" as const, value: "active" } },
 ];
 export default {
   async fetch(request: Request, env: Env) {
     const path = new URL(request.url).pathname;
     try {
+      if (path === "/one-shot") return Response.json(await env.READER.query({graphId: "example", query: 'test:title("test:e", T), test:status("test:e2", S)'}));
+      if (path === "/one-shot-denied") return Response.json(await env.READER.query({graphId: "other", query: "test:title(E, T)"}));
+      if (path === "/one-shot-unknown") return Response.json(await env.UNKNOWN.query({graphId: "example", query: "test:title(E, T)"}));
+      if (path === "/one-shot-forged") return Response.json(await env.READER.query(await request.json<{graphId: string; query: string}>()));
       if (path === "/acquire-only" || path === "/deny-before-storage") {
         using graph = await env.NO_STORAGE.getGraph({ graphId: "example" });
         if (path === "/deny-before-storage") return Response.json(await graph.transact(facts));
@@ -47,6 +52,7 @@ export default {
       if (path === "/write") return Response.json(await graph.transact(facts));
       if (path === "/bad-query") return Response.json(await graph.query("not Datalog"));
       if (path === "/integer") return Response.json(await graph.query('test:bytes("test:e", Value)'));
+      if (path === "/pointed-join") return Response.json(await graph.query('test:title("test:e", T), test:status("test:e2", S)'));
       if (path === "/schema") return Response.json(await graph.getSchema());
       if (path === "/identity") return Response.json({ id: await graph.id });
       return Response.json(await graph.query("test:title(E, T)"));

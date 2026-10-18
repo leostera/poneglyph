@@ -10,6 +10,17 @@ const receipt = await graph.transact(facts, {clientRequestToken: "my-app:operati
 // receipt is exactly { txId }, minted by the service after commit.
 ```
 
+For independent reads, the service also exposes a one-shot RPC that returns data rather than a capability:
+
+```ts
+const result = await env.PONEGLYPH.query({
+  graphId: "onepiece",
+  query: 'wiki:page:title("wiki:onepiece:page:Monkey%20D.%20Luffy", Title)',
+});
+```
+
+Each top-level query authenticates/authorizes the binding identity again. Unlike many calls on one long-lived `getGraph` handle, it has its own server execution context and request budgets. The caller still has its own invocation limits: a load generator must issue independent incoming requests, not thousands of calls inside a single Worker request. This API is not a cache, stale-read mode, or latency guarantee. See [RFD0004](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md) for read-plane behavior and validation limits.
+
 The binding's deployment-controlled `props.clientId` identifies the application. Deployment-owned JSON grants map that identity to allowed graphs and `read`/`write` permissions. Missing/malformed identity/policy, unknown clients and ungranted graphs deny access before storage. The generic runtime contains no application names or One Piece rules; the initial grants live in `cloudflare.config.ts`.
 
 Read handles expose the same typed method shape but their write methods **always deny on the server**, before parsing facts or accessing storage. This is not advisory metadata/TypeScript enforcement. A write-enabled subclass supplies the canonical write operation. Handle acquisition does not create durable state. Handles delegate their captured authority when shared and do not survive the caller's invocation; dispose them with `using`. Static grants are captured at acquisition, not an immediate-revocation control plane.

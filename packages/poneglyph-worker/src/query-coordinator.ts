@@ -22,6 +22,7 @@ import {
   QUERY_TIMEOUT_MS,
 } from "../../poneglyph/src/storage/constants.js";
 import { isRecord } from "../../poneglyph/src/domain/result.js";
+import { readFailureDiagnostic } from "../../poneglyph/src/storage/read-diagnostics.js";
 
 /**
  * Stateless query execution for the Worker RPC surface. The facade remains the
@@ -44,8 +45,14 @@ export async function executeWorkerQuery(
   return tracing.enterSpan("poneglyph.query", async () => {
     const started = Date.now();
     const expectedPrefixes = await queryReadPrefixes(graphId, parsedQuery.value);
-    const {snapshotSeq, cut} = await tracing.enterSpan("poneglyph.query.snapshot", () =>
-      acquireWorkerQueryCut(env, graphId, sourceText, expectedPrefixes));
+    const {snapshotSeq, cut} = await tracing.enterSpan("poneglyph.query.snapshot", async () => {
+      try {
+        return await acquireWorkerQueryCut(env, graphId, sourceText, expectedPrefixes);
+      } catch (error) {
+        console.error(readFailureDiagnostic("snapshot", error instanceof PoneglyphNetworkError ? error.cause : error));
+        throw error;
+      }
+    });
     const snapshotMs = Date.now() - started;
     const leaseExpiresAtMs = Math.min(...cut.map(lease => lease.expiresAtMs));
     const source = new DistributedFactSource(env, graphId, snapshotSeq, 0, leaseExpiresAtMs, undefined, cut);
@@ -75,6 +82,9 @@ export async function executeWorkerQuery(
       });
       evaluationMs = Date.now() - evaluationStarted;
     } catch (error) {
+      const diagnostic = readFailureDiagnostic("evaluation", error);
+      tracing.getActiveSpan()?.setAttribute("poneglyph.read.failure.reason", diagnostic.reason);
+      console.error(diagnostic);
       failed = true;
       failure = mapQueryFailure(error, controller.signal.aborted);
     } finally {

@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 import { Miniflare, Log, LogLevel } from "miniflare";
+import { treeForKey } from "../../poneglyph/src/storage/forest.js";
+import { virtualKeyForEntity } from "../../poneglyph/src/storage/keys.js";
 
 // Finite native RPC + real canonical SQLite, no mocked RpcTarget/transport.
 test("graph-scoped native RPC preserves writes/results and denies ungranted capabilities", async () => {
@@ -31,7 +33,7 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     await runtime.ready;
     const active = runtime;
     const call = async (path: string) => { const response = await active.dispatchFetch(`https://driver.test${path}`); return { status: response.status, body: await response.json() }; };
-    for (const path of ["/unknown", "/missing", "/malformed", "/forbidden-graph", "/write", "/deny-before-storage"]) {
+    for (const path of ["/unknown", "/missing", "/malformed", "/forbidden-graph", "/write", "/deny-before-storage", "/one-shot-denied", "/one-shot-unknown"]) {
       assert.deepEqual(await call(path), { status: 400, body: { name: "GraphAuthorizationError", message: "Graph access denied" } });
     }
     assert.deepEqual(await call("/identity"), { status: 200, body: { id: "example" } });
@@ -66,6 +68,23 @@ test("graph-scoped native RPC preserves writes/results and denies ungranted capa
     assert.deepEqual(integer.body.rows, [{ Value: { type: "integer", value: "9007199254740993" } }]);
     assert.equal((integer.body as unknown as {metrics: {treeReadLeaseAcquisitions: number}}).metrics.treeReadLeaseAcquisitions, 1,
       "a single-entity Worker query acquires only its exact owner lease");
+    const pointed = await call("/pointed-join");
+    assert.equal(pointed.status, 200, JSON.stringify(pointed.body));
+    assert.ok(typeof pointed.body === "object" && pointed.body !== null && "rows" in pointed.body && "metrics" in pointed.body && "snapshotSeq" in pointed.body);
+    assert.deepEqual(pointed.body.rows, [
+      {T: {type: "string", value: "hello"}, S: {type: "string", value: "active"}},
+      {T: {type: "string", value: "hello"}, S: {type: "string", value: "active"}},
+    ]);
+    const oneShot = await call("/one-shot");
+    assert.equal(oneShot.status, 200, JSON.stringify(oneShot.body));
+    assert.ok(typeof oneShot.body === "object" && oneShot.body !== null && "rows" in oneShot.body && "snapshotSeq" in oneShot.body);
+    assert.deepEqual(oneShot.body.rows, pointed.body.rows);
+    assert.equal(oneShot.body.snapshotSeq, pointed.body.snapshotSeq);
+    const forgedQuery = await active.dispatchFetch("https://driver.test/one-shot-forged", {method: "POST", body: JSON.stringify({graphId: "example", query: "test:title(E, T)", permissions: ["write"]})});
+    assert.equal(forgedQuery.status, 400);
+    const owners = new Set(await Promise.all(["test:e", "test:e2"].map(async entity => treeForKey(await virtualKeyForEntity("example", entity)))));
+    assert.equal((pointed.body.metrics as {treeReadLeaseAcquisitions: number}).treeReadLeaseAcquisitions, owners.size,
+      "compound pointed queries lease exactly their owner union without losing duplicate rows");
     const schema = await call("/schema");
     assert.equal(schema.status, 200);
     assert.ok(typeof schema.body === "object" && schema.body !== null && "fields" in schema.body && "snapshotVector" in schema.body);

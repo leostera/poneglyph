@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { acquireParallelReadCut } from "../src/storage/read-cut.js";
+import { acquireParallelReadCut, queryReadPrefixes } from "../src/storage/read-cut.js";
+import { parseDatalogQuery } from "../src/datalog/parser.js";
+import { parseGraphId } from "../src/domain/graph-id.js";
+import { treeForKey } from "../src/storage/forest.js";
+import { virtualKeyForEntity } from "../src/storage/keys.js";
 import { TREE_PREFIXES, type TreeSnapshot } from "../src/storage/forest.js";
 
 const lease = (prefix: TreeSnapshot["prefix"]): TreeSnapshot => ({prefix, readId: `read-${prefix}`, snapshotSeq: 1, directoryEpoch: 0, expiresAtMs: Date.now() + 30_000});
@@ -8,6 +12,36 @@ function deferred<T>() {
   const promise = new Promise<T>(done => {resolve = done;});
   return {promise, resolve};
 }
+
+describe("pointed read owner selection", () => {
+  const graph = parseGraphId("read-cut-test");
+  if (!graph.ok) throw new Error("invalid fixture graph");
+  const select = async (source: string) => {
+    const parsed = parseDatalogQuery(source);
+    if (!parsed.ok) throw new Error(parsed.error.message);
+    return queryReadPrefixes(graph.value, parsed.value);
+  };
+
+  it("unions literal owners across joined clauses in canonical order", async () => {
+    const entities = Array.from({length: 64}, (_, index) => `test:entity:${index}`);
+    const expected = new Set(await Promise.all(entities.map(async entity => treeForKey(await virtualKeyForEntity(graph.value, entity)))));
+    const query = entities.map(entity => `test:tenant(${JSON.stringify(entity)}, Tenant)`).join(", ");
+    expect(await select(query)).toEqual(TREE_PREFIXES.filter(prefix => expected.has(prefix)));
+  });
+
+  it("deduplicates owners for repeated clauses on the same entity", async () => {
+    const expected = treeForKey(await virtualKeyForEntity(graph.value, "test:a"));
+    expect(await select('test:tenant("test:a", Tenant), test:enabled("test:a", Enabled)')).toEqual([expected]);
+  });
+
+  it("keeps the full vector when any entity is variable, numeric, or not a URI", async () => {
+    for (const query of [
+      'test:tenant("test:a", Tenant), test:tenant(Other, Tenant)',
+      'test:tenant(42, Tenant)',
+      'test:tenant("not a uri", Tenant)',
+    ]) expect(await select(query)).toEqual(TREE_PREFIXES);
+  });
+});
 
 describe("parallel read cut", () => {
   it("opens all owners before waiting and preserves vector order", async () => {

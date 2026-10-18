@@ -118,6 +118,20 @@ export class ReadWriteGraph extends ReadGraph {
 }
 
 export default class PoneglyphService extends WorkerEntrypoint<ServiceEnv> {
+  // A top-level RPC returning only data has its own execution context. Calls on
+  // one long-lived RpcTarget instead share the getGraph invocation's budgets.
+  // Authorize every one-shot call; this is not a caller-supplied capability.
+  async query(input: {graphId: string; query: string}) {
+    const identity = parseIdentity(this.ctx.props);
+    if (typeof input !== "object" || input === null || Array.isArray(input) ||
+        Object.keys(input).some(key => key !== "graphId" && key !== "query") || typeof input.query !== "string") {
+      throw new PoneglyphInputError("query requires a graphId and Datalog string");
+    }
+    const request = parseGraphRequest({graphId: input.graphId});
+    await authorizeGraph(staticAuthorizer(this.env.GRAPH_GRANTS), identity, request);
+    return runGraphOperation(() => executeWorkerQuery(this.env, request.graphId, input.query));
+  }
+
   async getGraph(input: { graphId: string }): Promise<ReadGraph> {
     const identity = parseIdentity(this.ctx.props);
     const request = parseGraphRequest(input);

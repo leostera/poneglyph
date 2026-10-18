@@ -50,7 +50,9 @@ export const readFaultCases: Case[] = modes.map(mode => ({name: `read-fault/${mo
     {field: "test:stream", entity: {variable: "Entity"}, value: {constant: {type: "string" as const, value: "first"}}},
     {field: "test:title", entity: {variable: "Entity"}, value: {variable: "Title"}},
   ]};
-  await s.query(query); await s.query(joined);
+  // Verify the seed through a different query shape. Warming either exact
+  // query below lets the facade result cache bypass the armed shard fault.
+  await s.query(relation("test:stream", entity));
   const prefix = await entityLeaf(s, entity); await control(s, prefix, mode);
   try {
     for (const source of [query.source, joined.source]) {
