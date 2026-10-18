@@ -1,0 +1,73 @@
+{
+  "kind": "inactive-read-head-parent-local-regressions",
+  "sourceBaseCommit": "2374dd9134bdc730c1bce4a9fef22197aef204af",
+  "sourceSnapshot": "uncommitted implementation captured by exact source hashes below",
+  "sourceHashes": {
+    "packages/poneglyph/src/storage/read-head-state.ts": "cffc172a44b0800ff142b2df3c8599fda6f034121252aaca7274b4972a44d37e",
+    "packages/poneglyph/src/storage/read-head-parent.ts": "3840aa9de121dd82c140ab73fa202376269760589df5c26e135918bb8df530ab",
+    "packages/poneglyph/src/storage/read-identity.ts": "a6bdb1c032983005b7053c9b2d4cb4ce046315b8f529056f5c0ffdbc3d07e238",
+    "packages/poneglyph/tests/read-head-state.test.ts": "f15b1da103aedc63f4dce5da1873e4296fba66a3858c0629e940efefc5f76f47",
+    "packages/poneglyph/tests/read-head-parent.test.ts": "1a9010d22c2bb52b52710486ab685a5064150bf46f64cc17b380007be1119e04",
+    "packages/poneglyph/tests/read-head-durability.test.ts": "c1d52f13f7f4a8bc2cd725c0fe9d5ce45ede97cb10998f6f3d52d52748b9adf2",
+    "packages/poneglyph/tests/read-identity.test.ts": "6d3082dfa3e5b071321438ce673d27afdf61801318a84b0a990a3e54a0fe25bb",
+    "packages/poneglyph/tests/support/read-head-prototype.ts": "e5f948c77011160c3daaa79f95d47ef1bd223ca0aaaf962969d73e1f22970049",
+    "packages/poneglyph/src/storage/sql.ts": "6a33df64d28b601d061fe991cb49ad44bcfa14c5f2ecdc62199a8aba9d056363",
+    "packages/poneglyph/src/storage/coordinator-facade.ts": "ff7110e71364a18b862f5a7539849fd1cdd69eaad20028dd1b3f7fa479f8f2aa",
+    "packages/poneglyph/vitest.config.ts": "fbd63371aeb1b6966a32084d56bae3b482087de96a4f8231001e1efc6c9c975c",
+    "packages/poneglyph/src/worker.ts": "0aaa312ede619aef1c71a462355519da3368186beb0cf9b21aba774c4d1238a6"
+  },
+  "runtime": {
+    "bun": "1.4.2",
+    "node": "v26.11.0"
+  },
+  "targetedTests": 27,
+  "deterministicFaultSchedules": 100,
+  "architecturesUnderTheseSchedules": 1,
+  "canonicalFocusedCases": {
+    "warmPassed": 10,
+    "coldPassed": 10,
+    "notCertification": true,
+    "report": "packages/conformance/results/focused-controls-2026-10-18T03-45-12.742Z/report.json.gz",
+    "file": "report.json.gz",
+    "sha256": "a8a85074ad87fff93d98e11fa78f40a920d1f74932129b432ab11dfc8075df6b",
+    "uncompressedSha256": "e8450d6d40cae5661df5747cb907746529be48616e0995243035c504804de74e"
+  },
+  "logs": [
+    {
+      "file": "targeted.log.gz",
+      "command": "bun run --cwd packages/poneglyph test -- tests/read-head-durability.test.ts tests/read-head-parent.test.ts tests/read-head-state.test.ts tests/read-identity.test.ts",
+      "status": "passed",
+      "sha256": "664cd73d1bbccb7b893ba714354627e338ecc2a15871405a69dc03e80487d3b4",
+      "uncompressedSha256": "7a947f026b043bcc3b6325f0cd4f49bb4da78acaa8da2126e7cf9d9c17739ac8"
+    },
+    {
+      "file": "root-check.log.gz",
+      "command": "bun run check",
+      "status": "passed",
+      "sha256": "02e327396043c1a5f0ded3ec0c60869321c1066c0c20b7d300a7765e30b9fe61",
+      "uncompressedSha256": "55e897fccdf44d92fa8b3b07d9ca2333a5441283709a8f6b0ada130de8a9867f"
+    },
+    {
+      "file": "root-build.log.gz",
+      "command": "bun run build",
+      "status": "passed",
+      "sha256": "6e3d0e5947931ada395d0b300e2bcddb6b4fe135e8472040194ca72259b16ac8",
+      "uncompressedSha256": "765f74f0d2b188986a33f437d74bc6322690ad387914426e560117b2f4496cb3"
+    },
+    {
+      "file": "focused.log.gz",
+      "command": "bun run test:focused",
+      "status": "passed",
+      "sha256": "0574f798054e4f3e50dcac35f8afa046eb1a2da03305fe630e84170c4e21f8f7",
+      "uncompressedSha256": "4d6f5e1ad472d4016f459e6e6c0a51be6fe10f25e8c20cdc5852977d6cdfef65"
+    }
+  ],
+  "limitations": [
+    "Inactive pure parent/head kernels and test-only SQLite adapters, not production integration or a new deployed role.",
+    "Callbacks replace local test actor handlers; not native remote command RPC or alarm recovery.",
+    "Canonical cut and activation intent commit together in test SQL; real facade/ledger/topology hooks remain unimplemented.",
+    "Deterministic schedules check one architecture; they are not 100 architecture rounds or load measurements.",
+    "No new hosted measurements, resources, namespaces, fact writes or deployment.",
+    "Bounded correctness gates do not establish sub-100ms p99, sustained availability, arbitrary-partition progress or infinite capacity."
+  ]
+}

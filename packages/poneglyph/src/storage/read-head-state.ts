@@ -39,7 +39,7 @@ export function parseReadHeadView(raw: unknown): ReadHeadView {
   return Object.freeze({frontier: raw["frontier"], vector: parseReadIdentity(raw["vector"], TREE_PREFIXES)}) as ReadHeadView;
 }
 
-function sameView(left: ReadHeadView, right: ReadHeadView): boolean {
+export function readHeadViewsEqual(left: ReadHeadView, right: ReadHeadView): boolean {
   return left.frontier === right.frontier && left.vector.every(owner => {
     const other = right.vector.find(candidate => candidate.prefix === owner.prefix);
     return other?.snapshotSeq === owner.snapshotSeq && other.directoryEpoch === owner.directoryEpoch;
@@ -47,7 +47,7 @@ function sameView(left: ReadHeadView, right: ReadHeadView): boolean {
 }
 
 /** Publication frontier advances once; membership fencing generations need not. */
-function nextView(previous: ReadHeadView, next: ReadHeadView): boolean {
+export function isNextReadHeadView(previous: ReadHeadView, next: ReadHeadView): boolean {
   return next.frontier === previous.frontier + 1 && !sameComponents(previous, next) && previous.vector.every(owner => {
     const other = next.vector.find(candidate => candidate.prefix === owner.prefix);
     return other !== undefined && other.snapshotSeq >= owner.snapshotSeq && other.directoryEpoch >= owner.directoryEpoch;
@@ -89,13 +89,13 @@ export function parseReadHeadState(raw: unknown): ReadHeadState {
   }
   if (mode === "preparing" && keys(raw, ["mode", "graphId", "generation", "view", "nextView"])) {
     const view = parseReadHeadView(raw["view"]), next = parseReadHeadView(raw["nextView"]);
-    if (!nextView(view, next)) return invalid();
+    if (!isNextReadHeadView(view, next)) return invalid();
     return Object.freeze({...base, mode, view, nextView: next});
   }
   if (mode === "frozen" && keys(raw, ["mode", "graphId", "generation", "previousView", "nextView"])) {
     const previous = raw["previousView"] === null ? null : parseReadHeadView(raw["previousView"]);
     const next = parseReadHeadView(raw["nextView"]);
-    if (previous !== null && !nextView(previous, next)) return invalid();
+    if (previous !== null && !isNextReadHeadView(previous, next)) return invalid();
     return Object.freeze({...base, mode, previousView: previous, nextView: next});
   }
   return invalid();
@@ -112,7 +112,7 @@ function prepare(state: ReadHeadState, command: Extract<ReadHeadCommand, {kind: 
     if (state.generation !== command.generation) return transition(state, "conflict");
     const installed = state.mode === "serving" && state.operation === "bootstrap" ? state.view :
       state.mode === "frozen" && state.previousView === null ? state.nextView : undefined;
-    return transition(state, installed !== undefined && sameView(installed, command.view) ? "already-applied" : "conflict");
+    return transition(state, installed !== undefined && readHeadViewsEqual(installed, command.view) ? "already-applied" : "conflict");
   }
   if (state.mode === "empty" || state.mode === "retired") return transition(state, "conflict");
   if (command.generation === state.generation) {
@@ -121,9 +121,9 @@ function prepare(state: ReadHeadState, command: Extract<ReadHeadCommand, {kind: 
       return transition(state, "conflict");
     }
     const installed = state.mode === "serving" ? state.view : state.nextView;
-    return transition(state, sameView(installed, command.view) ? "already-applied" : "conflict");
+    return transition(state, readHeadViewsEqual(installed, command.view) ? "already-applied" : "conflict");
   }
-  if (state.mode !== "serving" || !nextView(state.view, command.view)) return transition(state, "conflict");
+  if (state.mode !== "serving" || !isNextReadHeadView(state.view, command.view)) return transition(state, "conflict");
   return transition(Object.freeze({mode: "preparing", graphId: state.graphId, generation: command.generation,
     view: state.view, nextView: command.view}), "applied");
 }
