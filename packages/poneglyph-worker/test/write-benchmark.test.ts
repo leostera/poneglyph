@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {payload, settings, classify} from "../bench/write/model.js";
 import {settledBurst} from "../bench/write/burst.js";
+import {h2Transport} from "../bench/write/direct.js";
+import {createServer, type ServerHttp2Stream, type IncomingHttpHeaders} from "node:http2";
 
 test("write scope cannot select existing graphs or an unbounded burst", () => {
   const run = "00000000-0000-4000-8000-000000000000";
@@ -33,6 +35,29 @@ test("graph payloads require three real-page assertions for one entity", () => {
   assert.equal(classify(423, {error: "private payload must not escape"}), "contention");
   assert.equal(classify(503, {error: "overloaded fake-private-detail"}), "overloaded");
 });
+test("direct HTTP/2 delivers 10,000 independent incoming requests without the local singleton proxy", async () => {
+  const server = createServer({settings: {maxConcurrentStreams: 100}});
+  let active = 0, peak = 0, arrived = 0;
+  const pending: (() => void)[] = [];
+  server.on("stream", (stream: ServerHttp2Stream, headers: IncomingHttpHeaders) => {
+    assert.equal(headers["x-benchmark-test"], "fake-not-a-credential");
+    active++; peak = Math.max(peak, active); arrived++;
+    pending.push(() => { active--; stream.respond({":status": 200}); stream.end('{"complete":true}'); });
+    if (arrived === 10_000) for (const finish of pending) finish();
+  });
+  await new Promise<void>(accept => server.listen(0, "127.0.0.1", accept));
+  const address = server.address(); assert(address !== null && typeof address !== "string");
+  const transport = await h2Transport(`http://127.0.0.1:${address.port}`, {"x-benchmark-test": "fake-not-a-credential"}, 10_000);
+  try {
+    const result = await settledBurst(Array.from({length: 10_000}, (_, i) => i), async () => {
+      const response = await transport.request("/write", {body: "{}", signal: AbortSignal.timeout(20_000)});
+      assert.equal(response.status, 200); assert.deepEqual(await response.json(), {complete: true});
+    });
+    assert.equal(result.outcomes.filter(outcome => outcome.status === "fulfilled").length, 10_000);
+    assert.equal(peak, 10_000); assert.equal(active, 0); assert.equal(arrived, 10_000);
+  } finally { transport.close(); await new Promise<void>(accept => server.close(() => accept())); }
+});
+
 test("10,000 offered concurrent calls are all issued and settled without retry", async () => {
   let release!: () => void;
   const gate = new Promise<void>(accept => { release = accept; });

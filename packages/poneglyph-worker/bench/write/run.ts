@@ -1,7 +1,6 @@
-import {spawn, execFile} from "node:child_process";
+import {execFile} from "node:child_process";
 import {createHash, randomUUID} from "node:crypto";
-import {mkdir, open, writeFile, readFile} from "node:fs/promises";
-import {createRequire} from "node:module";
+import {mkdir, writeFile, readFile, access} from "node:fs/promises";
 import {createServer} from "node:net";
 import {dirname, resolve} from "node:path";
 import {setTimeout as sleep} from "node:timers/promises";
@@ -13,10 +12,16 @@ import {latencyStats} from "../plan.js";
 import {payload, settings} from "./model.js";
 import {corpusSha256, pageSubsets} from "./corpus.js";
 import {settledBurst} from "./burst.js";
+import {startPrivatePreview} from "./direct.js";
 
 const execute = promisify(execFile), here = dirname(fileURLToPath(import.meta.url)), root = resolve(here, "../..");
 const target = "poneglyph-mavplus-validation-worker", account = "0f436d2aabf1f872be90b8dd9d5715e6";
-let port = 0, base = "";
+let port = 0;
+let preview: Awaited<ReturnType<typeof startPrivatePreview>> | undefined;
+function request(path: string, init: {method?: string; body?: string; signal?: AbortSignal}) {
+  if (preview === undefined) throw new Error("Private preview is not ready");
+  return preview.request(`/${path}`, init);
+}
 const environment = {...process.env, CLOUDFLARE_ACCOUNT_ID: account};
 const hash = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 async function deployment() {
@@ -36,13 +41,13 @@ async function portFree() {
     server.listen(0, "127.0.0.1", () => {
       const address = server.address();
       if (address === null || typeof address === "string") { server.close(); reject(new Error("Invalid local listener")); return; }
-      port = address.port; base = `http://127.0.0.1:${port}`;
+      port = address.port;
       server.close(error => error ? reject(error) : accept());
     });
   });
 }
 async function probe(scope: ReturnType<typeof settings>, path: string) {
-  const response = await fetch(`${base}/${path}`, {method: path === "health" ? "GET" : "POST", signal: AbortSignal.timeout(path === "health" ? 2_000 : 10_000)});
+  const response = await request(path, {method: path === "health" ? "GET" : "POST", signal: AbortSignal.timeout(path === "health" ? 2_000 : 10_000)});
   const body: unknown = await response.json();
   if (response.status !== 200 || !isRecord(body) || body["runId"] !== scope.runId || body["case"] !== scope.kind) throw new Error("Invalid operator probe");
   return body;
@@ -58,29 +63,21 @@ async function auditRun(runId: string) {
   if (manifest["runId"] !== runId || manifest["graphId"] !== scope.graphId || manifest["target"] !== target || manifest["account"] !== account) throw new Error("Invalid retained audit scope");
   await portFree();
   const version = await deployment();
-  const require = createRequire(import.meta.url), cfRequire = createRequire(require.resolve("cf/package.json"));
-  const wrangler = resolve(dirname(cfRequire.resolve("wrangler/package.json")), "bin/wrangler.js");
-  const suffix = Date.now(), log = await open(resolve(artifact, `audit-${suffix}.log`), "w");
-  const child = spawn(process.execPath, [wrangler, "dev", "--remote", "--experimental-new-config", "--port", String(port), "--ip", "127.0.0.1"], {
-    cwd: here, detached: true, stdio: ["ignore", log.fd, log.fd], env: {...environment,
-      PONEGLYPH_WRITE_BENCH_RUN_ID: scope.runId, PONEGLYPH_WRITE_BENCH_CASE: scope.kind,
-      PONEGLYPH_WRITE_BENCH_COUNT: String(scope.count), PONEGLYPH_WRITE_BENCH_AUDIT_ONLY: "1"},
-  });
-  const exited = new Promise<void>(accept => { child.once("exit", () => accept()); child.once("error", () => accept()); });
+  const suffix = Date.now();
+  preview = await startPrivatePreview({here, artifact, scope, port, environment, auditOnly: true, suffix: `audit-${suffix}`});
   try {
     for (let attempt = 0; ; attempt++) {
-      if (child.exitCode !== null || child.signalCode !== null || attempt >= 60) throw new Error("Audit operator unavailable");
+      if (attempt >= 3) throw new Error("Audit operator unavailable");
       try { await probe(scope, "health"); break; } catch { await sleep(500); }
     }
     const audit = await probe(scope, "audit");
-    const report = {runId, version, writesIssued: 0, originalWaveSamplesAvailable: false, audit};
+    let originalWaveSamplesAvailable = false;
+    try { await access(resolve(artifact, "burst-checkpoint.json.gz")); originalWaveSamplesAvailable = true; } catch {}
+    const report = {runId, version, writesIssued: 0, originalWaveSamplesAvailable, audit};
     await writeFile(resolve(artifact, `audit-${suffix}.json`), JSON.stringify(report, null, 2) + "\n");
     console.log(JSON.stringify(report));
   } finally {
-    if (child.pid !== undefined) { try { process.kill(-child.pid, "SIGTERM"); } catch {} }
-    await Promise.race([exited, sleep(2_000)]);
-    if (child.pid !== undefined && child.exitCode === null && child.signalCode === null) { try { process.kill(-child.pid, "SIGKILL"); } catch {} }
-    await log.close();
+    await preview.close(); preview = undefined;
   }
 }
 
@@ -101,23 +98,17 @@ async function main() {
     startedAt: new Date().toISOString(), corpusSha256: pages === undefined ? null : corpusSha256, datasetSha256,
     factEvents: inputs.reduce((sum, input) => sum + input.facts.length, 0), retries: 0, caller: "private-preview-native-do-fetch-public-transaction-route",
     concurrency: scope.count, deadlineMs: 120_000, graphIsolation: "fresh-graph-existing-isolated-namespaces", replicaHeads: "not-enabled",
-    transport: "local-http-proxy-to-authenticated-remote-preview", concurrencyBoundary: "offered-caller-not-simultaneous-backend-execution"};
+    transport: "direct-authenticated-remote-preview-http2", concurrencyBoundary: "offered-caller-not-simultaneous-backend-execution"};
   const artifact = resolve(root, ".artifacts/write-bench", scope.runId); await mkdir(artifact, {recursive: true});
   await writeFile(resolve(artifact, "plan.json"), JSON.stringify({manifest, payloadHashes}, null, 2) + "\n");
-  const require = createRequire(import.meta.url), cfRequire = createRequire(require.resolve("cf/package.json"));
-  const wrangler = resolve(dirname(cfRequire.resolve("wrangler/package.json")), "bin/wrangler.js");
-  const log = await open(resolve(artifact, "dev.log"), "w");
-  const child = spawn(process.execPath, [wrangler, "dev", "--remote", "--experimental-new-config", "--port", String(port), "--ip", "127.0.0.1"], {
-    cwd: here, detached: true, stdio: ["ignore", log.fd, log.fd], env: {...environment,
-      PONEGLYPH_WRITE_BENCH_RUN_ID: scope.runId, PONEGLYPH_WRITE_BENCH_CASE: scope.kind, PONEGLYPH_WRITE_BENCH_COUNT: String(scope.count)},
-  });
-  const exited = new Promise<void>(accept => { child.once("exit", () => accept()); child.once("error", () => accept()); });
-  type Sample = {index: number; callerMs: number; kind: string; hostedMs?: number; backendStatus?: number; txId?: string};
+  preview = await startPrivatePreview({here, artifact, scope, port, environment});
+  type Sample = {index: number; callerMs: number; kind: string; hostedMs?: number; backendStatus?: number; txId?: string;
+    callerStatus?: number; failureStage?: "request" | "body" | "witness"; transportCode?: string};
   const samples: Sample[] = [], audits: Record<string, unknown>[] = [], verifications: {index: number; passed: boolean}[] = [];
   let stopped: string | null = "startup", versionAfter: string | null = null, elapsedMs = 0, launchSpanMs = 0, maxInFlight = 0;
   try {
     for (let attempt = 0; ; attempt++) {
-      if (child.exitCode !== null || child.signalCode !== null || attempt >= 100) throw new Error("Operator not ready");
+      if (attempt >= 3) throw new Error("Operator not ready");
       try { await probe(scope, "health"); break; } catch { await sleep(500); }
     }
     const baseline = await probe(scope, "preflight"); audits.push(baseline);
@@ -126,10 +117,12 @@ async function main() {
     // Exactly one burst; no follow-on write waves after any failure.
     const burst = await settledBurst(inputs, async (input): Promise<Sample> => {
       const start = performance.now();
+      let callerStatus: number | undefined, failureStage: "request" | "body" | "witness" = "request";
       try {
-        const response = await fetch(`${base}/write`, {method: "POST", signal: AbortSignal.timeout(manifest.deadlineMs),
+        const response = await request("write", {method: "POST", signal: AbortSignal.timeout(manifest.deadlineMs),
           body: JSON.stringify({index: input.index, ...(scope.kind === "graph" ? {facts: input.facts} : {})})});
-        const body: unknown = await response.json();
+        callerStatus = response.status; failureStage = "body";
+        const body: unknown = await response.json(); failureStage = "witness";
         if (!isRecord(body) || body["runId"] !== scope.runId || body["case"] !== scope.kind || body["index"] !== input.index ||
             body["payloadSha256"] !== payloadHashes[input.index] || typeof body["kind"] !== "string" ||
             !["acknowledged", "contention", "overloaded", "capacity", "aborted", "unavailable", "rejected", "protocol", "disconnected", "timeout", "request-limit", "unknown"].includes(body["kind"]) ||
@@ -140,7 +133,14 @@ async function main() {
         return {index: input.index, callerMs: performance.now() - start, kind: body["kind"], hostedMs: body["hostedMs"],
           ...(typeof backendStatus === "number" ? {backendStatus} : {}), ...(typeof txId === "string" ? {txId} : {})};
       } catch (error) {
-        return {index: input.index, callerMs: performance.now() - start, kind: error instanceof Error && error.name === "TimeoutError" ? "caller-timeout" : "caller-transport-or-protocol"};
+        const code = error instanceof Error && "code" in error ? error.code : undefined;
+        const transportCode = typeof code === "string" && ["ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN",
+          "ERR_HTTP2_STREAM_ERROR", "ERR_HTTP2_GOAWAY_SESSION", "ERR_HTTP2_INVALID_SESSION", "ABORT_ERR"].includes(code) ? code : undefined;
+        return {index: input.index, callerMs: performance.now() - start,
+          kind: error instanceof Error && error.name === "TimeoutError" ? "caller-timeout" :
+            callerStatus !== undefined && callerStatus !== 200 && callerStatus !== 502 ? "caller-upstream-http" :
+            failureStage === "request" ? "caller-transport" : "caller-protocol",
+          failureStage, ...(callerStatus === undefined ? {} : {callerStatus}), ...(transportCode === undefined ? {} : {transportCode})};
       }
     });
     launchSpanMs = burst.launchSpanMs; elapsedMs = burst.elapsedMs; maxInFlight = burst.observedMaximumCallerInFlight;
@@ -169,7 +169,7 @@ async function main() {
     for (const index of selected) {
       let passed = false;
       try {
-        const response = await fetch(`${base}/verify`, {method: "POST", signal: verificationSignal,
+        const response = await request("verify", {method: "POST", signal: verificationSignal,
           body: JSON.stringify({index, ...(scope.kind === "graph" ? {facts: inputs[index]!.facts} : {})})});
         const body: unknown = await response.json();
         if (response.status !== 200 || !isRecord(body) || body["runId"] !== scope.runId || body["case"] !== scope.kind ||
@@ -188,10 +188,7 @@ async function main() {
     if (verifications.some(result => !result.passed)) stopped = "verification-failed";
     versionAfter = await deployment(); if (versionAfter !== versionBefore) stopped = "deployment-drift";
   } finally {
-    if (child.pid !== undefined) { try { process.kill(-child.pid, "SIGTERM"); } catch {} }
-    await Promise.race([exited, sleep(2_000)]);
-    if (child.pid !== undefined && child.exitCode === null && child.signalCode === null) { try { process.kill(-child.pid, "SIGKILL"); } catch {} }
-    await log.close();
+    await preview.close(); preview = undefined;
     const acknowledged = samples.filter(sample => sample.kind === "acknowledged");
     const summary = {manifest, versionAfter, stopped, completedAt: new Date().toISOString(), issued: samples.length,
       acknowledged: acknowledged.length, failedAcknowledgements: samples.length - acknowledged.length, maxInFlight, launchSpanMs, elapsedMs,
@@ -211,7 +208,9 @@ if (process.argv.includes("--help")) console.log("bench:write --case hot|graph -
 else await (process.argv[2] === "--audit-run" && process.argv.length === 4 ? auditRun(process.argv[3]!) : main())
   .catch(error => {
     const messages = ["Invalid audit run identity", "Missing retained run manifest", "Invalid retained audit scope", "Invalid write-bench scope",
-      "Invalid deployment", "Unstable deployment", "Unstable deployment version", "Audit operator unavailable", "Invalid operator probe"];
+      "Invalid deployment", "Unstable deployment", "Unstable deployment version", "Audit operator unavailable", "Invalid operator probe",
+      "Private preview unavailable", "Private preview stopped", "Invalid private preview metadata", "Missing preview credential",
+      "H2 session unavailable", "Insufficient H2 stream allocation"];
     const reason = error instanceof Error && messages.includes(error.message) ? error.message : "external-or-io";
     const code = isRecord(error) && (typeof error["code"] === "number" || typeof error["code"] === "string" && /^[A-Z_]+$/.test(error["code"])) ? error["code"] : null;
     console.error(JSON.stringify({event: "write-benchmark-stopped", reason, code, writesRetried: 0})); process.exitCode = 1;
