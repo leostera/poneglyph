@@ -1,0 +1,14 @@
+{
+  "packages/poneglyph/src/storage/query-results.ts": "ab116f89986f23098c3d3f6ae880ee834348e5eba55ceecb41a009baefd7231c",
+  "packages/poneglyph/src/storage/distributed-fact-source.ts": "e84abafd83236f4dac42d36e138f484301276ad74d705b915912d754a29da684",
+  "packages/poneglyph/src/storage/coordinator-facade.ts": "1eda48bbcaede1b8745658d76fbf20e96d71e2e96ad4da054857e69b76741721",
+  "packages/poneglyph/src/storage/plan.ts": "6ee07257d6d910c73771047953fa0b9578f5f939285e51eae62a11f418d867e8",
+  "packages/poneglyph/src/storage/transaction.ts": "898b5436e6d53f427bcd310e59ebefa9f858d040f03ea5b34f761833438b6469",
+  "packages/poneglyph/src/storage/http.ts": "f669ab4abb7d3c286b478f38382372db4dd4a87443f465653aa45956087ebe8b",
+  "packages/poneglyph-worker/src/query-coordinator.ts": "3b0469ab34699774c822c929cd2438c8583d8ede3fd2dabb018955ac6508bf50",
+  "packages/poneglyph-mcp/src/server.ts": "27fb2e0ed394fe3b5990615d22f59b294ec927cdbaf49a01785d5d38f28f23ad",
+  "packages/poneglyph-mcp/test/mcp.test.ts": "a93a40dc40353a68e4659e85a154a1184b191cbc197b67c6acd49a9ae2532dc2",
+  "packages/poneglyph/tests/query-results.test.ts": "2ec9e9e56e43918357a098709ffe553b5b9283c97d5fe1ebc2db48a98106684b",
+  "packages/poneglyph/tests/write-plan.test.ts": "e93ab696ec22fcf0cd180bd115137f1d68fe58ade0629de8cd53332f7ccbe229",
+  "packages/poneglyph/tests/http-body.test.ts": "77a81030c03d1d88e95318e07ddfdfcfb1f8e8363eac88fedfbdffd0034d626f"
+}

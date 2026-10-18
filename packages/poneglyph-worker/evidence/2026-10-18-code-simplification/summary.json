@@ -1,0 +1,34 @@
+{
+  "baselineDesign": "8ed9df0 (selected by a47e434 rollback)",
+  "committedCleanupSteps": [
+    "9b7efb4",
+    "a27d7f4",
+    "000b7ba"
+  ],
+  "remainingStep": "bounded HTTP reader finally releases its lock; checked source hashes recorded",
+  "scope": [
+    "one HTTP/RPC complete-bag collector; real cut-only scan inputs; no failure sentinel flags",
+    "owner/participant parsing and full journal partition verification; named reservation requirement; no JSON roundtrips for order/membership checks",
+    "shared MCP complete-response/error paths; safe stable diagnostics; capability lifetime unchanged",
+    "bounded JSON reader lock released on success and failure"
+  ],
+  "gates": {
+    "rootCheck": "passed",
+    "rootBuild": "passed",
+    "focused": "10 warm and 10 cold controls passed; not full-tier certification",
+    "addedCoreRegressionTests": 17,
+    "mcp": "both read tools preserve rejection metadata and one credential-free failure event each",
+    "negativeControl": "old HTTP reader reproduced retained-lock failure before finally fix"
+  },
+  "unchanged": [
+    "storage schema and wire formats",
+    "public APIs and authorization",
+    "canonical publication before acknowledgement and exact leased owner cuts",
+    "cache freshness and capacity policies",
+    "specs and historical evidence",
+    "dependencies and Cloudflare configuration"
+  ],
+  "cloudMutations": 0,
+  "performanceClaim": null,
+  "scopeLimit": "Focused cleanup of query execution, durable plan parsing, MCP response/error handling and request-body ownership; not an exhaustive whole-codebase audit."
+}

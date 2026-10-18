@@ -26,6 +26,8 @@ export async function readJsonBody(
     text += decoder.decode();
   } catch {
     return rejected("body", "could not read the request body");
+  } finally {
+    reader.releaseLock();
   }
 
   try {
