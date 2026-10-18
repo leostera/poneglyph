@@ -46,6 +46,7 @@ export type QueryMetrics = Readonly<{
   tuplesRead: number;
   bytesRead: number;
   directoryRequests: number;
+  cacheHits?: number;
   timing?: QueryTiming;
 }>;
 
@@ -361,6 +362,7 @@ function parseQueryMetrics(input: unknown): QueryMetrics {
     tuplesRead: readMetric(input, "tuplesRead"),
     bytesRead: readMetric(input, "bytesRead"),
     directoryRequests: readMetric(input, "directoryRequests"),
+    ...(input["cacheHits"] === undefined ? {} : {cacheHits: readMetric(input, "cacheHits")}),
     ...(input["timing"] === undefined ? {} : {timing: parseQueryTiming(input["timing"])}),
   });
 }

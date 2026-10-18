@@ -2,7 +2,7 @@ import { runInDurableObject, evictDurableObject, runDurableObjectAlarm } from "c
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import * as storage from "../src/storage/implementation.js";
-import { treeForKey, treeCoordinatorName, transactionCoordinatorName, tokenLedgerName } from "../src/storage/forest.js";
+import { treeForKey, treeCoordinatorName, transactionCoordinatorName, tokenLedgerName, TREE_PREFIXES } from "../src/storage/forest.js";
 import { virtualKeyForEntity, shardObjectName, bitAt } from "../src/storage/keys.js";
 import { auditFactStorage } from "../src/testing/storage-audit.js";
 import { sha256Hex, canonicalBatchJson } from "../src/storage/http.js";
@@ -917,6 +917,28 @@ describe("integrated storage authority", () => {
         directoryEpoch: lease.directoryEpoch, snapshotSeq: lease.snapshotSeq, leaseExpiresAtMs: 0}),
     });
     expect(expired.status).toBe(410); await expired.text();
+  });
+
+  it("admits more than 128 exact read leases on one owner without a fixed application cap", async () => {
+    const graph = `test-${crypto.randomUUID()}`, prefix = TREE_PREFIXES[0]!;
+    const owner = env.GRAPH_TREES.getByName(treeCoordinatorName(graph, prefix));
+    const leases: {readId: string}[] = [];
+    try {
+      for (let index = 0; index < 256; index++) {
+        const response = await owner.fetch("https://owner.internal/_tree-read", {method: "POST", body: JSON.stringify({
+          graphId: graph, prefix, snapshotSeq: 0, directoryEpoch: 0,
+        })});
+        expect(response.status).toBe(200);
+        leases.push(await response.json() as {readId: string});
+      }
+      await runInDurableObject(owner, (_instance, state) => {
+        expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM graph_read_leases").one()["count"]).toBe(256);
+      });
+    } finally {
+      await Promise.all(leases.map(lease => owner.fetch("https://owner.internal/_tree-release-read", {
+        method: "POST", body: JSON.stringify({graphId: graph, prefix, readId: lease.readId}),
+      })));
+    }
   });
 
   it("publishes different owner tickets as a vector rather than a graph-global scalar order", async () => {

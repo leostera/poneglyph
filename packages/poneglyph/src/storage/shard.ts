@@ -21,6 +21,8 @@ import {
   SPLIT_COPY_PAGE_SIZE,
   MAX_QUERY_RESULTS,
   MAX_QUERY_RESPONSE_BYTES,
+  MAX_SCAN_PAGE_CACHE_BYTES,
+  MAX_SCAN_PAGE_CACHE_ENTRIES,
 } from "./constants.js";
 import { accountStorage, estimateMutationFootprint } from "./capacity.js";
 import { MIGRATION_TABLES, migrationRowBytes, parseMigrationTable, virtualKeyRange, type MigrationTable, type MigrationRow } from "./migration.js";
@@ -28,6 +30,7 @@ import { canonicalBatchJson, jsonResponse, jsonStringResponse, readJsonBody, sha
 import { matchesPrefix, parseVirtualKey, parseVirtualPrefix, virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
 import { parseParticipantBatch, parseScanRequest, type ParticipantBatch, type ScanRequest } from "./protocol.js";
 import { ensureShardSchema } from "./sql.js";
+import { BoundedReadCache, utf8Bytes } from "./read-cache.js";
 
 type AtomicRecord = Readonly<{payload_hash: string; status: string; decision_kind: string;
   atomic_commit_seq: number | null; atomic_statement_ms: number | null; atomic_fact_count: number | null;
@@ -61,6 +64,15 @@ type ActiveValueRow = Readonly<{
   join_value_index: number;
 }>;
 
+const SCAN_CURSOR_COLUMNS = ["entity", "fact_id", "value_index", "join_fact_id", "join_value_index"] as const;
+
+function scanPageCacheKey(scan: ScanRequest, cursor?: ActiveValueRow): string {
+  const cursorValues = cursor === undefined ? null : SCAN_CURSOR_COLUMNS.map(column => cursor[column]);
+  return JSON.stringify(["scan-page-v1", scan.graphId, scan.shardPrefix, scan.shardGeneration,
+    scan.directoryEpoch, scan.snapshotSeq, scan.field, scan.joinField ?? null,
+    scan.entity ?? null, scan.value ?? null, scan.values ?? null, cursorValues]);
+}
+
 type StoredEntityVersion = Readonly<{
   fields_json: string;
   last_tx_id: string;
@@ -79,6 +91,11 @@ type ShardIdentity = Readonly<{
 }>;
 
 export class GraphShardDO extends DurableObject<Env> {
+  // Snapshot-keyed cache eviction affects performance only; SQLite remains authoritative.
+  private readonly scanPageCache = new BoundedReadCache<readonly ActiveValueRow[]>(
+    MAX_SCAN_PAGE_CACHE_ENTRIES,
+    MAX_SCAN_PAGE_CACHE_BYTES,
+  );
   // One exact-payload slot; replacing/evicting it never loses durable staging.
   private staged: Readonly<{payloadJson: string; batch: ParticipantBatch}> | undefined;
   constructor(ctx: DurableObjectState, env: Env) {
@@ -386,7 +403,6 @@ export class GraphShardDO extends DurableObject<Env> {
       }
     }
     const prepared = this.prepareScan(scan.value);
-    const cursorColumns = ["entity", "fact_id", "value_index", "join_fact_id", "join_value_index"] as const;
     const encoder = new TextEncoder();
     let cursor: ActiveValueRow | undefined;
     let closed = false;
@@ -401,14 +417,19 @@ export class GraphShardDO extends DurableObject<Env> {
         }
         // Both assertion identities participate in the cursor: equal projected
         // values from distinct sources must survive SQL page boundaries.
-        const cursorClause = cursor === undefined ? "" : ` AND (${cursorColumns.join(", ")}) > (?, ?, ?, ?, ?)`;
-        const cursorArgs = cursor === undefined ? [] : cursorColumns.map(column => cursor![column]);
-        const rows = this.ctx.storage.sql.exec<ActiveValueRow>(
-          `${prepared.sql}${cursorClause} ORDER BY ${cursorColumns.join(", ")} LIMIT ?`,
-          ...prepared.args,
-          ...cursorArgs,
-          SHARD_SCAN_PAGE_SIZE,
-        ).toArray();
+        const cursorClause = cursor === undefined ? "" : ` AND (${SCAN_CURSOR_COLUMNS.join(", ")}) > (?, ?, ?, ?, ?)`;
+        const cursorArgs = cursor === undefined ? [] : SCAN_CURSOR_COLUMNS.map(column => cursor![column]);
+        const pageKey = scanPageCacheKey(scan.value, cursor);
+        let rows = this.scanPageCache.get(pageKey);
+        if (rows === undefined) {
+          rows = this.ctx.storage.sql.exec<ActiveValueRow>(
+            `${prepared.sql}${cursorClause} ORDER BY ${SCAN_CURSOR_COLUMNS.join(", ")} LIMIT ?`,
+            ...prepared.args,
+            ...cursorArgs,
+            SHARD_SCAN_PAGE_SIZE,
+          ).toArray();
+          this.scanPageCache.set(pageKey, rows, utf8Bytes(JSON.stringify(rows)));
+        }
         if (rows.length === 0) {
           closed = true;
           controller.enqueue(encoder.encode(scanCompletionLine(emittedTuples)));

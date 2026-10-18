@@ -62,6 +62,47 @@ describe("owner-local query plan", () => {
     });
   });
 
+  it("reuses DO-local query and scan-page caches only for the same exact snapshot", async () => {
+    const graph = `test-${crypto.randomUUID()}`, entity = "test:read-cache";
+    const original: FactInput = {source: "agent:cache", entity, field: "test:title", value: {type: "text", value: "Old"}};
+    await write(graph, "query-cache:seed", [original]);
+
+    const source = `test:title(${JSON.stringify(entity)}, Title)`;
+    const first = await query(graph, source);
+    expect(first.status).toBe(200);
+    const firstResult = await first.json() as QueryResult & {snapshotVector: readonly unknown[]};
+    expect(firstResult.rows).toEqual([{Title: {type: "string", value: "Old"}}]);
+    expect(firstResult.metrics).toMatchObject({treeReadLeaseAcquisitions: 1, cacheHits: 0});
+
+    const repeated = await query(graph, source);
+    expect(repeated.status).toBe(200);
+    const repeatedResult = await repeated.json() as QueryResult & {snapshotVector: readonly unknown[]};
+    expect(repeatedResult.rows).toEqual(firstResult.rows);
+    expect(repeatedResult.snapshotVector).toEqual(firstResult.snapshotVector);
+    expect(repeatedResult.metrics).toMatchObject({treeReadLeaseAcquisitions: 0, scanCalls: 0, cacheHits: 1});
+
+    await write(graph, "query-cache:replace", [
+      {...original, retraction: true},
+      {...original, source: "agent:cache-new", value: {type: "text", value: "New"}},
+    ]);
+    const updated = await query(graph, source);
+    expect(updated.status).toBe(200);
+    const updatedResult = await updated.json() as QueryResult & {snapshotVector: readonly unknown[]};
+    expect(updatedResult.rows).toEqual([{Title: {type: "string", value: "New"}}]);
+    expect(updatedResult.snapshotVector).not.toEqual(firstResult.snapshotVector);
+    expect(updatedResult.metrics).toMatchObject({treeReadLeaseAcquisitions: 1, cacheHits: 0});
+
+    // The variable name changes the Datalog result-cache key, while the exact
+    // shard scan (including snapshot sequence and epoch) is reusable.
+    const alias = await query(graph, `test:title(${JSON.stringify(entity)}, Label)`);
+    expect(alias.status).toBe(200);
+    expect((await alias.json() as QueryResult).rows).toEqual([{Label: {type: "string", value: "New"}}]);
+    const root = treeForKey(await virtualKeyForEntity(graph, entity));
+    const pageCacheHits = await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), instance =>
+      (instance as unknown as {scanPageCache: {hits: number}}).scanPageCache.hits);
+    expect(pageCacheHits).toBeGreaterThan(0);
+  });
+
   it("batches multi-value final joins into one forest traversal and preserves bag multiplicity", async () => {
     const graph = `test-${crypto.randomUUID()}`;
     const targets = ["Nami", "Zoro", "Robin", "Chopper", "Sanji", "Usopp", "Franky", "Brook", "Jinbe", "Vivi", "Law", "Ace", "Sabo", "Shanks", "Mihawk", "Buggy"];

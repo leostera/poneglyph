@@ -46,7 +46,7 @@ function createFetch(response: (request: RecordedRequest) => Response | Promise<
 describe("Poneglyph TypeScript HTTP client", () => {
   it("propagates server elapsed timing and rejects malformed or inconsistent timing", async () => {
     const timing = {executionMs: 10, snapshotMs: 3, evaluationMs: 4, releaseMs: 2};
-    const metrics = {scanCalls: 1, shardRequests: 16, distinctShardsTouched: 16, treeReadLeaseAcquisitions: 16, tuplesRead: 1, bytesRead: 100, directoryRequests: 16};
+    const metrics = {scanCalls: 1, shardRequests: 16, distinctShardsTouched: 16, treeReadLeaseAcquisitions: 16, tuplesRead: 1, bytesRead: 100, directoryRequests: 16, cacheHits: 1};
     for (const value of [timing, {...timing, executionMs: -1}, {...timing, snapshotMs: 3.5}, {...timing, executionMs: 1}, {}, null]) {
       const network = createFetch(() => jsonResponse({rows: [], snapshotSeq: 1, metrics: {...metrics, timing: value}}));
       const graph = createDatabase({url: "https://poneglyph.example", graphId: "test", fetch: network.fetch});
@@ -56,6 +56,7 @@ describe("Poneglyph TypeScript HTTP client", () => {
         expect(parsed.metrics.timing).toEqual(timing);
         expect(parsed.metrics.distinctShardsTouched).toBe(16);
         expect(parsed.metrics.treeReadLeaseAcquisitions).toBe(16);
+        expect(parsed.metrics.cacheHits).toBe(1);
       } else await expect(result).rejects.toThrow(/query (timing|metric)/);
     }
   });

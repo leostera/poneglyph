@@ -8,7 +8,7 @@ import { ensureTreeSchema } from "./sql.js";
 import { accountStorage } from "./capacity.js";
 import { jsonResponse, readJsonBody } from "./http.js";
 import {
-  MAX_READ_LEASES, MAX_TRANSACTION_BYTES, MAX_TRANSACTION_FACTS, READ_LEASE_TTL_MS,
+  MAX_TRANSACTION_BYTES, MAX_TRANSACTION_FACTS, READ_LEASE_TTL_MS,
   ROUTING_VERSION, TRANSACTION_IDEMPOTENCY_RETENTION_MS,
 } from "./constants.js";
 import { coordinatorObjectName, parseVirtualPrefix, shardObjectName, virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
@@ -335,11 +335,6 @@ export class GraphTreeDO extends DurableObject<Env> {
       if (snapshotSeq < retained.min_retained_seq) throw new CoordinatorError(410, "cached read-cut history has expired");
       const now = Date.now();
       this.ctx.storage.sql.exec("DELETE FROM graph_read_leases WHERE expires_at_ms <= ?", now);
-      const leaseCount = this.ctx.storage.sql.exec<{ count: number }>(
-        "SELECT COUNT(*) AS count FROM graph_read_leases WHERE expires_at_ms > ?",
-        now,
-      ).toArray()[0]?.count ?? 0;
-      if (leaseCount >= MAX_READ_LEASES) throw new CoordinatorError(429, "graph has reached its concurrent read-lease limit");
       const readId = crypto.randomUUID();
       const expiresAtMs = now + READ_LEASE_TTL_MS;
       this.ctx.storage.sql.exec(

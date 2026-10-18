@@ -8,11 +8,12 @@ import { isRecord } from "../domain/result.js";
 import { evaluateDatalog, QueryResultLimitExceeded } from "../datalog/evaluator.js";
 import type { DatalogQuery } from "../datalog/ast.js";
 import { parseDatalogQuery } from "../datalog/parser.js";
-import { DistributedFactSource } from "./distributed-fact-source.js";
+import { DistributedFactSource, type QueryMetrics } from "./distributed-fact-source.js";
+import { BoundedReadCache, utf8Bytes } from "./read-cache.js";
 import { QueryScanBudgetExceeded } from "../datalog/scan-stream.js";
 import {
-  MAX_QUERY_RESPONSE_BYTES, MAX_QUERY_RESULTS, MAX_QUERY_SHARD_FANOUT,
-  QUERY_TIMEOUT_MS,
+  MAX_QUERY_CACHE_BYTES, MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_ENTRY_BYTES,
+  MAX_QUERY_RESPONSE_BYTES, MAX_QUERY_RESULTS, MAX_QUERY_SHARD_FANOUT, QUERY_TIMEOUT_MS,
 } from "./constants.js";
 import { jsonResponse, jsonStringResponse, readJsonBody, requestObject } from "./http.js";
 import { parseVirtualPrefix, shardObjectName, virtualKeyForEntity, type VirtualPrefix } from "./keys.js";
@@ -23,11 +24,14 @@ import { TREE_PREFIXES, TREE_DEPTH, treeCoordinatorName, treeForKey, parseTreeSn
 
 type SafeVectorRow = Readonly<{prefix: string; directory_epoch: number; visible_seq: number}>;
 type SafeFrontierRow = Readonly<{frontier: number}>;
+type CachedQueryResult = Readonly<{rowsJson: string; snapshotSeq: number; snapshotVectorJson: string}>;
 
 type FacadeEnv = Env;
 
 /** Graph-facing request surface. Durable state lives in ledgers, trees, and shards. */
 export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
+  private readonly queryCache = new BoundedReadCache<CachedQueryResult>(MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_BYTES);
+
   constructor(ctx: DurableObjectState, env: FacadeEnv) {
     super(ctx, env);
     void ctx.blockConcurrencyWhile(async () => {
@@ -273,7 +277,12 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     if (!query.ok) return jsonResponse({ error: query.error.message, offset: query.error.offset }, 400);
 
     const started = Date.now();
-    const cut = await tracing.enterSpan("poneglyph.query.snapshot", () => this.acquireQueryReadCut(graphId, query.value));
+    const safeVector = this.cachedSafeVector(graphId);
+    const cacheKey = queryResultCacheKey(graphId, safeVector, query.value);
+    const cached = this.queryCache.get(cacheKey);
+    if (cached) return this.cachedQueryResponse(cached, started);
+
+    const cut = await tracing.enterSpan("poneglyph.query.snapshot", () => this.acquireQueryReadCut(graphId, query.value, safeVector));
     const snapshotMs = Date.now() - started;
     const lease = { snapshotSeq: Math.max(...cut.map(s => s.snapshotSeq)), directoryEpoch: 0,
       expiresAtMs: Math.min(...cut.map(s => s.expiresAtMs)) };
@@ -322,10 +331,33 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
       snapshotVector: cut.map(s => ({ prefix: s.prefix, sequence: s.snapshotSeq, epoch: s.directoryEpoch })),
       metrics: source.metrics,
     });
-    if (new TextEncoder().encode(serialized).byteLength > MAX_QUERY_RESPONSE_BYTES) {
+    const responseBytes = utf8Bytes(serialized);
+    if (responseBytes > MAX_QUERY_RESPONSE_BYTES) {
       throw new CoordinatorError(413, "query response byte budget exceeded");
     }
+    const rowsJson = JSON.stringify(rows);
+    const snapshotVectorJson = JSON.stringify(cut.map(s => ({prefix: s.prefix, sequence: s.snapshotSeq, epoch: s.directoryEpoch})));
+    const cacheBytes = utf8Bytes(rowsJson) + utf8Bytes(snapshotVectorJson);
+    if (utf8Bytes(cacheKey) + cacheBytes <= MAX_QUERY_CACHE_ENTRY_BYTES) {
+      this.queryCache.set(cacheKey, {rowsJson, snapshotSeq: lease.snapshotSeq, snapshotVectorJson}, cacheBytes);
+    }
     return jsonStringResponse(serialized);
+  }
+
+  private cachedQueryResponse(entry: CachedQueryResult, started: number): Response {
+    const snapshotMs = Date.now() - started;
+    const metrics: QueryMetrics = {
+      scanCalls: 0,
+      shardRequests: 0,
+      distinctShardsTouched: 0,
+      treeReadLeaseAcquisitions: 0,
+      tuplesRead: 0,
+      bytesRead: 0,
+      directoryRequests: 0,
+      cacheHits: 1,
+      timing: {executionMs: Date.now() - started, snapshotMs, evaluationMs: 0, releaseMs: 0},
+    };
+    return jsonStringResponse(`{"rows":${entry.rowsJson},"snapshotSeq":${entry.snapshotSeq},"sequenceScope":"subtree-vector","snapshotVector":${entry.snapshotVectorJson},"metrics":${JSON.stringify(metrics)}}`);
   }
 
   private async readEntity(request: Request, graphId: GraphId): Promise<Response> {
@@ -359,7 +391,11 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
     }
   }
 
-  private async acquireQueryReadCut(graphId: GraphId, query: DatalogQuery): Promise<TreeSnapshot[]> {
+  private async acquireQueryReadCut(
+    graphId: GraphId,
+    query: DatalogQuery,
+    safeVector: Readonly<{frontier: number; vector: readonly SafeVectorRow[]}>,
+  ): Promise<TreeSnapshot[]> {
     // A single positive relation with a literal entity can only read that
     // entity's tree. Joins or unbound entities retain the complete owner vector.
     const clause = query.facts.length === 1 ? query.facts[0] : undefined;
@@ -367,14 +403,18 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
       const entity = parseUri(clause.entity.value.value);
       if (entity.ok) {
         const key = await virtualKeyForEntity(graphId, entity.value);
-        return this.acquireReadCut(graphId, [treeForKey(key)]);
+        return this.acquireReadCut(graphId, [treeForKey(key)], safeVector);
       }
     }
-    return this.acquireReadCut(graphId);
+    return this.acquireReadCut(graphId, TREE_PREFIXES, safeVector);
   }
 
-  private async acquireReadCut(graphId: GraphId, prefixes: readonly VirtualPrefix[] = TREE_PREFIXES): Promise<TreeSnapshot[]> {
-    const cached = this.cachedSafeVector(graphId);
+  private async acquireReadCut(
+    graphId: GraphId,
+    prefixes: readonly VirtualPrefix[] = TREE_PREFIXES,
+    safeVector = this.cachedSafeVector(graphId),
+  ): Promise<TreeSnapshot[]> {
+    const cached = safeVector;
     const cut = await acquireParallelReadCut(async prefix => {
       const owner = cached.vector.find(entry => entry.prefix === prefix);
       if (!owner) throw new CoordinatorError(503, "cached safe vector is missing a selected owner");
@@ -410,6 +450,15 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   }
 
 
+}
+
+function queryResultCacheKey(
+  graphId: GraphId,
+  safeVector: Readonly<{frontier: number; vector: readonly SafeVectorRow[]}>,
+  query: DatalogQuery,
+): string {
+  return JSON.stringify(["query-result-v1", graphId, safeVector.frontier,
+    safeVector.vector.map(owner => [owner.prefix, owner.directory_epoch, owner.visible_seq]), query]);
 }
 
 const OBSERVED_VALUE_TAGS: ReadonlySet<string> = new Set([

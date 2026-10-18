@@ -65,6 +65,10 @@ Successful caller-side query latencies were survivor-only: median **5,078 ms**, 
 
 The attempt used only fake tokens on the isolated graph and did not deploy a caller, change the Worker version/namespaces, touch production/the public playground, write corpus facts, or delete resources. The five seed events remain; the run did not complete the intended concurrent-publication test. Raw ignored evidence is `sites/onepiece.poneglyph.dev/.artifacts/import/mavplus-validation/control-plane-stress-result.json`; the pinned local workload plan is `control-plane-stress-plan.json` (run `cff04691-3cf9-4ada-b5ac-24a121484e12`, plan SHA-256 `28f9917839b2ab4ecb41dc31bd321e48f7d2531378b87efc5cfb6f92e49a7f58`).
 
+### Read-lease admission and snapshot-keyed DO caches
+
+The current implementation removes the fixed 128-active-lease admission rejection. The 30-second lease expiry, query deadline, exact sequence/epoch validation, and fail-closed cut acquisition remain; this removes an application-level concurrency cliff, not the underlying per-DO/platform capacity limits. Successful query responses are now cached in the facade DO by graph, parsed query, safe-vector frontier, and every owner sequence/epoch. A hit returns the already-materialized result for exactly that vector without acquiring new leases. Shard DOs also cache individual SQL scan pages by graph/range generation, directory epoch, snapshot sequence, scan filters, and cursor; the lease expiry is still checked before every page is served. Both caches are instance-local, byte/entry bounded LRU hints. Eviction or DO restart only causes a normal read; neither cache is durable authority. Focused tests verify >128 concurrent lease registrations, cache reuse for an identical vector, invalidation on publication, and reuse of an immutable shard scan page. This is implementation/correctness evidence, not a high-concurrency capacity result; no live deployment or stress retry was performed.
+
 ## Summary
 
 Replace fixed modulo sharding with a sparse, expandable prefix directory over a stable 256-bit entity hash. Every node is an instance of `GraphShardDO` with a durable `leaf` or `router` role; splitting changes the old leaf into a router and creates two child leaves. This avoids a fixed application-level leaf-count limit without introducing a second DO class or a flat directory table. A graph-wide durable topology lock pauses writes while a bounded snapshot is copied and verified; one directory-epoch update publishes the children. Previous owners remain read-only until leases pinned to the old directory epoch drain. The durable `txId` protocol is unchanged, and `visible_seq` advances only after every transaction participant applies. Every DO admits against an 8,000,000,000-byte accounted ceiling, with explicit write/index/projection, WAL, migration, and headroom estimates. A deterministic simulator accounts 1 TB across virtual entities without writing synthetic payloads; it is not a physical 1 TB capacity or throughput claim.
@@ -84,7 +88,7 @@ The next branch phase removes the Rust workspace and makes TypeScript the only P
 - Define split/move, stale-route, read-lease, and recovery behavior precisely enough to test.
 - Keep `txId` atomic visibility through participant failure, split, retry, and recovery.
 - Reject transactions before their predicted storage growth would consume safety headroom or cross the accounted 8 GB ceiling.
-- Bound per-graph transaction participants, query fan-out, directory traversal, read leases, and coordinator state.
+- Bound per-graph transaction participants, query fan-out, directory traversal, lease lifetime, query duration, cache memory, and coordinator state; do not reject reads at an arbitrary active-lease count.
 - Show a 1 TB *synthetic accounted-byte* topology while physically storing only a small dataset.
 - Model the core commit and split algorithms in small PlusCal/TLA+ state spaces and model-check their invariants.
 
@@ -161,7 +165,7 @@ This is an enforceable accounted-byte policy only to the extent that the pending
 
 ### Explicit service bounds
 
-Initial implementation bounds (constants, covered by tests and emitted in responses/metrics):
+Operational bounds are constants, covered by focused tests, and emitted in responses/metrics where applicable:
 
 | Resource | Bound |
 | --- | ---: |
@@ -169,14 +173,16 @@ Initial implementation bounds (constants, covered by tests and emitted in respon
 | Per-transaction facts / canonical bytes | Existing checkpoint bound: 1,000 facts / 1,000,000 bytes |
 | Concurrent graph write decisions | 1; coordinator returns retryable busy |
 | Retained completed/aborted coordinator and participant `txId` outcomes | 100,000 coordinator outcomes per graph; participant terminal rows prune after the same seven-day idempotency window |
-| Live read leases per graph | 128, each pinned to one snapshot sequence and directory epoch |
+| Read lease lifetime | 30 s; each lease pins one exact sequence and directory epoch; no fixed application-level active-lease count |
 | Transaction participant fan-out | 32 leaves maximum; automatic preflight may trigger at most 8 splits per write |
 | Leaf fan-out per query | 256 distinct leaves and 511 directory nodes; excess fails with a budget error |
 | Query duration and aggregate scan limits | Existing 20 s / tuple / byte / result budgets, retained and measured |
+| Facade query-result cache | 128 entries / 1,000,000 bytes per live facade instance; individual entries at most 128,000 bytes |
+| Shard scan-page cache | 64 entries / 131,072 bytes per live shard instance |
 | Directory lookup | Prefix depth at most 256; owner lookup visits at most 257 nodes (root plus 256 edges) |
 | Data/router/coordinator storage | Accounted bytes at most 8,000,000,000 per DO including reserved headroom |
 
-The shard count itself has no configured application maximum, but a single query and transaction do. Whole-graph scans above the query leaf budget need a later paginated/distributed-aggregation contract; they do not bypass limits or fan out without bound. The one-writer coordinator and per-graph query bounds are throughput and availability limits even when aggregate stored bytes can grow.
+Cache byte ceilings count UTF-8 serialized keys/values, not actual JavaScript heap overhead; they are eviction budgets, not physical-memory guarantees. The shard count itself has no configured application maximum, but a single query and transaction do. Whole-graph scans above the query leaf budget need a later paginated/distributed-aggregation contract; they do not bypass limits or fan out without bound. The one-writer coordinator and per-graph query bounds are throughput and availability limits even when aggregate stored bytes can grow.
 
 ## 1 TB synthetic capacity envelope
 
@@ -320,7 +326,7 @@ The parser rejects negation, recursive rules, non-binary relations, arbitrary ex
 | field + value | every active leaf, at most 256 | `active_values_by_field_value_snapshot` |
 | field + entity + value | entity's leaf | `active_values_by_field_entity_value_snapshot` |
 
-Integer literals map to numeric facts. URI-looking strings map to references except in `wiki:page:title` and `schema:name`; other strings map to text. A value constraint alone does not route to one leaf. Unbound-entity scans are proportional to active leaves plus matching rows. Budgets are 2,000 results, 50,000 tuples, 20,000 shard requests, 20 MB scanned response bytes, 2 MB serialized result bytes, 20 seconds, 128 concurrent read leases, 256 leaves, and 511 directory visits. Budget failure is an error, never silent truncation. An unsplittable entity is limited to 10,000 active assertion tuples and 5,000 projected fields.
+Integer literals map to numeric facts. URI-looking strings map to references except in `wiki:page:title` and `schema:name`; other strings map to text. A value constraint alone does not route to one leaf. Unbound-entity scans are proportional to active leaves plus matching rows. Budgets are 2,000 results, 50,000 tuples, 20,000 shard requests, 20 MB scanned response bytes, 2 MB serialized result bytes, 20 seconds, 256 leaves, and 511 directory visits. Lease duration remains 30 seconds; there is no fixed active read-lease count rejection. Budget failure is an error, never silent truncation. An unsplittable entity is limited to 10,000 active assertion tuples and 5,000 projected fields. Snapshot-keyed query and scan-page caches are opportunistic and bounded; a miss or eviction follows the same exact-vector read path.
 
 ## Authenticated reactive TODO operating contract
 

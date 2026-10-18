@@ -31,6 +31,7 @@ export type QueryMetrics = {
   tuplesRead: number;
   bytesRead: number;
   directoryRequests: number;
+  cacheHits: number;
   timing?: QueryTiming;
 };
 
@@ -41,7 +42,7 @@ export class DistributedFactSource implements FactSource {
     private readonly snapshotSeq: number,
     private readonly directoryEpoch: number,
     private readonly leaseExpiresAtMs: number,
-    readonly metrics: QueryMetrics = { scanCalls: 0, shardRequests: 0, distinctShardsTouched: 0, treeReadLeaseAcquisitions: 0, tuplesRead: 0, bytesRead: 0, directoryRequests: 0 },
+    readonly metrics: QueryMetrics = { scanCalls: 0, shardRequests: 0, distinctShardsTouched: 0, treeReadLeaseAcquisitions: 0, tuplesRead: 0, bytesRead: 0, directoryRequests: 0, cacheHits: 0 },
     private readonly cut: readonly TreeSnapshot[] = [],
   ) {}
 
