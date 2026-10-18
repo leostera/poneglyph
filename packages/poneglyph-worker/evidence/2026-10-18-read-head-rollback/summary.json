@@ -1,0 +1,24 @@
+{
+  "sourceCommit": "6d4bca2dc19c9401491e96e4742f3ad05e37a794",
+  "runId": "e51fe582-9fdf-461a-ab3d-58169620694c",
+  "legacySourceCommit": "32232625b0a8cdaeda62240c967b2685c8d3f305",
+  "actualUnmodifiedStorageWorkers": true,
+  "sameLocalSQLiteNamespaces": true,
+  "schema2PositiveControl": true,
+  "schema3ReadAndWriteIndividuallyExcluded": true,
+  "currentDataPreservedAndPublicationResumed": true,
+  "headFreshnessAfterResume": true,
+  "toolchain": {
+    "node": "26.11.0",
+    "bun": "1.4.2"
+  },
+  "workerCheckTests": 27,
+  "scope": [
+    "Actual pre-integration source recompiled with current locked dependencies; not an original historical hosted bundle",
+    "Fixed local sequence and one head; no certification of Cloudflare rolling deployment, in-flight old executors or arbitrary historical versions",
+    "Native binding exceptions recognized solely by fixed schema-marker message; raw errors/rows/queries/URLs/tokens not copied into diagnostics",
+    "No cloud credentials, deployment, corpus modification or namespace deletion",
+    "Private original write plan/source remain in ignored artifacts for uncertain-delivery reconciliation"
+  ],
+  "engineeringNote": "The first harness attempt failed closed because its log-only detector missed native binding exceptions; the detector now checks only the same fixed marker in exception text/bounded private responses, and asserts a recognized rejection separately for both invocations."
+}

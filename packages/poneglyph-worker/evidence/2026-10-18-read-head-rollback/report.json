@@ -1,0 +1,37 @@
+{
+  "runId": "e51fe582-9fdf-461a-ab3d-58169620694c",
+  "legacySourceCommit": "32232625b0a8cdaeda62240c967b2685c8d3f305",
+  "complete": true,
+  "localOnly": true,
+  "stateDirectory": "/var/folders/qy/3zl3lsrj0s9fwtjgjs6dx6vr0000gn/T/poneglyph-head-rollback-RG619u",
+  "schemaFenceSignals": 2,
+  "steps": [
+    {
+      "stage": "current-disabled-seed",
+      "confirmed": true
+    },
+    {
+      "stage": "actual-legacy-schema-2-positive-control",
+      "completeExactAnswer": true
+    },
+    {
+      "stage": "current-explicit-opt-in-preserves-data",
+      "activeMembers": 1
+    },
+    {
+      "stage": "actual-legacy-schema-3-exclusion",
+      "readStatus": null,
+      "writeStatus": null,
+      "recognizedReadMarkerRejection": true,
+      "recognizedWriteMarkerRejection": true
+    },
+    {
+      "stage": "current-reopen-and-publish-after-rejection",
+      "unchangedBeforeNewWrite": true,
+      "completeExactSnapshotAfterWrite": 2,
+      "activeMembers": 1,
+      "headRejectsOldIdentity": true,
+      "headAcceptsNewIdentity": true
+    }
+  ]
+}
