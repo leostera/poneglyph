@@ -103,7 +103,7 @@ async function main() {
   await writeFile(resolve(artifact, "plan.json"), JSON.stringify({manifest, payloadHashes}, null, 2) + "\n");
   preview = await startPrivatePreview({here, artifact, scope, port, environment});
   type Sample = {index: number; callerMs: number; kind: string; hostedMs?: number; backendStatus?: number; txId?: string;
-    callerStatus?: number; failureStage?: "request" | "body" | "witness"; transportCode?: string};
+    callerStatus?: number; failureStage?: "request" | "body" | "witness"; transportCode?: string; responseKind?: "json" | "non-json"};
   const samples: Sample[] = [], audits: Record<string, unknown>[] = [], verifications: {index: number; passed: boolean}[] = [];
   let stopped: string | null = "startup", versionAfter: string | null = null, elapsedMs = 0, launchSpanMs = 0, maxInFlight = 0;
   try {
@@ -131,7 +131,8 @@ async function main() {
         const txId = body["txId"], backendStatus = body["backendStatus"];
         if (body["kind"] === "acknowledged" && (typeof txId !== "string" || !/^poneglyph:tx:token:[0-9a-f]:[0-9a-f-]{36}$/.test(txId))) throw new Error("Invalid transaction identity");
         return {index: input.index, callerMs: performance.now() - start, kind: body["kind"], hostedMs: body["hostedMs"],
-          ...(typeof backendStatus === "number" ? {backendStatus} : {}), ...(typeof txId === "string" ? {txId} : {})};
+          ...(typeof backendStatus === "number" ? {backendStatus} : {}), ...(typeof txId === "string" ? {txId} : {}),
+          ...(body["responseKind"] === "json" || body["responseKind"] === "non-json" ? {responseKind: body["responseKind"]} : {})};
       } catch (error) {
         const code = error instanceof Error && "code" in error ? error.code : undefined;
         const transportCode = typeof code === "string" && ["ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN",

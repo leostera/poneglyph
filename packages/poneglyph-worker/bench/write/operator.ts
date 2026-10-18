@@ -65,7 +65,8 @@ export default {
           `https://graph.internal/v1/graphs/${scope.graphId}/transactions`, {method: "POST",
             body: JSON.stringify({clientRequestToken: input.clientRequestToken, facts: input.facts})});
         const result = await readJsonBody(response, 16_384), hostedMs = performance.now() - started;
-        if (!result.ok || !isRecord(result.value)) return answer({kind: "protocol", index: input.index, payloadSha256, hostedMs}, 502);
+        if (!result.ok || !isRecord(result.value)) return answer({kind: "protocol", index: input.index, payloadSha256, hostedMs,
+          backendStatus: response.status, responseKind: response.headers.get("content-type")?.includes("json") ? "json" : "non-json"}, 502);
         if (response.ok) {
           const txId = result.value["txId"];
           if (typeof txId !== "string" || !/^poneglyph:tx:token:[0-9a-f]:[0-9a-f-]{36}$/.test(txId)) return answer({kind: "protocol", index: input.index, payloadSha256, hostedMs}, 502);
