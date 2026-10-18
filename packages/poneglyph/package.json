@@ -48,7 +48,8 @@
     "build": "bun run workers:types && bun run typecheck && cf build",
     "deploy": "bun run workers:types && bun run typecheck && cf deploy",
     "workers:types": "cf workers types",
-    "bench:local": "PONEGLYPH_RUN_BENCH=1 vitest run tests/throughput-bench.test.ts --reporter=verbose"
+    "bench:local": "PONEGLYPH_RUN_BENCH=1 vitest run tests/throughput-bench.test.ts --reporter=verbose",
+    "test:traffic:local": "PONEGLYPH_RUN_TRAFFIC=1 vitest run tests/traffic-correctness.test.ts --reporter=verbose"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",

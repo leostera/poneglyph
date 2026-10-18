@@ -25,7 +25,7 @@ Only run the complete gate at an explicit coverage/repair checkpoint:
 bun run test:small
 ```
 
-This runs all **68 declared cases** against one fresh disk-backed production composition, warm and after full restart. It does not silently select cases. Fail-fast stops new cases/retries, drains admitted callers, closes the runtime and retains causal failures/cleanup diagnostics. Expected injected errors must satisfy their assertions. Unknown transport is never fabricated as abort or acknowledged delivery. A failed or unexecuted tail is not passing coverage.
+This runs all **69 declared cases** against one fresh disk-backed production composition, warm and after full restart. It does not silently select cases. Fail-fast stops new cases/retries, drains admitted callers, closes the runtime and retains causal failures/cleanup diagnostics. Expected injected errors must satisfy their assertions. Unknown transport is never fabricated as abort or acknowledged delivery. A failed or unexecuted tail is not passing coverage.
 
 The current cases still do **not** complete comprehensive small coverage; broader admission/decision/publication/release, topology/client/retention controls and later stateful/boundary/100k tiers remain pending. The independent oracle and declared limits are unchanged by the one-implementation cutover.
 

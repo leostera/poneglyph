@@ -2,6 +2,7 @@ import { cloudflareTest } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
 
 const runBenchmark = process.env["PONEGLYPH_RUN_BENCH"] === "1";
+const runTraffic = process.env["PONEGLYPH_RUN_TRAFFIC"] === "1";
 
 export default defineConfig({
   define: {
@@ -15,6 +16,7 @@ export default defineConfig({
         bindings: {
           TODO_SHARED_PASSPHRASE: "test-only-shared-passphrase",
           PONEGLYPH_RUN_BENCH: runBenchmark ? "1" : "0",
+          PONEGLYPH_RUN_TRAFFIC: runTraffic ? "1" : "0",
         },
         durableObjects: {
           GRAPH_FACADES: { className: "GraphCoordinatorDO", useSQLite: true },

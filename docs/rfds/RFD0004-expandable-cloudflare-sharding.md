@@ -596,9 +596,13 @@ bun run check                           # all workspace types + unit/adapter sui
 bun run build                           # portable package + local Worker bundle
 bun run test:focused                     # focused warm/cold E2E regressions
 # bun run test:small                     # deliberate full declared-case checkpoint
+bun run test:traffic:local               # local low/high-traffic correctness
+bun run test:local:correctness           # check + focused + small + traffic checkpoints
 # bun run test:capacity                  # optional synthetic accounting, no payload writes
 bun run dev                             # optional local Vite/workerd server
 ```
+
+`test:traffic:local` uses Miniflare/workerd and checks 24 sequential writes plus a 1,000-write burst at concurrency 32. During the burst it samples public queries, requires each read to include all writes acknowledged before that read began, verifies the complete final result against the issued workload, replays sampled request tokens after facade/transaction-actor eviction, and checks read-only per-leaf durable projections. This is a deterministic correctness/load regression, not a throughput target or production-capacity claim. `test:local:correctness` runs the package/workspace checks, focused warm/cold conformance, the complete declared small checkpoint, and both traffic cases in sequence. The wider conformance contract still declares coverage beyond these commands; `smallTierComplete` remains false until those required families and stateful tiers are implemented and executed.
 
 Cloudflare's cf CLI may warn that auto-configuration is limited when it sees no lockfile inside the package directory; the explicit config still builds successfully. Keep the one root lockfile—do not add a nested lockfile to suppress the warning. Use `bun run --cwd packages/poneglyph <script>` for package-specific commands.
 
