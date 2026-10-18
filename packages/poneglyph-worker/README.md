@@ -41,6 +41,8 @@ Public RPC writes mint internal transaction IDs on the service and return only `
 bun run build:package
 bun run --cwd packages/poneglyph-worker check
 bun run --cwd packages/poneglyph-worker build
+# Explicit LOCAL compatibility gate; requires the historical commit in Git:
+bun run --cwd packages/poneglyph-worker check:read-head-rollback
 # Explicit cloud operation, requires authorization:
 bun run --cwd packages/poneglyph-worker deploy
 ```

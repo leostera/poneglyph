@@ -58,7 +58,7 @@ Broken variants cover partial vector publication, early replies, batch poisoning
 | --- | --- |
 | Existing owner-gated revision protocol | `ReadVectorRecovery` bounded TLC; starts after irrevocable decision and prepares |
 | Existing read-head membership/freshness | `ReadHeadPublication` bounded TLC and three local kernel lemmas; global inductive proof/composition still pending |
-| Schema-3 old-writer exclusion | Runtime integration tests of the old startup predicate; no separately executed old-binary certification or model of platform code handoff |
+| Schema-3 old-writer exclusion | `bun run --cwd packages/poneglyph-worker check:read-head-rollback` executes unmodified pre-integration storage Worker sources over the same local SQLite state: schema-2 positive control, individual schema-3 read/write rejections, current reopen/publication/head validation. A finite local recompiled-source case, not the original deployed binary or a model/certification of platform code handoff |
 | Proposed batch semantic safety and independent outcomes | TLAPS core/refinement proofs; static identities, participant sets and stable validation outcomes |
 | Proposed numeric cuts, epochs, incremental views/counts and recovery | Bounded TLC only; full deductive invariant remains work |
 | Dynamic batch formation, payload/token binding, conditional updates, retractions, predicate conflicts, quotas, physical migration/pruning, native I/O and authorization | Not established by the new models |
