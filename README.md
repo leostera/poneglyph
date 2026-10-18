@@ -49,13 +49,14 @@ One root `bun.lock` pins dependencies. Private harnesses link the library with `
 
 ```sh
 bun install --frozen-lockfile
-bun run check          # all workspace types, unit/adapter/example/site tests
-bun run build          # portable package + Workers + all example/site builds
-bun run test:focused   # focused warm/cold E2E regressions
-# bun run test:small   # explicit full 68-case warm/cold checkpoint
+bun test                   # all local correctness gates, including low/high traffic
+bun run check              # workspace typechecks and unit/adapter/example/site tests
+bun run build              # portable package + Workers + all example/site builds
+bun run test:focused       # short focused warm/cold E2E regressions
+# bun run test:small       # explicit declared-case warm/cold checkpoint
 ```
 
-Use `bun run test`, not Bun's built-in `bun test`: the native Worker tests use Vitest and the harness units use Node's test runner. Benchmark loads, deployments and publishing remain separate explicit operations.
+At the repository root, `bun test` and `bun run test` run the same local correctness suite: workspace checks, focused conformance, all declared small-tier cases, and low/high-concurrency Miniflare correctness tests. Bun discovers only an orchestration wrapper; native Worker tests still run under Vitest/Miniflare and conformance under Node. No hosted tests, corpus loads or performance benchmarks run by default. The broader conformance contract still has gaps (`smallTierComplete` remains false); passing the declared checkpoint is not comprehensive certification.
 
 ## Try it locally
 
