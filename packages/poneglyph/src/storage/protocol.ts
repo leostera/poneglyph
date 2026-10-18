@@ -2,7 +2,7 @@ import { parseFactDraft, type FactDraft } from "../domain/fact.js";
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseTransactionId, parseUri, type TransactionId } from "../domain/identifiers.js";
 import { isRecord, parsed, rejected, type ParseResult } from "../domain/result.js";
-import { parseDatalogValue, sameDatalogValue, type DatalogValue } from "../datalog/value.js";
+import { parseDatalogValue, type DatalogValue } from "../datalog/value.js";
 import { MAX_QUERY_VALUE_SET_SIZE } from "./constants.js";
 import { parseVirtualKey, parseVirtualPrefix, type VirtualKey, type VirtualPrefix } from "./keys.js";
 
@@ -22,19 +22,24 @@ export type ParticipantBatch = Readonly<{
   facts: NonEmptyArray<IndexedFact>;
 }>;
 
-export type ScanRequest = Readonly<{
+type ScanFilter =
+  | Readonly<{kind: "all"}>
+  | Readonly<{kind: "entity"; entity: DatalogValue}>
+  | Readonly<{kind: "value"; value: DatalogValue; joinField?: string}>
+  | Readonly<{kind: "entity-value"; entity: DatalogValue; value: DatalogValue; joinField?: string}>
+  | Readonly<{kind: "values"; values: NonEmptyArray<DatalogValue>}>;
+
+type ScanIdentity = Readonly<{
   graphId: GraphId;
   shardPrefix: VirtualPrefix;
   shardGeneration: number;
   directoryEpoch: number;
   field: string;
-  joinField?: string;
-  entity?: DatalogValue;
-  value?: DatalogValue;
-  values?: readonly DatalogValue[];
   snapshotSeq: number;
   leaseExpiresAtMs: number;
 }>;
+
+export type ScanRequest = ScanIdentity & ScanFilter;
 
 export function parseParticipantBatch(input: unknown): ParseResult<ParticipantBatch> {
   if (!isRecord(input)) return rejected("participant", "expected a prepare request object");
@@ -116,19 +121,9 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
     return rejected("scan.leaseExpiresAtMs", "expected a safe integer timestamp");
   }
 
-  const request: {
-    graphId: GraphId;
-    shardPrefix: VirtualPrefix;
-    shardGeneration: number;
-    directoryEpoch: number;
-    field: string;
-    joinField?: string;
-    snapshotSeq: number;
-    leaseExpiresAtMs: number;
-    entity?: DatalogValue;
-    value?: DatalogValue;
-    values?: readonly DatalogValue[];
-  } = {
+  const filter = parseScanFilter(input);
+  if (!filter.ok) return filter;
+  return parsed(Object.freeze({
     graphId: graphId.value,
     shardPrefix: shardPrefix.value,
     shardGeneration,
@@ -136,39 +131,74 @@ export function parseScanRequest(input: unknown): ParseResult<ScanRequest> {
     field: field.value,
     snapshotSeq,
     leaseExpiresAtMs,
-  };
+    ...filter.value,
+  }));
+}
+
+function parseScanFilter(input: Record<string, unknown>): ParseResult<ScanFilter> {
+  let entity: DatalogValue | undefined;
   if (input["entity"] !== undefined) {
-    const entity = parseDatalogValue(input["entity"], "scan.entity");
-    if (!entity.ok) return entity;
-    request.entity = entity.value;
-  }
-  if (input["value"] !== undefined) {
-    const value = parseDatalogValue(input["value"], "scan.value");
-    if (!value.ok) return value;
-    request.value = value.value;
-  }
-  if (input["values"] !== undefined) {
-    if (!Array.isArray(input["values"]) || input["values"].length === 0 || input["values"].length > MAX_QUERY_VALUE_SET_SIZE) {
-      return rejected("scan.values", `expected between 1 and ${MAX_QUERY_VALUE_SET_SIZE} values`);
-    }
-    if (request.value !== undefined || request.entity !== undefined) return rejected("scan.values", "value-set scans cannot include entity or single-value filters");
-    const values: DatalogValue[] = [];
-    for (const [index, inputValue] of input["values"].entries()) {
-      const value = parseDatalogValue(inputValue, `scan.values[${index}]`);
-      if (!value.ok) return value;
-      if (values.some(existing => sameDatalogValue(existing, value.value))) return rejected(`scan.values[${index}]`, "expected distinct values");
-      values.push(value.value);
-    }
-    request.values = Object.freeze(values);
+    const parsedEntity = parseDatalogValue(input["entity"], "scan.entity");
+    if (!parsedEntity.ok) return parsedEntity;
+    entity = parsedEntity.value;
   }
 
-  if (input["joinField"] !== undefined) {
-    const joinField = parseUri(input["joinField"], "scan.joinField");
-    if (!joinField.ok) return joinField;
-    if (request.value === undefined) return rejected("scan.joinField", "entity join requires a bound input value");
-    request.joinField = joinField.value;
+  let value: DatalogValue | undefined;
+  if (input["value"] !== undefined) {
+    const parsedValue = parseDatalogValue(input["value"], "scan.value");
+    if (!parsedValue.ok) return parsedValue;
+    value = parsedValue.value;
   }
-  return parsed(Object.freeze(request));
+
+  let values: NonEmptyArray<DatalogValue> | undefined;
+  if (input["values"] !== undefined) {
+    const rawValues = input["values"];
+    if (!Array.isArray(rawValues) || rawValues.length === 0 || rawValues.length > MAX_QUERY_VALUE_SET_SIZE) {
+      return rejected("scan.values", `expected between 1 and ${MAX_QUERY_VALUE_SET_SIZE} values`);
+    }
+    if (value !== undefined || entity !== undefined) {
+      return rejected("scan.values", "value-set scans cannot include entity or single-value filters");
+    }
+    const parsedValues: DatalogValue[] = [];
+    const seen = new Set<string>();
+    for (const [index, inputValue] of rawValues.entries()) {
+      const parsedValue = parseDatalogValue(inputValue, `scan.values[${index}]`);
+      if (!parsedValue.ok) return parsedValue;
+      const key = JSON.stringify([parsedValue.value.type, parsedValue.value.value]);
+      if (seen.has(key)) return rejected(`scan.values[${index}]`, "expected distinct values");
+      seen.add(key);
+      parsedValues.push(parsedValue.value);
+    }
+    values = Object.freeze(parsedValues) as NonEmptyArray<DatalogValue>;
+  }
+
+  let joinField: string | undefined;
+  if (input["joinField"] !== undefined) {
+    const parsedJoinField = parseUri(input["joinField"], "scan.joinField");
+    if (!parsedJoinField.ok) return parsedJoinField;
+    joinField = parsedJoinField.value;
+  }
+
+  if (values !== undefined) {
+    if (joinField !== undefined) return rejected("scan.joinField", "entity join requires a bound input value");
+    return parsed(Object.freeze({kind: "values", values}));
+  }
+  if (entity !== undefined && value !== undefined) {
+    return parsed(Object.freeze(joinField === undefined
+      ? {kind: "entity-value", entity, value}
+      : {kind: "entity-value", entity, value, joinField}));
+  }
+  if (entity !== undefined) {
+    if (joinField !== undefined) return rejected("scan.joinField", "entity join requires a bound input value");
+    return parsed(Object.freeze({kind: "entity", entity}));
+  }
+  if (value !== undefined) {
+    return parsed(Object.freeze(joinField === undefined
+      ? {kind: "value", value}
+      : {kind: "value", value, joinField}));
+  }
+  if (joinField !== undefined) return rejected("scan.joinField", "entity join requires a bound input value");
+  return parsed(Object.freeze({kind: "all"}));
 }
 
 export function factAsJson(fact: FactDraft): FactDraft {

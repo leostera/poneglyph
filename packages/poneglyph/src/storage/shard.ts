@@ -58,11 +58,22 @@ type ActiveValueRow = Readonly<{
 
 const SCAN_CURSOR_COLUMNS = ["entity", "fact_id", "value_index", "join_fact_id", "join_value_index"] as const;
 
+const EMPTY_ENTITY_SCAN = "SELECT entity, fact_id, value_index, datalog_type, datalog_value, fact_id AS join_fact_id, value_index AS join_value_index FROM active_values WHERE 0";
+
+function scanFilterCacheKey(scan: ScanRequest): readonly unknown[] {
+  switch (scan.kind) {
+    case "all": return [scan.kind];
+    case "entity": return [scan.kind, scan.entity];
+    case "value": return [scan.kind, scan.value, scan.joinField ?? null];
+    case "entity-value": return [scan.kind, scan.entity, scan.value, scan.joinField ?? null];
+    case "values": return [scan.kind, scan.values];
+  }
+}
+
 function scanPageCacheKey(scan: ScanRequest, cursor?: ActiveValueRow): string {
   const cursorValues = cursor === undefined ? null : SCAN_CURSOR_COLUMNS.map(column => cursor[column]);
-  return JSON.stringify(["scan-page-v1", scan.graphId, scan.shardPrefix, scan.shardGeneration,
-    scan.directoryEpoch, scan.snapshotSeq, scan.field, scan.joinField ?? null,
-    scan.entity ?? null, scan.value ?? null, scan.values ?? null, cursorValues]);
+  return JSON.stringify(["scan-page-v2", scan.graphId, scan.shardPrefix, scan.shardGeneration,
+    scan.directoryEpoch, scan.snapshotSeq, scan.field, scanFilterCacheKey(scan), cursorValues]);
 }
 
 type StoredEntityVersion = Readonly<{
@@ -392,7 +403,7 @@ export class GraphShardDO extends DurableObject<Env> {
       return jsonResponse({ error: "read snapshot lease expired" }, 410);
     }
 
-    if (scan.value.entity?.type === "string") {
+    if ((scan.value.kind === "entity" || scan.value.kind === "entity-value") && scan.value.entity.type === "string") {
       const parsedEntity = parseUri(scan.value.entity.value);
       if (!parsedEntity.ok || !matchesPrefix(await virtualKeyForEntity(scan.value.graphId, parsedEntity.value), scan.value.shardPrefix)) {
         return jsonResponse({ error: "entity is outside the requested virtual-shard range" }, 409);
@@ -561,7 +572,7 @@ export class GraphShardDO extends DurableObject<Env> {
     return jsonResponse({ status: "pruned", minSnapshotSeq: minSnapshotSeq.value });
   }
 
-  private prepareScan(scan: ScanRequest): Readonly<{ sql: string; args: readonly (string | number)[] }> {
+  private prepareScan(scan: ScanRequest): Readonly<{sql: string; args: readonly (string | number)[]}> {
     const clauses = [
       "field = ?",
       "valid_from_seq <= ?",
@@ -569,37 +580,26 @@ export class GraphShardDO extends DurableObject<Env> {
     ];
     const args: (string | number)[] = [scan.field, scan.snapshotSeq, scan.snapshotSeq];
 
-    if (scan.entity !== undefined) {
-      const empty = {sql: "SELECT entity, fact_id, value_index, datalog_type, datalog_value, fact_id AS join_fact_id, value_index AS join_value_index FROM active_values WHERE 0", args: []};
-      if (scan.entity.type !== "string") return empty;
-      const entity = parseUri(scan.entity.value);
-      if (!entity.ok) return empty;
-      clauses.push("entity = ?");
-      args.push(entity.value);
-    }
-
-    if (scan.value !== undefined) {
-      // value_key indexes canonical FactValues, while Datalog conversion is
-      // many-to-one. Seek all canonical keys that expose this typed value and
-      // retain the exact exposed-value predicate as a correctness guard.
-      const keys = valueIndexKeysForDatalogValue(scan.value);
-      clauses.push(`value_key IN (${keys.map(() => "?").join(", ")})`, "datalog_type = ?", "datalog_value = ?");
-      args.push(...keys, scan.value.type, scan.value.value);
-    }
-    if (scan.values !== undefined) {
-      const keys = [...new Set(scan.values.flatMap(value => valueIndexKeysForDatalogValue(value)))];
-      const valuePredicates = scan.values.map(() => "(datalog_type = ? AND datalog_value = ?)");
-      if (args.length + keys.length + scan.values.length * 2 > MAX_SQL_BINDINGS) {
-        throw new ShardProtocolError(400, "value-set scan exceeds SQLite binding limit");
-      }
-      clauses.push(`value_key IN (${keys.map(() => "?").join(", ")})`);
-      args.push(...keys);
-      clauses.push(`(${valuePredicates.join(" OR ")})`);
-      for (const value of scan.values) args.push(value.type, value.value);
+    switch (scan.kind) {
+      case "all":
+        break;
+      case "entity":
+        if (!this.addEntityFilter(scan.entity, clauses, args)) return {sql: EMPTY_ENTITY_SCAN, args: []};
+        break;
+      case "value":
+        this.addSingleValueFilter(scan.value, clauses, args);
+        break;
+      case "entity-value":
+        if (!this.addEntityFilter(scan.entity, clauses, args)) return {sql: EMPTY_ENTITY_SCAN, args: []};
+        this.addSingleValueFilter(scan.value, clauses, args);
+        break;
+      case "values":
+        this.addValueSetFilter(scan.values, clauses, args);
+        break;
     }
 
     const filtered = `SELECT entity, fact_id, value_index, datalog_type, datalog_value FROM active_values WHERE ${clauses.join(" AND ")}`;
-    if (scan.joinField !== undefined) {
+    if ((scan.kind === "value" || scan.kind === "entity-value") && scan.joinField !== undefined) {
       return {
         sql: `SELECT * FROM (
           SELECT a.entity, a.fact_id, a.value_index, b.fact_id AS join_fact_id, b.value_index AS join_value_index,
@@ -614,6 +614,35 @@ export class GraphShardDO extends DurableObject<Env> {
       sql: `SELECT *, fact_id AS join_fact_id, value_index AS join_value_index FROM (${filtered}) WHERE 1`,
       args,
     };
+  }
+
+  private addEntityFilter(entityValue: DatalogValue, clauses: string[], args: (string | number)[]): boolean {
+    if (entityValue.type !== "string") return false;
+    const entity = parseUri(entityValue.value);
+    if (!entity.ok) return false;
+    clauses.push("entity = ?");
+    args.push(entity.value);
+    return true;
+  }
+
+  private addSingleValueFilter(value: DatalogValue, clauses: string[], args: (string | number)[]): void {
+    // Canonical FactValue indexing is many-to-one after Datalog conversion;
+    // keep the exposed typed-value check as the final correctness guard.
+    const keys = valueIndexKeysForDatalogValue(value);
+    clauses.push(`value_key IN (${keys.map(() => "?").join(", ")})`, "datalog_type = ?", "datalog_value = ?");
+    args.push(...keys, value.type, value.value);
+  }
+
+  private addValueSetFilter(values: readonly DatalogValue[], clauses: string[], args: (string | number)[]): void {
+    const keys = [...new Set(values.flatMap(value => valueIndexKeysForDatalogValue(value)))];
+    const valuePredicates = values.map(() => "(datalog_type = ? AND datalog_value = ?)");
+    if (args.length + keys.length + values.length * 2 > MAX_SQL_BINDINGS) {
+      throw new ShardProtocolError(400, "value-set scan exceeds SQLite binding limit");
+    }
+    clauses.push(`value_key IN (${keys.map(() => "?").join(", ")})`);
+    args.push(...keys);
+    clauses.push(`(${valuePredicates.join(" OR ")})`);
+    for (const value of values) args.push(value.type, value.value);
   }
 
   private validatePreparedBatch(batch: ParticipantBatch): void {
