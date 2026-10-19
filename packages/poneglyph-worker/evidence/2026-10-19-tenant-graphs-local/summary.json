@@ -1,0 +1,49 @@
+{
+  "kind": "local-tenant-per-graph-cold-point-read-comparison",
+  "runId": "7ede42d4-dd43-4413-b8ca-d4a1608d0fb6",
+  "sourceRevision": "8b355fdfb0436ae25029c5d0cc99e77ec510c540",
+  "localOnly": true,
+  "activeStorageImplementationChanged": false,
+  "cloudflareResourcesChanged": false,
+  "workload": {
+    "tenantCount": 100,
+    "pointLookupsPerPhase": 100,
+    "offeredConcurrencyPerPhase": 100,
+    "queryMode": "one cold, entity-bound point query per tenant; no application retries",
+    "seed": "100 independent graph writes each committed one setting fact; one shared graph transaction committed the same 100 tenant settings",
+    "seedWallMs": 1190
+  },
+  "results": [
+    {
+      "layout": "one graph containing all tenants",
+      "issued": 100,
+      "completeExactAnswers": 100,
+      "failed": 0,
+      "cacheHits": 0,
+      "snapshotSeq": 1,
+      "callerLatencyMs": {"p50": 123, "p95": 124, "p99": 124, "max": 124}
+    },
+    {
+      "layout": "one graph per tenant",
+      "issued": 100,
+      "completeExactAnswers": 100,
+      "failed": 0,
+      "cacheHits": 0,
+      "snapshotSeq": 1,
+      "callerLatencyMs": {"p50": 108, "p95": 108, "p99": 108, "max": 108}
+    }
+  ],
+  "sourceDigests": {
+    "operatorSha256": "7d05287932b3b68e7f85fb8c2cc175f3aeb266d0d810fc95ee32685e6ccb521a",
+    "harnessSha256": "8efda1efc8bbfa98b557b95f64a81d19b46401759ac73d0649e150e4ed01a2e4",
+    "serviceBundleSha256": "61dbc31a108e721a8ffefaaea6f59b4a18646c9a2d8bfb3220a9aabc14dddb68",
+    "driverBundleSha256": "02b792ce84e01418f9f2cc7e761559ebb9596b3115d0b22cf503e5ef2a3065c0"
+  },
+  "interpretation": "The tenant-per-graph layout reduced local cold pointed-read p99 by 16 ms (about 13%) in this sample while preserving 100/100 complete answers, but it still missed the 100 ms objective at 100 offered concurrent requests. It distributes aggregate demand across independent per-graph authorities; it does not scale a single hot tenant/graph. This is an application partitioning tradeoff, not transparent graph sharding or proof of infinite capacity.",
+  "limitations": [
+    "One closed-loop Miniflare sample on one machine; latency is inside the local Worker RPC harness, not external network caller latency or Cloudflare placement.",
+    "No repeated trials, open-loop load, mixed writes, failure injection, multi-region test, or hosted deployment.",
+    "Different graph IDs have independent commit sequences and no cross-graph transaction-closed snapshot. Cross-tenant query aggregation would require fanout and an explicit completeness/freshness contract.",
+    "The single-graph layout used one 100-fact transaction; the per-tenant layout used 100 separate one-fact transactions. This is a read-path partition comparison, not an equivalent write-cost benchmark."
+  ]
+}
