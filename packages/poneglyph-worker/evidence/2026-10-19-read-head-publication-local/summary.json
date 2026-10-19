@@ -1,0 +1,76 @@
+{
+  "kind": "local-read-head-write-publication-and-post-write-read-probe",
+  "sourceRevision": "a38765e",
+  "completed": false,
+  "localOnly": true,
+  "activeImplementationChanged": false,
+  "cloudflareResourcesChanged": false,
+  "protocol": "On one fresh local graph per trial, seed control-plane facts, register the requested read-head count, warm cache entries, then submit one tokenized transaction retracting Enabled=false and asserting Enabled=true. If acknowledged, require the first pointed read at snapshotSeq 2 and 500 subsequent complete warm reads at snapshotSeq 2 with cacheHits=1 and validations balanced across heads.",
+  "results": [
+    {
+      "heads": 0,
+      "trials": 1,
+      "writeCommitted": 1,
+      "postWriteFirstReadSnapshotSeq": 2,
+      "stopStage": "post-publication-warm-reads",
+      "stopReason": "The canonical baseline correctly wrote/read the new snapshot; the read-head-only harness subsequently stopped because this path did not satisfy its cache-hit assertion.",
+      "runId": "0dd82635-f4c5-4511-9dc3-4da5d54d83b4",
+      "compressedReportSha256": "410ebe463bf2f412b8f21b31ac6a68aefe7d569b11dddbca0d9b5b9e5bfd525e"
+    },
+    {
+      "heads": 1,
+      "trials": 1,
+      "writeCommitted": 1,
+      "writeLatencyMs": 18.80475,
+      "postWriteFirstReadSnapshotSeq": 2,
+      "warmReads": {"issued": 500, "complete": 500, "cacheHits": 500, "canonicalReadCuts": 0, "headValidations": 500},
+      "runId": "7f48d8c8-f6b4-4e1d-8f74-7d66de181e95",
+      "compressedReportSha256": "8f17e774e201a95791b66613064fb9c43e3107d5578c6df1b89d5a06c91674cc"
+    },
+    {
+      "heads": 8,
+      "trials": 1,
+      "writeCommitted": 1,
+      "writeLatencyMs": 31.153708,
+      "postWriteFirstReadSnapshotSeq": 2,
+      "warmReads": {"issued": 500, "complete": 500, "cacheHits": 500, "canonicalReadCuts": 0, "headValidationsPerHeadRange": [44, 77]},
+      "runId": "97d7da8d-f226-4e99-8900-8464170c5795",
+      "compressedReportSha256": "fb7abbd8f5cf6cef52ae32177b6697ccc0b0dd2664280b60c46dd76849327a94"
+    },
+    {
+      "heads": 12,
+      "trials": 1,
+      "writeCommitted": 0,
+      "outcome": "Graph write failed; delivery may be unknown.",
+      "retainedLocalLedger": {"requestTokenTerminalStatus": null, "transactionPhase": "atomic-delegated"},
+      "postWriteRead": "not run",
+      "runId": "58b36477-5863-47d2-8ead-6714e88fd34d",
+      "compressedReportSha256": "347b62ae00f1fc220496c5fee010a85386c2a52cc8b0ace45742b364ccb9d704"
+    },
+    {
+      "heads": 16,
+      "trials": 2,
+      "writeCommitted": 0,
+      "outcome": "Both writes failed with delivery unknown; retained local ledger state remained nonterminal/atomic-delegated.",
+      "postWriteRead": "not run",
+      "runIds": ["baed0bc5-21e8-4bf6-8950-b4d246bb04e6", "9cc3b3e0-b2d6-4f2a-a3ad-7cd5753cc7d1"],
+      "compressedReportSha256": ["d0f280a9f706dfb1caff395a94fff6fa153ed7ad6c41afd5a64487fe1e39a705", "c08a614e16cb15ac3797d6337fb5445fc53bf9229d19d436005ca0367a8c7df0"]
+    },
+    {
+      "heads": 100,
+      "trials": 7,
+      "writeCommitted": 0,
+      "outcome": "All seven attempts stopped at publication with delivery unknown; retained local ledger state was nonterminal/atomic-delegated.",
+      "postWriteRead": "not run",
+      "runIds": ["0fe864d7-da37-4414-adef-59537ae70392", "2d56238d-5f35-4a2b-b396-42a5d0184542", "a412c852-f002-440b-b077-3987bd9e0329", "a4198958-aa85-41a3-805e-cc08b53dca47", "27770afd-ebef-4059-8e9d-3e1279dc0a01", "5830113b-0531-48f3-8e71-972b469786d0", "ec9da09f-358e-45d1-ac1f-72dbe5015abd"],
+      "representativeCompressedReportSha256": "b75a3d09a231e0d3c3e2f40d42a84e4d943786d7f7e558595351498d4d4c00f6"
+    }
+  ],
+  "interpretation": "The one-trial successes at 1/8 heads do not estimate near-100% reliability. Repeated unknown outcomes at 12/16/100 heads disqualify this historical synchronous all-head publication prototype from promotion on current evidence, but do not establish a provider limit or a stable numerical head threshold. This does not test cold/unique strict-latest read scaling, hosted performance, open-loop load, or durable recovery under faults.",
+  "limitations": [
+    "All experiments used local Miniflare/SQLite and historical source a38765e; the active implementation was not changed.",
+    "One transaction per fresh graph; no repeated statistical sample at successful head counts, mixed writes, injected faults, sustained availability, multi-region placement or Cloudflare limits tested.",
+    "No full formal model check was rerun for this publication probe.",
+    "Unconfirmed writes were not automatically replayed."
+  ]
+}
