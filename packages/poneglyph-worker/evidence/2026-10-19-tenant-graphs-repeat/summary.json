@@ -1,0 +1,58 @@
+{
+  "kind": "repeated-local-tenant-graph-cold-point-read-concurrency-profile",
+  "runIds": [
+    "28a56d92-bf4b-4617-a26e-30ca034e05fb",
+    "ea28af3a-8d8b-4561-b289-b27012445d37",
+    "b6c4680d-8a72-4188-bc6f-3c0458dad9d7"
+  ],
+  "sourceRevisions": [
+    "d3b2eaf45ec2343ae7d72b78b54c200e50e72cd2",
+    "f13453c73fba4a56db1e3b4332eb529000b17266",
+    "f13453c73fba4a56db1e3b4332eb529000b17266"
+  ],
+  "localOnly": true,
+  "workloadPerRun": {
+    "tenantGraphCount": 128,
+    "factsPerTenant": 4,
+    "uniqueColdQueriesPerPhase": 128,
+    "offeredConcurrencyLevels": [16, 32, 64, 128],
+    "queryRounds": 4,
+    "answersPerRun": 1024,
+    "readsInThreeRuns": 3072,
+    "allAnswersExact": true,
+    "allSnapshotSeq": 1,
+    "cacheHits": 0,
+    "retries": 0
+  },
+  "callerP99MsByTrial": {
+    "oneGraph": {
+      "16": [27, 53, 41],
+      "32": [63, 73, 84],
+      "64": [73, 101, 79],
+      "128": [140, 159, 159]
+    },
+    "oneGraphPerTenant": {
+      "16": [21, 22, 25],
+      "32": [53, 55, 56],
+      "64": [65, 72, 72],
+      "128": [146, 158, 158]
+    }
+  },
+  "maxCallerP99MsAcrossTrials": {
+    "oneGraph": {"16": 53, "32": 84, "64": 101, "128": 159},
+    "oneGraphPerTenant": {"16": 25, "32": 56, "64": 72, "128": 158}
+  },
+  "interpretation": "The tenant-per-graph layout stayed under 100 ms p99 through offered concurrency 64 across these three local samples, but all three concurrency-128 phases missed (146–158 ms). The shared graph layout was also under 100 ms through 32; at 64 one of three trials reached 101 ms, and all three 128 phases missed (140–159 ms). All 3,072 reads completed exactly, but this finite local sample is not a service availability/SLO estimate, does not establish hosted latency, and does not establish unbounded capacity.",
+  "sourceDigests": {
+    "operatorSha256": "1ae136568cec7ea1dc7d948effb50309bf0ac2d81432a02a352f9062fbcfa791",
+    "harnessSha256": "8aea4b57dda653ceaec8c860c6e1e30075f898e7b616005539c172ca4d71396d",
+    "serviceBundleSha256": "61dbc31a108e721a8ffefaaea6f59b4a18646c9a2d8bfb3220a9aabc14dddb68",
+    "driverBundleSha256": "39a351b1aa27a7a77ea96298096aa1429d20a9a5fdb3e1c9dd9b1d7bcdcf5c14"
+  },
+  "limitations": [
+    "Three closed-loop Miniflare/SQLite trials on one machine; in-process Worker RPC latency is not external or hosted caller latency.",
+    "No open-loop offered arrival-rate model, repeated time windows, fault injection, mixed writes, multi-region placement or single-hot-tenant phase.",
+    "Each tenant graph has its own transaction history; cross-graph transactions/consistent fanout are not evaluated.",
+    "Seed transaction shapes differ: one 512-fact shared transaction versus 128 four-fact tenant transactions."
+  ]
+}
