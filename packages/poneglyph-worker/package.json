@@ -10,6 +10,7 @@
     "typecheck": "cf workers types && tsc --noEmit",
     "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node packages/poneglyph-worker/test",
     "bench:local-tenant-graphs": "node --import tsx bench/local-tenant-graphs.ts",
+    "bench:local-partition-counts": "node --import tsx bench/local-partition-counts.ts",
     "check": "bun run typecheck && bun run test",
     "build": "bun run typecheck && cf build",
     "deploy": "bun run --cwd ../.. build:package && bun run typecheck && cf deploy"
