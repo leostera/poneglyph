@@ -1,0 +1,57 @@
+{
+  "kind": "local-point-read-scaling-by-graph-partition-count",
+  "runIds": [
+    "94ffe0e4-e0bc-46d1-a629-5345ffc989c7",
+    "7254251b-7bd9-4ff8-9527-8bddaf92a7d2",
+    "56dade12-0efe-44ef-9ef2-5312849d3881"
+  ],
+  "sourceRevision": "5ff7388840e29c263f8114a934478677012cb0a1",
+  "localOnly": true,
+  "workload": {
+    "independentKeys": 128,
+    "partitionCounts": [1, 2, 4, 8, 16, 32, 64, 128],
+    "offeredConcurrency": 128,
+    "phasesPerTrial": 8,
+    "queriesPerPhase": 128,
+    "trials": 3,
+    "queriesTotal": 3072,
+    "allExactComplete": true,
+    "allSnapshotSeq": 1,
+    "cacheHits": 0,
+    "retries": 0,
+    "allSeedTransactionsAcknowledged": true
+  },
+  "callerP99MsByTrial": {
+    "1": [184, 149, 165],
+    "2": [150, 158, 144],
+    "4": [159, 169, 160],
+    "8": [172, 158, 164],
+    "16": [187, 198, 150],
+    "32": [179, 157, 203],
+    "64": [152, 140, 152],
+    "128": [143, 161, 172]
+  },
+  "p99RangesMs": {
+    "1": [149, 184],
+    "2": [144, 158],
+    "4": [159, 169],
+    "8": [158, 172],
+    "16": [150, 198],
+    "32": [157, 203],
+    "64": [140, 152],
+    "128": [143, 172]
+  },
+  "interpretation": "No partition count from 1 through 128 met the 100 ms p99 target at 128 offered concurrent unique cold lookups in any of the three local trials. Every request returned the exact result at snapshot sequence 1. Latency did not improve monotonically as partition count increased; this experiment does not support a simple graph-count scale-out claim.",
+  "sourceDigests": {
+    "operatorSha256": "4819d62f3ae29818e4f59dd75ae80c66d674db1da6b77fd115c64996cef7edb3",
+    "harnessSha256": "5309e164d98b0a56fdc0fbbb03178a204962db20a0230d8cd9d57dd32452e298",
+    "serviceBundleSha256": "61dbc31a108e721a8ffefaaea6f59b4a18646c9a2d8bfb3220a9aabc14dddb68",
+    "driverBundleSha256": "7b3ae543ee9a752d19b535873a73a740542584bfb35fd758c34f8270e5ae58da"
+  },
+  "limitations": [
+    "Three closed-loop Miniflare/SQLite trials on one machine; these are local RPC call times, not external or Cloudflare placement latency.",
+    "Every phase offers 128 one-shot reads in a single wave; no open-loop request arrival, sustained duration, fault injection, mixed writes or repeated time windows.",
+    "Partitioned graph IDs have independent transaction histories. The benchmark does not specify or evaluate cross-partition transactions or query fanout.",
+    "At each partition count, each graph is seeded in one transaction; transaction sizes vary inversely with the partition count. This is not a write-cost comparison."
+  ]
+}
