@@ -40,9 +40,9 @@
     {
       "heads": 12,
       "trials": 1,
-      "writeCommitted": 0,
+      "immediateWriteAcknowledged": false,
       "outcome": "Graph write failed; delivery may be unknown.",
-      "retainedLocalLedger": {"requestTokenTerminalStatus": null, "transactionPhase": "atomic-delegated"},
+      "stateAtInspection": {"requestTokenTerminalStatus": null, "transactionPhase": "atomic-delegated"},
       "postWriteRead": "not run",
       "runId": "58b36477-5863-47d2-8ead-6714e88fd34d",
       "compressedReportSha256": "347b62ae00f1fc220496c5fee010a85386c2a52cc8b0ace45742b364ccb9d704"
@@ -50,8 +50,8 @@
     {
       "heads": 16,
       "trials": 2,
-      "writeCommitted": 0,
-      "outcome": "Both writes failed with delivery unknown; retained local ledger state remained nonterminal/atomic-delegated.",
+      "immediateWriteAcknowledged": false,
+      "outcome": "Both writes failed with delivery unknown; retained local ledger state remained nonterminal/atomic-delegated. Recovery was not inspected for these runs.",
       "postWriteRead": "not run",
       "runIds": ["baed0bc5-21e8-4bf6-8950-b4d246bb04e6", "9cc3b3e0-b2d6-4f2a-a3ad-7cd5753cc7d1"],
       "compressedReportSha256": ["d0f280a9f706dfb1caff395a94fff6fa153ed7ad6c41afd5a64487fe1e39a705", "c08a614e16cb15ac3797d6337fb5445fc53bf9229d19d436005ca0367a8c7df0"]
@@ -59,18 +59,26 @@
     {
       "heads": 100,
       "trials": 7,
-      "writeCommitted": 0,
-      "outcome": "All seven attempts stopped at publication with delivery unknown; retained local ledger state was nonterminal/atomic-delegated.",
-      "postWriteRead": "not run",
+      "immediateWriteAcknowledged": false,
+      "outcome": "All seven attempts stopped at publication without confirmed completion; instrumented attempts returned delivery-unknown errors. At initial inspection retained local ledger state was nonterminal/atomic-delegated.",
+      "postWriteReadInOriginalHarness": "not run",
+      "recoveryInspection": {
+        "runId": "a4198958-aa85-41a3-805e-cc08b53dca47",
+        "method": "Reopened retained local state without issuing another application write; queried transaction status and pointed value, waited 12 seconds with the Durable Object alarm runtime active, then queried again.",
+        "beforeAlarmRecovery": {"transactionPhase": "atomic-delegated", "queryComplete": true, "enabled": "true", "snapshotSeq": 2, "cacheHits": 0},
+        "afterAlarmRecovery": {"transactionPhase": "complete", "queryComplete": true, "enabled": "true", "snapshotSeq": 2, "cacheHits": 1},
+        "applicationWriteReplay": false,
+        "latencyClaim": false
+      },
       "runIds": ["0fe864d7-da37-4414-adef-59537ae70392", "2d56238d-5f35-4a2b-b396-42a5d0184542", "a412c852-f002-440b-b077-3987bd9e0329", "a4198958-aa85-41a3-805e-cc08b53dca47", "27770afd-ebef-4059-8e9d-3e1279dc0a01", "5830113b-0531-48f3-8e71-972b469786d0", "ec9da09f-358e-45d1-ac1f-72dbe5015abd"],
       "representativeCompressedReportSha256": "b75a3d09a231e0d3c3e2f40d42a84e4d943786d7f7e558595351498d4d4c00f6"
     }
   ],
-  "interpretation": "The one-trial successes at 1/8 heads do not estimate near-100% reliability. Repeated unknown outcomes at 12/16/100 heads disqualify this historical synchronous all-head publication prototype from promotion on current evidence, but do not establish a provider limit or a stable numerical head threshold. This does not test cold/unique strict-latest read scaling, hosted performance, open-loop load, or durable recovery under faults.",
+  "interpretation": "The one-trial successes at 1/8 heads do not estimate near-100% reliability. At 12/16/100 heads, the immediate public write result was unknown; one retained 100-head transaction was later observed completing through the durable alarm while a complete pointed query returned the new snapshot before and after recovery. This demonstrates one eventual local recovery, not immediate acknowledgement or a recovery-latency bound. These outcomes do not establish a provider limit or stable numerical head threshold. Cold/unique strict-latest read scaling, hosted performance, open-loop load and recovery under injected faults remain untested.",
   "limitations": [
     "All experiments used local Miniflare/SQLite and historical source a38765e; the active implementation was not changed.",
-    "One transaction per fresh graph; no repeated statistical sample at successful head counts, mixed writes, injected faults, sustained availability, multi-region placement or Cloudflare limits tested.",
+    "One transaction per fresh graph; no repeated statistical sample at successful head counts, mixed writes, injected recovery faults, sustained availability, multi-region placement or Cloudflare limits tested. Only one 100-head pending transaction was observed through alarm recovery for 12 seconds.",
     "No full formal model check was rerun for this publication probe.",
-    "Unconfirmed writes were not automatically replayed."
+    "The diagnostic harness did not issue an application write replay; the observed completion was performed by the Durable Object transaction ledger's scheduled alarm."
   ]
 }
