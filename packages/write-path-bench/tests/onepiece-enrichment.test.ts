@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { classifyOnePiecePage, extractPageEnrichment, identityFacts } from "../onepiece-enrichment.js";
 import { onePieceEntityForPage, parseWikiPageId } from "../onepiece-identities.js";
 import { WikiPageDirectory, type WikiPageReference } from "../wiki-page-directory.js";

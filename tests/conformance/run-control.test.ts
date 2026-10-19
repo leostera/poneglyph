@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test, vi} from "vitest";
 import {RunControl, persistCompletion} from "./run-control.js";
 import {archiveReport, parseArchivedRun, validateTraversal} from "./archive.js";
 import {mkdtemp, readFile, writeFile, rm} from "node:fs/promises";
@@ -7,12 +7,12 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {gunzipSync} from "node:zlib";
 import {Session} from "./session.js";
-test("fail-fast drains the original caller without issuing another retry or fabricating abort", async context => {
+test("fail-fast drains the original caller without issuing another retry or fabricating abort", async () => {
   let release: (() => void) | undefined, entered: (() => void) | undefined;
   const started = new Promise<void>(resolve => {entered = resolve;});
   const gate = new Promise<void>(resolve => {release = resolve;});
   let requests = 0;
-  context.mock.method(globalThis, "fetch", async () => {requests++; entered?.(); await gate; return Response.json({error: "busy", retryable: true}, {status: 503});});
+  vi.spyOn(globalThis, "fetch").mockImplementation(async () => {requests++; entered?.(); await gate; return Response.json({error: "busy", retryable: true}, {status: 503});});
   const session = new Session({graphId: "test", token: "test", endpoints: ["http://unit.test"], database: {fetch}, close: async () => {}}, "test");
   const pending = session.write("original", []).then(() => "unexpected", error => String(error));
   await started; const drained = session.drain(); release?.(); await drained;

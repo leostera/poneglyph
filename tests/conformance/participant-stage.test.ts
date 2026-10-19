@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {parseParticipantStage} from "./participant-stage.js";
 const hash = "a".repeat(64);
 function stage(status = "prepared", facts: object[] = []) {return {identity: {graph_id: "test", prefix: "01", role: "leaf"}, transactions: [{tx_id: "tx:partial", payload_hash: hash, status}], facts};}

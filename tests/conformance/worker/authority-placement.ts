@@ -1,5 +1,5 @@
-import {coordinatorObjectName, type VirtualPrefix} from "../../poneglyph/src/storage/keys.js";
-import {TREE_PREFIXES, treeCoordinatorName, transactionCoordinatorName} from "../../poneglyph/src/storage/forest.js";
+import {coordinatorObjectName, type VirtualPrefix} from "../../../packages/poneglyph/src/storage/keys.js";
+import {TREE_PREFIXES, treeCoordinatorName, transactionCoordinatorName} from "../../../packages/poneglyph/src/storage/forest.js";
 import type {AuthorityRole} from "./authority-sql.js";
 export function ownerActorName(graph: string, prefix: VirtualPrefix) {return treeCoordinatorName(graph, prefix);}
 export async function authorityActors(graph: string, txIds: readonly string[]): Promise<{name: string; role: AuthorityRole}[]> {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { test } from "node:test";
+import { test, vi } from "vitest";
 import { main, nextMessage, type Socket } from "../src/main.ts";
 
 function socket(): Socket & EventEmitter {
@@ -36,16 +36,16 @@ test("socket close/error settles the original waiter and removes every owned lis
   }
 });
 
-test("missing target or secret rejects before any cloud request", async (t) => {
-  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("network forbidden"); });
+test("missing target or secret rejects before any cloud request", async () => {
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("network forbidden"); });
   await assert.rejects(main({}), /explicitly approved/);
   await assert.rejects(main({ PONEGLYPH_CLOUDFLARE_URL: "https://approved.poneglyph.leostera.dev" }), /PASSPHRASE/);
-  assert.equal(network.mock.callCount(), 0);
+  assert.equal(network.mock.calls.length, 0);
 });
 
-test("built TODO smoke imports without opening a cloud request or socket", async (t) => {
-  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("network forbidden"); });
+test("built TODO smoke imports without opening a cloud request or socket", async () => {
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("network forbidden"); });
   const entry = await import(new URL("../dist/main.js", import.meta.url).href);
   assert.equal(typeof entry.main, "function");
-  assert.equal(network.mock.callCount(), 0);
+  assert.equal(network.mock.calls.length, 0);
 });

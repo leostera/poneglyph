@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test } from "vitest";
 import { prepareOnePieceEnrichment } from "../prepare-enrichment.js";
 
 const xml = `<?xml version="1.0"?><mediawiki>
@@ -13,9 +13,9 @@ const xml = `<?xml version="1.0"?><mediawiki>
   <page><title>Mugiwara</title><ns>0</ns><id>4</id><redirect title="Straw Hat Pirates"/><revision><id>104</id><text>#REDIRECT [[Straw Hat Pirates]]</text></revision></page>
 </mediawiki>`;
 
-test("prepares a local, digest-pinned semantic overlay and refuses to overwrite it", async t => {
+test("prepares a local, digest-pinned semantic overlay and refuses to overwrite it", async () => {
   const directory = await mkdtemp(join(tmpdir(), "poneglyph-enrichment-test-"));
-  t.after(async () => rm(directory, { recursive: true, force: true }));
+  try {
   const xmlPath = join(directory, "wiki.xml");
   const manifestPath = join(directory, "corpus-manifest.json");
   const outputPath = join(directory, "enrichment-v1");
@@ -43,4 +43,5 @@ test("prepares a local, digest-pinned semantic overlay and refuses to overwrite 
   assert.equal(outputManifest.policies.remoteWrites, false);
 
   await assert.rejects(() => prepareOnePieceEnrichment(xmlPath, manifestPath, outputPath), /refusing to overwrite/);
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });

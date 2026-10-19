@@ -43,13 +43,13 @@
     "build:package": "node --input-type=module -e \"import { rmSync } from 'node:fs'; rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
     "prepack": "bun run build:package",
     "prepublishOnly": "bun run check",
-    "test": "vitest run --bail 1",
+    "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=worker packages/poneglyph/tests",
     "check": "bun run workers:types && bun run typecheck && bun run test",
     "build": "bun run workers:types && bun run typecheck && cf build",
     "deploy": "bun run workers:types && bun run typecheck && cf deploy",
     "workers:types": "cf workers types",
-    "bench:local": "PONEGLYPH_RUN_BENCH=1 vitest run tests/throughput-bench.test.ts --reporter=verbose",
-    "test:traffic:local": "PONEGLYPH_RUN_TRAFFIC=1 vitest run tests/traffic-correctness.test.ts --reporter=verbose"
+    "bench:local": "PONEGLYPH_RUN_BENCH=1 bun run --cwd ../.. vitest run --config vitest.config.ts --project=worker packages/poneglyph/tests/throughput-bench.test.ts --reporter=verbose",
+    "test:traffic:local": "PONEGLYPH_RUN_TRAFFIC=1 bun run --cwd ../.. vitest run --config vitest.config.ts --project=worker packages/poneglyph/tests/traffic-correctness.test.ts --reporter=verbose"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
@@ -57,7 +57,6 @@
     "@types/node": "25.6.0",
     "cf": "1.0.0-beta.14",
     "typescript": "5.9.3",
-    "vite": "8.3.4",
-    "vitest": "4.1.7"
+    "vite": "8.3.4"
   }
 }

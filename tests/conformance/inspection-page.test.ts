@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vitest";
 import assert from "node:assert/strict";
 import {parseInspectionPage} from "./inspection-page.js";
 test("remote directory parser produces exact binary router evidence", () => {

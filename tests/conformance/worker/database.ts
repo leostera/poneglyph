@@ -1,5 +1,5 @@
-import original, { TodoHubDO } from "../../poneglyph/src/worker.js";
-import { GraphCoordinatorDO, GraphLedgerDO, GraphTreeDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../poneglyph/src/storage/implementation.js";
+import original, { TodoHubDO } from "../../../packages/poneglyph/src/worker.js";
+import { GraphCoordinatorDO, GraphLedgerDO, GraphTreeDO, GraphShardDO, shardObjectName, coordinatorObjectName, parseVirtualPrefix } from "../../../packages/poneglyph/src/storage/implementation.js";
 
 import {parseReadFaultMode, transformRead, type ReadFaultMode} from "./read-fault.js";
 import {WriteBarrier} from "./write-barrier.js";
@@ -9,10 +9,10 @@ import {facadeAuthority, ledgerAuthority, ownerAuthority, shardAuthority, ownerW
 import {parseReply} from "../response-evidence.js";
 import {parseAuthorityIdentities} from "./authority-controls.js";
 
-import {TREE_DEPTH} from "../../poneglyph/src/storage/forest.js";
-import {parseFactBatch} from "../../poneglyph/src/domain/fact.js";
-import {parseGraphId} from "../../poneglyph/src/domain/graph-id.js";
-import {dispatchInternalTransaction} from "../../poneglyph/src/storage/transaction-request.js";
+import {TREE_DEPTH} from "../../../packages/poneglyph/src/storage/forest.js";
+import {parseFactBatch} from "../../../packages/poneglyph/src/domain/fact.js";
+import {parseGraphId} from "../../../packages/poneglyph/src/domain/graph-id.js";
+import {dispatchInternalTransaction} from "../../../packages/poneglyph/src/storage/transaction-request.js";
 export {TodoHubDO};
 export class InspectionFacadeDO extends GraphCoordinatorDO {
   authorityStatus(_role: AuthorityRole, after: number) {return facadeAuthority(after);}

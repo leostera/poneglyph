@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { admitMcpRequest, RATE_LIMIT } from "../src/rate-limit.js";
 
 const request = (ip?: string) => new Request("https://playground.poneglyph.leostera.dev/mcp", {

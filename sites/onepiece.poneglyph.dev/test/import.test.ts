@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import test from "node:test";
+import { test } from "vitest";
 import { parseTransactionId } from "@leostera/poneglyph";
 import { createImportHandler, type ImportEnv } from "../src/import.js";
 import { IMPORT_ACCESS_AUDIENCE, IMPORT_BODY_BYTES, parseApprovedBatch, parseImportPlan } from "../src/import-contract.js";

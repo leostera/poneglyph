@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {identifyActorInputs} from "./build.js";
 
 const path = (directory: string, role: string) => `../poneglyph/src/${directory}/${role}.ts`;

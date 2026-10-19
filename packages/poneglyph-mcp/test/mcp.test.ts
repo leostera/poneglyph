@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createDatabase, type FetchFunction } from "@leostera/poneglyph";
 import { createPoneglyphMcpHandler, type GraphReader } from "../src/index.js";
@@ -114,8 +114,8 @@ test("schema and query budget/busy errors remain errors, not partial or empty su
   }
 });
 
-test("each read-tool failure is logged once, without retry or leaking backend details", async context => {
-  const logs = context.mock.method(console, "error", () => {});
+test("each read-tool failure is logged once, without retry or leaking backend details", async () => {
+  const logs = vi.spyOn(console, "error").mockImplementation(() => {});
   let calls = 0;
   await withClient(fakeGraph(async () => { calls++; throw new Error("private backend credential must never appear"); }), async client => {
     for (const name of ["query", "get_schema"]) {
@@ -127,7 +127,7 @@ test("each read-tool failure is logged once, without retry or leaking backend de
   });
   assert.equal(calls, 2);
   assert.deepEqual(logs.mock.calls.map(call => {
-    const line: unknown = call.arguments[0];
+    const line: unknown = call[0];
     assert.ok(typeof line === "string");
     return JSON.parse(line);
   }), ["query", "schema"].map(tool => ({event: `poneglyph-mcp-${tool}-failed`, code: "backend_unavailable", kind: "transport"})));

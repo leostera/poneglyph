@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { extractTopLevelWikiLinks, scanCategoryLinks, scanTopLevelTemplates, scanTopLevelWikiLinks } from "../wikitext-templates.js";
 
 test("scans requested top-level infoboxes and ignores nested templates, comments, and literal blocks", () => {

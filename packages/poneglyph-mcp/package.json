@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test test/*.test.ts",
+    "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node packages/poneglyph-mcp/test",
     "check": "bun run typecheck && bun run test"
   },
   "dependencies": {

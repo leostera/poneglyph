@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {parseAuthorityActors, parseCoordinatorAuthority, parseShardAuthority} from "./authority-evidence.js";
 import {parseAuthorityIdentities} from "./worker/authority-controls.js";
 test("authority control identities become bounded trusted URI lists before actor lookup", () => {

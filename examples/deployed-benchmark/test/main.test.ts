@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, vi } from "vitest";
 import { benchmarkWrites, boundedInteger, summarize, main } from "../src/main.ts";
 
 test("bounded environment parameters reject invalid concurrency instead of widening the workload", () => {
@@ -65,18 +65,18 @@ test("invalid workload cannot admit a callback", async () => {
   assert.equal(issued, 0);
 });
 
-test("cloud configuration fails before login/writes and transport failures are not retried", async (t) => {
-  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("unknown transport"); });
+test("cloud configuration fails before login/writes and transport failures are not retried", async () => {
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("unknown transport"); });
   await assert.rejects(main({}), /explicitly approved/);
   await assert.rejects(main({ PONEGLYPH_CLOUDFLARE_URL: "https://user:secret@approved.poneglyph.leostera.dev", PONEGLYPH_TODO_PASSPHRASE: "test-only" }), /requires HTTPS/);
-  assert.equal(network.mock.callCount(), 0);
+  assert.equal(network.mock.calls.length, 0);
   await assert.rejects(main({ PONEGLYPH_CLOUDFLARE_URL: "https://approved.poneglyph.leostera.dev", PONEGLYPH_TODO_PASSPHRASE: "test-only" }), /unknown transport/);
-  assert.equal(network.mock.callCount(), 1);
+  assert.equal(network.mock.calls.length, 1);
 });
 
-test("built benchmark imports without issuing a load", async (t) => {
-  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("network forbidden"); });
+test("built benchmark imports without issuing a load", async () => {
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("network forbidden"); });
   const entry = await import(new URL("../dist/main.js", import.meta.url).href);
   assert.equal(typeof entry.main, "function");
-  assert.equal(network.mock.callCount(), 0);
+  assert.equal(network.mock.calls.length, 0);
 });

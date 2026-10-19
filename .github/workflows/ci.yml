@@ -26,41 +26,11 @@ jobs:
       - name: Install workspace dependencies
         run: bun install --frozen-lockfile
 
-      - name: Check all workspace types and unit tests
+      - name: Typecheck and run the unified Vitest battery
         run: bun run check
 
       - name: Build package and Worker
         run: bun run build
-
-  small-data-conformance:
-    name: Small-data read/write conformance
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 26
-      - name: Install workspace dependencies
-        run: bun install --frozen-lockfile
-      - name: Build client, check conformance types and canonical small tier
-        run: bun run test:small
-      - name: Retain correctness reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: small-data-conformance-reports
-          path: packages/conformance/results/
-      - name: Retain failed-run persistence and bundles
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: small-data-conformance-diagnostics
-          path: packages/conformance/.artifacts/
-          include-hidden-files: true
 
   formal-models:
     name: PlusCal/TLA+ model checking

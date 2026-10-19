@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { onePieceEntityForPage, parseWikiPageId } from "../onepiece-identities.js";
 
 test("MediaWiki page IDs parse as positive signed 64-bit decimal strings", () => {

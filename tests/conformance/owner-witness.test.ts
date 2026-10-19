@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {parseParticipantWitness, verifyOwnerWitness} from "./owner-witness.js";
 const participant = {cursor: 1, tx_id: "tx:one", payload_hash: "a".repeat(64), status: "committed", decision_kind: "atomic", created_at_ms: 100,
   decision_context_json: null, atomic_commit_seq: 7, atomic_statement_ms: 101, atomic_generation: 0, atomic_directory_epoch: 2, owner_released: 0};

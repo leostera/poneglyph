@@ -16,7 +16,7 @@
     "build": "bun run typecheck && cf build",
     "deploy": "bun run --cwd ../.. build:package && bun run --cwd ../../packages/poneglyph-worker deploy && bun run typecheck && cf deploy",
     "typecheck": "cf workers types && tsc --noEmit",
-    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
+    "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node sites/onepiece.poneglyph.dev/test",
     "benchmark:query-rubric": "node --import tsx scripts/run-query-rubric.ts",
     "check": "bun run typecheck && bun run test"
   },

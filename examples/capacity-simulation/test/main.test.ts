@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, vi } from "vitest";
 import { simulate } from "../src/main.ts";
 
 test("simulation accounts logical bytes without writing payloads", async () => {
@@ -17,9 +17,9 @@ test("invalid simulation inputs fail rather than manufacture accounting evidence
   await assert.rejects(simulate(100, -1), /syntheticEntities must be positive/);
 });
 
-test("built entrypoint imports without running a simulation or network request", async (t) => {
-  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("network forbidden"); });
+test("built entrypoint imports without running a simulation or network request", async () => {
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("network forbidden"); });
   const entry = await import(new URL("../dist/main.js", import.meta.url).href);
   assert.equal(typeof entry.main, "function");
-  assert.equal(network.mock.callCount(), 0);
+  assert.equal(network.mock.calls.length, 0);
 });

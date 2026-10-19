@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {identifyDatabaseImplementation} from "../database-identity.js";
 test("benchmark identity comes from both canonical bundled actors", () => {
   assert.equal(identifyDatabaseImplementation(["../poneglyph/src/storage/coordinator.ts", "C:\\repo\\packages\\poneglyph\\src\\storage\\shard.ts"]), "poneglyph-pooled-owner-write-path");

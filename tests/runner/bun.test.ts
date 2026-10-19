@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
-test("root local correctness suite", async () => {
-  const run = Bun.spawn(["bun", "run", "test:local:correctness"], {
+test("root Vitest battery", async () => {
+  const run = Bun.spawn(["bun", "run", "test:battery"], {
     cwd: process.cwd(),
     stdout: "inherit",
     stderr: "inherit",

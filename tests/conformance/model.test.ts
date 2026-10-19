@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vitest";
 import assert from "node:assert/strict";
 import {Model, equalBag, relation, scalar, normalizeValue, type Evidence} from "./model.js";
 import {fact} from "./small.js";

@@ -41,5 +41,7 @@ node_modules/
 target
 tests/fixtures/cache/
 
-# Local conformance runner output; tracked historical reports remain unchanged.
+# Local correctness-runner output; historical artifacts remain unchanged.
 /packages/conformance/results/
+/packages/conformance/.artifacts/
+/tests/conformance/results/

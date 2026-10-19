@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import type { GraphSchemaObservation, QueryResult } from "@leostera/poneglyph";
 import { createPoneglyphMcpHandler, type ScopedGraphReader } from "../src/index.js";

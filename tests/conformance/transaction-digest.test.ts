@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {transactionDigest} from "./transaction-digest.js";
 import type {FactInput} from "@leostera/poneglyph";
 const fact: FactInput = {source: "agent:a", entity: "test:a", field: "test:f", value: {type: "number", value: "01"}};

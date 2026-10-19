@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { parseWikiPageId } from "../onepiece-identities.js";
 import { WikiPageDirectory } from "../wiki-page-directory.js";
 

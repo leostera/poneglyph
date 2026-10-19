@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {parseProcessMembers, membersOfGroup} from "./process-group.js";
 test("native process membership records safe identities and actual execution state", () => {
   assert.deepEqual(parseProcessMembers(" 123 10 123 S /usr/bin/node\n 124 123 123 Z /path/to/workerd\n"), [

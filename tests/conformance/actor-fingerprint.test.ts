@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {parseActorFingerprint} from "./actor-fingerprint.js";
 const valid = {objectId: "a".repeat(64), incarnation: "12345678-1234-4234-8234-123456789abc"};
 test("actor identity/incarnation are parsed, not inferred from an abort error", () => {

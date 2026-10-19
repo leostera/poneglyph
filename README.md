@@ -40,7 +40,7 @@ This is a Bun workspace. Install **Bun 1.4.2** and **Node.js 26**: Bun manages d
 | [`packages/poneglyph`](packages/poneglyph/) | Library, client and canonical database Worker |
 | [`packages/poneglyph-worker`](packages/poneglyph-worker/) | Private graph-scoped Worker RPC service and canonical actor assembly |
 | [`packages/poneglyph-mcp`](packages/poneglyph-mcp/) | Reusable read-only Agents SDK MCP tools/handler and HTTP composition |
-| [`packages/conformance`](packages/conformance/) | Independent correctness oracle and disk-backed E2E harness |
+| [`tests/conformance`](tests/conformance/) | Independent correctness oracle and disk-backed E2E tests within the root test battery |
 | [`packages/write-path-bench`](packages/write-path-bench/) | Private write-path benchmark harness |
 | `examples/*` | Six individually built, typechecked and offline-tested examples |
 | [`sites/playground.poneglyph.leostera.dev`](sites/playground.poneglyph.leostera.dev/) | Read-only, rate-limited MCP at `onepiece.poneglyph.dev`, protected by account-member Access; full corpus load unverified |
@@ -49,14 +49,14 @@ One root `bun.lock` pins dependencies. Private harnesses link the library with `
 
 ```sh
 bun install --frozen-lockfile
-bun test                   # all local correctness gates, including low/high traffic
-bun run check              # workspace typechecks and unit/adapter/example/site tests
+bun test                   # the complete unified Vitest battery
+bun run check              # workspace typechecks and the same test battery
 bun run build              # portable package + Workers + all example/site builds
-bun run test:focused       # short focused warm/cold E2E regressions
-# bun run test:small       # explicit declared-case warm/cold checkpoint
+bun run test:focused       # optional focused correctness subset
+# bun run test:small       # optional declared-case warm/cold checkpoint
 ```
 
-At the repository root, `bun test` and `bun run test` run the same local correctness suite: workspace checks, focused conformance, all declared small-tier cases, and low/high-concurrency Miniflare correctness tests. Bun discovers only an orchestration wrapper; native Worker tests still run under Vitest/Miniflare and conformance under Node. No hosted tests, corpus loads or performance benchmarks run by default. The broader conformance contract still has gaps (`smallTierComplete` remains false); passing the declared checkpoint is not comprehensive certification.
+At the repository root, `bun test`, `bun run test`, and `bun run check` all enter one Vitest test battery configured by [`vitest.config.ts`](vitest.config.ts). It contains separate Worker/Miniflare and Node-environment projects, including the independent oracle and disk-backed crash/recovery scenarios; these are coverage groups in one runner, not a separate conformance package or local-versus-remote test system. Bun discovers only a small compatibility wrapper that starts the Vitest command. No hosted tests, corpus loads or performance benchmarks run by default. The broader correctness contract still has gaps (`smallTierComplete` remains false); passing the declared checkpoint is not comprehensive certification.
 
 ## Try it locally
 

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test, vi } from "vitest";
 import { deploymentUrl, main } from "../src/main.ts";
 
 const target = { PONEGLYPH_CLOUDFLARE_URL: "https://approved.poneglyph.leostera.dev" };
@@ -27,14 +27,14 @@ test("deployment target is explicit and rejects credentials, unrelated hosts and
   }
 });
 
-test("smoke verifies original identity/payload and exact typed rows without assuming a one-root/global clock", async (t) => {
-  const endpoint = fakeEndpoint(), log = t.mock.method(console, "log", () => {});
+test("smoke verifies original identity/payload and exact typed rows without assuming a one-root/global clock", async () => {
+  const endpoint = fakeEndpoint(), log = vi.spyOn(console, "log").mockImplementation(() => {});
   await main(target, endpoint.fetcher);
   assert.equal(endpoint.writes.length, 2);
   assert.equal(typeof endpoint.writes[0]?.["clientRequestToken"], "string");
   assert.equal(Object.hasOwn(endpoint.writes[0]!, "txId"), false);
   assert.deepEqual(endpoint.writes[0], endpoint.writes[1]);
-  assert.equal(log.mock.callCount(), 1);
+  assert.equal(log.mock.calls.length, 1);
 });
 
 test("unchanged row count cannot hide an incorrect acknowledged value", async () => {
@@ -47,9 +47,9 @@ test("uncertain transport is surfaced once, not silently retried or counted as a
   assert.equal(calls, 1);
 });
 
-test("built cloud smoke imports without contacting an endpoint", async (t) => {
-  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("network forbidden"); });
+test("built cloud smoke imports without contacting an endpoint", async () => {
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("network forbidden"); });
   const entry = await import(new URL("../dist/main.js", import.meta.url).href);
   assert.equal(typeof entry.main, "function");
-  assert.equal(network.mock.callCount(), 0);
+  assert.equal(network.mock.calls.length, 0);
 });

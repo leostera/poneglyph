@@ -1,4 +1,4 @@
-import {test} from "node:test";
+import {test} from "vitest";
 import assert from "node:assert/strict";
 import {parseReadFaultMode, transformRead} from "./worker/read-fault.js";
 const body = '{"one":1}\n{"two":2}\n';

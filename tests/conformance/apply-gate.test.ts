@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {ApplyGate, parseApplyGateStatus, parseApplyGateId} from "./worker/apply-gate.js";
 const request = (id = "tx:partial") => new Request("https://shard.internal/_commit", {method: "POST", body: JSON.stringify({txId: id})});
 async function waiting(gate: ApplyGate, hits = 1) {

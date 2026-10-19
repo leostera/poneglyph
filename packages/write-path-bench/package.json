@@ -7,7 +7,7 @@
     "prepare:corpus": "node --import tsx corpus.ts",
     "prepare:enrichment": "node --import tsx prepare-enrichment.ts",
     "preflight": "node --import tsx preflight.ts",
-    "test": "node --import tsx --test --test-concurrency=1 tests/*.test.ts",
+    "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node packages/write-path-bench/tests",
     "typecheck": "tsc --noEmit",
     "run:local": "node --import tsx run.ts"
   },

@@ -4,6 +4,16 @@
   "workspaces": {
     "": {
       "name": "poneglyph-workspace",
+      "devDependencies": {
+        "@cloudflare/workers-types": "5.20261011.1",
+        "@leostera/poneglyph": "workspace:*",
+        "@types/node": "25.6.0",
+        "esbuild": "0.28.2",
+        "miniflare": "5.20261006.1-alpha",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+        "vitest": "4.1.7",
+      },
     },
     "examples/capacity-simulation": {
       "name": "@poneglyph/example-capacity-simulation",
@@ -75,20 +85,6 @@
         "typescript": "5.9.3",
       },
     },
-    "packages/conformance": {
-      "name": "@poneglyph/conformance-tests",
-      "dependencies": {
-        "@leostera/poneglyph": "workspace:*",
-      },
-      "devDependencies": {
-        "@cloudflare/workers-types": "5.20261011.1",
-        "@types/node": "25.6.0",
-        "esbuild": "0.28.2",
-        "miniflare": "5.20261006.1-alpha",
-        "tsx": "4.23.15",
-        "typescript": "5.9.3",
-      },
-    },
     "packages/poneglyph": {
       "name": "@leostera/poneglyph",
       "version": "0.1.0",
@@ -99,7 +95,6 @@
         "cf": "1.0.0-beta.14",
         "typescript": "5.9.3",
         "vite": "8.3.4",
-        "vitest": "4.1.7",
       },
     },
     "packages/poneglyph-mcp": {
@@ -388,8 +383,6 @@
     "@modelcontextprotocol/server": ["@modelcontextprotocol/server@2.3.1", "", { "dependencies": { "@modelcontextprotocol/core": "2.3.1", "zod": "^4.2.0" } }, "sha512-e59MfWuSssj6DoQ96JCTqdW1AXT5/XtnTl0WWd6MU1Ka434fFUGGosCLJbGNySDhHGvxQWoRWK137FXYFkYNWw=="],
 
     "@oxc-project/types": ["@oxc-project/types@0.153.0", "", {}, "sha512-jSNrRIyvPVLL5E1z/tS5zLAprosGz/FuI1PWwEOz59j3E4TTTzSpqKb/RDGqJhhW0QHYISGXxq582wGx6T11Tw=="],
-
-    "@poneglyph/conformance-tests": ["@poneglyph/conformance-tests@workspace:packages/conformance"],
 
     "@poneglyph/example-capacity-simulation": ["@poneglyph/example-capacity-simulation@workspace:examples/capacity-simulation"],
 

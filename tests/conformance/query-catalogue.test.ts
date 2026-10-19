@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test, vi} from "vitest";
 import {QueryCatalogue} from "./query-catalogue.js";
 import {relation, constant, variable, type Query} from "./model.js";
 import {Session} from "./session.js";
@@ -23,9 +23,9 @@ test("opaque filters and external mutation cannot weaken the replay catalogue", 
   const cold = new QueryCatalogue(); cold.inherit(catalogue.queries); cold.remember(relation("test:value"));
   assert.equal(cold.queries.length, 3, "cold inheritance deduplicates only unfiltered repetitions");
 });
-test("explicit public reads still execute and compare at each changed state", async context => {
+test("explicit public reads still execute and compare at each changed state", async () => {
   let calls = 0;
-  context.mock.method(globalThis, "fetch", async () => Response.json({rows: [{Entity: {type: "string", value: "test:e"}, Value: {type: "string", value: ++calls === 1 ? "before" : "after"}}]}));
+  vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({rows: [{Entity: {type: "string", value: "test:e"}, Value: {type: "string", value: ++calls === 1 ? "before" : "after"}}]}));
   const runtime = {graphId: "test", token: "test", endpoints: ["http://unit.test"], database: {fetch}, close: async () => {}};
   const session = new Session(runtime, "test"), query = relation("test:value");
   const fact = {source: "agent:a", entity: "test:e", field: "test:value", value: {type: "text" as const, value: "before"}};

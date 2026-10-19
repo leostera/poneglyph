@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {correctnessBudgets, requiredCoverage, smallTierComplete, statefulSeeds} from "./contract.js";
 
 test("required coverage cannot silently certify the unfinished tier", () => {

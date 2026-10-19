@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { visitMediaWikiPages } from "../wiki-xml.js";
 
 async function* chunks(input: string, size: number): AsyncGenerator<Uint8Array> {

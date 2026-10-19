@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {setImmediate} from "node:timers/promises";
 import {WriteBarrier, parseBarrierConfig, parseBarrierStatus} from "./worker/write-barrier.js";
 const config = {phase: "prepared" as const, txId: "tx:phase"};

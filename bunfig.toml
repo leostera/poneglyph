@@ -1,3 +1,3 @@
 [test]
-root = "./tests/local"
+root = "./tests/runner"
 timeout = 1800000

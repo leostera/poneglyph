@@ -9,20 +9,29 @@
   },
   "workspaces": ["packages/*", "examples/*", "sites/*"],
   "trustedDependencies": ["esbuild", "workerd"],
+  "devDependencies": {
+    "@leostera/poneglyph": "workspace:*",
+    "@cloudflare/workers-types": "5.20261011.1",
+    "@types/node": "25.6.0",
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261006.1-alpha",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "4.1.7"
+  },
   "scripts": {
     "dev": "bun run --cwd packages/poneglyph dev",
     "build:package": "bun run --cwd packages/poneglyph build:package && bun run --cwd packages/poneglyph-mcp build",
     "build": "bun run build:package && bun run --cwd packages/poneglyph build && bun run --cwd packages/poneglyph-worker build && bun run build:examples && bun run build:sites",
     "build:sites": "bun run --filter '@poneglyph/site-*' --sequential build",
     "build:examples": "bun run --filter '@poneglyph/example-*' --sequential build",
-    "typecheck": "bun run --cwd packages/poneglyph workers:types && bun run build:package && bun run --cwd packages/poneglyph typecheck && bun run --cwd packages/poneglyph-mcp typecheck && bun run --cwd packages/poneglyph-worker typecheck && bun run --cwd packages/conformance typecheck && bun run --cwd packages/write-path-bench typecheck && bun run --filter '@poneglyph/example-*' --sequential typecheck && bun run --filter '@poneglyph/site-*' --sequential typecheck",
-    "test:unit": "bun run --cwd packages/poneglyph test && bun run --cwd packages/poneglyph-mcp test && bun run --cwd packages/poneglyph-worker test && bun run --cwd packages/conformance test:oracle && bun run --cwd packages/write-path-bench test && bun run --filter '@poneglyph/example-*' --sequential test && bun run --filter '@poneglyph/site-*' --sequential test",
-    "test": "bun run test:local:correctness",
-    "check": "bun run typecheck && bun run test:unit",
-    "test:focused": "bun run --cwd packages/poneglyph workers:types && bun run build:package && bun run --cwd packages/conformance typecheck && bun run --cwd packages/conformance test:focused",
-    "test:small": "bun run --cwd packages/poneglyph workers:types && bun run build:package && bun run --cwd packages/conformance typecheck && bun run --cwd packages/conformance test:small",
-    "test:traffic:local": "bun run --cwd packages/poneglyph test:traffic:local",
-    "test:local:correctness": "bun run check && bun run test:focused && bun run test:small && bun run test:traffic:local",
+    "typecheck": "bun run --cwd packages/poneglyph workers:types && bun run build:package && bun run --cwd packages/poneglyph typecheck && bun run --cwd packages/poneglyph-mcp typecheck && bun run --cwd packages/poneglyph-worker typecheck && tsc --noEmit -p tests/conformance/tsconfig.json && bun run --cwd packages/write-path-bench typecheck && bun run --filter '@poneglyph/example-*' --sequential typecheck && bun run --filter '@poneglyph/site-*' --sequential typecheck",
+    "test:battery": "bun run typecheck && bun run build:examples && PONEGLYPH_RUN_TRAFFIC=1 vitest run --config vitest.config.ts",
+    "test": "bun run test:battery",
+    "check": "bun run test:battery",
+    "test:focused": "PONEGLYPH_RUN_FOCUSED=1 vitest run --config vitest.config.ts --project=node tests/conformance/focused-run.test.ts",
+    "test:small": "vitest run --config vitest.config.ts --project=node tests/conformance/small-run.test.ts",
+    "test:traffic": "PONEGLYPH_RUN_TRAFFIC=1 vitest run --config vitest.config.ts --project=worker packages/poneglyph/tests/traffic-correctness.test.ts",
     "test:capacity": "bun run --cwd examples/capacity-simulation run"
   }
 }

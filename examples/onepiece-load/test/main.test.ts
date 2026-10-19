@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { test, vi } from "vitest";
 import { ingestDump, pageFacts, readPositiveInteger, readNonNegativeInteger, writeBatch, loadConfiguration } from "../src/main.ts";
 
 test("page extraction preserves typed text byte counts and bounded category/link facts", () => {
@@ -62,9 +62,9 @@ test("loader surfaces unknown transport once with no fresh or implicit retry", a
   assert.equal(calls, 1);
 });
 
-test("built loader imports without starting a Worker or corpus load", async (t) => {
-  const network = t.mock.method(globalThis, "fetch", async () => { throw new Error("network forbidden"); });
+test("built loader imports without starting a Worker or corpus load", async () => {
+  const network = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw new Error("network forbidden"); });
   const entry = await import(new URL("../dist/main.js", import.meta.url).href);
   assert.equal(typeof entry.main, "function");
-  assert.equal(network.mock.callCount(), 0);
+  assert.equal(network.mock.calls.length, 0);
 });

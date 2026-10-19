@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import test from "node:test";
+import { test } from "vitest";
 import { build } from "esbuild";
 import { Miniflare, Log, LogLevel } from "miniflare";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";

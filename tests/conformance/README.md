@@ -7,15 +7,10 @@
 ```sh
 bun install --frozen-lockfile
 bun run typecheck
-bun run --cwd packages/conformance test:oracle
 bun run test:focused
 ```
 
-The focused runner uses the actual production composition and the same shared assertions. Its default four cases cover three bounded legal concurrent histories plus a causal partial-participant process crash/recovery, warm/cold. It is explicitly **not full-tier certification**. The canonical package's controlled storage/schema/retention/client/TODO tests run normally, without an implementation selection flag:
-
-```sh
-bun run --cwd packages/poneglyph test
-```
+The focused test uses the actual production composition and the same shared assertions. Its four cases cover three bounded legal concurrent histories plus a causal partial-participant process crash/recovery, warm/cold. It is explicitly **not full-tier certification**. The oracle, Worker/Miniflare, package, example, and site tests are collected by the single root Vitest configuration; coverage groups do not use separate runners or package scripts.
 
 ## Certification checkpoint
 
@@ -35,9 +30,9 @@ The current cases still do **not** complete comprehensive small coverage; broade
 
 ## Retained evidence
 
-All local run reports are ignored by the root `.gitignore` and are not part of the current tracked tree. Older archived reports remain available in Git history, not in a fresh checkout. Find their containing revision with `git log --all -- packages/conformance/results/<run>/summary.json`, then retrieve with `git show <revision>:packages/conformance/results/<run>/summary.json`. The historical path links below name those past records.
+All run reports are ignored by the root `.gitignore` and are not part of the tracked tree. New results are written under `tests/conformance/results/`. Older archived reports remain available in Git history, not in a fresh checkout. Find their containing revision with `git log --all -- packages/conformance/results/<run>/summary.json`, then retrieve with `git show <revision>:packages/conformance/results/<run>/summary.json`. The historical path links below name those past records.
 
-Reports predating the workspace move keep their original digests, identities and recorded `tests/conformance/` paths unchanged. The evidence now lives here; relocation is not a new test run or product replay. Node remains the native host runtime; Bun installs dependencies and orchestrates scripts. New report source identities include the root `bun.lock` and workspace manifest.
+Reports predating the workspace move keep their original digests, identities and recorded `tests/conformance/` paths unchanged. The evidence now lives here; relocation is not a new test run or product replay. Vitest is the sole test runner; Node remains the native host runtime for disk-backed conformance/crash scenarios, while Bun installs dependencies and orchestrates scripts. New report source identities include the root `bun.lock`, workspace manifest, and Vitest configuration.
 
 Results contain source/bundle/runtime identities, actual answers, caller outcomes and native lifecycle evidence. Certification reports use `formatVersion: 2` and must contain exactly `poneglyph`. The archiver reads older all-eleven reports only as historical evidence—not selectable implementations. Focused reports remain separately labelled.
 
