@@ -29,13 +29,24 @@
     },
     {
       "heads": 8,
-      "trials": 1,
+      "trials": 2,
       "writeCommitted": 1,
       "writeLatencyMs": 31.153708,
       "postWriteFirstReadSnapshotSeq": 2,
       "warmReads": {"issued": 500, "complete": 500, "cacheHits": 500, "canonicalReadCuts": 0, "headValidationsPerHeadRange": [44, 77]},
       "runId": "97d7da8d-f226-4e99-8900-8464170c5795",
-      "compressedReportSha256": "fb7abbd8f5cf6cef52ae32177b6697ccc0b0dd2664280b60c46dd76849327a94"
+      "compressedReportSha256": "fb7abbd8f5cf6cef52ae32177b6697ccc0b0dd2664280b60c46dd76849327a94",
+      "repeatTrial": {
+        "runId": "8d56d6c4-f0e2-4ec8-82cf-761663c35993",
+        "compressedReportSha256": "4eb5b1f37b36127bf21663996793f0d2a48c75adf816b007c862ad7777aa8b95",
+        "preWriteReads": [
+          {"kind": "point", "issued": 500, "completed": 500, "concurrency": 16, "callerP99Ms": 11.228292},
+          {"kind": "combined", "issued": 500, "completed": 500, "concurrency": 128, "callerP99Ms": 74.325084}
+        ],
+        "writeLatencyMs": 31.857542,
+        "firstPostWriteSnapshotSeq": 2,
+        "postWriteWarmReads": {"issued": 500, "complete": 500, "cacheHits": 500, "canonicalReadCuts": 0, "headValidationsPerHeadRange": [53, 79]}
+      }
     },
     {
       "heads": 12,
@@ -74,7 +85,7 @@
       "representativeCompressedReportSha256": "b75a3d09a231e0d3c3e2f40d42a84e4d943786d7f7e558595351498d4d4c00f6"
     }
   ],
-  "interpretation": "The one-trial successes at 1/8 heads do not estimate near-100% reliability. At 12/16/100 heads, the immediate public write result was unknown; one retained 100-head transaction was later observed completing through the durable alarm while a complete pointed query returned the new snapshot before and after recovery. This demonstrates one eventual local recovery, not immediate acknowledgement or a recovery-latency bound. These outcomes do not establish a provider limit or stable numerical head threshold. Cold/unique strict-latest read scaling, hosted performance, open-loop load and recovery under injected faults remain untested.",
+  "interpretation": "The one-trial success at 1 head and two at 8 heads do not estimate near-100% reliability. The 8-head repeat completed 500 pointed and 500 compound reads before the write at concurrency 16/128, then 500/500 warm reads after a committed flip. At 12/16/100 heads, the immediate public write result was unknown; one retained 100-head transaction was later observed completing through the durable alarm while a complete pointed query returned the new snapshot before and after recovery. This demonstrates one eventual local recovery, not immediate acknowledgement or a recovery-latency bound. These outcomes do not establish a provider limit or stable numerical head threshold. Cold/unique strict-latest read scaling, hosted performance, open-loop load and recovery under injected faults remain untested.",
   "limitations": [
     "All experiments used local Miniflare/SQLite and historical source a38765e; the active implementation was not changed.",
     "One transaction per fresh graph; no repeated statistical sample at successful head counts, mixed writes, injected recovery faults, sustained availability, multi-region placement or Cloudflare limits tested. Only one 100-head pending transaction was observed through alarm recovery for 12 seconds.",
