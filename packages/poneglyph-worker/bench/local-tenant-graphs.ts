@@ -8,14 +8,14 @@ import {Log, LogLevel, Miniflare} from "miniflare";
 
 const packageDirectory = resolve(import.meta.dirname, "..");
 const runId = randomUUID();
-const graphIds = Array.from({length: 100}, (_, index) => `control-tenant-${index.toString().padStart(3, "0")}`);
+const graphIds = Array.from({length: 128}, (_, index) => `control-tenant-${index.toString().padStart(3, "0")}`);
 const sharedGraph = "control-plane-shared";
 const stateDirectory = await mkdtemp(resolve(tmpdir(), "poneglyph-tenant-graphs-"));
 const artifacts = resolve(packageDirectory, ".artifacts/local-tenant-graphs", runId);
 await mkdir(artifacts, {recursive: true});
 const plan = {runId, sourceRevision: execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim(),
-  localOnly: true, graphIds: graphIds.length, sharedGraph, uniqueColdPointQueriesPerPhase: graphIds.length,
-  requestedConcurrency: graphIds.length, deadlineMs: 20_000, stateDirectory};
+  localOnly: true, graphIds: graphIds.length, sharedGraph, uniqueColdPointQueriesPerTenant: 4,
+  queryRounds: [0, 1, 2, 3], offeredConcurrencyLevels: [16, 32, 64, 128], deadlineMs: 20_000, stateDirectory};
 await writeFile(resolve(artifacts, "plan.json"), JSON.stringify(plan, null, 2) + "\n");
 
 const digest = async (path: string) => createHash("sha256").update(await readFile(path)).digest("hex");
@@ -71,16 +71,17 @@ try {
   const reads = seedIsComplete ? await invoke("/read") : {skipped: "seed did not complete for all graph IDs"};
   const phases = typeof reads === "object" && reads !== null && "phases" in reads && Array.isArray(reads.phases)
     ? reads.phases : [];
-  const readsAreComplete = phases.length === 2 && phases.every(phase => typeof phase === "object" && phase !== null &&
+  const readsAreComplete = phases.length === 8 && phases.every(phase => typeof phase === "object" && phase !== null &&
     "offered" in phase && phase.offered === graphIds.length && "completed" in phase && phase.completed === graphIds.length &&
-    "failed" in phase && phase.failed === 0 && "exactAnswers" in phase && phase.exactAnswers === graphIds.length);
+    "failed" in phase && phase.failed === 0 && "exactAnswers" in phase && phase.exactAnswers === graphIds.length &&
+    "observedMaxInFlight" in phase && "offeredConcurrency" in phase && phase.observedMaxInFlight === phase.offeredConcurrency);
   const report = {plan, completed: seedIsComplete && readsAreComplete, source: {
       operatorSha256: await digest(resolve(packageDirectory, "bench/local-tenant-graphs-operator.ts")),
       harnessSha256: await digest(resolve(packageDirectory, "bench/local-tenant-graphs.ts")),
       serviceBundleSha256: await digest(serviceBundle), driverBundleSha256: await digest(driverBundle),
       inputPaths: Object.keys(built.metafile.inputs).sort(),
     }, seed, reads,
-    scope: "Local Miniflare/SQLite comparison of 100 unique pointed reads on one graph versus 100 isolated tenant graphs; closed-loop one-shot sample, not Cloudflare placement, SLA, or infinite-capacity evidence."};
+    scope: "Local Miniflare/SQLite comparison of unique cold pointed reads on one graph versus one graph per tenant at offered concurrency 16/32/64/128; closed-loop one-shot sample, not Cloudflare placement, SLA, or infinite-capacity evidence."};
   await writeFile(resolve(artifacts, "report.json"), JSON.stringify(report, null, 2) + "\n");
   complete = seedIsComplete && readsAreComplete;
   console.log(JSON.stringify({runId, artifacts, completed: complete, seed, reads}));

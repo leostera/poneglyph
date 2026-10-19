@@ -1,0 +1,40 @@
+{
+  "kind": "local-tenant-per-graph-cold-point-read-concurrency-profile",
+  "runId": "28a56d92-bf4b-4617-a26e-30ca034e05fb",
+  "sourceRevision": "d3b2eaf45ec2343ae7d72b78b54c200e50e72cd2",
+  "localOnly": true,
+  "activeStorageImplementationChanged": false,
+  "cloudflareResourcesChanged": false,
+  "seed": {
+    "tenantGraphCount": 128,
+    "factsPerTenant": 4,
+    "sharedGraphFacts": 512,
+    "sharedWriteAcknowledged": true,
+    "independentGraphWritesAcknowledged": 128,
+    "seedWallMs": 1579
+  },
+  "method": "For each of four query rounds, one unique cold pointed query per tenant (128 distinct tenants) used a unique field to avoid query-result-cache hits. Each layout ran one graph then one graph per tenant at an independently bounded offered concurrency. No application retries. All graph reads verified exact answer and snapshotSeq >= 1; max in-flight was measured in the driver. The single-graph case issued 128 requests into one GraphCoordinatorDO; tenant mode issued one request per each of 128 graph authorities.",
+  "phases": [
+    {"layout": "one graph", "offeredConcurrency": 16, "observedMaxInFlight": 16, "issued": 128, "completeExact": 128, "failed": 0, "cacheHits": 0, "callerLatencyMs": {"p50": 19, "p95": 27, "p99": 27, "max": 27}},
+    {"layout": "one graph per tenant", "offeredConcurrency": 16, "observedMaxInFlight": 16, "issued": 128, "completeExact": 128, "failed": 0, "cacheHits": 0, "callerLatencyMs": {"p50": 17, "p95": 20, "p99": 21, "max": 21}},
+    {"layout": "one graph", "offeredConcurrency": 32, "observedMaxInFlight": 32, "issued": 128, "completeExact": 128, "failed": 0, "cacheHits": 0, "callerLatencyMs": {"p50": 37, "p95": 48, "p99": 63, "max": 74}},
+    {"layout": "one graph per tenant", "offeredConcurrency": 32, "observedMaxInFlight": 32, "issued": 128, "completeExact": 128, "failed": 0, "cacheHits": 0, "callerLatencyMs": {"p50": 28, "p95": 53, "p99": 53, "max": 53}},
+    {"layout": "one graph", "offeredConcurrency": 64, "observedMaxInFlight": 64, "issued": 128, "completeExact": 128, "failed": 0, "cacheHits": 0, "callerLatencyMs": {"p50": 67, "p95": 73, "p99": 73, "max": 73}},
+    {"layout": "one graph per tenant", "offeredConcurrency": 64, "observedMaxInFlight": 64, "issued": 128, "completeExact": 128, "failed": 0, "cacheHits": 0, "callerLatencyMs": {"p50": 63, "p95": 65, "p99": 65, "max": 65}},
+    {"layout": "one graph", "offeredConcurrency": 128, "observedMaxInFlight": 128, "issued": 128, "completeExact": 128, "failed": 0, "cacheHits": 0, "callerLatencyMs": {"p50": 139, "p95": 139, "p99": 140, "max": 140}},
+    {"layout": "one graph per tenant", "offeredConcurrency": 128, "observedMaxInFlight": 128, "issued": 128, "completeExact": 128, "failed": 0, "cacheHits": 0, "callerLatencyMs": {"p50": 145, "p95": 145, "p99": 146, "max": 146}}
+  ],
+  "sourceDigests": {
+    "operatorSha256": "1ae136568cec7ea1dc7d948effb50309bf0ac2d81432a02a352f9062fbcfa791",
+    "harnessSha256": "8aea4b57dda653ceaec8c860c6e1e30075f898e7b616005539c172ca4d71396d",
+    "serviceBundleSha256": "61dbc31a108e721a8ffefaaea6f59b4a18646c9a2d8bfb3220a9aabc14dddb68",
+    "driverBundleSha256": "39a351b1aa27a7a77ea96298096aa1429d20a9a5fdb3e1c9dd9b1d7bcdcf5c14"
+  },
+  "interpretation": "This single local sample had 100% exact completion and p99 under 100 ms at concurrency 16, 32 and 64 in both layouts. At concurrency 128, both layouts missed the p99 target by 40–46 ms; tenant partitioning was slightly slower in this phase. It does not certify reliability, externally observed latency, a hosted capacity envelope or unbounded scaling.",
+  "limitations": [
+    "One closed-loop Miniflare/SQLite sample on one machine; caller timing is inside the local Worker RPC harness, not network-to-Cloudflare caller latency.",
+    "No repeated trials, open-loop arrival-rate test, mixed read/write traffic, failure injection, multi-region or hosted placement.",
+    "The experiment partitions 128 independent tenants; it does not test 128 concurrent reads for a single hot tenant. Tenant graph IDs have separate transaction histories and no cross-graph snapshot.",
+    "The shared layout commits all 512 seed facts in one graph transaction; the per-tenant layout commits four facts in each of 128 transactions. It is not a write-cost comparison."
+  ]
+}
