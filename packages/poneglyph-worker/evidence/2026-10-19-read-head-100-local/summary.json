@@ -1,0 +1,56 @@
+{
+  "kind": "local-warm-hit-read-head-placement-stress",
+  "runId": "4192351f-17c0-4ea1-abb4-83fb0c1f902c",
+  "completed": true,
+  "localOnly": true,
+  "source": {
+    "revision": "a38765e",
+    "change": "temporary benchmark-plan-only expansion of head counts from [0,1,4,8] to [0,1,4,8,16,32,64,100]; no Worker/storage implementation change",
+    "benchmarkPlanSourceSha256": "e9dc70a3b492290f0f51c989c352e09a526db433ba0fd3cef78cc46ec7c6c798",
+    "sourceInputsSha256": "41e1a118a62bae8fd162c62590450b9947f38e4b52022f7be98ed76f54132ebc",
+    "serviceBundleSha256": "dfaad76e4f92eb57ba72c33251015b94256aa896b9d7f9be23201e397a3930f3",
+    "probeBundleSha256": "57cc7dd320e1bdad77789d2571d51d21beb35420299a2bbc6c2570955499684b",
+    "adminBundleSha256": "b0d353fe62d9499c24a3f690a2f22ca10f4c2e5ea59c79f11fa7431cc5a7c31e",
+    "compressedFullReportSha256": "d99fb5339732f91cfe3bb622d4e4ab9803dc9117e311ccb9137261a4cdd126b2"
+  },
+  "workload": {
+    "headCounts": [0, 1, 4, 8, 16, 32, 64, 100],
+    "pointReadsPerPlacement": 500,
+    "pointCallerConcurrency": 16,
+    "combinedReadsPerPlacement": 500,
+    "combinedCallerConcurrency": 128,
+    "warmupsPerQueryPerPlacement": 64,
+    "measuredReads": 8000,
+    "warmupReads": 1024,
+    "reportedPhases": 16,
+    "localMachineOnly": true,
+    "queryMode": "repeated exact queries; completed-result cache hit validated by canonical facade at zero heads or an independent freshness head at nonzero head counts"
+  },
+  "allPhases": {
+    "issued": 8000,
+    "completeExpectedAnswers": 8000,
+    "failed": 0,
+    "automaticRetries": 0,
+    "routingAccountingValid": true,
+    "allWarmupsComplete": true,
+    "allRowsAndSnapshotsValidated": true,
+    "cacheHits": 8000
+  },
+  "results": [
+    {"heads": 0, "point": {"p50Ms": 6.960958, "p95Ms": 8.38525, "p99Ms": 9.261083, "nativeP99Ms": 3, "serviceP99Ms": 2, "canonicalReadCuts": 500}, "combined": {"p50Ms": 65.533209, "p95Ms": 70.168959, "p99Ms": 70.33175, "nativeP99Ms": 28, "serviceP99Ms": 16, "canonicalReadCuts": 500}},
+    {"heads": 1, "point": {"p50Ms": 6.635708, "p95Ms": 8.647917, "p99Ms": 9.533083, "nativeP99Ms": 4, "serviceP99Ms": 3, "headValidations": 500}, "combined": {"p50Ms": 57.214917, "p95Ms": 62.391, "p99Ms": 62.867792, "nativeP99Ms": 29, "serviceP99Ms": 19, "headValidations": 500}},
+    {"heads": 4, "point": {"p50Ms": 6.551583, "p95Ms": 8.257584, "p99Ms": 8.979209, "nativeP99Ms": 4, "serviceP99Ms": 3, "headValidations": 500}, "combined": {"p50Ms": 58.772708, "p95Ms": 65.347625, "p99Ms": 65.501625, "nativeP99Ms": 27, "serviceP99Ms": 19, "headValidations": 500}},
+    {"heads": 8, "point": {"p50Ms": 6.525416, "p95Ms": 8.470375, "p99Ms": 8.607125, "nativeP99Ms": 4, "serviceP99Ms": 3, "headValidations": 500}, "combined": {"p50Ms": 56.571125, "p95Ms": 72.906625, "p99Ms": 73.044667, "nativeP99Ms": 27, "serviceP99Ms": 20, "headValidations": 500}},
+    {"heads": 16, "point": {"p50Ms": 6.0775, "p95Ms": 7.876917, "p99Ms": 8.448459, "nativeP99Ms": 4, "serviceP99Ms": 3, "headValidations": 500}, "combined": {"p50Ms": 56.208667, "p95Ms": 66.46675, "p99Ms": 66.899209, "nativeP99Ms": 28, "serviceP99Ms": 22, "headValidations": 500}},
+    {"heads": 32, "point": {"p50Ms": 6.215458, "p95Ms": 8.244832, "p99Ms": 8.786542, "nativeP99Ms": 3, "serviceP99Ms": 3, "headValidations": 500}, "combined": {"p50Ms": 51.776417, "p95Ms": 68.165667, "p99Ms": 68.31475, "nativeP99Ms": 26, "serviceP99Ms": 19, "headValidations": 500}},
+    {"heads": 64, "point": {"p50Ms": 6.020917, "p95Ms": 7.947042, "p99Ms": 8.329208, "nativeP99Ms": 3, "serviceP99Ms": 3, "headValidations": 500}, "combined": {"p50Ms": 59.205167, "p95Ms": 70.191458, "p99Ms": 70.326292, "nativeP99Ms": 28, "serviceP99Ms": 22, "headValidations": 500}},
+    {"heads": 100, "point": {"p50Ms": 6.644708, "p95Ms": 8.554083, "p99Ms": 8.846542, "nativeP99Ms": 4, "serviceP99Ms": 3, "headValidations": 500}, "combined": {"p50Ms": 60.022084, "p95Ms": 69.501083, "p99Ms": 69.94575, "nativeP99Ms": 30, "serviceP99Ms": 24, "headValidations": 500, "minCallsPerHead": 1, "maxCallsPerHead": 11}}
+  ],
+  "interpretation": [
+    "This exercises warm completed-result hits only; it is not a direct data-replica read. Cold/unique queries and changed projections still use canonical read-cut/lease paths.",
+    "All 7,000 reads at nonzero head counts used a head validation and made zero canonical read-cut calls; the 1,000 zero-head baseline reads used canonical read-cut calls.",
+    "All measured caller p99 values were below 100 ms on this local machine, including the 128-concurrency combined samples. The canonical baseline also passed locally.",
+    "There is no monotonic latency improvement as head count rises. At 100 heads the local p99 was 8.85 ms for point/16 and 69.95 ms for combined/128, close to the 0-head baseline 9.26/70.33 ms.",
+    "This does not measure Cloudflare placement, external network delivery, cold/unique traffic, concurrent writes, head failure, publication/fallback latency, sustained throughput, or global latest reads over replicated fact data. It does not prove infinite capacity or hosted p99."
+  ]
+}
