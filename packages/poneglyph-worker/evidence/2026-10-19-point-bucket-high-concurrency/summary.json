@@ -1,0 +1,35 @@
+{
+  "kind": "local-append-only-key-bucket-high-concurrency-sweep",
+  "runIds": [
+    "15b47d55-34de-47ad-b5d0-f7c663d472f0",
+    "f2b3cdbc-c261-467e-a174-ff8cdf297754",
+    "5084274f-8c30-4887-b5fa-943d2aa0106a"
+  ],
+  "sourceRevision": "fd3908a49ccc0a1dd6e6008abb98ac4f07ec689d",
+  "localOnly": true,
+  "method": "Each fresh Miniflare/SQLite trial seeded 1,024 independent keys into 8/16/32/64/128 append-only buckets, disposed the runtime, reopened the same persistent state, and then issued all 1,024 unique reads at concurrency 1,024 followed by another 1,024 reads at concurrency 512. Every read validated key/value/revision exactly; no retries.",
+  "totalReads": 30720,
+  "exactReads": 30720,
+  "failed": 0,
+  "allWritesAcknowledged": true,
+  "callerP99MsByBucketCount": {
+    "8": {"cold1024": [67, 68, 72], "warm512": [36, 34, 41]},
+    "16": {"cold1024": [67, 68, 75], "warm512": [30, 32, 34]},
+    "32": {"cold1024": [84, 85, 87], "warm512": [35, 38, 37]},
+    "64": {"cold1024": [103, 112, 113], "warm512": [35, 36, 35]},
+    "128": {"cold1024": [142, 136, 146], "warm512": [34, 34, 34]}
+  },
+  "interpretation": "For 1,024 keys in a cold-after-restart 1,024-request wave, 8/16/32 buckets met local p99 <100 ms in all three runs; 64/128 buckets did not. This is consistent with actor activation/fanout being expensive in this local runtime and with a small number of independent buckets handling many reads each. At concurrency 512, every bucket count had p99 30–41 ms after its actor set was warm. No conclusion about hosted placement or sustained/steady-state capacity follows.",
+  "sourceDigests": {
+    "operatorSha256": "7f1809037f5fa68ccfe1e761484b3500b8d75a064d49c0fa73e9c9592550e4ec",
+    "bucketDoSha256": "9d288579bfcaa7646bd1bc829ac23d082b319fb19481e87ba981b15954e9b3bd",
+    "serviceBundleSha256": "08c389fe7f2b295c0519911d7c1abe39021f25f9ae01702848bada9875a8c4b8",
+    "driverBundleSha256": "4e00df00443b7f70e07c2d78d2a3a89c1696a6c476a4569a1fb7a8fd8a508c7b"
+  },
+  "limitations": [
+    "Local closed-loop Miniflare/SQLite experiment on one machine; three trials only.",
+    "One 1,024-key population, one initial read wave per layout; no sustained/open-loop traffic or failure injection.",
+    "This architecture exposes per-key reads and per-bucket serialization only. Cross-bucket transactions/snapshots and Datalog joins are absent.",
+    "The 1,024-concurrency result applies to the exact local RPC/driver setup, not Cloudflare p99 or an infinite capacity claim."
+  ]
+}

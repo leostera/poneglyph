@@ -1,0 +1,27 @@
+{
+  "kind": "local-point-owner-actor-restart-profile",
+  "runIds": [
+    "c96fd434-c572-4993-b481-143194c68ab2",
+    "99a3206d-9bde-4c9d-8b1c-46e8f0bfaee8"
+  ],
+  "sourceRevision": "fd3908a49ccc0a1dd6e6008abb98ac4f07ec689d",
+  "localOnly": true,
+  "method": "Seed 128, 512 and 1,024 one-key Durable Objects at in-flight 128, dispose the Miniflare runtime, reopen the same persistent SQLite state in a fresh runtime, then issue one read per key at in-flight 128. Trial two adds a reconstructible latest-value Map to the DO; both trials have exact sequence/revision checks and zero application retries.",
+  "outcomes": {
+    "sqlReadPerRequest": {"reads": 1664, "exact": 1664, "failed": 0, "callerP99MsByKeyCount": {"128": 110, "512": 111, "1024": 145}},
+    "reconstructedInMemoryProjection": {"reads": 1664, "exact": 1664, "failed": 0, "callerP99MsByKeyCount": {"128": 108, "512": 110, "1024": 152}}
+  },
+  "interpretation": "The per-key actor's warm one-wave profile was fast, but after runtime/actor restart the p99 exceeded 100 ms at all measured key counts. Reconstructing an in-memory latest projection did not solve the cold-activation spike. This motivated the bucketed actor prototype, which trades actors per key for bounded groups of keys per Durable Object.",
+  "sourceDigests": {
+    "operatorSha256": "96c3b7267d53716631cc459b1ac2fedaefa8a50effc7e935950f0d00b5af9808",
+    "oldPointOwnerDoSha256": "c2b61c8376ae7365a73c94eb401f1a8a5f91c5fe4a9a789389d4200209be7393",
+    "projectedPointOwnerDoSha256": "f9f3a444f71155ff49461b4d3d7a11369de30846e19831c0850d74a0adf98be2",
+    "serviceBundleSha256": "b98905ecaa2f4493b95f1b242df879dcfb0d407418c877ea14be5b2d824c1c17",
+    "driverBundleSha256": "255f98d04e2213e0232dd5f8bc679e5a092bce554491d3a3c6ac3b5ea49ff067"
+  },
+  "limitations": [
+    "Miniflare runtime restart simulates actor reconstruction, not Cloudflare deployment or platform cold-start latency.",
+    "No failure injection, sustained offered load, geographically distributed clients or hosted evidence.",
+    "Per-key transactions only; no graph-wide transaction or query semantics."
+  ]
+}

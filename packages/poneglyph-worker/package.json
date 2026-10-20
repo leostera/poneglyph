@@ -11,6 +11,12 @@
     "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node packages/poneglyph-worker/test",
     "bench:local-tenant-graphs": "node --import tsx bench/local-tenant-graphs.ts",
     "bench:local-partition-counts": "node --import tsx bench/local-partition-counts.ts",
+    "bench:local-point-owner": "node --import tsx bench/local-point-owner.ts",
+    "bench:local-point-owner-scale": "node --import tsx bench/local-point-owner-scale.ts",
+    "bench:local-point-buckets": "node --import tsx bench/local-point-buckets.ts",
+    "bench:local-point-bucket-scale": "node --import tsx bench/local-point-bucket-scale.ts",
+    "bench:local-point-bucket-load": "node --import tsx bench/local-point-bucket-load.ts",
+    "bench:local-point-bucket-large": "node --import tsx bench/local-point-bucket-large.ts",
     "check": "bun run typecheck && bun run test",
     "build": "bun run typecheck && cf build",
     "deploy": "bun run --cwd ../.. build:package && bun run typecheck && cf deploy"

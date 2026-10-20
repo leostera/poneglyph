@@ -1,0 +1,49 @@
+{
+  "kind": "local-append-only-key-bucket-16k-restart-and-load-profile",
+  "runIds": [
+    "f5db658c-230f-4ec9-9041-1100fbc7da3c",
+    "be6a4a71-64b6-406a-9bb2-ab79823a0ba9",
+    "d97d622b-3766-49d8-bbd6-fa413a2e721e"
+  ],
+  "sourceRevision": "fd3908a49ccc0a1dd6e6008abb98ac4f07ec689d",
+  "localOnly": true,
+  "layout": {"keys": 16384, "appendOnlyBuckets": 32, "keysPerBucket": 512},
+  "method": "Each trial committed 16,384 one-key facts at write concurrency 128, disposed the Miniflare runtime, reopened its persistent SQLite state, and then issued 16,384 unique reads in each of three waves at concurrency 512, 1,024 and 256, in that order. Thus the 512 wave was cold-after-restart; later phases exercised the same warmed actors. Exact key/value/revision validation; no retries.",
+  "totalReads": 147456,
+  "exactReads": 147456,
+  "failed": 0,
+  "totalAcknowledgedWrites": 49152,
+  "writeP99MsByTrial": [34, 41, 36],
+  "readResults": {
+    "coldConcurrency512": {
+      "p99Ms": [74, 80, 76],
+      "maxMs": [122, 124, 118],
+      "requestsOver100ms": [13, 16, 12],
+      "percentOver100ms": [0.079, 0.098, 0.073]
+    },
+    "warmConcurrency1024": {
+      "p99Ms": [113, 113, 112],
+      "maxMs": [113, 114, 113],
+      "requestsOver100ms": [1024, 1024, 1024],
+      "percentOver100ms": [6.25, 6.25, 6.25]
+    },
+    "warmConcurrency256": {
+      "p99Ms": [54, 57, 54],
+      "maxMs": [55, 58, 55],
+      "requestsOver100ms": [0, 0, 0],
+      "percentOver100ms": [0, 0, 0]
+    }
+  },
+  "interpretation": "At 16,384 keys/32 buckets, all 16,384 values were exact after restart in every phase. The cold 512-concurrency phase met p99 <100 ms in all three trials; 0.073–0.098% of individual reads exceeded 100 ms, so this is a p99 result, not a hard per-request bound. The later 1,024-concurrency phase missed p99 at 112–113 ms, with 6.25% over 100 ms; 256 concurrency was fully below 100 ms in these samples. This bounds the local claim to a 512-concurrent-read profile, not unbounded scale.",
+  "sourceDigests": {
+    "operatorSha256": "55edc72526688a7522494da52019b97390cf51d590ee52085011a6df1a2d9c3d",
+    "bucketDoSha256": "9d288579bfcaa7646bd1bc829ac23d082b319fb19481e87ba981b15954e9b3bd",
+    "serviceBundleSha256": "08c389fe7f2b295c0519911d7c1abe39021f25f9ae01702848bada9875a8c4b8",
+    "driverBundleSha256": "0625ed96ae4a5e43cb5b1d4b40b83e753fe214674eb32ebc892b5d932eb4a7a7"
+  },
+  "limitations": [
+    "Local Miniflare/SQLite, closed-loop finite batches on one machine; no hosted caller/network, geographic distribution or Cloudflare DO placement.",
+    "No injected failures, sustained/open-loop traffic, cross-bucket transaction/snapshot, Datalog evaluation or tenant-churn test.",
+    "One key population and bucket count; this establishes 16,384 keys, not infinite capacity."
+  ]
+}

@@ -5,5 +5,5 @@
     "strict": true, "noEmit": true, "allowImportingTsExtensions": true,
     "isolatedModules": true, "verbatimModuleSyntax": true, "skipLibCheck": true
   },
-  "include": ["src", "test", "bench/local-tenant-graphs.ts", "bench/local-tenant-graphs-operator.ts", "bench/local-partition-counts.ts", "bench/local-partition-counts-operator.ts", "cloudflare.config.ts", ".cloudflare/types"]
+  "include": ["src", "test", "bench/local-tenant-graphs.ts", "bench/local-tenant-graphs-operator.ts", "bench/local-partition-counts.ts", "bench/local-partition-counts-operator.ts", "bench/local-point-owner.ts", "bench/local-point-owner-operator.ts", "bench/local-point-owner-do.ts", "bench/local-point-owner-service.ts", "bench/local-point-owner-scale.ts", "bench/local-point-owner-scale-operator.ts", "bench/local-point-owner-scale-service.ts", "bench/local-point-bucket-do.ts", "bench/local-point-bucket-operator.ts", "bench/local-point-bucket-service.ts", "bench/local-point-buckets.ts", "bench/local-point-bucket-scale.ts", "bench/local-point-bucket-scale-operator.ts", "bench/local-point-bucket-load.ts", "bench/local-point-bucket-load-operator.ts", "bench/local-point-bucket-large.ts", "bench/local-point-bucket-large-operator.ts", "cloudflare.config.ts", ".cloudflare/types"]
 }

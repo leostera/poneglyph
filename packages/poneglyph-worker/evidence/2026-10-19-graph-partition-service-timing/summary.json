@@ -1,0 +1,28 @@
+{
+  "kind": "local-graph-query-component-timing-sample",
+  "runId": "da0fbbb7-9176-4908-a1b9-de845bbc9cff",
+  "sourceRevision": "fd3908a49ccc0a1dd6e6008abb98ac4f07ec689d",
+  "localOnly": true,
+  "offeredConcurrency": 128,
+  "queriesPerPartitionCount": 128,
+  "partitionCounts": [1, 2, 4, 8, 16, 32, 64, 128],
+  "allQueriesExact": true,
+  "p99MsByPartitionCount": {
+    "1": {"caller": 171, "execution": 153, "snapshot": 118, "evaluation": 55, "release": 21},
+    "2": {"caller": 181, "execution": 169, "snapshot": 100, "evaluation": 79, "release": 26},
+    "4": {"caller": 173, "execution": 157, "snapshot": 72, "evaluation": 77, "release": 41},
+    "8": {"caller": 165, "execution": 152, "snapshot": 72, "evaluation": 65, "release": 33},
+    "16": {"caller": 219, "execution": 208, "snapshot": 127, "evaluation": 58, "release": 28},
+    "32": {"caller": 211, "execution": 204, "snapshot": 93, "evaluation": 67, "release": 48},
+    "64": {"caller": 192, "execution": 185, "snapshot": 96, "evaluation": 63, "release": 27},
+    "128": {"caller": 156, "execution": 150, "snapshot": 70, "evaluation": 54, "release": 27}
+  },
+  "sourceDigests": {
+    "operatorSha256": "f8c7b6900533beea336b2d5d3719009399e41b0342ecba1674e259fdcbe53b2c",
+    "harnessSha256": "5309e164d98b0a56fdc0fbbb03178a204962db20a0230d8cd9d57dd32452e298",
+    "serviceBundleSha256": "61dbc31a108e721a8ffefaaea6f59b4a18646c9a2d8bfb3220a9aabc14dddb68",
+    "driverBundleSha256": "4c9a1de8c08f395a3cc23fc4482591cc916e339f1f60016ea8aa314417d7b811"
+  },
+  "interpretation": "In this local graph-query run, snapshot acquisition and query evaluation each contributed substantial service-side p99 time. The single sample suggests the full graph path has multiple DO/SQLite stages beyond the direct point-owner prototype; timing quantiles are independent and do not sum to caller p99. It is not hosted or repeated timing evidence.",
+  "limitations": ["One closed-loop local sample; not Cloudflare caller latency.", "No retries/fault injection or sustained open-loop phase."]
+}

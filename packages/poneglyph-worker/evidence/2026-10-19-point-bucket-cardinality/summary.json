@@ -1,0 +1,38 @@
+{
+  "kind": "local-append-only-key-bucket-read-profile",
+  "runIds": [
+    "e7637e14-4a69-4b86-b178-1a2f4f34db56",
+    "5f0ea089-da58-4128-91c5-0cd027c82895",
+    "e6c25c47-d749-43df-949a-4c7a387b4a23"
+  ],
+  "sourceRevision": "fd3908a49ccc0a1dd6e6008abb98ac4f07ec689d",
+  "localOnly": true,
+  "method": "Seed the same 128 independent keys into hash-bucket Durable Objects at partition counts 1/2/4/8/16/32/64/128. After disposing and reopening the Miniflare runtime with the same SQLite persistence, issue 128 unique cold pointed reads in a single concurrent wave for each layout. Buckets reconstruct a bounded latest-value Map from append-only facts. No retries.",
+  "totalReads": 3072,
+  "exactReads": 3072,
+  "failed": 0,
+  "revision": 1,
+  "callerP99MsByPartitionCount": {
+    "1": [10, 9, 9],
+    "2": [11, 10, 9],
+    "4": [11, 9, 9],
+    "8": [14, 14, 13],
+    "16": [21, 17, 19],
+    "32": [30, 30, 27],
+    "64": [51, 48, 44],
+    "128": [100, 91, 84]
+  },
+  "interpretation": "At 128 independent cold reads, fewer key buckets improved local p99 in this workload, likely by avoiding a cold-start storm across 128 simultaneously activated DOs. Bucket counts 1 through 64 stayed below 100 ms p99 in all three trials. One of three 128-bucket trials landed at 100 ms (max 101 ms), so the strict target was not reliable at one actor per key. This is not a hosted capacity result; the single-bucket case is a throughput bottleneck risk under sustained/hot traffic.",
+  "sourceDigests": {
+    "operatorSha256": "fc422ee983f046a099edf9a59f250c21c76d516079f162e29de4fc99e8b3f167",
+    "bucketDoSha256": "9d288579bfcaa7646bd1bc829ac23d082b319fb19481e87ba981b15954e9b3bd",
+    "serviceBundleSha256": "08c389fe7f2b295c0519911d7c1abe39021f25f9ae01702848bada9875a8c4b8",
+    "driverBundleSha256": "86040db37bc012c59505605058cdec8c4ddede7e8605300b2123e67bd203dff1"
+  },
+  "limitations": [
+    "Local Miniflare/SQLite, three closed-loop single-wave trials on one machine.",
+    "No open-loop/sustained workload, failure injection, tenant churn or hosted placement.",
+    "Keys in distinct buckets have independent histories; cross-bucket transactions, joins and snapshots are not provided.",
+    "Write p99 increases with bucket count due many cold actors; this summary focuses on read latency."
+  ]
+}

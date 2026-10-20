@@ -1,0 +1,41 @@
+{
+  "kind": "local-single-key-owner-vs-graph-point-read-prototype",
+  "runIds": [
+    "dbb0f2b5-1a84-47b9-80e9-89b6edd8618b",
+    "ceef00fe-b5d5-4177-9a8e-2c0e50acda01",
+    "db662a9e-ef53-4525-a8ef-c7a4fa40530d"
+  ],
+  "sourceRevision": "fd3908a49ccc0a1dd6e6008abb98ac4f07ec689d",
+  "localOnly": true,
+  "workloadPerTrial": {
+    "independentKeys": 128,
+    "offeredConcurrency": 128,
+    "seedWritesAcknowledged": {"poneglyphGraphs": 128, "pointOwners": 128},
+    "readPhases": ["128 unique keys", "128 requests to one hot key"],
+    "noApplicationRetries": true
+  },
+  "results": {
+    "poneglyphGraphPerKey": {
+      "uniqueKeys": {"exact": 384, "failed": 0, "snapshotSeq": 1, "cacheHits": 0, "callerP99MsByTrial": [157, 173, 151]},
+      "singleHotKey": {"exact": 384, "failed": 0, "snapshotSeq": 1, "cacheHitsPerTrial": 128, "callerP99MsByTrial": [28, 29, 28]}
+    },
+    "appendOnlyPointOwnerDOPerKey": {
+      "uniqueKeys": {"exact": 384, "failed": 0, "revision": 1, "callerP99MsByTrial": [12, 12, 11]},
+      "singleHotKey": {"exact": 384, "failed": 0, "revision": 1, "callerP99MsByTrial": [10, 9, 9]}
+    }
+  },
+  "totalReadOutcomes": {"poneglyphGraphPerKey": 768, "pointOwnerDO": 768, "exact": 1536, "failed": 0},
+  "interpretation": "A benchmark-only one-key Durable Object serving a local append-only SQLite fact log and its latest value projection reduced warm-actor pointed-read p99 substantially versus a full Poneglyph graph query in this local 128-concurrency sample. It also completed a single-hot-key read wave with p99 below 10 ms. This changes the coordination atom: it does not provide Datalog joins, graph-wide transactions or a cross-key snapshot. These are local RPC timings, not hosted evidence.",
+  "sourceDigests": {
+    "operatorSha256": "b8be6109e3ee96613642625fa043d44b2ede47e1bfd0de7cc2d2f9fb6cdaeb11",
+    "pointOwnerDoSha256": "c2b61c8376ae7365a73c94eb401f1a8a5f91c5fe4a9a789389d4200209be7393",
+    "serviceBundleSha256": "925648afd8d29df64857b38015fa659d8fca4f2a3c8a3a9026aaa63889ffbcd7",
+    "driverBundleSha256": "2641d83d9d8fa67cc23d4f2697e4ecfb3baae686531c75c16632e9fe40ed19cf"
+  },
+  "limitations": [
+    "Three one-wave local Miniflare trials; owner actors were recently used for seeding, not cold-started between seed and read.",
+    "Single-key owner preserves only per-key history/atomicity. It is not a Poneglyph replacement for graph-wide transactions or arbitrary query algebra.",
+    "No injected actor failures, sustained/open-loop traffic, network path, Cloudflare placement or hosted p99.",
+    "A one-hot-key 128-request wave does not prove arbitrary sustained throughput for that actor."
+  ]
+}

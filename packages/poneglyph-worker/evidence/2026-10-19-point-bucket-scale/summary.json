@@ -1,0 +1,45 @@
+{
+  "kind": "local-append-only-key-bucket-cardinality-and-scale-profile",
+  "runIds": [
+    "b251b913-1781-4cad-8a93-cca8263f5a71",
+    "c7996347-e847-4544-997e-f596c7f6813d",
+    "3777bba1-cfb6-4346-8abf-8641736a594a"
+  ],
+  "sourceRevision": "fd3908a49ccc0a1dd6e6008abb98ac4f07ec689d",
+  "localOnly": true,
+  "method": "Each of three fresh Miniflare runtimes seeded 128 and 1,024 unique keys into hash-bucket Durable Objects at 8/16/32/64/128 buckets per key set. The runtime was disposed and recreated over the same SQLite state before 128-concurrency unique-key read waves. Every read checked exact key/value/revision 1. No retries.",
+  "totalReads": 17280,
+  "exactReads": 17280,
+  "failed": 0,
+  "totalSeedWrites": 17280,
+  "allSeedWritesAcknowledged": true,
+  "callerP99MsByKeyCountAndBucketCount": {
+    "128": {
+      "8": [12, 13, 13],
+      "16": [19, 20, 19],
+      "32": [26, 33, 32],
+      "64": [43, 52, 52],
+      "128": [82, 96, 91]
+    },
+    "1024": {
+      "8": [11, 10, 10],
+      "16": [16, 15, 16],
+      "32": [26, 25, 25],
+      "64": [46, 56, 53],
+      "128": [91, 93, 148]
+    }
+  },
+  "interpretation": "The benchmark-only bucketed append-only owner design served 1,024 independent keys using 64 buckets with p99 46/56/53 ms across three local runtime-restart trials at 128 concurrent requests. All 17,280 reads completed exactly and all seed writes were acknowledged. At one bucket per key, the 1,024-key layout was unstable: p99 91/93/148 ms. This suggests bounded grouping can avoid both one-hot-owner contention and a large cold-actor activation wave for the tested workload; it is not a production SLO or infinite-capacity proof.",
+  "sourceDigests": {
+    "operatorSha256": "9ac47c0d3a69e952e1bf1c5483a2b16afb9deecb533489f54d7609a736f67ed4",
+    "bucketDoSha256": "9d288579bfcaa7646bd1bc829ac23d082b319fb19481e87ba981b15954e9b3bd",
+    "serviceBundleSha256": "08c389fe7f2b295c0519911d7c1abe39021f25f9ae01702848bada9875a8c4b8",
+    "driverBundleSha256": "c4114dd9cd66fb85bbb1e41c343be1f77709f0d160fcf2843761e905a0b622b3"
+  },
+  "limitations": [
+    "Local Miniflare/SQLite, closed-loop 128-concurrency waves, three trials on one machine.",
+    "No open-loop traffic, sustained windows, mixed cross-key writes, failure injection, Cloudflare placement or external caller latency.",
+    "Append-only facts and linearizability are scoped to one key within one bucket. There is no atomic transaction or snapshot across buckets, and the prototype does not implement Poneglyph Datalog joins.",
+    "This tests up to 1,024 keys, not unbounded growth; actor count, storage size, hot-bucket contention and eviction behavior require further capacity testing."
+  ]
+}

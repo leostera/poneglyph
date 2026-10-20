@@ -2,8 +2,9 @@ import type PoneglyphService from "../src/index.js";
 
 type Partition = {count: number; graphIds: string[]};
 type Env = {PONEGLYPH: Service<PoneglyphService>; PARTITIONS: Partition[]; RUN_ID: string};
+type ServerTiming = Readonly<{executionMs: number; snapshotMs: number; evaluationMs: number; releaseMs: number}>;
 type Result = {tenant: number; elapsedMs: number; exactAnswer: boolean; snapshotSeq: number | null;
-  cacheHits: number; errorName?: string};
+  cacheHits: number; serverTiming?: ServerTiming; errorName?: string};
 const source = "control:local-partition-count-profile";
 const queryRounds = [0, 1, 2, 3] as const;
 const partitionCounts = [1, 2, 4, 8, 16, 32, 64, 128] as const;
@@ -18,6 +19,10 @@ const latency = (samples: number[]) => {
   const at = (p: number) => sorted[Math.max(0, Math.ceil(p * sorted.length) - 1)] ?? null;
   return {count: sorted.length, p50Ms: at(0.5), p95Ms: at(0.95), p99Ms: at(0.99), maxMs: sorted.at(-1) ?? null};
 };
+const serverTiming = (samples: Result[]) => Object.fromEntries(
+  (["executionMs", "snapshotMs", "evaluationMs", "releaseMs"] as const).map(field => [field,
+    latency(samples.flatMap(sample => sample.serverTiming === undefined ? [] : [sample.serverTiming[field]]))]),
+);
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -63,7 +68,7 @@ export default {
             const enabled = result.rows[0]?.["Enabled"];
             samples[tenant] = {tenant, elapsedMs: performance.now() - started,
               exactAnswer: result.rows.length === 1 && enabled?.type === "string" && enabled.value === "true" && result.snapshotSeq === 1,
-              snapshotSeq: result.snapshotSeq, cacheHits: result.metrics.cacheHits ?? 0};
+              snapshotSeq: result.snapshotSeq, cacheHits: result.metrics.cacheHits ?? 0, serverTiming: result.metrics.timing};
           } catch (error) {
             samples[tenant] = {tenant, elapsedMs: performance.now() - started, exactAnswer: false,
               snapshotSeq: null, cacheHits: 0, errorName: error instanceof Error ? error.name : "unknown"};
@@ -76,7 +81,7 @@ export default {
         offered: tenantCount, completed: exact.length, failed: tenantCount - exact.length,
         exactAnswers: exact.length, offeredConcurrency: tenantCount, observedMaxInFlight,
         cacheHits: samples.reduce((sum, sample) => sum + sample.cacheHits, 0),
-        callerLatency: latency(samples.map(sample => sample.elapsedMs)), samples});
+        callerLatency: latency(samples.map(sample => sample.elapsedMs)), serviceTiming: serverTiming(samples), samples});
     }
     return Response.json({runId: env.RUN_ID,
       workload: "128 unique cold pointed lookups per partition layout; 128 concurrent requests; no retries",
