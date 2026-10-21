@@ -1,34 +1,20 @@
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Button } from "@cloudflare/kumo/components/button";
-import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 import { ClipboardText } from "@cloudflare/kumo/components/clipboard-text";
-import { Input } from "@cloudflare/kumo/components/input";
 import { LayerCard } from "@cloudflare/kumo/components/layer-card";
-import { Select } from "@cloudflare/kumo/components/select";
 import { Text } from "@cloudflare/kumo/components/text";
-import { CheckCircleIcon, MagnifyingGlassIcon, PaperPlaneTiltIcon, PlusIcon, TrashIcon, WarningIcon } from "@phosphor-icons/react";
-import { useState } from "react";
+import { CheckCircleIcon, MagnifyingGlassIcon, PaperPlaneTiltIcon, WarningCircleIcon, WarningIcon } from "@phosphor-icons/react";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { newRequestToken, submitFacts, Unauthenticated, type FactDraft, type Session, type WriteOutcome } from "./api.ts";
+import type { EditorProblems } from "./FactsEditor.tsx";
+import { parseFactsSource, starterSource } from "./facts-source.ts";
 import type { HistoryEntry } from "./latency.tsx";
 import { formatMs } from "./values.tsx";
 
 type RecordEntry = (entry: Omit<HistoryEntry, "id" | "at">) => void;
-type Draft = FactDraft & { key: number };
-
-const VALUE_HINTS: Readonly<Record<string, string>> = {
-  text: "Any text", number: "Signed 64-bit integer, e.g. 1500000000", boolean: "true / false",
-  reference: "Entity URI, e.g. onepiece:crew:…", date: "YYYY-MM-DD", date_time: "RFC 3339, e.g. 2026-10-21T12:00:00Z",
-};
-
-function starterFacts(author: string): Draft[] {
-  const entity = `playground:pirate:${author}-${Math.random().toString(36).slice(2, 7)}`;
-  return [
-    { key: 1, entity, field: "onepiece:name", value: { type: "text", value: "Captain Demo" }, retraction: false },
-    { key: 2, entity, field: "onepiece:bounty", value: { type: "number", value: "1500000000" }, retraction: false },
-    { key: 3, entity, field: "onepiece:member_of", value: { type: "reference", value: "onepiece:crew:7802a7e4-aeb6-58c5-8999-f08deccc5902" }, retraction: false },
-  ];
-}
+const FactsEditor = lazy(() => import("./FactsEditor.tsx"));
 
 function readBackQuery(facts: readonly FactDraft[]): string {
   const entity = facts[0]!.entity;
@@ -39,22 +25,21 @@ function readBackQuery(facts: readonly FactDraft[]): string {
 export function FactsPanel({ session, record, onSignedOut, openQuery }: {
   session: Session; record: RecordEntry; onSignedOut: () => void; openQuery: (query: string, run: boolean) => void;
 }) {
-  const [drafts, setDrafts] = useState<Draft[]>(() => starterFacts(session.user.author));
+  const [source, setSource] = useState(() => starterSource(session.user.author));
+  const [reset, setReset] = useState(() => ({ text: source, nonce: 0 }));
   const [submitting, setSubmitting] = useState(false);
   const [outcome, setOutcome] = useState<WriteOutcome | undefined>();
+  const [problems, setProblems] = useState<EditorProblems>({ errors: 0 });
   // A token is reused only to retry an unknown outcome with identical facts.
   const [token, setToken] = useState(newRequestToken);
-  const [nextKey, setNextKey] = useState(10);
+  const parsed = useMemo(() => parseFactsSource(source, session.limits.factsPerWrite), [source, session.limits.factsPerWrite]);
 
-  const update = (key: number, change: Partial<FactDraft>) => {
-    setDrafts(previous => previous.map(draft => draft.key === key ? { ...draft, ...change } : draft));
-    setToken(newRequestToken());
-    setOutcome(undefined);
-  };
+  const edit = (value: string) => { setSource(value); setToken(newRequestToken()); setOutcome(undefined); };
   const submit = async (requestToken: string) => {
     setSubmitting(true);
     try {
-      const facts = drafts.map(({ key: _key, ...fact }) => fact);
+      if (!parsed.ok) return;
+      const facts = parsed.facts;
       const result = await submitFacts(facts, requestToken);
       setOutcome(result);
       record({ kind: "write", label: `${facts.length} fact${facts.length === 1 ? "" : "s"} · ${facts[0]?.entity ?? ""}`, ok: result.ok, roundTripMs: result.roundTripMs, ...(result.ok ? { serverMs: result.serverMs } : {}) });
@@ -71,34 +56,23 @@ export function FactsPanel({ session, record, onSignedOut, openQuery }: {
       <LayerCard>
         <LayerCard.Secondary className="flex items-center justify-between gap-2">
           <span>Transaction</span>
-          <Button size="sm" variant="ghost" onClick={() => { setDrafts(starterFacts(session.user.author)); setToken(newRequestToken()); setOutcome(undefined); }}>Reset example</Button>
+          <Button size="sm" variant="ghost" onClick={() => { const text = starterSource(session.user.author); setReset(previous => ({ text, nonce: previous.nonce + 1 })); edit(text); }}>Reset example</Button>
         </LayerCard.Secondary>
         <LayerCard.Primary className="flex flex-col gap-3">
-          {drafts.map(draft => (
-            <div key={draft.key} className="grid grid-cols-1 items-end gap-2 rounded-lg border border-kumo-hairline p-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_8.5rem_minmax(0,1.2fr)_auto]">
-              <Input size="sm" label="Entity" className="font-code" value={draft.entity} spellCheck={false} onChange={event => update(draft.key, { entity: event.target.value })} />
-              <Input size="sm" label="Field" className="font-code" value={draft.field} spellCheck={false} onChange={event => update(draft.key, { field: event.target.value })} />
-              <Select size="sm" label="Type" value={draft.value.type}
-                items={Object.fromEntries(session.writableValueTypes.map(type => [type, type]))}
-                onValueChange={type => update(draft.key, { value: { type: String(type), value: type === "boolean" ? true : "" } })} />
-              {draft.value.type === "boolean" ? (
-                <Select size="sm" label="Value" value={String(draft.value.value)} items={{ true: "true", false: "false" }}
-                  onValueChange={value => update(draft.key, { value: { type: "boolean", value: value === "true" } })} />
-              ) : (
-                <Input size="sm" label="Value" placeholder={VALUE_HINTS[draft.value.type]} className={draft.value.type === "text" ? "" : "font-code"}
-                  value={String(draft.value.value)} spellCheck={false} onChange={event => update(draft.key, { value: { type: draft.value.type, value: event.target.value } })} />
-              )}
-              <div className="flex items-center gap-2 pb-1">
-                <Checkbox label="Retract" checked={draft.retraction} onCheckedChange={checked => update(draft.key, { retraction: checked === true })} />
-                <Button size="sm" variant="ghost" shape="square" aria-label="Remove fact" icon={<TrashIcon />} disabled={drafts.length === 1}
-                  onClick={() => { setDrafts(previous => previous.filter(candidate => candidate.key !== draft.key)); setToken(newRequestToken()); }} />
-              </div>
-            </div>
-          ))}
+          <Suspense fallback={<div className="flex h-[22rem] items-center justify-center rounded-lg border border-kumo-line"><Loader /></div>}>
+            <FactsEditor reset={reset} onChange={edit} onCommit={() => { if (parsed.ok && !submitting) void submit(token); }} onProblems={setProblems} />
+          </Suspense>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="secondary" icon={<PlusIcon />} disabled={drafts.length >= session.limits.factsPerWrite}
-              onClick={() => { const last = drafts.at(-1); setDrafts(previous => [...previous, { key: nextKey, entity: last?.entity ?? "", field: "", value: { type: "text", value: "" }, retraction: false }]); setNextKey(nextKey + 1); setToken(newRequestToken()); }}>Add fact</Button>
-            <Button variant="primary" icon={<PaperPlaneTiltIcon weight="fill" />} loading={submitting} disabled={submitting} onClick={() => void submit(token)}>Commit transaction</Button>
+            <Button variant="primary" icon={<PaperPlaneTiltIcon weight="fill" />} loading={submitting} disabled={submitting || !parsed.ok} onClick={() => void submit(token)}>Commit transaction</Button>
+            {parsed.ok ? (
+              <Text variant="secondary" size="xs">
+                {parsed.facts.length} {parsed.facts.length === 1 ? "fact" : "facts"} · {((count) => `${count} ${count === 1 ? "entity" : "entities"}`)(new Set(parsed.facts.map(fact => fact.entity)).size)}
+                {parsed.facts.some(fact => fact.retraction) ? ` · ${parsed.facts.filter(fact => fact.retraction).length} retractions` : ""} · ⌘/Ctrl+Enter commits
+              </Text>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs text-kumo-danger"><WarningCircleIcon weight="fill" />{parsed.error}</span>
+            )}
+            {parsed.ok && problems.errors > 0 && <span className="inline-flex items-center gap-1 text-xs text-kumo-warning" title={problems.first}><WarningIcon weight="fill" />{problems.errors} type {problems.errors === 1 ? "issue" : "issues"}: {problems.first}</span>}
           </div>
         </LayerCard.Primary>
       </LayerCard>

@@ -32,7 +32,7 @@ const api = createApiHandler({
 // and ctx.access apply to every response. See build/client-assets.ts.
 const CONTENT_SECURITY_POLICY = [
   "default-src 'none'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data:", "font-src 'self' data:",
-  "connect-src 'self'", "frame-ancestors 'none'", "base-uri 'none'", "form-action 'none'",
+  "connect-src 'self'", "worker-src 'self'", "frame-ancestors 'none'", "base-uri 'none'", "form-action 'none'",
 ].join("; ");
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const decoded = new Map<string, Uint8Array<ArrayBuffer>>();
