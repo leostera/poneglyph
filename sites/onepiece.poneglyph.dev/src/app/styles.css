@@ -6,3 +6,30 @@
 html, body { min-height: 100%; }
 body { font-feature-settings: "cv11", "ss01"; }
 .font-code { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+/* Datalog highlighting (light, then dark). */
+.datalog-editor .dl-predicate { color: #0b5cd5; font-weight: 600; }
+.datalog-editor .dl-variable { color: #a1420c; }
+.datalog-editor .dl-string { color: #12784a; }
+.datalog-editor .dl-number { color: #7a3dd1; }
+.datalog-editor .dl-keyword { color: #b3197a; font-weight: 600; }
+.datalog-editor .dl-operator { color: #b3197a; }
+.datalog-editor .dl-atom { color: #3d4a5c; }
+.datalog-editor .dl-punctuation { color: #8a94a3; }
+.datalog-editor .dl-invalid { color: #d0302f; text-decoration: wavy underline; }
+.datalog-editor .cm-matchingBracket { background: rgb(11 92 213 / 0.14); outline: 1px solid rgb(11 92 213 / 0.35); border-radius: 2px; }
+.datalog-editor .cm-selectionBackground, .datalog-editor .cm-focused .cm-selectionBackground { background: rgb(11 92 213 / 0.18) !important; }
+[data-mode="dark"] .datalog-editor .dl-predicate { color: #74aaff; }
+[data-mode="dark"] .datalog-editor .dl-variable { color: #ffb36b; }
+[data-mode="dark"] .datalog-editor .dl-string { color: #6fdc9f; }
+[data-mode="dark"] .datalog-editor .dl-number { color: #c59bff; }
+[data-mode="dark"] .datalog-editor .dl-keyword, [data-mode="dark"] .datalog-editor .dl-operator { color: #ff7ac6; }
+[data-mode="dark"] .datalog-editor .dl-atom { color: #c3ccd8; }
+[data-mode="dark"] .datalog-editor .dl-punctuation { color: #7d8794; }
+[data-mode="dark"] .datalog-editor .cm-matchingBracket { background: rgb(116 170 255 / 0.18); outline-color: rgb(116 170 255 / 0.45); }
+[data-mode="dark"] .datalog-editor .cm-selectionBackground, [data-mode="dark"] .datalog-editor .cm-focused .cm-selectionBackground { background: rgb(116 170 255 / 0.25) !important; }
+.cm-tooltip.cm-tooltip-autocomplete { border-radius: 8px; border: 1px solid var(--color-kumo-line); background: var(--color-kumo-elevated); overflow: hidden; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.cm-tooltip-autocomplete ul li[aria-selected] { background: var(--color-kumo-brand) !important; color: white !important; }
+.cm-tooltip-autocomplete .cm-completionDetail { opacity: 0.6; margin-left: 0.75em; font-style: normal; }
+.cm-tooltip-autocomplete .cm-completionMatchedText { text-decoration: none; font-weight: 700; }
+.cm-tooltip-autocomplete ul li { padding: 3px 10px !important; }

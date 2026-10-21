@@ -1,17 +1,22 @@
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Empty } from "@cloudflare/kumo/components/empty";
-import { InputArea } from "@cloudflare/kumo/components/input";
 import { LayerCard } from "@cloudflare/kumo/components/layer-card";
 import { Table } from "@cloudflare/kumo/components/table";
 import { Text } from "@cloudflare/kumo/components/text";
 import { ArrowsClockwiseIcon, LightningIcon, PlayIcon, WarningCircleIcon, WarningIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { DatalogEditor } from "./DatalogEditor.tsx";
 import { runQuery, Unauthenticated, type QueryOutcome, type Session } from "./api.ts";
 import { type HistoryEntry, QueryStats } from "./latency.tsx";
 import { formatMs, ValueCell } from "./values.tsx";
 
 const DISPLAY_ROWS = 250;
+const FIELD_PATTERN = /([A-Za-z][A-Za-z0-9_.-]*:[A-Za-z0-9:_?+.-]+)\s*\(/g;
+// Completion candidates: every field used by the curated examples plus fields the schema tab observed.
+const KNOWN_FIELDS = ["wiki:page:title", "wiki:page:category", "wiki:page:link", "wiki:page:namespace", "wiki:page:text_bytes",
+  "onepiece:name", "onepiece:alias", "onepiece:kind", "onepiece:member_of", "onepiece:former_member_of", "onepiece:captain",
+  "onepiece:affiliation", "onepiece:occupation", "onepiece:ship", "onepiece:bounty", "onepiece:source_page"];
 type RecordEntry = (entry: Omit<HistoryEntry, "id" | "at">) => void;
 
 export function QueryPanel({ session, record, onSignedOut, pending }: {
@@ -50,6 +55,8 @@ export function QueryPanel({ session, record, onSignedOut, pending }: {
   }, [pending, execute, session.examples]);
 
   const example = session.examples.find(candidate => candidate.id === selectedExample);
+  const fields = useMemo(() => [...new Set([...KNOWN_FIELDS, ...session.examples.flatMap(candidate => [...candidate.query.matchAll(FIELD_PATTERN)].map(match => match[1]!))])].sort(), [session.examples]);
+  const onEdit = useCallback((value: string) => { setQuery(value); setSelectedExample(session.examples.find(candidate => candidate.query === value)?.id); }, [session.examples]);
   return (
     <div className="flex flex-col gap-4">
       <LayerCard>
@@ -74,10 +81,13 @@ export function QueryPanel({ session, record, onSignedOut, pending }: {
         </LayerCard.Secondary>
         <LayerCard.Primary className="flex flex-col gap-3">
           {example && <Text variant="secondary" size="sm">{example.description}</Text>}
-          <InputArea aria-label="Datalog query" className="font-code text-sm" autoResize minRows={3} maxRows={12} value={query}
-            spellCheck={false} maxLength={session.limits.queryCharacters}
-            onValueChange={value => { setQuery(value); setSelectedExample(session.examples.find(candidate => candidate.query === value)?.id); }}
-            onKeyDown={event => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void execute(query); } }} />
+          <DatalogEditor label="Datalog query" value={query} onChange={onEdit} onRun={() => void execute(query)} fields={fields} maxLength={session.limits.queryCharacters} />
+          <Text variant="secondary" size="xs">
+            <span className="datalog-editor font-code">
+              <span className="dl-predicate">field:uri</span>(<span className="dl-variable">Variable</span>, <span className="dl-string">"text"</span>, <span className="dl-number">42</span>, <span className="dl-keyword">_</span>)
+            </span>
+            {" "}· clauses join on shared variables · builtins <span className="datalog-editor font-code"><span className="dl-keyword">gt</span>, <span className="dl-keyword">contains</span>, <span className="dl-keyword">startsWith</span>…</span> · Ctrl+Space completes fields
+          </Text>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="primary" icon={<PlayIcon weight="fill" />} loading={running === "once"} disabled={running !== false} onClick={() => void execute(query)}>Run query</Button>
             <Button variant="secondary" icon={<ArrowsClockwiseIcon />} loading={running === "repeat"} disabled={running !== false} onClick={() => void execute(query, 5)}>Run 5×</Button>
