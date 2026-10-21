@@ -10,3 +10,4 @@ evidence/
 !.env.example
 *.log
 .DS_Store
+.client-dist/

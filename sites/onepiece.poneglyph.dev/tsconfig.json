@@ -24,6 +24,9 @@
     "src",
     "test",
     "scripts",
+    "build",
+    "vite.config.ts",
+    "vite.client.config.ts",
     "cloudflare.config.ts",
     ".cloudflare/types"
   ]

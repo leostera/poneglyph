@@ -9,14 +9,15 @@
     "import:prepare:remainder": "node --import tsx scripts/prepare-import.ts remainder90",
     "import:audit": "node --import tsx scripts/audit-import.ts",
     "import:audit:remainder": "node --import tsx scripts/audit-import.ts remainder90",
-    "build": "bun run typecheck && cf build",
-    "deploy": "bun run --cwd ../.. build:package && bun run --cwd ../../packages/poneglyph-worker deploy && bun run typecheck && cf deploy",
+    "build": "bun run typecheck && bun run build:client && cf build",
+    "deploy": "bun run --cwd ../.. build:package && bun run --cwd ../../packages/poneglyph-worker deploy && bun run typecheck && bun run build:client && cf deploy",
     "typecheck": "cf workers types && tsc --noEmit",
     "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node sites/onepiece.poneglyph.dev/test",
     "benchmark:query-rubric": "node --import tsx scripts/run-query-rubric.ts",
     "check": "bun run typecheck && bun run test",
     "load:corpus": "node --import tsx scripts/load-corpus.ts",
-    "preview:local": "node --import tsx scripts/local-preview.ts"
+    "preview:local": "node --import tsx scripts/local-preview.ts",
+    "build:client": "vite build --config vite.client.config.ts"
   },
   "dependencies": {
     "@cloudflare/kumo": "2.15.0",

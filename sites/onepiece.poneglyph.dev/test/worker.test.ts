@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { test } from "vitest";
-import { build } from "esbuild";
+import { build, type Plugin } from "esbuild";
 import { Miniflare, Log, LogLevel } from "miniflare";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { ACCESS_AUDIENCE, API_LIMITS, API_RATE_LIMIT, WRITE_RATE_LIMIT } from "../src/api.js";
@@ -12,6 +12,15 @@ import { RATE_LIMIT } from "../src/rate-limit.js";
 import { COMPATIBILITY_DATE, GRAPH_ID } from "../src/runtime.js";
 
 const site = resolve(import.meta.dirname, "..");
+// Stand-in for the embedded browser build (see build/client-assets.ts).
+const fixtureClient: Plugin = { name: "fixture-client", setup(builder) {
+  builder.onResolve({ filter: /^virtual:playground-client$/ }, () => ({ path: "client", namespace: "fixture-client" }));
+  builder.onLoad({ filter: /.*/, namespace: "fixture-client" }, () => ({ loader: "js", contents: `export default ${JSON.stringify({
+    "/index.html": { type: "text/html; charset=utf-8", etag: '"i"', text: "<!doctype html><div id=root></div>" },
+    "/assets/app.js": { type: "text/javascript; charset=utf-8", etag: '"a"', text: "console.log(1)" },
+    "/logo.png": { type: "image/png", etag: '"p"', base64: "iVBORw==" },
+  })};` }));
+} };
 const ORIGIN = `https://${PUBLIC_HOST}`;
 const luffy = "wiki:onepiece:page:Monkey%20D.%20Luffy";
 const zoro = "wiki:onepiece:page:Roronoa%20Zoro";
@@ -46,10 +55,9 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
   try {
     await build({ absWorkingDir: site, entryPoints: { playground: "src/index.ts", database: "../../packages/poneglyph-worker/src/index.ts", operator: "src/operator.ts" },
       outdir: directory, outExtension: { ".js": ".mjs" }, bundle: true, format: "esm", platform: "browser",
-      target: "es2024", conditions: ["workerd", "worker", "browser"], external: ["cloudflare:*", "node:*"] });
+      target: "es2024", conditions: ["workerd", "worker", "browser"], external: ["cloudflare:*", "node:*"], plugins: [fixtureClient] });
     const manifest = (contents: string) => ({ mainModule: "index.mjs", modules: { "index.mjs": { type: "esm" as const, contents } } });
     const playground = manifest(await readFile(resolve(directory, "playground.mjs"), "utf8"));
-    const assets = manifest(`export default { fetch(request) { return new URL(request.url).pathname === "/missing.js" ? new Response("nope", { status: 404 }) : new Response("<!doctype html><div id=root></div>", { headers: { "content-type": "text/html" } }); } };`);
     const grants = { playground: { [GRAPH_ID]: ["read"] }, "playground-writer": { [GRAPH_ID]: ["read", "write"] }, "playground-loader": { [GRAPH_ID]: ["read", "write"] } };
     const playgroundEnv = {
       PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground" } },
@@ -57,13 +65,11 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
       MCP_RATE_LIMITER: { type: "rate-limit", ...RATE_LIMIT },
       API_RATE_LIMITER: { type: "rate-limit", ...API_RATE_LIMIT },
       WRITE_RATE_LIMITER: { type: "rate-limit", ...WRITE_RATE_LIMIT },
-      ASSETS: { type: "worker", worker: "assets" },
     } as const;
     runtime = new Miniflare({ port: 0, host: "127.0.0.1", resourcePersistencePath: resolve(directory, "state"),
       telemetry: { enabled: false }, log: new Log(LogLevel.WARN), workers: [
         { dev: { access: { aud: ACCESS_AUDIENCE, identity: { email: "member@example.test" } } },
           config: { name: "playground", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"], env: playgroundEnv } },
-        { config: { name: "assets", manifest: assets, compatibilityDate: COMPATIBILITY_DATE } },
         { config: {
           name: "database",
           manifest: manifest(await readFile(resolve(directory, "database.mjs"), "utf8")),
@@ -88,7 +94,7 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
         // Same public entrypoint without limiters or database: fail closed.
         { dev: { access: { aud: ACCESS_AUDIENCE, identity: { email: "member@example.test" } } },
           config: { name: "unadmitted", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
-          env: { MCP_RATE_LIMITER: { type: "rate-limit", namespace: "2026101402", simple: { limit: 1, period: 60 } }, ASSETS: { type: "worker", worker: "assets" } } } },
+          env: { MCP_RATE_LIMITER: { type: "rate-limit", namespace: "2026101402", simple: { limit: 1, period: 60 } } } } },
       ] });
     await runtime.ready;
     const active = runtime;
@@ -120,7 +126,23 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
     assert.match(await home.text(), /id=root/);
     assert.match(home.headers.get("content-security-policy") ?? "", /script-src 'self'/);
     assert.equal(home.headers.get("x-frame-options"), "DENY");
+    assert.equal(home.headers.get("cache-control"), "private, no-cache");
     assert.equal((await active.dispatchFetch(`${ORIGIN}/`, { method: "POST", body: "{}" })).status, 405);
+    assert.match(await (await active.dispatchFetch(`${ORIGIN}/write`)).text(), /id=root/);
+    const script = await active.dispatchFetch(`${ORIGIN}/assets/app.js`);
+    assert.match(script.headers.get("cache-control") ?? "", /immutable/);
+    assert.equal(await script.text(), "console.log(1)");
+    assert.equal((await active.dispatchFetch(`${ORIGIN}/assets/app.js`, { headers: { "if-none-match": '"a"' } })).status, 304);
+    assert.deepEqual([...new Uint8Array(await (await active.dispatchFetch(`${ORIGIN}/logo.png`)).arrayBuffer())], [0x89, 0x50, 0x4e, 0x47]);
+    assert.equal((await active.dispatchFetch(`${ORIGIN}/missing.js`)).status, 404);
+
+    // Without a verified Access context every public route fails closed,
+    // including the shell and MCP (defense in depth behind the edge app).
+    const unverified = await active.getWorker("playground");
+    for (const path of ["/", "/assets/app.js", "/mcp", "/api/session"]) {
+      const response = await unverified.fetch(`${ORIGIN}${path}`, { method: path === "/mcp" ? "POST" : "GET", body: path === "/mcp" ? "{}" : undefined });
+      assert.equal(response.status, 401, path); await response.text();
+    }
 
     // Direct invocation carries no Access identity: the API refuses it.
     const direct = await active.getWorker("playground");
@@ -223,9 +245,9 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
     const preflight = await active.dispatchFetch(MCP_URL, { method: "OPTIONS", headers: { origin: "https://any-agent.example" } });
     assert.equal(preflight.status, 204);
     const limited = await active.getWorker("unadmitted");
-    const first = await limited.fetch(MCP_URL, { method: "POST", body: "{}" });
+    const first = await limited.fetch("http://127.0.0.1/mcp", { method: "POST", body: "{}" });
     assert.equal(first.status, 503); await first.text();
-    const denied = await limited.fetch(MCP_URL, { method: "POST", body: "{}" });
+    const denied = await limited.fetch("http://127.0.0.1/mcp", { method: "POST", body: "{}" });
     assert.equal(denied.status, 429); await denied.text();
     complete = true;
   } finally {

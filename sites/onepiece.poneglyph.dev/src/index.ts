@@ -1,7 +1,8 @@
 import { createPublicPoneglyphMcpWorker } from "@leostera/poneglyph-mcp";
 import type { InferEnv } from "cf/config";
 import type { playgroundBindings } from "../cloudflare.config.ts";
-import { createApiHandler } from "./api.js";
+import clientAssets from "virtual:playground-client";
+import { ACCESS_AUDIENCE, createApiHandler } from "./api.js";
 import { CONNECTION_TEXT, DATASET, EXAMPLE_QUERIES, MCP_URL, PUBLIC_HOST } from "./dataset.js";
 import { admitMcpRequest } from "./rate-limit.js";
 import { GRAPH_ID } from "./runtime.js";
@@ -17,7 +18,7 @@ const mcpWorker = createPublicPoneglyphMcpWorker<PlaygroundEnv>({
   dataset: DATASET,
   serverInfo: { name: "poneglyph-onepiece-playground", version: "0.2.0" },
   allowedHostnames: ALLOWED_HOSTS,
-  // The browser app owns "/"; this is never reached because "/" is routed to assets.
+  // The browser app owns "/"; this is never reached because "/" is served by `client` below.
   homepage: () => new Response(null, { status: 404 }),
 });
 
@@ -27,30 +28,54 @@ const api = createApiHandler({
   session: { dataset: { name: DATASET.name, note: DATASET.currentDataNote, limitations: DATASET.limitations, entityIdentity: DATASET.entityIdentity, queryLanguage: DATASET.queryLanguage }, examples: EXAMPLE_QUERIES, mcp: { url: MCP_URL, instructions: CONNECTION_TEXT } },
 });
 
-// Static assets are served through the Worker (runWorkerFirst) so every
-// response carries the same security headers and Access context is available.
+// The client is embedded in this bundle (no static-assets router), so Access
+// and ctx.access apply to every response. See build/client-assets.ts.
 const CONTENT_SECURITY_POLICY = [
   "default-src 'none'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data:", "font-src 'self' data:",
   "connect-src 'self'", "frame-ancestors 'none'", "base-uri 'none'", "form-action 'none'",
 ].join("; ");
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+const decoded = new Map<string, Uint8Array<ArrayBuffer>>();
 
-async function asset(request: Request, env: PlaygroundEnv): Promise<Response> {
+function client(request: Request): Response {
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD" } });
-  const response = await env.ASSETS.fetch(request);
-  const headers = new Headers(response.headers);
-  headers.set("content-security-policy", CONTENT_SECURITY_POLICY);
-  headers.set("x-content-type-options", "nosniff");
-  headers.set("referrer-policy", "no-referrer");
-  headers.set("x-frame-options", "DENY");
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  const path = new URL(request.url).pathname;
+  const exact = clientAssets[path];
+  // SPA fallback: unknown extension-less paths render the app; unknown files are 404.
+  const asset = exact ?? (/\.[a-z0-9]+$/i.test(path) ? undefined : clientAssets["/index.html"]);
+  if (asset === undefined) return new Response("Not found", { status: 404 });
+  const headers = new Headers({
+    "content-type": asset.type,
+    etag: asset.etag,
+    "cache-control": path.startsWith("/assets/") ? "private, max-age=31536000, immutable" : "private, no-cache",
+    "content-security-policy": CONTENT_SECURITY_POLICY,
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "no-referrer",
+    "x-frame-options": "DENY",
+  });
+  if (request.headers.get("if-none-match") === asset.etag) return new Response(null, { status: 304, headers });
+  let body: string | Uint8Array<ArrayBuffer> | undefined = asset.text;
+  if (body === undefined) {
+    body = decoded.get(path) ?? Uint8Array.from(atob(asset.base64 ?? ""), character => character.charCodeAt(0));
+    decoded.set(path, body);
+  }
+  return new Response(request.method === "HEAD" ? null : body, { headers });
+}
+
+// Defense in depth: the edge Access app must have admitted this request. If
+// Access is ever detached from the Worker, every route fails closed instead of
+// silently becoming public. Loopback hosts exist only in local development.
+function admitted(url: URL, ctx: ExecutionContext): boolean {
+  return LOOPBACK_HOSTS.has(url.hostname) || ctx.access?.aud === ACCESS_AUDIENCE;
 }
 
 export default {
   async fetch(request: Request, env: PlaygroundEnv, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (!ALLOWED_HOSTS.includes(url.hostname)) return new Response("Invalid host", { status: 403 });
+    if (!admitted(url, ctx)) return new Response("Sign in through Cloudflare Access", { status: 401, headers: { "cache-control": "no-store" } });
     if (url.pathname === "/mcp") return mcpWorker.fetch(request, env);
     if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return api(request, env, ctx);
-    return asset(request, env);
+    return client(request);
   },
 } satisfies ExportedHandler<PlaygroundEnv>;

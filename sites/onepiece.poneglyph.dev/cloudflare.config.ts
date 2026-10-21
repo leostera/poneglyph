@@ -13,7 +13,6 @@ export const playgroundBindings = {
   MCP_RATE_LIMITER: bindings.rateLimit(RATE_LIMIT),
   API_RATE_LIMITER: bindings.rateLimit(API_RATE_LIMIT),
   WRITE_RATE_LIMITER: bindings.rateLimit(WRITE_RATE_LIMIT),
-  ASSETS: bindings.assets(),
 };
 // Loopback-only bulk loader (`cf dev --mode seed`); never deployed.
 export const seedBindings = {
@@ -30,7 +29,6 @@ export default defineConfig(({ mode }) => {
       workersDev: false,
       previewUrls: false,
       domains: seedMode ? [] : ["onepiece.poneglyph.dev"],
-      ...(seedMode ? {} : { assets: { runWorkerFirst: true, notFoundHandling: "single-page-application" as const } }),
       observability: { enabled: true, logs: { enabled: true }, traces: { enabled: true, headSamplingRate: 1.0 } },
       env: seedMode ? seedBindings : playgroundBindings,
     }
