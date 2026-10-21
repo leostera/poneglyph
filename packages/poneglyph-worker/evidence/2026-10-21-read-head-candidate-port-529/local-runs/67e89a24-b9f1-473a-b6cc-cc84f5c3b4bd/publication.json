@@ -1,0 +1,63 @@
+[
+  {
+    "heads": 8,
+    "writeMs": 36.616791999999805,
+    "acknowledged": true,
+    "firstPostWrite": {
+      "kind": "complete",
+      "metrics": {
+        "snapshotSeq": 2,
+        "hostedMs": 2,
+        "serviceMs": 2,
+        "snapshotMs": 1,
+        "evaluationMs": 1,
+        "releaseMs": 0,
+        "cacheHits": 0,
+        "leases": 1
+      }
+    },
+    "measuredWarmReads": 500,
+    "completedWarmReads": 500,
+    "failedWarmReads": 0,
+    "observedMaxInFlight": 128,
+    "cacheHits": 500,
+    "canonicalReadCutsAfterWarm": 0,
+    "headValidations": [
+      {
+        "member": 1,
+        "calls": 61
+      },
+      {
+        "member": 2,
+        "calls": 58
+      },
+      {
+        "member": 3,
+        "calls": 59
+      },
+      {
+        "member": 4,
+        "calls": 74
+      },
+      {
+        "member": 5,
+        "calls": 80
+      },
+      {
+        "member": 6,
+        "calls": 51
+      },
+      {
+        "member": 7,
+        "calls": 63
+      },
+      {
+        "member": 8,
+        "calls": 54
+      }
+    ],
+    "minCallsPerHead": 51,
+    "maxCallsPerHead": 80,
+    "warmupCanonicalReadCutDelta": 1
+  }
+]

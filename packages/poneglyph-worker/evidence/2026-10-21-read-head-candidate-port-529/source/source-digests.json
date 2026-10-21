@@ -1,0 +1,185 @@
+{
+  "baseline": "529f4754489578610490f001c95a75f3f595d7c4",
+  "worktreeHead": "529f4754489578610490f001c95a75f3f595d7c4",
+  "portPatchSha256": "8b6fec7de4766c4641853d73c7ca407a91eb5af2dfafa9bb42b362201c328ad3",
+  "changedFiles": [
+    {
+      "path": "packages/poneglyph-worker/bench/local-head-admin.ts",
+      "sha256": "ed7c8f21ffd6d22588e24dd9c82b6281d2fc47b51a580d3459b24c463038d3e8",
+      "bytes": 3964
+    },
+    {
+      "path": "packages/poneglyph-worker/bench/local-heads.ts",
+      "sha256": "b63c714b76c6877cedd90adca04b99ca0ed56be456ee0bedea7c7d8fa00c849f",
+      "bytes": 19420
+    },
+    {
+      "path": "packages/poneglyph-worker/bench/operator.ts",
+      "sha256": "a97e60d90bc5aaae1e3bcd10499e85a54d1b8bc61c013de2ba3776f6ee4020e0",
+      "bytes": 3838
+    },
+    {
+      "path": "packages/poneglyph-worker/bench/plan.ts",
+      "sha256": "6822fb16408ec8bc7d6dfd4dd434ff53af33566310f50aa91776effa7c70d453",
+      "bytes": 5171
+    },
+    {
+      "path": "packages/poneglyph-worker/bench/raw-query-driver.ts",
+      "sha256": "4e07029a6baa1eec142df1c3acc431d90098978915f09b22b8239b04bf956bf4",
+      "bytes": 2947
+    },
+    {
+      "path": "packages/poneglyph-worker/bench/waves.ts",
+      "sha256": "58ccd2139285f115f8151a591b19f365d2ead48ba66a727f985bd1b181e8ff13",
+      "bytes": 1772
+    },
+    {
+      "path": "packages/poneglyph-worker/src/query-coordinator.ts",
+      "sha256": "6a70109db6ddcf4b4bcc86a3866d6c41148275355abcc1cd112ff101f859981a",
+      "bytes": 12954
+    },
+    {
+      "path": "packages/poneglyph-worker/src/read-head-routing.ts",
+      "sha256": "18716044913605812893de2dc7a31958f26045cb648e9c03baf2e83461de5fc5",
+      "bytes": 6745
+    },
+    {
+      "path": "packages/poneglyph-worker/test/cache-test-service.ts",
+      "sha256": "619e6531a094064f79953ef3fae089115ea7184939b4e3b195648540ce177ce1",
+      "bytes": 4288
+    },
+    {
+      "path": "packages/poneglyph-worker/test/read-head-rollback.ts",
+      "sha256": "b0d42250bea67a9bbdbc1d229a8802a876868ccdd5c5ff7d720edebac562b986",
+      "bytes": 12680
+    },
+    {
+      "path": "packages/poneglyph-worker/test/read-head-routing.node.ts",
+      "sha256": "d1168078a421c895da4f238b7c698fc39897d111c8ee4bb4e90904eb34e1b223",
+      "bytes": 8356
+    },
+    {
+      "path": "packages/poneglyph-worker/test/read-head-rpc.ts",
+      "sha256": "d6cbde1ec1cd764883799b2dfcfba24bca9f51ffe520911434db939de881412a",
+      "bytes": 7458
+    },
+    {
+      "path": "packages/poneglyph/src/storage/coordinator-facade.ts",
+      "sha256": "8ca0b8887d5242e4f2b1f56cbc7a95ff75e82e45543094061752f8ffc8f40a10",
+      "bytes": 29731
+    },
+    {
+      "path": "packages/poneglyph/src/storage/http.ts",
+      "sha256": "895511189adcec79a08f093539688ade443437b1fb89161dd4f486dc4ec4313a",
+      "bytes": 2572
+    },
+    {
+      "path": "packages/poneglyph/src/storage/read-head-coordinator.ts",
+      "sha256": "2525a02b8c9a634644554dfa782a46a14ec658ee2269b458efbf2c27e78d97e2",
+      "bytes": 8748
+    },
+    {
+      "path": "packages/poneglyph/src/storage/read-head-journal.ts",
+      "sha256": "746d5a8caabbc581e0d710c875e3ec8448f0819ce87d2101d0132936942f4343",
+      "bytes": 9399
+    },
+    {
+      "path": "packages/poneglyph/src/storage/read-head-parent.ts",
+      "sha256": "af74e3e54f90a09a275d6bf70e4a48fca4f5d775743de42a6ba0f82e263ce46e",
+      "bytes": 9556
+    },
+    {
+      "path": "packages/poneglyph/src/storage/read-head-placement.ts",
+      "sha256": "8ad843aed224f5bb41fdb9511c39071d8f81025f5546b0818da23a12b787d65f",
+      "bytes": 3827
+    },
+    {
+      "path": "packages/poneglyph/src/storage/read-head-replica.ts",
+      "sha256": "6c405957d47c452e0b864010ed295fa1f41bfac5cc55b947f206cd7febad1ab7",
+      "bytes": 7569
+    },
+    {
+      "path": "packages/poneglyph/src/storage/read-head-state.ts",
+      "sha256": "cffc172a44b0800ff142b2df3c8599fda6f034121252aaca7274b4972a44d37e",
+      "bytes": 11435
+    },
+    {
+      "path": "packages/poneglyph/src/storage/read-identity.ts",
+      "sha256": "a6bdb1c032983005b7053c9b2d4cb4ce046315b8f529056f5c0ffdbc3d07e238",
+      "bytes": 2005
+    },
+    {
+      "path": "packages/poneglyph/src/storage/sql.ts",
+      "sha256": "6a190e9e4af0fe839639b4042f6a199874db54b2fe56b668794780a04d35721d",
+      "bytes": 13131
+    },
+    {
+      "path": "packages/poneglyph/tests/read-head-durability.test.ts",
+      "sha256": "c1d52f13f7f4a8bc2cd725c0fe9d5ce45ede97cb10998f6f3d52d52748b9adf2",
+      "bytes": 10757
+    },
+    {
+      "path": "packages/poneglyph/tests/read-head-integration.test.ts",
+      "sha256": "ccadbd2a846ce1af7ea0d0b7865af2c6e9c7af6e30b8f62319ab666c6c50feee",
+      "bytes": 15613
+    },
+    {
+      "path": "packages/poneglyph/tests/read-head-kv-atomicity.test.ts",
+      "sha256": "267a6dcad5d6af2f73aa862fabe9f544b4eb70943325c81a5b0c25a56bf7ac73",
+      "bytes": 4637
+    },
+    {
+      "path": "packages/poneglyph/tests/read-head-parent.test.ts",
+      "sha256": "1a9010d22c2bb52b52710486ab685a5064150bf46f64cc17b380007be1119e04",
+      "bytes": 12668
+    },
+    {
+      "path": "packages/poneglyph/tests/read-head-replica.test.ts",
+      "sha256": "4e6ee5d8d7fc601101ebea47a03f4fdc896e75e5aceb38bd7aafac91d7b4c9d0",
+      "bytes": 11373
+    },
+    {
+      "path": "packages/poneglyph/tests/read-head-state.test.ts",
+      "sha256": "f15b1da103aedc63f4dce5da1873e4296fba66a3858c0629e940efefc5f76f47",
+      "bytes": 10328
+    },
+    {
+      "path": "packages/poneglyph/tests/read-identity.test.ts",
+      "sha256": "6d3082dfa3e5b071321438ce673d27afdf61801318a84b0a990a3e54a0fe25bb",
+      "bytes": 1881
+    },
+    {
+      "path": "packages/poneglyph/tests/schema-compatibility.test.ts",
+      "sha256": "0d2db17c4bb869d8df35911b87dbbc2c26c5a62615f18754b27463601046d6b9",
+      "bytes": 2865
+    },
+    {
+      "path": "packages/poneglyph/tests/support/read-head-prototype.ts",
+      "sha256": "e5f948c77011160c3daaa79f95d47ef1bd223ca0aaaf962969d73e1f22970049",
+      "bytes": 5551
+    },
+    {
+      "path": "tests/conformance/query-plan.ts",
+      "sha256": "d07f5a45e0065b244a8a01b75dc89f822fce6e7fb656ad85155e43ece5a82fb2",
+      "bytes": 2612
+    },
+    {
+      "path": "tests/conformance/session.ts",
+      "sha256": "37033aa4dee82755ec6a7d512ee1ff490b7e548b3370e4a66302e93b8479cd6a",
+      "bytes": 7796
+    },
+    {
+      "path": "tests/conformance/worker/application.ts",
+      "sha256": "79009998a92c7e460c8d13b6df7157b8f0851e81c1aa4cbb47bf202e75d5034b",
+      "bytes": 3232
+    },
+    {
+      "path": "tests/conformance/worker/database.ts",
+      "sha256": "f88ee6f5e7d831703955f2c75964b21f6bb68bc5e9806a133ed284bdad8e87c6",
+      "bytes": 17455
+    }
+  ],
+  "gitStatusAtCapture": " A packages/poneglyph-worker/bench/local-head-admin.ts\n A packages/poneglyph-worker/bench/local-heads.ts\n A packages/poneglyph-worker/bench/operator.ts\n A packages/poneglyph-worker/bench/plan.ts\n A packages/poneglyph-worker/bench/raw-query-driver.ts\n A packages/poneglyph-worker/bench/waves.ts\n M packages/poneglyph-worker/src/query-coordinator.ts\n A packages/poneglyph-worker/src/read-head-routing.ts\n M packages/poneglyph-worker/test/cache-test-service.ts\n A packages/poneglyph-worker/test/read-head-rollback.ts\n A packages/poneglyph-worker/test/read-head-routing.node.ts\n A packages/poneglyph-worker/test/read-head-rpc.ts\n M packages/poneglyph/src/storage/coordinator-facade.ts\n M packages/poneglyph/src/storage/http.ts\n A packages/poneglyph/src/storage/read-head-coordinator.ts\n A packages/poneglyph/src/storage/read-head-journal.ts\n A packages/poneglyph/src/storage/read-head-parent.ts\n A packages/poneglyph/src/storage/read-head-placement.ts\n A packages/poneglyph/src/storage/read-head-replica.ts\n A packages/poneglyph/src/storage/read-head-state.ts\n M packages/poneglyph/src/storage/read-identity.ts\n M packages/poneglyph/src/storage/sql.ts\n A packages/poneglyph/tests/read-head-durability.test.ts\n A packages/poneglyph/tests/read-head-integration.test.ts\n A packages/poneglyph/tests/read-head-kv-atomicity.test.ts\n A packages/poneglyph/tests/read-head-parent.test.ts\n A packages/poneglyph/tests/read-head-replica.test.ts\n A packages/poneglyph/tests/read-head-state.test.ts\n M packages/poneglyph/tests/read-identity.test.ts\n M packages/poneglyph/tests/schema-compatibility.test.ts\n A packages/poneglyph/tests/support/read-head-prototype.ts\n M tests/conformance/query-plan.ts\n M tests/conformance/session.ts\n M tests/conformance/worker/application.ts\n M tests/conformance/worker/database.ts\n",
+  "portPatchPath": "source/port-529.patch.gz",
+  "portPatchContentSha256": "82f25f614adc395c99847622fcbb43f6df8430184a4d355401ad8b33f8014992"
+}

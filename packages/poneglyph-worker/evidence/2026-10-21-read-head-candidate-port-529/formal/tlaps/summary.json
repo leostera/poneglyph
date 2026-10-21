@@ -1,0 +1,33 @@
+{
+  "tool": "TLAPS/tlapm",
+  "version": "901ae51",
+  "backend": "Z3 version 4.8.9 - 64 bit",
+  "mode": "strict, fresh fingerprints, SMT; no Isabelle certificate recheck",
+  "scope": "Three local read-head lemmas; not whole-protocol safety, liveness, batching, implementation or performance",
+  "sourceSha256": {
+    "ReadHeadPublication.tla": "f846ae211b14fb8f7aa390506c602319f152f21f82ab312ba44dc310ce36677d",
+    "ReadHeadKernelProofs.tla": "9de09121dfebd5cca3694b072101c2ce5f57916a75e01d5e69c37d288abe7a59",
+    "check-tlaps.sh": "da414ac9e2c02c21a986f141bbb00e681935bad5150c433f2d1114b782d50092"
+  },
+  "results": {
+    "positive": {
+      "status": "proved",
+      "obligations": 6
+    },
+    "no-activation-fence": {
+      "status": "expected-proof-failure",
+      "theorem": "ActivationRejectsStaleGeneration",
+      "exitCode": 10
+    },
+    "revive-retired-head": {
+      "status": "expected-proof-failure",
+      "theorem": "RetirementIsIrreversible",
+      "exitCode": 10
+    },
+    "unconditional-frozen-validation": {
+      "status": "expected-proof-failure",
+      "theorem": "FrozenValidationSound",
+      "exitCode": 10
+    }
+  }
+}

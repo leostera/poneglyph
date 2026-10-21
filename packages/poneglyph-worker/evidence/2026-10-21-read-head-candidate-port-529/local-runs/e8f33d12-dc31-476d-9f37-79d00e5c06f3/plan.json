@@ -1,0 +1,25 @@
+{
+  "runId": "e8f33d12-dc31-476d-9f37-79d00e5c06f3",
+  "localOnly": true,
+  "graphId": "control-plane-validation",
+  "seedToken": "local-heads:e8f33d12-dc31-476d-9f37-79d00e5c06f3:seed",
+  "heads": [
+    0,
+    8
+  ],
+  "roundsPerPlacement": [
+    {
+      "kind": "point",
+      "concurrency": 16,
+      "count": 64
+    },
+    {
+      "kind": "combined",
+      "concurrency": 128,
+      "count": 64
+    }
+  ],
+  "warmupPerQuery": 64,
+  "deadlineMs": 10000,
+  "stateDirectory": "/var/folders/qy/3zl3lsrj0s9fwtjgjs6dx6vr0000gn/T/poneglyph-local-read-heads-KGjw5Z"
+}

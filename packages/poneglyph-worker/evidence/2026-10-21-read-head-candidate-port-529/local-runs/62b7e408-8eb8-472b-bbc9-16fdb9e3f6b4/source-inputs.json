@@ -1,0 +1,332 @@
+{
+  "workerInputs": [
+    {
+      "path": "../poneglyph/src/domain/date-validation.ts",
+      "sha256": "7f141cf8063ea3519680f0a71bc424212283f1401c9415dbbf3d6af5cb1d75e1"
+    },
+    {
+      "path": "../poneglyph/src/domain/result.ts",
+      "sha256": "9f1e517b566238e0a4fc771172c6c7c5d7f0954e82584201193d298bd061b8f5"
+    },
+    {
+      "path": "../poneglyph/src/domain/identifiers.ts",
+      "sha256": "81e4b8b0056b4ad23b1bf3461c87ef40e7bfaf8ec4f3be3385a046383a5b1830"
+    },
+    {
+      "path": "../poneglyph/src/storage/constants.ts",
+      "sha256": "93a1f177c55e9146e50da9443a1a8c6f03cbe78fee3e7a7c52422a2e128753fd"
+    },
+    {
+      "path": "../poneglyph/src/domain/int64.ts",
+      "sha256": "4448f6097cdf97b1bdc72e4ecd7819516ade0661f424f9ec18865a3a45460ffd"
+    },
+    {
+      "path": "../poneglyph/src/domain/string-order.ts",
+      "sha256": "a38dc679f8479e9f089e0795c3da5d48d72dceb01046567f6184d5457bcf1ea4"
+    },
+    {
+      "path": "../poneglyph/src/domain/fact-value.ts",
+      "sha256": "8df5f3e2b8a22899325ff75d4d2ed35e53c7adb296a64fc6b28af1db2831c71a"
+    },
+    {
+      "path": "../poneglyph/src/domain/fact.ts",
+      "sha256": "ba92f8a48cfba0ab82bcbc611ddf7e4a8107df7a89ef0a203c7a2dae4b6cf6b4"
+    },
+    {
+      "path": "../poneglyph/src/domain/graph-id.ts",
+      "sha256": "fb23faf3dc333f49752a9e17009bcaf512a01632419b1b574fb9f491d25cf641"
+    },
+    {
+      "path": "../poneglyph/src/datalog/value.ts",
+      "sha256": "7291d44c1f0856b7d448dce8fef8d1a127f7ad364f4e9782ad7beb223e996a05"
+    },
+    {
+      "path": "../poneglyph/src/storage/keys.ts",
+      "sha256": "83aba10f1458b8478dc15af3ed9882d8ae6c01b90e706ffbc1446473277ffa34"
+    },
+    {
+      "path": "../poneglyph/src/storage/protocol.ts",
+      "sha256": "9da496bb1ffd2233a8b9da33ba7482a5a70cbab298a7d081d7011b8940c2572a"
+    },
+    {
+      "path": "../poneglyph/src/storage/http.ts",
+      "sha256": "f86e7d714010724e0c0032de0673cabb539491151e84bc2b2c238dad9ae1d5ac"
+    },
+    {
+      "path": "../poneglyph/src/storage/forest.ts",
+      "sha256": "95929c91a108612941a6aef4a5ea2c9f99f8de0a0bc6f7cd197bf1a43aa399d0"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-diagnostics.ts",
+      "sha256": "29a36c643ea3e60acb81be9022b7373832f95fba2b59460d87c233ee3a2ac7be"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-cut.ts",
+      "sha256": "edb6be32810d619b7ffba50b5d3ed96bd12d8a749555f6cfb58cfc4687c0e074"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-identity.ts",
+      "sha256": "a6bdb1c032983005b7053c9b2d4cb4ce046315b8f529056f5c0ffdbc3d07e238"
+    },
+    {
+      "path": "../poneglyph/src/datalog/evaluator.ts",
+      "sha256": "a1f19d2e39ac231f5c20bd85bccd226a3b4f91f6f9c700417b50d30949777e8f"
+    },
+    {
+      "path": "../poneglyph/src/datalog/scan-stream.ts",
+      "sha256": "a6cda81757c4bd0dd4fe8845635275ae451521df7d7eaf65cf82140026049d4e"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-cache.ts",
+      "sha256": "555fdfc84db59e852dd35e007bba7cf6334e69a9dce2cf9ac1048dc40696b6f1"
+    },
+    {
+      "path": "../poneglyph/src/storage/query-results.ts",
+      "sha256": "ab116f89986f23098c3d3f6ae880ee834348e5eba55ceecb41a009baefd7231c"
+    },
+    {
+      "path": "../poneglyph/src/datalog/ast.ts",
+      "sha256": "586cc0a795c7114b6813eaf6d309fedc13b5d32180aebcb10b2da4bbeff7b9f0"
+    },
+    {
+      "path": "../poneglyph/src/datalog/parser.ts",
+      "sha256": "558f30101ecd7547efd62df4976fe1fd834651624fae58406411ebb8080ae183"
+    },
+    {
+      "path": "../poneglyph/src/storage/routing.ts",
+      "sha256": "62800de752a3dc53003b47cf8d651905b689d16877ac37c14351e5fddf2deab7"
+    },
+    {
+      "path": "../poneglyph/src/storage/value-index.ts",
+      "sha256": "f9ce643ee26de158b474b305791c1bb741cf9c765be7d0f0d5209d9338a94def"
+    },
+    {
+      "path": "../poneglyph/src/storage/distributed-fact-source.ts",
+      "sha256": "e84abafd83236f4dac42d36e138f484301276ad74d705b915912d754a29da684"
+    },
+    {
+      "path": "../poneglyph/src/storage/transaction-request.ts",
+      "sha256": "171d436e3b5fe4620face8b15bda665159c45b8012c1387ae543d66f565dde92"
+    },
+    {
+      "path": "../poneglyph/src/storage/sql.ts",
+      "sha256": "6a33df64d28b601d061fe991cb49ad44bcfa14c5f2ecdc62199a8aba9d056363"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-head-placement.ts",
+      "sha256": "8ad843aed224f5bb41fdb9511c39071d8f81025f5546b0818da23a12b787d65f"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-head-state.ts",
+      "sha256": "cffc172a44b0800ff142b2df3c8599fda6f034121252aaca7274b4972a44d37e"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-head-replica.ts",
+      "sha256": "6c405957d47c452e0b864010ed295fa1f41bfac5cc55b947f206cd7febad1ab7"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-head-parent.ts",
+      "sha256": "af74e3e54f90a09a275d6bf70e4a48fca4f5d775743de42a6ba0f82e263ce46e"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-head-journal.ts",
+      "sha256": "746d5a8caabbc581e0d710c875e3ec8448f0819ce87d2101d0132936942f4343"
+    },
+    {
+      "path": "../poneglyph/src/storage/read-head-coordinator.ts",
+      "sha256": "2525a02b8c9a634644554dfa782a46a14ec658ee2269b458efbf2c27e78d97e2"
+    },
+    {
+      "path": "../poneglyph/src/storage/coordinator-facade.ts",
+      "sha256": "8ca0b8887d5242e4f2b1f56cbc7a95ff75e82e45543094061752f8ffc8f40a10"
+    },
+    {
+      "path": "../poneglyph/dist/domain/date-validation.js",
+      "sha256": "4b7d7283ed28fdc9a5bf6a5827b6796c54454503e4113b23f69108a9e64ae6f9"
+    },
+    {
+      "path": "../poneglyph/dist/domain/result.js",
+      "sha256": "d8d4830e99f43409a946d8b2e1316a1f13e5171b599865ab00643585bcda9609"
+    },
+    {
+      "path": "../poneglyph/dist/domain/identifiers.js",
+      "sha256": "9e63d6c5cae128bf091a19dd905a9a250a01f359cd7aa632632a94372e559573"
+    },
+    {
+      "path": "../poneglyph/dist/domain/int64.js",
+      "sha256": "2e3e55ccc389336263a1dd51d6089b641da0515fbb3c1307d09df995d47af9a5"
+    },
+    {
+      "path": "../poneglyph/dist/domain/string-order.js",
+      "sha256": "aa59fe031cfc95f85594e9b0ee8eccf3b1234378c157da25a5628ea12b03460c"
+    },
+    {
+      "path": "../poneglyph/dist/domain/fact-value.js",
+      "sha256": "dbf69ccc15f594656aa28892522b9909a0000d04f926d5e995e8685aa3df8248"
+    },
+    {
+      "path": "../poneglyph/dist/domain/fact.js",
+      "sha256": "549cc66749833c217ea9d9860f9a942b91f130b0345689a0f2bb18e549b64ac2"
+    },
+    {
+      "path": "../poneglyph/dist/domain/graph-id.js",
+      "sha256": "b20ec3aaf6d8343b4709beab1d8b1d70f33022720eca700b1689930ec024db99"
+    },
+    {
+      "path": "../poneglyph/dist/domain/schema-observation.js",
+      "sha256": "756fc40b60ee92a978c0685d6d179367311f639acc8a3853c7aa1fe35c96c9f5"
+    },
+    {
+      "path": "../poneglyph/dist/datalog/ast.js",
+      "sha256": "20d3ed3a2f4bbdf67581c4a1a8cca094f636415a0e05657a812b6c35288e4e16"
+    },
+    {
+      "path": "../poneglyph/dist/datalog/value.js",
+      "sha256": "a42784eaf59359e86d6e3ca31a66dbbde9d96d6558e717296fb29a878853ec80"
+    },
+    {
+      "path": "../poneglyph/dist/datalog/evaluator.js",
+      "sha256": "87510a31dc0b39b13746858b7ff4261c5c097ac51e96e1edd7e0d3d10a33004a"
+    },
+    {
+      "path": "../poneglyph/dist/datalog/fact-source.js",
+      "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881"
+    },
+    {
+      "path": "../poneglyph/dist/datalog/parser.js",
+      "sha256": "bc528dae38e60b2f87137f89a35dd154f5d7a280cb99490c97f2cca911afb36f"
+    },
+    {
+      "path": "../poneglyph/dist/client.js",
+      "sha256": "c0776608970a24352beec3eefea2c2f618a31b51c691ac62ac93e7afb5ee64a9"
+    },
+    {
+      "path": "../poneglyph/dist/index.js",
+      "sha256": "317f2cb763e6f5633f4eaf3212183b75003bff9ebc984a04c21b72373d94372f"
+    },
+    {
+      "path": "../poneglyph/src/storage/ledger-capacity.ts",
+      "sha256": "a8a7ce6b98a50eef59d1160d2e18eeb1a0179c818b664640302342dc0ba4249b"
+    },
+    {
+      "path": "../poneglyph/src/storage/capacity.ts",
+      "sha256": "9f4104bb26c43a07270d7c2a185c69379b71a6e24309224094a3fb622e58b4fa"
+    },
+    {
+      "path": "../poneglyph/src/storage/request-tokens.ts",
+      "sha256": "1b4cf4912a9e4131fcfced6ab14a1e4748c4ebe4137cebfd385f236cf258be0e"
+    },
+    {
+      "path": "../poneglyph/src/storage/plan.ts",
+      "sha256": "0fb27563ade1aa92b19835a89dec100a5622aa3a294df2cf49133dba84768a41"
+    },
+    {
+      "path": "../poneglyph/src/storage/transaction-diagnostics.ts",
+      "sha256": "61e845662354bd61b665dc6dcf014ef5f337c8bbb2673d5679c806f02daa1edf"
+    },
+    {
+      "path": "../poneglyph/src/storage/transaction.ts",
+      "sha256": "ddcf83f4912cfb92c2a95ed1b5a409be59475c84e96983129a313acb54791605"
+    },
+    {
+      "path": "../poneglyph/src/storage/batch-cache.ts",
+      "sha256": "0d5aab84937d90fc7713f62d55b768ad9ce6ebb039bcdc9da8cd6748899dc516"
+    },
+    {
+      "path": "../poneglyph/src/storage/ledger.ts",
+      "sha256": "e7fe6c4a9bb7d6bd2620fd93afed5c267d89a43717e808f1c48442af9df6e8c7"
+    },
+    {
+      "path": "../poneglyph/src/storage/ledger-do.ts",
+      "sha256": "5641356045d90457e4842ff63af485b2796adf1560da1e76caad04f75eca5d4d"
+    },
+    {
+      "path": "../poneglyph/src/storage/owner-writes.ts",
+      "sha256": "664b96e98b43652f011ab620c0c3f3e1af03741df14595129b0d745ee7b29c52"
+    },
+    {
+      "path": "../poneglyph/src/storage/coordinator.ts",
+      "sha256": "0cc3e63fe52de662183f3823a3f4f2791f4d5e4ec4dcbb1698539feb65bf74cd"
+    },
+    {
+      "path": "../poneglyph/src/storage/migration.ts",
+      "sha256": "46e149dd4ffce655979864fd20ed4906e7a02d3344b76713a8cf3b941151e55a"
+    },
+    {
+      "path": "../poneglyph/src/storage/decision-control.ts",
+      "sha256": "dec23bb2749d5b7358eb8f3d328d27493b5eb5707f8550041b2eee3f14a69cb3"
+    },
+    {
+      "path": "../poneglyph/src/storage/shard.ts",
+      "sha256": "587634b1672c390b6df1710369cbb688cc6ebd61b684fe23e06b1c03119eef47"
+    },
+    {
+      "path": "../poneglyph/src/testing/storage-audit.ts",
+      "sha256": "32babba0e76eb9c19edb04d7ea019bc9a0589d4a9bf2f5a1582ffdebd61e2077"
+    },
+    {
+      "path": "../poneglyph/src/storage/benchmark.ts",
+      "sha256": "40919126bc10b939ab0912199c6cf3b68509f87504b948ebf1e5f09231c3908e"
+    },
+    {
+      "path": "../poneglyph/src/storage/implementation.ts",
+      "sha256": "0d8ffedfd7920b1e3beef38772fd9579a4585e52c3cf75d4c9c3f28989c2322a"
+    },
+    {
+      "path": "src/read-head-routing.ts",
+      "sha256": "97f0a174431ec1c140376f8052a5ef3996a7e884a992e50c366bc50eb1c7ab8c"
+    },
+    {
+      "path": "src/query-coordinator.ts",
+      "sha256": "ccc730eb477009672eb0e9d0faae14f20ef46d0650f1da99134d862c0f7380f2"
+    },
+    {
+      "path": "src/authorization.ts",
+      "sha256": "685321057430063922062bdaa2cfcaa744a427eba4ca1d2f2f160e913be4a691"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "587ee8e2a23e025bec87590e55636401bf3392d4956cab12b8aed57b360ebc84"
+    },
+    {
+      "path": "test/cache-test-service.ts",
+      "sha256": "619e6531a094064f79953ef3fae089115ea7184939b4e3b195648540ce177ce1"
+    },
+    {
+      "path": "bench/operator.ts",
+      "sha256": "cc10422fbf4f5f22f04666b4100c57bda291a5ba76aed1483986ad4fb193919c"
+    },
+    {
+      "path": "bench/local-head-admin.ts",
+      "sha256": "ed7c8f21ffd6d22588e24dd9c82b6281d2fc47b51a580d3459b24c463038d3e8"
+    }
+  ],
+  "harnessInputs": [
+    {
+      "path": "bench/local-heads.ts",
+      "sha256": "4ce1faa4ac36d81641872e8d8b59314599fc2ad96081a25ee0f4053ee916ac03"
+    },
+    {
+      "path": "bench/waves.ts",
+      "sha256": "58ccd2139285f115f8151a591b19f365d2ead48ba66a727f985bd1b181e8ff13"
+    },
+    {
+      "path": "bench/plan.ts",
+      "sha256": "40e097fab12caab015ed49cd67f0367bae84a2dfa4845713891ca4074d7024fe"
+    }
+  ],
+  "bundles": [
+    {
+      "name": "probe",
+      "sha256": "ecb471d20c80093aecbdb98caa88f2685aaf1c1e14af54cd2d81653e4a7357a2"
+    },
+    {
+      "name": "service",
+      "sha256": "ff622bc04ce47a37443bdbebcccec977b2d30fcfff8c58399278ee43b28dd695"
+    },
+    {
+      "name": "admin",
+      "sha256": "1edc93275ea2c7067c29eb0d22bbbe2fa8cda45910ae089f00b61845f50a53ea"
+    }
+  ]
+}

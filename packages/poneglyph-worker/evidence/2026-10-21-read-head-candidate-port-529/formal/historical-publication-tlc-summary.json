@@ -1,0 +1,96 @@
+{
+  "toolJarSha256": "15d103b7e5617780bcc904c0af12f1ad242e2b345c0301136c5be4588f17edac",
+  "sourceLogs": "/tmp/poneglyph-head-model-projection-evidence",
+  "sources": [
+    {
+      "path": "specs/ReadHeadPublication.tla",
+      "sha256": "f846ae211b14fb8f7aa390506c602319f152f21f82ab312ba44dc310ce36677d"
+    },
+    {
+      "path": "specs/ReadHeadPublication.safe.cfg",
+      "sha256": "2f2ec716fbebb92f07a3add7e24218b578f43d8dd4865b71551372b98556e489"
+    },
+    {
+      "path": "specs/ReadHeadPublication.three-heads.cfg",
+      "sha256": "d2751832467a3dbbe5e84dd927dffe4003557669e94b0bec994785e9af1e3cd9"
+    },
+    {
+      "path": "specs/ReadHeadPublication.no-freeze.cfg",
+      "sha256": "9c374efac672ac396dd0a226f53f4b60e14c5b213cfa582ae47b3e0146aa7583"
+    },
+    {
+      "path": "specs/ReadHeadPublication.no-fence.cfg",
+      "sha256": "505f5c29c1976d7f8c08d5b7e8743a2371294a660aab310218f31bd322ae3e1d"
+    },
+    {
+      "path": "specs/ReadHeadPublication.availability.cfg",
+      "sha256": "e701fb0960c7e8d33757ebe7a20c4e099b84183f855acb92691d0efe04dd50c3"
+    },
+    {
+      "path": "specs/check-read-head-publication.sh",
+      "sha256": "98f108d60a16c5e696e8afbd386d4e285c7ae5a89cfbd0697011fa8a710b551b"
+    },
+    {
+      "path": "packages/poneglyph/src/storage/read-head-state.ts",
+      "sha256": "a08b6df33e0f1ae573e8e920ad2950070459276b1e1aeb56166fc310f9df1fa4"
+    },
+    {
+      "path": "packages/poneglyph/tests/read-head-state.test.ts",
+      "sha256": "f15b1da103aedc63f4dce5da1873e4296fba66a3858c0629e940efefc5f76f47"
+    }
+  ],
+  "outputs": [
+    {
+      "file": "safe.log.gz",
+      "uncompressedSha256": "4c8d986936f937adff5546715831b7597a54af433735bf9b82d124a9654b7187",
+      "compressedSha256": "8370942f2c3e9c5f8226f06d2711666308efd9d87f74ccf690a9e1823890ff84",
+      "generatedStates": 14023,
+      "distinctStates": 1735,
+      "passed": true,
+      "violatedInvariant": null
+    },
+    {
+      "file": "three-heads.log.gz",
+      "uncompressedSha256": "23b0068f302656d9027cc28aaffe17f092b94e4528926e1d051de3ccda37b3f4",
+      "compressedSha256": "474401e9936167e2519b7b061218fb576160608667e78420e31789fb3f58ded9",
+      "generatedStates": 609992,
+      "distinctStates": 48150,
+      "passed": true,
+      "violatedInvariant": null
+    },
+    {
+      "file": "no-freeze.log.gz",
+      "uncompressedSha256": "03125464d9a1ec05b277560994cf0501abc11002191f67a8647e3d8c3e44c359",
+      "compressedSha256": "badf06eb05116f93467640a4a52a51efdc4a7d382d7d4eb0c96e976e0b9f63e4",
+      "generatedStates": 16,
+      "distinctStates": 12,
+      "passed": false,
+      "violatedInvariant": "ServingHeadsCurrent"
+    },
+    {
+      "file": "no-fence.log.gz",
+      "uncompressedSha256": "828dde64e4af0de7ed94fff84bf41f3b61dcb8657bb43036acb721cd92064984",
+      "compressedSha256": "21faa424287c6a973cd8340195f960a4d8a94488ba423bc802f2eaafb5bb2266",
+      "generatedStates": 448,
+      "distinctStates": 109,
+      "passed": false,
+      "violatedInvariant": "ServingHeadsCurrent"
+    },
+    {
+      "file": "availability.log.gz",
+      "uncompressedSha256": "a9030a67da51278782872266014f9967064b4e55f52b47f1fcbbdb7f88314691",
+      "compressedSha256": "3fbbc00f549e02d22075f6e34e2fe81457153bfa828f929423822eeb54c06b4e",
+      "generatedStates": 150,
+      "distinctStates": 67,
+      "passed": false,
+      "violatedInvariant": "CanAnswer"
+    }
+  ],
+  "limitations": [
+    "Bounded two/three-head design model, not deployed actors or canonical storage certification.",
+    "Transaction-closed canonical input vectors and correct query owner scopes are assumptions.",
+    "Progress assumes a finite shared crash budget and weakly fair recoverable communication.",
+    "Availability counterexample is intentional: no stale complete-view fallback during all-head freeze plus parent loss.",
+    "No throughput, infinite capacity, geo-latency, storage pruning, TTL clock bound or unconditional success is certified."
+  ]
+}

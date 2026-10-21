@@ -1,0 +1,4691 @@
+{
+  "kind": "read-head-candidate-port-529-evaluation",
+  "date": "2026-10-21",
+  "baseline": {
+    "revision": "529f4754489578610490f001c95a75f3f595d7c4",
+    "worktree": "/Users/leostera/Developer/github.com/leostera/poneglyph-worktrees/experiment/read-head-port-529",
+    "branch": "experiment/read-head-port-529",
+    "HEAD": "529f4754489578610490f001c95a75f3f595d7c4"
+  },
+  "candidate": "Replicated exact-safe-vector read heads validating reuse of complete cached Datalog query results; heads contain metadata only, not graph facts.",
+  "isolation": "Candidate code, conformance adapter, tests and benchmark remained in a separate worktree based exactly on 529f475. No candidate storage code was merged into the canonical checkout.",
+  "durableCompatibilityChange": {
+    "scope": "Explicit opt-in only. First head join advances the durable g-facade protocol marker from 2 to 3 as an old-writer fence; the candidate accepts 2/3 and the prior code predicate rejects 3. No source fact, transaction payload, index, projection, public query or public API wire format is rewritten.",
+    "compatibility": "This is a persisted control-plane marker change; it is not a transparent zero-migration replacement. The candidate is therefore not selected for canonical use."
+  },
+  "conformance": {
+    "focused": {
+      "status": "complete",
+      "cases": 10,
+      "warmColdCasePhases": 20,
+      "report": "conformance/focused/report.json",
+      "notFullTier": true
+    },
+    "smallTier": {
+      "status": "complete",
+      "cases": 69,
+      "executedPhases": 138,
+      "failedChecks": 0,
+      "summary": "conformance/small/summary.json",
+      "report": "conformance/small/report.json.gz"
+    },
+    "rootCheckSmallTier": "conformance/root-check-small-summary.json",
+    "readHeadCoverage": "The conformance-only InspectionFacadeDO joins one active durable head for every graph before its first query cut. The multi-clause 401-row bag-join case requires repeated exact result reuse after same-snapshot validation; after replacement/retraction it requires canonical fallback and an exact fresh result. Session compares full bags to its independent reference Model. The conformance suite exercises writes, replay identity, crash/recovery, read faults, and nested topology while the candidate is enabled.",
+    "candidateUnitTests": {
+      "storageReadHeadFiles": 7,
+      "passed": 44,
+      "failed": 0,
+      "log": "tests/storage-read-head-tests.txt.gz",
+      "workerRoutingNodeTests": {
+        "passed": 9,
+        "failed": 0,
+        "log": "tests/worker-read-head-routing-tests.txt.gz",
+        "timeoutMs": 10000
+      }
+    },
+    "fullRootCheck": {
+      "status": "passed",
+      "testFilesPassed": 75,
+      "testFilesSkipped": 2,
+      "testsPassed": 408,
+      "testsSkipped": 2,
+      "log": "tests/root-check.txt.gz"
+    }
+  },
+  "localPerformance": {
+    "successfulRunId": "67e89a24-b9f1-473a-b6cc-cc84f5c3b4bd",
+    "raw": "local-runs/67e89a24-b9f1-473a-b6cc-cc84f5c3b4bd/",
+    "runtime": "Miniflare/workerd with local SQLite and native RPC; no hosted Cloudflare access",
+    "placements": [
+      0,
+      8
+    ],
+    "queryShapes": {
+      "point": "one bound-entity relation",
+      "combined": "five-clause tenant/feature/credential conjunction"
+    },
+    "steadyRounds": [
+      {
+        "heads": 0,
+        "phase": {
+          "kind": "point",
+          "concurrency": 16,
+          "count": 64
+        },
+        "issued": 64,
+        "completed": 64,
+        "failed": 0,
+        "observedMaxInFlight": 16,
+        "elapsedMs": 31.11499999999978,
+        "launchSpanMs": 22.566749999999956,
+        "callerAllOutcomes": {
+          "count": 64,
+          "p50": 6.780333000000155,
+          "p95": 8.242541999999958,
+          "p99": 8.486124999999902,
+          "max": 8.486124999999902
+        },
+        "nativeSuccessOnly": {
+          "count": 64,
+          "p50": 2,
+          "p95": 4,
+          "p99": 4,
+          "max": 4
+        },
+        "serviceSuccessOnly": {
+          "count": 64,
+          "p50": 1,
+          "p95": 3,
+          "p99": 3,
+          "max": 3
+        },
+        "cacheHits": 64,
+        "rootReadCutCalls": 64,
+        "discoveryCalls": 0,
+        "headValidations": [],
+        "routingAccountingValid": true,
+        "meetsLocalSampleTarget": true,
+        "samples": [
+          {
+            "callerMs": 1.678625000000011,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.7326250000000982,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.6860000000001492,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.781500000000051,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.8435410000001866,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.8312909999999647,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.905207999999675,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.8609580000002097,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.717250000000149,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.781582999999955,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.743249999999989,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.957417000000078,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.791666999999961,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.098917000000256,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.086917000000085,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.026249999999891,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.0144579999996495,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 0.9904169999999795,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.4686249999999745,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.503124999999727,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.537667000000056,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.569250000000011,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.602542000000085,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.637666000000081,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.680166999999983,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.425000000000182,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.7592500000000655,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.706957999999759,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.913958000000093,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.780333000000155,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.01491599999963,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.98700000000008,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.5182080000004134,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.4713329999999587,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 0,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.2659169999997175,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.323374999999942,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.347709000000123,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.397874999999658,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.453167000000121,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.482499999999618,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.520167000000129,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.233583000000181,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.628291999999874,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.563666999999896,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.806999999999789,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.651209000000108,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.917207999999846,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.888792000000194,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.3886670000001686,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.4390830000002097,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.3817919999996775,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.5820000000003347,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.448667000000114,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.6863750000002256,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.650000000000091,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.126166999999896,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.147917000000234,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.074750000000222,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.231959000000188,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.188000000000102,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.391916999999921,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.242541999999958,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.486124999999902,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.463208000000122,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "heads": 0,
+        "phase": {
+          "kind": "combined",
+          "concurrency": 128,
+          "count": 64
+        },
+        "issued": 64,
+        "completed": 64,
+        "failed": 0,
+        "observedMaxInFlight": 64,
+        "elapsedMs": 31.173041999999896,
+        "launchSpanMs": 0.3015840000002754,
+        "callerAllOutcomes": {
+          "count": 64,
+          "p50": 29.236582999999882,
+          "p95": 30.56600000000026,
+          "p99": 30.827166999999918,
+          "max": 30.827166999999918
+        },
+        "nativeSuccessOnly": {
+          "count": 64,
+          "p50": 8,
+          "p95": 8,
+          "p99": 10,
+          "max": 10
+        },
+        "serviceSuccessOnly": {
+          "count": 64,
+          "p50": 4,
+          "p95": 6,
+          "p99": 6,
+          "max": 6
+        },
+        "cacheHits": 64,
+        "rootReadCutCalls": 64,
+        "discoveryCalls": 0,
+        "headValidations": [],
+        "routingAccountingValid": true,
+        "meetsLocalSampleTarget": true,
+        "samples": [
+          {
+            "callerMs": 2.420791999999892,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 0,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.089958000000024,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.112624999999753,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.176124999999956,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.201958000000104,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.234999999999673,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.284791999999925,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.335625000000164,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.382082999999966,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.037041000000045,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.529625000000124,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.503708000000188,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.830416000000241,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.60879100000011,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.985375000000204,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 8.901916999999685,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.28445899999997,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.296624999999949,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.341666999999688,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.234416000000238,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.447375000000193,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.363875000000007,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.586250000000291,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.443624999999884,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.67687500000011,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 13.654791999999816,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.057291000000077,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.10941700000012,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.145916999999827,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.193167000000358,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.236582999999882,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.288166999999703,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.33224999999993,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.412166999999954,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.47287499999993,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.501624999999876,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.503000000000156,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.56708400000025,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.604624999999942,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.650582999999642,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.6901670000002,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.749582999999802,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.795334000000366,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.83658299999979,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.882250000000113,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 9,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.925040999999965,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 29.991292000000158,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.018040999999812,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.064082999999755,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.122875000000022,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.14720800000032,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.227292000000034,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.28008299999965,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.315791999999874,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.36270800000011,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.406375000000025,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.455875000000106,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 28.93020800000022,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 7,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.53508299999976,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.465541999999914,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.728625000000193,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.56600000000026,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 8,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.827166999999918,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.803207999999813,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "phase": {
+          "kind": "point",
+          "concurrency": 16,
+          "count": 64
+        },
+        "issued": 64,
+        "completed": 64,
+        "failed": 0,
+        "observedMaxInFlight": 16,
+        "elapsedMs": 30.312957999999526,
+        "launchSpanMs": 22.765416999999616,
+        "callerAllOutcomes": {
+          "count": 64,
+          "p50": 7.267415999999685,
+          "p95": 7.79149999999936,
+          "p99": 7.945541999999477,
+          "max": 7.945541999999477
+        },
+        "nativeSuccessOnly": {
+          "count": 64,
+          "p50": 2,
+          "p95": 4,
+          "p99": 4,
+          "max": 4
+        },
+        "serviceSuccessOnly": {
+          "count": 64,
+          "p50": 1,
+          "p95": 3,
+          "p99": 3,
+          "max": 3
+        },
+        "cacheHits": 64,
+        "rootReadCutCalls": 0,
+        "discoveryCalls": 0,
+        "headValidations": [
+          {
+            "member": 1,
+            "calls": 8
+          },
+          {
+            "member": 2,
+            "calls": 7
+          },
+          {
+            "member": 3,
+            "calls": 7
+          },
+          {
+            "member": 4,
+            "calls": 7
+          },
+          {
+            "member": 5,
+            "calls": 7
+          },
+          {
+            "member": 6,
+            "calls": 15
+          },
+          {
+            "member": 7,
+            "calls": 7
+          },
+          {
+            "member": 8,
+            "calls": 6
+          }
+        ],
+        "routingAccountingValid": true,
+        "meetsLocalSampleTarget": true,
+        "samples": [
+          {
+            "callerMs": 1.492708999999195,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 0,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.5008749999997235,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 0,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.5206660000003467,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 0,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.5419999999994616,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.5886669999999867,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.671832999999424,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.6044160000001284,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 3.6387910000003103,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.552082999999584,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.6108329999997295,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.669458000000304,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.735332999999628,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.757165999999415,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.667749999999614,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.79058299999997,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 6.55987499999992,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.0875000000005457,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.1441249999998035,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.1435419999997976,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.0570419999994556,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.371084000000337,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.600750000000517,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.414458999999624,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.666500000000269,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.444707999999991,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.6900830000004134,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.357208999999784,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.533582999999453,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.473625000000538,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.604916999999659,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.310707999999977,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.71416599999975,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.5284169999995356,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.5133749999995416,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 1.475333999999748,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 0,
+                "snapshotMs": 0,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.4137909999999465,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.494125000000167,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.716750000000502,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.5321249999997235,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.6657909999994445,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.863957999999911,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.377833000000464,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.79149999999936,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.945541999999477,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.554417000000285,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.614792000000307,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.387665999999626,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.893666999999368,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.703791999999339,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.796624999999949,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.6531660000000556,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.8232920000000377,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.8600829999995767,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.735916999999972,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.6998329999996713,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.377875000000131,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.413791000000856,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.227540999999292,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 2,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.267415999999685,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.332957999999962,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.523624999999811,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.445917000000009,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.4812089999995806,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 7.282583000000159,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          }
+        ]
+      },
+      {
+        "heads": 8,
+        "phase": {
+          "kind": "combined",
+          "concurrency": 128,
+          "count": 64
+        },
+        "issued": 64,
+        "completed": 64,
+        "failed": 0,
+        "observedMaxInFlight": 64,
+        "elapsedMs": 33.152250000000095,
+        "launchSpanMs": 0.19504199999937555,
+        "callerAllOutcomes": {
+          "count": 64,
+          "p50": 31.383458000000246,
+          "p95": 32.7279580000004,
+          "p99": 32.93195800000012,
+          "max": 32.93195800000012
+        },
+        "nativeSuccessOnly": {
+          "count": 64,
+          "p50": 11,
+          "p95": 12,
+          "p99": 12,
+          "max": 12
+        },
+        "serviceSuccessOnly": {
+          "count": 64,
+          "p50": 6,
+          "p95": 8,
+          "p99": 9,
+          "max": 9
+        },
+        "cacheHits": 64,
+        "rootReadCutCalls": 0,
+        "discoveryCalls": 0,
+        "headValidations": [
+          {
+            "member": 1,
+            "calls": 11
+          },
+          {
+            "member": 2,
+            "calls": 10
+          },
+          {
+            "member": 3,
+            "calls": 11
+          },
+          {
+            "member": 4,
+            "calls": 9
+          },
+          {
+            "member": 5,
+            "calls": 4
+          },
+          {
+            "member": 6,
+            "calls": 6
+          },
+          {
+            "member": 7,
+            "calls": 6
+          },
+          {
+            "member": 8,
+            "calls": 7
+          }
+        ],
+        "routingAccountingValid": true,
+        "meetsLocalSampleTarget": true,
+        "samples": [
+          {
+            "callerMs": 2.0719170000002123,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 2.0428750000000946,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 1,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.819167000000562,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.444542000000183,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.435292000000118,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.46204200000011,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.666957999999795,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.775165999999444,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 10.000667000000249,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 10.131333000000268,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 10.193249999999352,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 10.12249999999949,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 4,
+                "serviceMs": 3,
+                "snapshotMs": 3,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.589500000000044,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.473708000000443,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 2,
+                "snapshotMs": 2,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.739083000000392,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 9.53887500000019,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 3,
+                "serviceMs": 1,
+                "snapshotMs": 1,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.54162499999984,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.326750000000175,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.32508399999915,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 12,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.059832999999344,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.741833000000042,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 12,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.783708999999362,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 12,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.583166999999776,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.587667000000692,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.383458000000246,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 12,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.5282500000003,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 12,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.63354100000015,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 9,
+                "snapshotMs": 9,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.952624999999898,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.15187500000047,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.898582999999235,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 8,
+                "snapshotMs": 8,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.23987500000021,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.415500000000065,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.658291999999165,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.123083000000406,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.555875000000015,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.702791999999135,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.085166000000754,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.67499999999927,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.33400000000074,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.6889170000004,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.60895800000071,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.16370800000004,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 7,
+                "snapshotMs": 7,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.714833,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.602458999999726,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.925624999999854,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.808625000000575,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.862750000000233,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.130667000000358,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.025375000000167,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.43104200000016,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.7279580000004,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.277000000000044,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.24883299999965,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 30.435042000000067,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 10,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.90904199999932,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.82520799999929,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.338042000000314,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.732958000000508,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.47429100000045,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.994458000000122,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.428084000000126,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 32.93195800000012,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 6,
+                "snapshotMs": 6,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.4092499999997,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 4,
+                "snapshotMs": 4,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          },
+          {
+            "callerMs": 31.91204199999993,
+            "result": {
+              "kind": "complete",
+              "metrics": {
+                "snapshotSeq": 1,
+                "hostedMs": 11,
+                "serviceMs": 5,
+                "snapshotMs": 5,
+                "evaluationMs": 0,
+                "releaseMs": 0,
+                "cacheHits": 1,
+                "leases": 0
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "warmups": {
+      "successfulCalls": 256,
+      "failedCalls": 0,
+      "callsPerShapePerPlacement": 64
+    },
+    "postPublication": {
+      "heads": 8,
+      "writeMs": 36.616791999999805,
+      "acknowledged": true,
+      "firstPostWrite": {
+        "kind": "complete",
+        "metrics": {
+          "snapshotSeq": 2,
+          "hostedMs": 2,
+          "serviceMs": 2,
+          "snapshotMs": 1,
+          "evaluationMs": 1,
+          "releaseMs": 0,
+          "cacheHits": 0,
+          "leases": 1
+        }
+      },
+      "measuredWarmReads": 500,
+      "completedWarmReads": 500,
+      "failedWarmReads": 0,
+      "observedMaxInFlight": 128,
+      "cacheHits": 500,
+      "canonicalReadCutsAfterWarm": 0,
+      "headValidations": [
+        {
+          "member": 1,
+          "calls": 61
+        },
+        {
+          "member": 2,
+          "calls": 58
+        },
+        {
+          "member": 3,
+          "calls": 59
+        },
+        {
+          "member": 4,
+          "calls": 74
+        },
+        {
+          "member": 5,
+          "calls": 80
+        },
+        {
+          "member": 6,
+          "calls": 51
+        },
+        {
+          "member": 7,
+          "calls": 63
+        },
+        {
+          "member": 8,
+          "calls": 54
+        }
+      ],
+      "minCallsPerHead": 51,
+      "maxCallsPerHead": 80,
+      "warmupCanonicalReadCutDelta": 1
+    },
+    "denominators": {
+      "measuredSteadyCalls": 256,
+      "steadyCompleted": 256,
+      "steadyFailed": 0,
+      "postPublicationWarmCalls": 500,
+      "postPublicationCompleted": 500,
+      "postPublicationFailed": 0,
+      "warmupCalls": 256,
+      "warmupCompleted": 256,
+      "warmupFailed": 0,
+      "automaticRetries": 0
+    },
+    "limitations": [
+      "One bounded local trial, 64 measured samples per query/placement; p99 is sample max, not a tail bound.",
+      "Combined offered concurrency was 128; observed in-flight max was 64 due local Worker/harness behavior.",
+      "The 8-head placement shows zero canonical read-cut calls during repeat rounds, but no dependable general latency gain: point p99 changes from 8.49 to 7.95 ms, combined p99 from 30.83 to 32.93 ms.",
+      "The 500 post-publication point queries were exact snapshot 2/cacheHits 1 at observed concurrency 128; they do not establish hosted performance or unique-query scaling.",
+      "The single two-fact publication took 36.62 ms; no baseline write comparison or broad write throughput conclusion is supported."
+    ]
+  },
+  "formal": {
+    "tlaps": {
+      "status": "passed",
+      "version": "901ae51",
+      "backend": "Z3 version 4.8.9 - 64 bit",
+      "positiveObligations": 6,
+      "negativeControls": [
+        "no-activation-fence",
+        "revive-retired-head",
+        "unconditional-frozen-validation"
+      ],
+      "summary": "formal/tlaps/summary.json",
+      "scope": "Three local read-head lemmas; not whole-protocol safety, liveness, batching, implementation or performance"
+    },
+    "tlc": "Historical publication/routing model runs are retained under formal/historical-*.json. A fresh TLC attempt on the port worktree stopped before execution because TLA2TOOLS_JAR is unavailable; exact attempt: formal/tlc/attempt.txt.",
+    "scopeCaveat": "The formal models do not establish whole-protocol implementation refinement, hosted performance, liveness under platform failures, or unconditional availability."
+  },
+  "failedLocalAttempts": {
+    "retainedReports": [
+      {
+        "runId": "19cba67a-5ffd-4c7e-a9f9-fe728fb54424",
+        "stage": "placement-0-restart",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 0,
+        "seedReceiptPresent": true,
+        "warmups": [
+          {
+            "heads": 0,
+            "query": "point",
+            "issued": 8,
+            "complete": 0,
+            "transportFailures": 8
+          }
+        ]
+      },
+      {
+        "runId": "489e8457-e033-4d68-a23e-5a9f03f2cfd7",
+        "stage": "placement-8-restart",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 2,
+        "seedReceiptPresent": true,
+        "warmups": [
+          {
+            "heads": 0,
+            "query": "point",
+            "issued": 64,
+            "complete": 64,
+            "transportFailures": 0
+          },
+          {
+            "heads": 0,
+            "query": "combined",
+            "issued": 64,
+            "complete": 64,
+            "transportFailures": 0
+          },
+          {
+            "heads": 8,
+            "query": "point",
+            "issued": 8,
+            "complete": 0,
+            "transportFailures": 0
+          }
+        ]
+      },
+      {
+        "runId": "4fdaec7f-1402-4c33-867c-e6a2ca82ffb9",
+        "stage": "placement-8-restart",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 2,
+        "seedReceiptPresent": true,
+        "warmups": [
+          {
+            "heads": 0,
+            "query": "point",
+            "issued": 64,
+            "complete": 64,
+            "transportFailures": 0
+          },
+          {
+            "heads": 0,
+            "query": "combined",
+            "issued": 64,
+            "complete": 64,
+            "transportFailures": 0
+          },
+          {
+            "heads": 8,
+            "query": "point",
+            "issued": 8,
+            "complete": 0,
+            "transportFailures": 0
+          }
+        ]
+      },
+      {
+        "runId": "62b7e408-8eb8-472b-bbc9-16fdb9e3f6b4",
+        "stage": "seed",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 0,
+        "seedReceiptPresent": true,
+        "warmups": [
+          {
+            "heads": 0,
+            "query": "point",
+            "issued": 8,
+            "complete": 0,
+            "transportFailures": 8
+          }
+        ]
+      },
+      {
+        "runId": "8ec5869d-8d79-4071-ad41-a52d53de4966",
+        "stage": "placement-0-restart",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 0,
+        "seedReceiptPresent": true,
+        "warmups": [
+          {
+            "heads": 0,
+            "query": "point",
+            "issued": 8,
+            "complete": 0,
+            "transportFailures": 8
+          }
+        ]
+      },
+      {
+        "runId": "a446243f-970a-4f0a-a7cb-99df5a11a7e0",
+        "stage": "seed",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 0,
+        "seedReceiptPresent": false,
+        "warmups": []
+      },
+      {
+        "runId": "b9ddc2d5-75d1-4a73-bf7a-361e8a302292",
+        "stage": "seed",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 0,
+        "seedReceiptPresent": true,
+        "warmups": [
+          {
+            "heads": 0,
+            "query": "point",
+            "issued": 8,
+            "complete": 0,
+            "transportFailures": 8
+          }
+        ]
+      },
+      {
+        "runId": "cae29d48-64dd-4d34-bbad-bb778a54c26a",
+        "stage": "placement-0-restart",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 0,
+        "seedReceiptPresent": true,
+        "warmups": [
+          {
+            "heads": 0,
+            "query": "point",
+            "issued": 8,
+            "complete": 0,
+            "transportFailures": 8
+          }
+        ]
+      },
+      {
+        "runId": "e8f33d12-dc31-476d-9f37-79d00e5c06f3",
+        "stage": "placement-0-restart",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 0,
+        "seedReceiptPresent": true,
+        "warmups": [
+          {
+            "heads": 0,
+            "query": "point",
+            "issued": 8,
+            "complete": 0,
+            "transportFailures": 8
+          }
+        ]
+      },
+      {
+        "runId": "e9e60832-ddc1-4dda-bd6a-92bd2ac9a26f",
+        "stage": "seed",
+        "stopReason": "unconfirmed-local-operation",
+        "completedRounds": 0,
+        "seedReceiptPresent": false,
+        "warmups": []
+      }
+    ],
+    "note": "All unsuccessful local attempts have their full reports/source inputs in local-runs/. Each used a fresh temporary persistence directory and unique run ID. No operation was replayed against an uncertain state; only successful run 67e89a24-b9f1-473a-b6cc-cc84f5c3b4bd supplies performance results."
+  },
+  "source": {
+    "patch": "source/port-529.patch.gz",
+    "digestManifest": "source/source-digests.json",
+    "patchSha256": "8b6fec7de4766c4641853d73c7ca407a91eb5af2dfafa9bb42b362201c328ad3",
+    "changedFileCount": 35,
+    "patchContentSha256": "82f25f614adc395c99847622fcbb43f6df8430184a4d355401ad8b33f8014992"
+  },
+  "recommendation": "Do not select for canonical storage. The port now has correctness evidence on the requested 529f475 baseline and demonstrates exact repeated-query cut-RPC elimination, but a single small trial shows negligible/slightly mixed p99 behavior while adding a durable opt-in schema marker fence and synchronous publication fan-out before acknowledgement. Retain as research; require a product decision on the persisted control marker, hosted/representative workload evidence, and further write-path profiling before any reconsideration."
+}
