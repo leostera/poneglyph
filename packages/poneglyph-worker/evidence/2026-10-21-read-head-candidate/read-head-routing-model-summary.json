@@ -1,0 +1,67 @@
+{
+  "routing-proof": {
+    "status": "proved",
+    "obligations": 26,
+    "seconds": 6.301
+  },
+  "ignore-head-authority-proof": {
+    "status": "expected-proof-failure",
+    "seconds": 8.969
+  },
+  "ignore-cache-identity-proof": {
+    "status": "expected-proof-failure",
+    "seconds": 8.733
+  },
+  "stale-canonical-fallback-proof": {
+    "status": "expected-proof-failure",
+    "seconds": 8.432
+  },
+  "routing-safety": {
+    "status": "checked",
+    "seconds": 21.357,
+    "generated": 1624192,
+    "distinct": 166702
+  },
+  "ignore-head-authority": {
+    "status": "expected-counterexample",
+    "seconds": 0.79,
+    "generated": 7644,
+    "distinct": 2165
+  },
+  "ignore-cache-identity": {
+    "status": "expected-counterexample",
+    "seconds": 0.896,
+    "generated": 11927,
+    "distinct": 3189
+  },
+  "stale-canonical-fallback": {
+    "status": "expected-counterexample",
+    "seconds": 0.743,
+    "generated": 8914,
+    "distinct": 2427
+  },
+  "witness-NoHeadWithoutCanonical": {
+    "status": "expected-counterexample",
+    "seconds": 0.488,
+    "generated": 412,
+    "distinct": 134
+  },
+  "witness-NoFrozenHeadHit": {
+    "status": "expected-counterexample",
+    "seconds": 0.653,
+    "generated": 4181,
+    "distinct": 1206
+  },
+  "witness-NoRetiredHintFallback": {
+    "status": "expected-counterexample",
+    "seconds": 0.808,
+    "generated": 14359,
+    "distinct": 3725
+  },
+  "witness-NoFailedQuery": {
+    "status": "expected-counterexample",
+    "seconds": 0.531,
+    "generated": 938,
+    "distinct": 294
+  }
+}

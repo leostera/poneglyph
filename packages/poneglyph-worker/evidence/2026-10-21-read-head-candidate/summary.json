@@ -1,0 +1,459 @@
+{
+  "kind": "read-head-replica-candidate-evaluation",
+  "date": "2026-10-21",
+  "candidate": "Replicated exact-freshness/read-head authorities for cached completed Datalog results; heads store safe-vector metadata, not facts.",
+  "candidateFeatureCommit": "3a567b3770408d441c9059de499157d5351eb149",
+  "candidateRuntimeSnapshot": "a38765e44d95c92794b55a6b7d209ad0ac703349",
+  "verifiedCurrentBaseline": "529f4754489578610490f001c95a75f3f595d7c4",
+  "compatibilityScope": "Candidate runtime is a historical ancestor snapshot and was not ported/rebased onto 529f475; the oracle and local experiment evaluate the actual isolated read-head prototype, not the current canonical tree.",
+  "candidateConformance": {
+    "status": "complete",
+    "notCertification": true,
+    "runId": "focused-controls-2026-10-21T08-08-59.428Z",
+    "report": "conformance-focused-report.json",
+    "cases": [
+      "concurrent/legal-history/same-source-assert-retract",
+      "concurrent/legal-history/source-qualified-retraction-projection",
+      "concurrent/legal-history/disjoint-entities-typed-multiplicity",
+      "recovery/native-partial-participant-apply-process-crash",
+      "query-plan/owner-local-bag-join",
+      "read-fault/unavailable-before",
+      "read-fault/malformed",
+      "read-fault/empty-eof",
+      "read-fault/record-eof",
+      "read-fault/record-error"
+    ],
+    "warmAndCold": "All 10 focused cases passed in both phases (20 case-phases).",
+    "headActivation": "Test-only InspectionFacadeDO joins one actual head before each graph\u2019s first query read-cut and rejects if membership is not active. For the 401-row two-clause Datalog bag join, the harness requires an identical-query replay to return cacheHits=1 at the same snapshot with byte-identical rows; after replace and retract, stale validation must fall back, then the refreshed result must hit. Session independently checks each bag against its reference Model.",
+    "headSourceDigests": {
+      "candidate-test-harness/database.ts": "c143435dd95aea86475cdefe07a00cfed48fc0a6635184d2839d8fcd17233d04",
+      "candidate-test-harness/application.ts": "8e7b4898f32efed4d5ffdbfd811af12f2b35feb6fa012808cc2d96aa055a516a",
+      "candidate-test-harness/session.ts": "37033aa4dee82755ec6a7d512ee1ff490b7e548b3370e4a66302e93b8479cd6a",
+      "candidate-test-harness/query-plan.ts": "d07f5a45e0065b244a8a01b75dc89f822fce6e7fb656ad85155e43ece5a82fb2"
+    }
+  },
+  "workerTests": {
+    "passed": 27,
+    "failed": 0,
+    "log": "read-head-worker-tests.txt"
+  },
+  "performance": {
+    "runId": "8818228a-1229-41da-b8e4-6ba97f3bf299",
+    "runtime": "local Miniflare/workerd; no Cloudflare credentials or deployment",
+    "seedFacts": 5,
+    "flipFacts": 2,
+    "headsCompared": [
+      0,
+      8
+    ],
+    "sampleCountPerQueryPerPlacement": 64,
+    "queryShapes": {
+      "point": "one bound-entity relation",
+      "combined": "five-clause tenant/feature/credential Datalog conjunction"
+    },
+    "exactCompletion": "Four measured rounds completed 64/64 each, no failures/retries; after a two-fact publication, 500/500 exact warm reads completed at observed concurrency 128.",
+    "rounds": [
+      {
+        "heads": 0,
+        "queryShape": "point",
+        "configuredConcurrency": 16,
+        "issued": 64,
+        "completed": 64,
+        "failed": 0,
+        "observedMaxInFlight": 16,
+        "callerLatencyMs": {
+          "count": 64,
+          "p50": 8.98395800000003,
+          "p95": 10.38262500000019,
+          "p99": 10.415583999999853,
+          "max": 10.415583999999853
+        },
+        "serviceSuccessOnlyMs": {
+          "count": 64,
+          "p50": 2,
+          "p95": 2,
+          "p99": 4,
+          "max": 4
+        },
+        "nativeSuccessOnlyMs": {
+          "count": 64,
+          "p50": 3,
+          "p95": 4,
+          "p99": 5,
+          "max": 5
+        },
+        "cacheHits": 64,
+        "canonicalReadCutCalls": 64,
+        "headValidations": [],
+        "routingAccountingValid": true
+      },
+      {
+        "heads": 0,
+        "queryShape": "combined",
+        "configuredConcurrency": 128,
+        "issued": 64,
+        "completed": 64,
+        "failed": 0,
+        "observedMaxInFlight": 64,
+        "callerLatencyMs": {
+          "count": 64,
+          "p50": 37.47162500000013,
+          "p95": 39.094499999999925,
+          "p99": 39.151625000000195,
+          "max": 39.151625000000195
+        },
+        "serviceSuccessOnlyMs": {
+          "count": 64,
+          "p50": 6,
+          "p95": 9,
+          "p99": 9,
+          "max": 9
+        },
+        "nativeSuccessOnlyMs": {
+          "count": 64,
+          "p50": 11,
+          "p95": 14,
+          "p99": 18,
+          "max": 18
+        },
+        "cacheHits": 64,
+        "canonicalReadCutCalls": 64,
+        "headValidations": [],
+        "routingAccountingValid": true
+      },
+      {
+        "heads": 8,
+        "queryShape": "point",
+        "configuredConcurrency": 16,
+        "issued": 64,
+        "completed": 64,
+        "failed": 0,
+        "observedMaxInFlight": 16,
+        "callerLatencyMs": {
+          "count": 64,
+          "p50": 7.861916000000292,
+          "p95": 10.4240420000001,
+          "p99": 10.476125000000138,
+          "max": 10.476125000000138
+        },
+        "serviceSuccessOnlyMs": {
+          "count": 64,
+          "p50": 1,
+          "p95": 2,
+          "p99": 3,
+          "max": 3
+        },
+        "nativeSuccessOnlyMs": {
+          "count": 64,
+          "p50": 2,
+          "p95": 3,
+          "p99": 4,
+          "max": 4
+        },
+        "cacheHits": 64,
+        "canonicalReadCutCalls": 0,
+        "headValidations": [
+          {
+            "member": 1,
+            "calls": 8
+          },
+          {
+            "member": 2,
+            "calls": 11
+          },
+          {
+            "member": 3,
+            "calls": 7
+          },
+          {
+            "member": 4,
+            "calls": 7
+          },
+          {
+            "member": 5,
+            "calls": 10
+          },
+          {
+            "member": 6,
+            "calls": 9
+          },
+          {
+            "member": 7,
+            "calls": 4
+          },
+          {
+            "member": 8,
+            "calls": 8
+          }
+        ],
+        "routingAccountingValid": true
+      },
+      {
+        "heads": 8,
+        "queryShape": "combined",
+        "configuredConcurrency": 128,
+        "issued": 64,
+        "completed": 64,
+        "failed": 0,
+        "observedMaxInFlight": 64,
+        "callerLatencyMs": {
+          "count": 64,
+          "p50": 27.667875000000095,
+          "p95": 36.98125000000027,
+          "p99": 37.01666599999999,
+          "max": 37.01666599999999
+        },
+        "serviceSuccessOnlyMs": {
+          "count": 64,
+          "p50": 5,
+          "p95": 7,
+          "p99": 8,
+          "max": 8
+        },
+        "nativeSuccessOnlyMs": {
+          "count": 64,
+          "p50": 8,
+          "p95": 10,
+          "p99": 10,
+          "max": 10
+        },
+        "cacheHits": 64,
+        "canonicalReadCutCalls": 0,
+        "headValidations": [
+          {
+            "member": 1,
+            "calls": 6
+          },
+          {
+            "member": 2,
+            "calls": 6
+          },
+          {
+            "member": 3,
+            "calls": 7
+          },
+          {
+            "member": 4,
+            "calls": 8
+          },
+          {
+            "member": 5,
+            "calls": 10
+          },
+          {
+            "member": 6,
+            "calls": 10
+          },
+          {
+            "member": 7,
+            "calls": 8
+          },
+          {
+            "member": 8,
+            "calls": 9
+          }
+        ],
+        "routingAccountingValid": true
+      }
+    ],
+    "postPublication": [
+      {
+        "heads": 8,
+        "writeMs": 39.70104200000014,
+        "acknowledged": true,
+        "firstPostWrite": {
+          "kind": "complete",
+          "metrics": {
+            "snapshotSeq": 2,
+            "hostedMs": 2,
+            "serviceMs": 1,
+            "snapshotMs": 1,
+            "evaluationMs": 0,
+            "releaseMs": 0,
+            "cacheHits": 0,
+            "leases": 1
+          }
+        },
+        "measuredWarmReads": 500,
+        "completedWarmReads": 500,
+        "failedWarmReads": 0,
+        "observedMaxInFlight": 128,
+        "cacheHits": 500,
+        "canonicalReadCutsAfterWarm": 0,
+        "headValidations": [
+          {
+            "member": 1,
+            "calls": 62
+          },
+          {
+            "member": 2,
+            "calls": 65
+          },
+          {
+            "member": 3,
+            "calls": 65
+          },
+          {
+            "member": 4,
+            "calls": 61
+          },
+          {
+            "member": 5,
+            "calls": 60
+          },
+          {
+            "member": 6,
+            "calls": 60
+          },
+          {
+            "member": 7,
+            "calls": 54
+          },
+          {
+            "member": 8,
+            "calls": 73
+          }
+        ],
+        "minCallsPerHead": 54,
+        "maxCallsPerHead": 73,
+        "warmupCanonicalReadCutDelta": 1
+      }
+    ],
+    "allReadOutcomesRetained": true,
+    "p99Caveat": "64 samples per round; one local closed-loop run, not a tail estimate, hosted latency, or capacity guarantee."
+  },
+  "formal": {
+    "historicalPublicationModel": {
+      "oneHeadDistinctStates": 1735,
+      "threeHeadDistinctStates": 48150,
+      "intendedNoFreezeCounterexample": "ServingHeadsCurrent",
+      "intendedNoFenceCounterexample": "ServingHeadsCurrent",
+      "availabilityCounterexample": "Availability counterexample is intentional: no stale complete-view fallback during all-head freeze plus parent loss."
+    },
+    "historicalRoutingModel": {
+      "routing-proof": {
+        "status": "proved",
+        "obligations": 26,
+        "seconds": 6.301
+      },
+      "ignore-head-authority-proof": {
+        "status": "expected-proof-failure",
+        "seconds": 8.969
+      },
+      "ignore-cache-identity-proof": {
+        "status": "expected-proof-failure",
+        "seconds": 8.733
+      },
+      "stale-canonical-fallback-proof": {
+        "status": "expected-proof-failure",
+        "seconds": 8.432
+      },
+      "routing-safety": {
+        "status": "checked",
+        "seconds": 21.357,
+        "generated": 1624192,
+        "distinct": 166702
+      },
+      "ignore-head-authority": {
+        "status": "expected-counterexample",
+        "seconds": 0.79,
+        "generated": 7644,
+        "distinct": 2165
+      },
+      "ignore-cache-identity": {
+        "status": "expected-counterexample",
+        "seconds": 0.896,
+        "generated": 11927,
+        "distinct": 3189
+      },
+      "stale-canonical-fallback": {
+        "status": "expected-counterexample",
+        "seconds": 0.743,
+        "generated": 8914,
+        "distinct": 2427
+      },
+      "witness-NoHeadWithoutCanonical": {
+        "status": "expected-counterexample",
+        "seconds": 0.488,
+        "generated": 412,
+        "distinct": 134
+      },
+      "witness-NoFrozenHeadHit": {
+        "status": "expected-counterexample",
+        "seconds": 0.653,
+        "generated": 4181,
+        "distinct": 1206
+      },
+      "witness-NoRetiredHintFallback": {
+        "status": "expected-counterexample",
+        "seconds": 0.808,
+        "generated": 14359,
+        "distinct": 3725
+      },
+      "witness-NoFailedQuery": {
+        "status": "expected-counterexample",
+        "seconds": 0.531,
+        "generated": 938,
+        "distinct": 294
+      }
+    },
+    "historicalKernelProof": {
+      "tool": "TLAPS/tlapm",
+      "version": "901ae51",
+      "backend": "Z3 version 4.8.9 - 64 bit",
+      "mode": "strict, fresh fingerprints, SMT; no Isabelle certificate recheck",
+      "scope": "Three local read-head lemmas; not whole-protocol safety, liveness, batching, implementation or performance",
+      "sourceSha256": {
+        "ReadHeadPublication.tla": "f846ae211b14fb8f7aa390506c602319f152f21f82ab312ba44dc310ce36677d",
+        "ReadHeadKernelProofs.tla": "9de09121dfebd5cca3694b072101c2ce5f57916a75e01d5e69c37d288abe7a59",
+        "check-tlaps.sh": "da414ac9e2c02c21a986f141bbb00e681935bad5150c433f2d1114b782d50092"
+      },
+      "results": {
+        "positive": {
+          "status": "proved",
+          "obligations": 6
+        },
+        "no-activation-fence": {
+          "status": "expected-proof-failure",
+          "theorem": "ActivationRejectsStaleGeneration",
+          "exitCode": 10
+        },
+        "revive-retired-head": {
+          "status": "expected-proof-failure",
+          "theorem": "RetirementIsIrreversible",
+          "exitCode": 10
+        },
+        "unconditional-frozen-validation": {
+          "status": "expected-proof-failure",
+          "theorem": "FrozenValidationSound",
+          "exitCode": 10
+        }
+      }
+    },
+    "rerunAttempt": "TLC rerun attempted with ./specs/check-read-head-publication.sh, but it stopped before execution because TLA2TOOLS_JAR is not set and no local tla2tools.jar was found. Historical TLC reports/tool/source hashes remain included.",
+    "tlapsRerun": {
+      "status": "passed",
+      "summary": "formal-tlaps-rerun/summary.json",
+      "version": "901ae51",
+      "backend": "Z3 4.8.9, SMT, strict/fresh fingerprints; no Isabelle certificate recheck",
+      "positiveObligations": 6,
+      "negativeControls": [
+        "no-activation-fence",
+        "revive-retired-head",
+        "unconditional-frozen-validation"
+      ],
+      "scope": "Three local lemmas only; not whole-protocol safety, liveness, implementation refinement, or performance."
+    }
+  },
+  "recommendation": "Reject for current selection; retain as historical research. It eliminates canonical read-cut RPCs for warm identical queries but did not materially improve point p99 and showed only a small combined-query p99 change in one local run; every active head adds synchronous acknowledged-write publication work. A port/re-proof against 529f475 would be required before reconsideration.",
+  "limitations": [
+    "Historical candidate snapshot, not rebased to 529f475.",
+    "Only repeated fixed queries, one 401-row bag-join oracle case, eight-head scale, and bounded local load were tested.",
+    "No mixed concurrent writer/read stress for the candidate, split/migration load, open-loop saturation, or hosted behavior was measured.",
+    "Formal results are bounded/scope-limited and historical; no full protocol proof or implementation refinement.",
+    "All-head freeze plus parent loss deliberately denies answers rather than serving stale data."
+  ],
+  "artifactDirectory": "local-run/",
+  "focusedOracleReport": "conformance-focused-report.json",
+  "candidateCodeHistory": "Read-head runtime is available in repository history at candidateFeatureCommit and candidateRuntimeSnapshot; the isolated test adapter/harness sources are copied under candidate-test-harness/."
+}

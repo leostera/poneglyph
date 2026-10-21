@@ -1,0 +1,107 @@
+$ bun run test:oracle && node --import tsx run-focused.ts
+$ node --import tsx --test --test-concurrency=1 *.test.ts
+✔ actor identity/incarnation are parsed, not inferred from an abort error (1.013833ms)
+✔ pre-apply gate never claims or executes native SQL before explicit release (16.895792ms)
+✔ every duplicate request is held and clearing drains original work without replacement input (2.6965ms)
+✔ stale request parsing cannot activate a replacement arm with the same identity (0.51025ms)
+✔ wrong identity passes through; expiry is a failed fixture outcome rather than a success receipt (7.49125ms)
+✔ authority control identities become bounded trusted URI lists before actor lookup (1.079833ms)
+✔ mandatory quiescent obligation counts cannot omit, coerce or hide pending work (4.894459ms)
+✔ terminal decisions preserve typed identity, graph, sequence and strict bounded cursor (1.38875ms)
+✔ participant preparation and release/publication obligations fail closed (0.475291ms)
+✔ authority roles and identities are parsed before state inspection (0.846125ms)
+✔ conformance builds the exact four production storage roles (1.066292ms)
+✔ obsolete, mixed, missing and unknown actors fail closed (1.925625ms)
+✔ required coverage cannot silently certify the unfinished tier (0.490375ms)
+✔ 32 stable uint32 seed inputs are recorded, not claimed executed (0.463833ms)
+✔ correctness budgets are finite and unchanged by fault control (0.085083ms)
+✔ remote directory parser produces exact binary router evidence (0.917916ms)
+✔ remote leaf parser preserves SQL scalars and cursor evidence (0.1095ms)
+✔ malformed directory evidence cannot turn into an empty successful audit (1.873375ms)
+✔ invalid scalar, duplicate/backward cursor and overlarge page fail at the boundary (0.511ms)
+✔ overlapping callers admit both orders, real-time predecessors cannot be reversed (1.121833ms)
+✔ read prefixes include all preceding acknowledgments and no future invocation (1.596917ms)
+✔ invalid intervals/duplicates/unbounded histories fail, never reduce the search silently (0.605875ms)
+✔ hand-calculated assert/retract alternatives preserve complete duplicate multisets (1.986125ms)
+✔ one source retraction does not remove the other source, but projection order remains meaningful (0.430875ms)
+✔ hand-calculated single fact, public binding and durable evidence (1.731958ms)
+✔ hand-calculated duplicate list and source multiplicity (0.280792ms)
+✔ ordered retraction and retry preserve append-only membership (0.277541ms)
+✔ hand-calculated overlapping entity transactions permit two whole projections, not mixed fields (0.385167ms)
+✔ hand-calculated scalar encodings and Unicode canonical map ordering (0.134625ms)
+✔ checker sensitivity: missing acknowledged fact (2.372417ms)
+✔ checker sensitivity: duplicate durable fact (0.298666ms)
+✔ checker sensitivity: missing active assertion (0.226625ms)
+✔ checker sensitivity: missing index row (0.270833ms)
+✔ checker sensitivity: wrong index type (0.287833ms)
+✔ checker sensitivity: untyped false retraction (0.079542ms)
+✔ checker sensitivity: wrong canonical index key (0.2555ms)
+✔ checker sensitivity: wrong projection (0.222958ms)
+✔ checker sensitivity: orphan active reference (0.216334ms)
+✔ checker sensitivity: truthy SQL retraction corruption is not boolean-coerced (0.179083ms)
+✔ public comparison catches omission, duplicate and changed type (0.30325ms)
+✔ cached and uncached outcomes both require exact durable owner release/publication (4.023792ms)
+✔ distributed identity context remains exact across descendants of the same owner (1.622291ms)
+✔ aborted owner witness must be exact and lock-free, not fabricated from visibility (0.36375ms)
+✔ participant stage carries actual retained identity and exact typed append-only rows (1.0895ms)
+✔ wrong graph/prefix/role/identity, missing/duplicate rows and malformed fact scalars fail closed (6.248708ms)
+✔ native process membership records safe identities and actual execution state (1.122041ms)
+✔ only identical unfiltered replay specifications are deduplicated (0.69275ms)
+✔ opaque filters and external mutation cannot weaken the replay catalogue (0.204834ms)
+✔ explicit public reads still execute and compare at each changed state (20.836333ms)
+✔ read fault boundary rejects unknown modes (0.784916ms)
+✔ no read fault preserves the original complete stream (17.924333ms)
+✔ empty EOF removes the entire real scan (0.597291ms)
+✔ malformed transport replaces actual scan with invalid syntax (0.264917ms)
+✔ clean EOF preserves exactly one record, not the whole chunk (2.412625ms)
+✔ error occurs after a real record is delivered (0.370792ms)
+✔ no record cannot silently satisfy a record-stage fault (0.241833ms)
+✔ public reply parsing rejects non-object JSON instead of unchecked casts (0.539791ms)
+✔ uncertain transport diagnostics preserve native code, cause, stack and name (1.347459ms)
+✔ fail-fast drains the original caller without issuing another retry or fabricating abort (14.597666ms)
+✔ first failure prevents every subsequent stage and survives cleanup errors (0.829417ms)
+✔ failed prefix archives explicitly unexecuted work, never a passing incomplete matrix (1.870542ms)
+✔ cold fail-fast retains warm coverage but cannot execute a later cold case (0.185417ms)
+✔ terminal completion is persisted before the file-level archiver consumes it (6.519833ms)
+✔ startup/build failure and full completion have distinct terminal evidence (3.256042ms)
+✔ single-implementation report format requires the canonical composition and exact failure prefix (0.483375ms)
+✔ single-implementation terminal report archives four phases without historical traversal (1.968042ms)
+✔ hand-calculated canonical retained wire identity (0.740834ms)
+✔ nested map ordering and wire property ordering normalize without dropping list multiplicity (0.232042ms)
+✔ barrier boundary returns precise states and rejects malformed controls (1.127333ms)
+✔ idle/unmatched requests retain their native response (14.308584ms)
+✔ real native work finishes before its reply waits; release retains response (3.904917ms)
+✔ duplicate native replies cannot bypass the same barrier (1.257334ms)
+✔ clear drains pending requests and forbids implicit rearming (0.604ms)
+✔ failed native phases are reported, never fabricated as successful hits (0.343375ms)
+✔ safety expiry is a distinct failed fixture outcome (6.846125ms)
+✔ clearing during native work cannot activate a replacement barrier (0.470625ms)
+ℹ tests 76
+ℹ suites 0
+ℹ pass 76
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2646.503459
+poneglyph focused-warm-pass concurrent/legal-history/same-source-assert-retract
+poneglyph focused-warm-pass concurrent/legal-history/source-qualified-retraction-projection
+poneglyph focused-warm-pass concurrent/legal-history/disjoint-entities-typed-multiplicity
+poneglyph focused-warm-pass recovery/native-partial-participant-apply-process-crash
+poneglyph focused-warm-pass query-plan/owner-local-bag-join
+poneglyph focused-warm-pass read-fault/unavailable-before
+poneglyph focused-warm-pass read-fault/malformed
+poneglyph focused-warm-pass read-fault/empty-eof
+poneglyph focused-warm-pass read-fault/record-eof
+poneglyph focused-warm-pass read-fault/record-error
+poneglyph focused-cold-pass concurrent/legal-history/same-source-assert-retract
+poneglyph focused-cold-pass concurrent/legal-history/source-qualified-retraction-projection
+poneglyph focused-cold-pass concurrent/legal-history/disjoint-entities-typed-multiplicity
+poneglyph focused-cold-pass recovery/native-partial-participant-apply-process-crash
+poneglyph focused-cold-pass query-plan/owner-local-bag-join
+poneglyph focused-cold-pass read-fault/unavailable-before
+poneglyph focused-cold-pass read-fault/malformed
+poneglyph focused-cold-pass read-fault/empty-eof
+poneglyph focused-cold-pass read-fault/record-eof
+poneglyph focused-cold-pass read-fault/record-error
+Focused regression report: /Users/leostera/Developer/github.com/leostera/poneglyph-worktrees/experiment/read-head-100-publish/packages/conformance/results/focused-controls-2026-10-21T08-08-59.428Z/report.json; not full-tier certification.

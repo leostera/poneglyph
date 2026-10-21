@@ -1,0 +1,2 @@
+$ ./specs/check-read-head-publication.sh
+Set TLA2TOOLS_JAR to a local tla2tools.jar

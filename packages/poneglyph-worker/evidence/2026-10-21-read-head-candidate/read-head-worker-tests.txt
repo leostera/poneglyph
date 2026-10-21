@@ -1,0 +1,76 @@
+$ node --import tsx --test --test-concurrency=1 test/*.test.ts
+✔ trusted binding identity and graph selection are parsed, exact and frozen (1.277542ms)
+✔ static authorizer snapshots configuration and never uses prototype grants (0.255667ms)
+✔ unknown clients, ungranted graphs and empty grants fail closed (0.188541ms)
+✔ malformed entire policies are rejected, never partially installed (0.146667ms)
+✔ read probe requires the exact typed row bag, not a matching subset of fields (16.743208ms)
+✔ local head benchmark rejects invalid counts before creating a runtime or writing fixtures (404.8855ms)
+✔ read benchmark parses exact bounded plans without exposing destination or query inputs (0.746875ms)
+✔ read benchmark parses complete and failed probes with exact run identity and finite metrics (0.249583ms)
+✔ read benchmark keeps deadline failures in all-outcome p99, never in successful service percentiles (0.51975ms)
+✔ read benchmark classifies transport evidence without exposing causes (0.093458ms)
+✔ read benchmark actually enforces advertised concurrency and issues each operation once (34.6665ms)
+✔ read benchmark drains all issued work after an unexpected rejection, then stops without retries (0.241458ms)
+✔ read-head discovery is an exact, bounded, immutable routing hint (1.122667ms)
+✔ bounded discovery windows can reach every member beyond the per-hint budget (0.556875ms)
+✔ warm completed-result checks select fresh heads without per-read canonical calls (17.176334ms)
+✔ head responses cannot turn changed, retired, malformed or failed authority into a hit (1.865833ms)
+✔ membership hints may be stale but every positive result still requires fresh head authority (0.313709ms)
+✔ failed/disabled discovery is retried after a bounded cooldown, not on every concurrent read (0.237791ms)
+✔ concurrent cold discovery never shares another request's promise or blocks its canonical fallback (0.245208ms)
+✔ head request cancellation settles before canonical fallback (250.723792ms)
+✔ head routing envelope budget cannot make a complete canonical read invalid (0.419541ms)
+{
+  event: 'poneglyph.read.failure',
+  stage: 'snapshot',
+  reason: 'unknown'
+}
+{
+  event: 'poneglyph.read.failure',
+  stage: 'snapshot',
+  reason: 'protocol'
+}
+{
+  event: 'poneglyph.read.failure',
+  stage: 'snapshot',
+  reason: 'unknown'
+}
+{
+  event: 'poneglyph.read_head.delivery_deferred',
+  phase: 'freeze',
+  reason: 'unknown'
+}
+{
+  event: 'poneglyph.read.failure',
+  stage: 'snapshot',
+  reason: 'unknown'
+}
+{
+  event: 'poneglyph.read_head.delivery_deferred',
+  phase: 'activate',
+  reason: 'unknown'
+}
+{
+  event: 'poneglyph.read.failure',
+  stage: 'snapshot',
+  reason: 'unknown'
+}
+{
+  event: 'poneglyph.read.failure',
+  stage: 'snapshot',
+  reason: 'unknown'
+}
+✔ graph-scoped native RPC preserves writes/results and denies ungranted capabilities (2495.393667ms)
+✔ write scope cannot select existing graphs or an unbounded burst (0.724708ms)
+✔ hot updates independently add distinct grants to one shared policy (0.888125ms)
+✔ graph payloads require three real-page assertions for one entity (0.326959ms)
+✔ direct HTTP/2 delivers 10,000 independent incoming requests without the local singleton proxy (569.46175ms)
+✔ 10,000 offered concurrent calls are all issued and settled without retry (28.375334ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4940.74025
