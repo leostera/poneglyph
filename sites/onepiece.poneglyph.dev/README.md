@@ -1,44 +1,32 @@
-# One Piece MCP playground
+# One Piece playground
 
-Tiny read-only MCP application, protected by Cloudflare Access for members of the owner's personal Cloudflare account. Its entrypoint composes `createPublicPoneglyphMcpWorker` with dataset guidance, IP-rate admission and a private `PONEGLYPH` RPC binding. There is no query editor, hosted chat model or separate database API key.
+Developer-facing browser playground and read-only MCP endpoint for Poneglyph at `https://onepiece.poneglyph.dev`, built with React and [Kumo](https://kumo-ui.com). The whole host is protected by a Worker-scoped Cloudflare Access app for members of the owner's Cloudflare account. It is an application of Poneglyph (see [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md)), not a separate database.
 
-```ts
-using graph = await env.PONEGLYPH.getGraph({ graphId: "onepiece" });
-```
+- **Query**: curated and free-form Datalog over the `onepiece-wiki` graph, with per-query latency (browser round trip, Worker, database, snapshot/evaluate/release phases) plus shard requests, leases, tuples and bytes read. A session panel keeps p50/p95/max and a sparkline.
+- **Write facts**: assert or retract up to 25 typed facts per atomic transaction. The server assigns `source = playground:author:<sha256(email) prefix>` and an idempotent request token; storage 4xx is reported as rejected, anything else as unknown delivery (retry with the same token).
+- **Schema**: observed fields and value tags at one snapshot.
+- **Connect an agent**: MCP config for `/mcp` (tools `describe_dataset`, `get_schema`, `query`; read-only).
 
-The reusable MCP package manages that graph's per-tool lifetime. The private `packages/poneglyph-worker` service enforces the playground principal's read-only graph grant; writes are denied independently of the MCP tool list. No database actors/HTTP client adapter live in this site.
+## Boundaries
 
-The current hostname is `onepiece.poneglyph.dev`. The playground and private service were freshly redeployed with routing version 9 and unversioned Worker names. The public graph has six active synthetic smoke-test facts and no imported wiki-corpus facts. A separate, private MAV+ validation Worker received 277,787 One Piece facts / 45,913 page records on 2026-10-17; it has no public URL and did not change the public graph or production bindings. The approved two-writer continuation produced 115 successful four-query samples (107 overlapping writes), then stopped on a durably aborted source batch. No delivery is unresolved. All further writes are paused pending approval of the exact one-batch repair plan hash `8550f6d0f807334c220ee27b5b57325c3057c1b6dd954be2710aa76df59e6461`; details and limitations are recorded in [RFD0004](../../docs/rfds/RFD0004-expandable-cloudflare-sharding.md). The production graph remains untouched. [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md) records public deployment state and limitations.
+- `/api/*` requires the runtime-verified Access identity (`ctx.access`, audience-checked), same-origin JSON, bounded bodies, and rate limits before parsing (API 120/min, writes 20/min per member). Missing limiters or bindings fail closed.
+- `PONEGLYPH` (`playground`) is read-only; `PONEGLYPH_WRITER` (`playground-writer`) has read/write on `onepiece-wiki` only. MCP uses the read-only binding. Grants live in `packages/poneglyph-worker/cloudflare.config.ts`.
+- The loader principal `playground-loader` is used only by the loopback operator (`bun run dev:seed`, port 8878) and is not part of the public Worker.
 
-## Offline development
+## Data
+
+`onepiece-wiki` holds the full pinned One Piece wiki corpus (`.artifacts/import/pages10` + `remainder90`, 1,530,195 facts / 296,624 page records) plus the v5 semantic overlay (35,986 facts: characters, crews, captains, ships, bounties). `bun run load:corpus -- plan|run|status` loads overlay first, then base batches, verifying every payload SHA-256, journaling to `.artifacts/import/onepiece-wiki/`, replaying unknown outcomes with the same transaction ID, and stopping on unexpected 4xx. Demo writes land in the same graph under the `playground:` source prefix and never overwrite corpus facts.
+
+## Development
 
 ```sh
-# Repository root:
-bun install --frozen-lockfile
-bun run build:package
-bun run --cwd sites/playground.poneglyph.leostera.dev check
-bun run --cwd sites/playground.poneglyph.leostera.dev build
+bun install --frozen-lockfile && bun run build:package   # repository root
+bun run --cwd sites/onepiece.poneglyph.dev check          # typecheck + offline tests
+bun run --cwd sites/onepiece.poneglyph.dev build
+bun run --cwd sites/onepiece.poneglyph.dev preview:local  # offline UI on 127.0.0.1:8790 with overlay + 40 base batches
 ```
 
-Root build/check/test includes the service, adapter and site. Node hosts native tests against real canonical SQLite actors with six synthetic facts, not cloud resources/corpus data. `dev` uses the referenced service locally with ignored persistence. `dev:seed` is an explicit authenticated remote operator mode, pinned to `127.0.0.1:8878`; it never runs in default gates. Verify the owned listener before calling it. `/seed` submits only the fixed manifest in `src/test-facts.ts`; `/verify` executes three fixed private reads. Neither is part of the public deployment.
-
-`bun run deploy` builds dependencies and deploys the central private service before the public Worker. A new service means fresh namespaces, not automatic migration; never mistake seeding a distinct service for reconciliation against the old database. Keep uncertain original IDs/payloads and stop instead of silently retrying. Deployment/full corpus ingestion/deletion remain explicit operations requiring authorization.
-
-## Historical bounded import plans (currently paused)
-
-`POST /import` was the only write-route exception for the public playground. It required runtime-verified Access for the existing account-member app; client-supplied Access headers did not authenticate. A separate `PONEGLYPH_IMPORT` binding used the `playground-importer` principal. MCP retained the original read-only binding and two read-only tools. The loopback-only operator used for the dated isolated validation was a separate local tool, not a public route.
-
-The immutable `src/import-plan.json` and versioned `src/import-plan-remainder90.json` pin historical source payloads, IDs and SHA-256 hashes. The remainder plan's two-day authorization window has expired. Source provenance is `wiki:onepiece:dump:<XML SHA-256>`, not the historical normalized file's fixture label. All namespaces and repeated page records are retained; whole pages stay together in batches of at most 500 facts/800,000 bytes. Canonical write/participant/accounting limits are unchanged. These artifacts do not authorize any current public or staging import. **Do not run a hosted import command until the owner explicitly approves a newly prepared exact plan and target.**
-
-The offline `bun run import:prepare:remainder` and `bun run import:audit:remainder` commands verify source hashes, counts, batch facts and page boundaries; they do not themselves authorize writes. The historical `bun run import:run:remainder -- --max-batches=200` command is currently paused. Any future operator must retain original identities before dispatch and reconcile uncertain delivery using the exact same transaction ID and payload; a new identity or rebatching requires a separately approved exact plan. Successful receipts alone do not verify projected query answers. Default gates never invoke any import command.
-
-## Connecting an agent
-
-```text
-https://onepiece.poneglyph.dev/mcp
-```
-
-Sign in using a Cloudflare account that is a member of the owner's personal account. The Worker-scoped Access app uses only the Cloudflare IdP and an explicit Cloudflare Account Member selector; email-PIN login, email allowlists, Everyone and service-token grants are excluded. Workers.dev and preview URLs remain disabled. Your MCP transport must support Access authentication; browser sign-in alone does not authenticate a separate agent process. Call `describe_dataset` for syntax and limitations, then `get_schema` for fields observed at a declared snapshot; fixture data is not verified wiki lore. MCP POSTs have an approximate **30/minute per-IP, per-Cloudflare-location** allowance; `429` includes `Retry-After: 60`. Shared IPs share allowance. Native query budgets remain unchanged, and errors never become truncated successes. The generic handler's wildcard CORS is not an Access exemption or a promise of cross-origin cookie authentication. Local native tests bypass the cloud Access edge; deployment verification must read back the policy and check unauthenticated ingress separately.
+Tests run against real canonical SQLite actors in Miniflare with fixture facts; no cloud resources. `bun run deploy` deploys the private service before the public Worker. Hosted loads, deploys and Access changes are explicit operator actions.
 
 ## Query inventory and read-path rubric
 
@@ -47,24 +35,24 @@ Sign in using a Cloudflare account that is a member of the owner's personal acco
 The deterministic cohort contains 50 unique queries generated from the receipt-verified 227,692-page / 1,096,908-fact base prefix: five full constant bindings (one per field), 20 entity-bound relations across all five fields, 20 value-bound relations over selective title/category/link/text-byte values, and five conjunction/builtin join shapes. Namespace is covered by its full and entity-bound forms; value `0` is deliberately not used because its expected broad result exceeds the row budget. The runner accepts 50 requests (one pass) or 100 requests (the same 50 queries twice, with distinct evidence keys) to retain a strict per-invocation budget; this increases repeat samples, not unique-query coverage. The 10,000-query target therefore means 200 reviewed 50-request passes or 100 reviewed 100-request batches over this initial cohort, not 10,000 distinct query strings. Unbound full-relation and wildcard scans remain excluded from hosted reads because they risk query budgets. Before the hosted command, run the local planner to verify the corpus hash, exact committed receipt prefix and expected typed result digests without accessing credentials or the network:
 
 ```sh
-bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric
+bun run --cwd sites/onepiece.poneglyph.dev benchmark:query-rubric
 ```
 
 For end-to-end local correctness, build the canonical Worker bundle if needed, then use `--local`. This starts an isolated Miniflare runtime with a fresh temporary SQLite Durable Object persistence path, replays the exact 2,208-batch receipt-verified prefix (227,692 pages / 1,096,908 facts) with fresh local-only request tokens and server-minted transaction IDs, and compares every query to an independent typed-multiset oracle. It reads no Cloudflare credentials, sends no external requests, and never touches the hosted graph. The temporary database is removed after a completed batch; interrupted runs retain it for diagnosis and do not retry queries. This is a check of the defined 50-query cohort, not every valid Datalog program or a hosted performance test:
 
 ```sh
 bun run --cwd packages/poneglyph build
-bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric -- --local --count 50
+bun run --cwd sites/onepiece.poneglyph.dev benchmark:query-rubric -- --local --count 50
 # Or run the same 50 unique cases twice:
-bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric -- --local --count 100
+bun run --cwd sites/onepiece.poneglyph.dev benchmark:query-rubric -- --local --count 100
 ```
 
 A 100-request local run matched all 100 complete typed multisets (50 unique queries, each run twice). Per-run JSON output is generated locally under the git-ignored `evidence/` directory; local timings are for the isolated SQLite runtime and must not be compared as hosted latency. The following is a separate, explicitly hosted, read-only command. It sends one serial query per case, spaces request starts by at least 2.2 seconds to remain under the configured approximate 30/minute MCP allowance, compares every answer to an independently evaluated typed multiset, and writes per-case latency/lease/shard metrics plus result hashes to a new non-overwriting evidence file. Each failure is retained without raw response bodies or automatic query retry; later cases still run. It does not write graph facts, alter sampling, or deploy:
 
 ```sh
-bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric -- --hosted --confirm-read-only-hosted --count 50
+bun run --cwd sites/onepiece.poneglyph.dev benchmark:query-rubric -- --hosted --confirm-read-only-hosted --count 50
 # Or run the same 50 unique cases twice (100 serial requests):
-bun run --cwd sites/playground.poneglyph.leostera.dev benchmark:query-rubric -- --hosted --confirm-read-only-hosted --count 100
+bun run --cwd sites/onepiece.poneglyph.dev benchmark:query-rubric -- --hosted --confirm-read-only-hosted --count 100
 ```
 
 The runner uses the local Access-cookie helper without printing or persisting its credential. A batch with any backend error or result mismatch is not a passing compliance run. Report successful bounded samples only as descriptive evidence, not a capacity or tail-latency claim. Benchmark commands are never a build/check/test side effect; expand to a later batch only after reviewing the previous evidence and bottlenecks.

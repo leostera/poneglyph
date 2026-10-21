@@ -5,15 +5,18 @@ import type { GraphPermission } from "./src/authorization.js";
 // Deployment-owned policy. The generic service/authorizer has no product names.
 type GrantJson = Record<string, Record<string, GraphPermission[]>>;
 
+// The One Piece playground reads (MCP + browser), appends attributed browser
+// facts, and bulk-loads the pinned corpus, each through a distinct principal.
 const serviceGrants: GrantJson = {
-  playground: { onepiece: ["read"] },
-  "playground-loader": { onepiece: ["read", "write"] },
-  "playground-importer": { onepiece: ["read", "write"] },
+  playground: { "onepiece-wiki": ["read"] },
+  "playground-writer": { "onepiece-wiki": ["read", "write"] },
+  "playground-loader": { "onepiece-wiki": ["read", "write"] },
 };
 
 const validationGrants: GrantJson = {
   ...serviceGrants,
   "playground-loader": {
+    "onepiece-wiki": ["read", "write"],
     onepiece: ["read", "write"],
     "control-plane-validation": ["read", "write"],
   },

@@ -1,9 +1,9 @@
+// Offline verifier for the pinned, audited corpus batches. These plans are
+// historical source manifests; the corpus loader re-verifies their bytes.
 import { parseFactBatch, type FactBatch } from "@leostera/poneglyph";
 
-export const IMPORT_ACCESS_AUDIENCE = "81f3a2c62b68cd12e073e0678ec7a786968deed4853e90679528580350b0db3c";
 export const IMPORT_BODY_BYTES = 800_000;
 export const IMPORT_BATCH_FACTS = 500;
-export const IMPORT_RATE_LIMIT = { namespace: "2026101403", simple: { limit: 60, period: 60 as const } };
 export type ImportSegment = "pages10" | "remainder90";
 export type ImportBatch = Readonly<{ txId: string; sha256: string; facts: number; pages: number; bytes: number }>;
 export type ImportRetry = Readonly<{ batch: number; attempt: 1; txId: string; sha256: string; facts: number; pages: number; bytes: number; supersedesTxId: string; supersedesSha256: string }>;

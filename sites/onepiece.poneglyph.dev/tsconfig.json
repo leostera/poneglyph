@@ -1,17 +1,30 @@
 {
   "compilerOptions": {
     "target": "es2024",
-    "lib": ["es2024", "DOM", "DOM.Iterable"],
+    "lib": [
+      "es2024",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "preserve",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "strict": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
   },
-  "include": ["src", "test", "scripts", "cloudflare.config.ts", ".cloudflare/types"]
+  "include": [
+    "src",
+    "test",
+    "scripts",
+    "cloudflare.config.ts",
+    ".cloudflare/types"
+  ]
 }

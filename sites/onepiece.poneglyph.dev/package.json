@@ -9,29 +9,36 @@
     "import:prepare:remainder": "node --import tsx scripts/prepare-import.ts remainder90",
     "import:audit": "node --import tsx scripts/audit-import.ts",
     "import:audit:remainder": "node --import tsx scripts/audit-import.ts remainder90",
-    "import:run": "node --import tsx scripts/run-import.ts",
-    "import:run:remainder": "node --import tsx scripts/run-import.ts remainder90",
-    "import:reconcile": "node --import tsx scripts/reconcile-import.ts",
-    "import:reconcile:remainder": "node --import tsx scripts/reconcile-import.ts remainder90",
     "build": "bun run typecheck && cf build",
     "deploy": "bun run --cwd ../.. build:package && bun run --cwd ../../packages/poneglyph-worker deploy && bun run typecheck && cf deploy",
     "typecheck": "cf workers types && tsc --noEmit",
     "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node sites/onepiece.poneglyph.dev/test",
     "benchmark:query-rubric": "node --import tsx scripts/run-query-rubric.ts",
-    "check": "bun run typecheck && bun run test"
+    "check": "bun run typecheck && bun run test",
+    "load:corpus": "node --import tsx scripts/load-corpus.ts",
+    "preview:local": "node --import tsx scripts/local-preview.ts"
   },
   "dependencies": {
+    "@cloudflare/kumo": "2.15.0",
     "@leostera/poneglyph": "workspace:*",
     "@leostera/poneglyph-mcp": "workspace:*",
-    "@leostera/poneglyph-worker": "workspace:*"
+    "@leostera/poneglyph-worker": "workspace:*",
+    "@phosphor-icons/react": "^2.1.10",
+    "react": "19",
+    "react-dom": "19"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "2.3.1",
     "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+    "@modelcontextprotocol/client": "2.3.1",
+    "@tailwindcss/vite": "4",
     "@types/node": "25.6.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "cf": "1.0.0-beta.14",
     "esbuild": "0.28.2",
     "miniflare": "5.20261006.1-alpha",
+    "tailwindcss": "4",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vite": "8.3.4"

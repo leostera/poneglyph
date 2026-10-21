@@ -8,7 +8,7 @@ export const QUERY_PREDICATE_INVENTORY = Object.freeze([
 ] as const);
 
 export const QUERY_RUBRIC = Object.freeze({
-  dataScope: "The generic engine accepts any valid URI predicate; an unknown predicate is not a schema error and normally has no matching facts. Use get_schema to observe fields and FactValue tags present at a declared read snapshot. The semantic enrichment overlay and its extra predicates are not hosted.",
+  dataScope: "The generic engine accepts any valid URI predicate; an unknown predicate is not a schema error and normally has no matching facts. Use get_schema to observe fields and FactValue tags present at a declared read snapshot. The graph contains base wiki:page:* metadata/link predicates and the v5 onepiece:* semantic overlay predicates.",
   relation: {
     form: "field(Entity, Value)",
     arity: 2,
@@ -54,7 +54,7 @@ export const QUERY_RUBRIC = Object.freeze({
   ] as const),
   unsupported: Object.freeze([
     "No negation, disjunction, rule definitions, recursive rules, aggregation, projection, ordering, LIMIT, OFFSET, or pagination.",
-    "No full article text, semantic enrichment predicates, inference, or schema constraints are provided by this hosted corpus.",
+    "No full article text, inference, entity merging, or schema constraints are provided by this hosted corpus.",
   ] as const),
   budgets: Object.freeze({queryCharacters: 8192, clauses: 64, resultRows: 2000, tuplesRead: 50000, shardRequests: 20000, scanBytes: 20000000, databaseResponseBytes: 2000000, durationSeconds: 20, leafFanout: 256, directoryNodes: 511}),
 });
