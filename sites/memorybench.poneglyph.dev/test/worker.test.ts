@@ -6,6 +6,7 @@ import { test } from "vitest";
 import { build } from "esbuild";
 import { Miniflare, Log, LogLevel } from "miniflare";
 import { GRAPH_SCOPES, COMPATIBILITY_DATE, GRAPH_HEADER, HOST } from "../src/registry.js";
+import { splitGrantBindings } from "../../../packages/poneglyph-worker/src/grant-bindings.js";
 import { memorybenchGrants } from "../../../packages/poneglyph-worker/memorybench-grants.js";
 
 const site = resolve(import.meta.dirname, "..");
@@ -39,7 +40,7 @@ test("isolated read-only MCP and idempotent loopback ingestion", async () => {
       { config: { ...base, name: "anonymous", manifest: publicManifest, env: publicEnv } },
       { config: { ...base, name: "operator", manifest: await manifest("operator"), env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "memorybench-loader" } } } } },
       { config: { ...base, name: "database", manifest: await manifest("database"), env: {
-        GRAPH_GRANTS: { type: "json", value: memorybenchGrants },
+        ...Object.fromEntries(Object.entries(splitGrantBindings(memorybenchGrants)).map(([key, value]) => [key, { type: "json" as const, value }])),
         GRAPH_FACADES: { type: "durable-object", worker: "database", exportName: "GraphCoordinatorDO" },
         GRAPH_LEDGERS: { type: "durable-object", worker: "database", exportName: "GraphLedgerDO" },
         GRAPH_TREES: { type: "durable-object", worker: "database", exportName: "GraphTreeDO" },

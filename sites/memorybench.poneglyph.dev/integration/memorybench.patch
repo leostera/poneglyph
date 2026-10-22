@@ -1,0 +1,160 @@
+diff --git a/src/judges/openai.ts b/src/judges/openai.ts
+index 0d6a0e0..4d2e174 100644
+--- a/src/judges/openai.ts
++++ b/src/judges/openai.ts
+@@ -1,4 +1,5 @@
+ import { createOpenAI } from "@ai-sdk/openai"
++import { createGatewayOpenAI } from "../utils/cloudflare"
+ import { generateText } from "ai"
+ import type { Judge, JudgeConfig, JudgeInput, JudgeResult } from "../types/judge"
+ import type { ProviderPrompts } from "../types/prompts"
+@@ -12,9 +13,7 @@ export class OpenAIJudge implements Judge {
+   private client: ReturnType<typeof createOpenAI> | null = null
+ 
+   async initialize(config: JudgeConfig): Promise<void> {
+-    this.client = createOpenAI({
+-      apiKey: config.apiKey,
+-    })
++    this.client = createGatewayOpenAI(config.apiKey)
+     const modelAlias = config.model || DEFAULT_JUDGE_MODELS.openai
+     this.modelConfig = getModelConfig(modelAlias)
+     logger.info(
+@@ -36,7 +35,8 @@ export class OpenAIJudge implements Judge {
+       params.temperature = this.modelConfig.defaultTemperature
+     }
+ 
+-    params.maxTokens = this.modelConfig.defaultMaxTokens
++    params.maxOutputTokens = this.modelConfig.defaultMaxTokens
++    if (this.modelConfig.id.startsWith("@cf/")) params.providerOptions = { openai: { reasoningEffort: "low" } }
+ 
+     const { text } = await generateText(params as Parameters<typeof generateText>[0])
+ 
+diff --git a/src/orchestrator/index.ts b/src/orchestrator/index.ts
+index b5e5c14..ca469bb 100644
+--- a/src/orchestrator/index.ts
++++ b/src/orchestrator/index.ts
+@@ -261,7 +261,7 @@ export class Orchestrator {
+     if (checkpoint.providerConfig) {
+       logger.info(`Provider config: ${JSON.stringify(checkpoint.providerConfig)}`)
+     }
+-    await provider.initialize({ ...getProviderConfig(providerName), ...checkpoint.providerConfig })
++    await provider.initialize({ ...getProviderConfig(providerName), ...checkpoint.providerConfig, benchmark: checkpoint.benchmark, dataSourceRunId: checkpoint.dataSourceRunId })
+ 
+     if (phases.includes("ingest")) {
+       await runIngestPhase(
+diff --git a/src/orchestrator/phases/answer.ts b/src/orchestrator/phases/answer.ts
+index d76acb1..199427a 100644
+--- a/src/orchestrator/phases/answer.ts
++++ b/src/orchestrator/phases/answer.ts
+@@ -1,5 +1,6 @@
+ import { readFileSync, existsSync } from "fs"
+ import { createOpenAI } from "@ai-sdk/openai"
++import { createGatewayOpenAI } from "../../utils/cloudflare"
+ import { createAnthropic } from "@ai-sdk/anthropic"
+ import { createGoogleGenerativeAI } from "@ai-sdk/google"
+ import { generateText } from "ai"
+@@ -31,7 +32,7 @@ function getAnsweringModel(modelAlias: string): {
+   switch (modelConfig.provider) {
+     case "openai":
+       return {
+-        client: createOpenAI({ apiKey: config.openaiApiKey }),
++        client: createGatewayOpenAI(config.openaiApiKey),
+         modelConfig,
+       }
+     case "anthropic":
+@@ -156,7 +157,8 @@ export async function runAnswerPhase(
+         const params: Record<string, unknown> = {
+           model: client(modelConfig.id),
+           prompt,
+-          maxTokens: modelConfig.defaultMaxTokens,
++          maxOutputTokens: modelConfig.defaultMaxTokens,
++          ...(modelConfig.id.startsWith("@cf/") ? { providerOptions: { openai: { reasoningEffort: "low" } } } : {}),
+         }
+ 
+         if (modelConfig.supportsTemperature) {
+diff --git a/src/orchestrator/phases/retrieval-eval.ts b/src/orchestrator/phases/retrieval-eval.ts
+index 344197c..ae36ef7 100644
+--- a/src/orchestrator/phases/retrieval-eval.ts
++++ b/src/orchestrator/phases/retrieval-eval.ts
+@@ -55,17 +55,16 @@ Return ONLY the JSON array, no other text.`
+     const response = await generateText({
+       model,
+       messages: [{ role: "user", content: prompt }],
++      maxOutputTokens: 8192,
+     })
+ 
+     const jsonMatch = response.text.match(/\[[\s\S]*\]/)
+-    if (!jsonMatch) {
+-      return searchResults.map((_, i) => ({ id: `result_${i + 1}`, relevant: 0 as const }))
+-    }
++    if (!jsonMatch) throw new Error("Relevance judge did not return JSON")
+ 
+     const parsed = JSON.parse(jsonMatch[0]) as RelevanceResult[]
+     return parsed
+-  } catch {
+-    return searchResults.map((_, i) => ({ id: `result_${i + 1}`, relevant: 0 as const }))
++  } catch (cause) {
++    throw new Error("Relevance evaluation failed; no fabricated zero scores", { cause })
+   }
+ }
+ 
+diff --git a/src/providers/index.ts b/src/providers/index.ts
+index 5f71566..a4f1c33 100644
+--- a/src/providers/index.ts
++++ b/src/providers/index.ts
+@@ -5,6 +5,7 @@ import { Mem0Provider } from "./mem0"
+ import { ZepProvider } from "./zep"
+ import { FilesystemProvider } from "./filesystem"
+ import { RAGProvider } from "./rag"
++import { PoneglyphDeterministicProvider, PoneglyphExtractedProvider } from "./poneglyph"
+ 
+ const providers: Record<ProviderName, new () => Provider> = {
+   supermemory: SupermemoryProvider,
+@@ -12,6 +13,8 @@ const providers: Record<ProviderName, new () => Provider> = {
+   zep: ZepProvider,
+   filesystem: FilesystemProvider,
+   rag: RAGProvider,
++  "poneglyph-a": PoneglyphDeterministicProvider,
++  "poneglyph-b": PoneglyphExtractedProvider,
+ }
+ 
+ export function createProvider(name: ProviderName): Provider {
+diff --git a/src/types/provider.ts b/src/types/provider.ts
+index cdc0228..bd1b64d 100644
+--- a/src/types/provider.ts
++++ b/src/types/provider.ts
+@@ -47,4 +47,4 @@ export interface Provider {
+   clear(containerTag: string): Promise<void>
+ }
+ 
+-export type ProviderName = "supermemory" | "mem0" | "zep" | "filesystem" | "rag"
++export type ProviderName = "supermemory" | "mem0" | "zep" | "filesystem" | "rag" | "poneglyph-a" | "poneglyph-b"
+diff --git a/src/utils/config.ts b/src/utils/config.ts
+index 8ac1268..b9f7d94 100644
+--- a/src/utils/config.ts
++++ b/src/utils/config.ts
+@@ -20,6 +20,9 @@ export const config: Config = {
+ 
+ export function getProviderConfig(provider: string): { apiKey: string; baseUrl?: string } {
+   switch (provider) {
++    case "poneglyph-a":
++    case "poneglyph-b":
++      return { apiKey: "" } // Credentials come from process environment, never checkpoint config.
+     case "supermemory":
+       return { apiKey: config.supermemoryApiKey, baseUrl: config.supermemoryBaseUrl }
+     case "mem0":
+diff --git a/src/utils/models.ts b/src/utils/models.ts
+index b29ac80..21b654f 100644
+--- a/src/utils/models.ts
++++ b/src/utils/models.ts
+@@ -9,6 +9,10 @@ export interface ModelConfig {
+ }
+ 
+ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
++  "@cf/openai/gpt-oss-120b": {
++    id: "@cf/openai/gpt-oss-120b", provider: "openai", displayName: "Workers AI GPT-OSS 120B",
++    supportsTemperature: false, defaultTemperature: 1, maxTokensParam: "maxOutputTokens", defaultMaxTokens: 8192,
++  },
+   // OpenAI - Standard models (support temperature)
+   "gpt-4o": {
+     id: "gpt-4o",

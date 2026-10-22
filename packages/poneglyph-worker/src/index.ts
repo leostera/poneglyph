@@ -12,7 +12,7 @@ import { parseFactBatch } from "../../poneglyph/src/domain/fact.js";
 import { parseTransactionId } from "../../poneglyph/src/domain/identifiers.js";
 import { executeWorkerQuery } from "./query-coordinator.js";
 import type { StorageEnv } from "../../poneglyph/src/storage/environment.js";
-import { authorizeGraph, GraphAuthorizationError, parseGraphRequest, parseIdentity, staticAuthorizer } from "./authorization.js";
+import { authorizeGraph, GraphAuthorizationError, parseGraphRequest, parseIdentity, authorizerFromBindings } from "./authorization.js";
 
 export { GraphCoordinatorDO, GraphLedgerDO, GraphTreeDO, GraphShardDO } from "../../poneglyph/src/storage/implementation.js";
 export { staticAuthorizer, type GraphAuthorizer, type GraphGrants } from "./authorization.js";
@@ -128,14 +128,14 @@ export default class PoneglyphService extends WorkerEntrypoint<ServiceEnv> {
       throw new PoneglyphInputError("query requires a graphId and Datalog string");
     }
     const request = parseGraphRequest({graphId: input.graphId});
-    await authorizeGraph(staticAuthorizer(this.env.GRAPH_GRANTS), identity, request);
+    await authorizeGraph(authorizerFromBindings(this.env), identity, request);
     return runGraphOperation(() => executeWorkerQuery(this.env, request.graphId, input.query));
   }
 
   async getGraph(input: { graphId: string }): Promise<ReadGraph> {
     const identity = parseIdentity(this.ctx.props);
     const request = parseGraphRequest(input);
-    const authorizer = staticAuthorizer(this.env.GRAPH_GRANTS);
+    const authorizer = authorizerFromBindings(this.env);
     const permissions = await authorizeGraph(authorizer, identity, request);
     // Acquiring a capability creates no durable objects or graph data.
     const graph = bindGraph(this.env, request.graphId);

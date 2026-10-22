@@ -55,6 +55,25 @@ export function staticAuthorizer(input: unknown): GraphAuthorizer {
     async permissionsFor({ clientId, graphId }: ClientIdentity & Readonly<{ graphId: GraphId }>) { return grants.get(clientId)?.get(graphId) ?? Object.freeze([]); },
   });
 }
+// A deployment may split an exact policy across bounded JSON variables. This
+// changes its representation, not its principals, graph scope or permissions.
+export function authorizerFromBindings(bindings: object): GraphAuthorizer {
+  if (!Object.hasOwn(bindings, "GRAPH_GRANTS")) throw new GraphAuthorizationError();
+  const merged: Record<string, Record<string, unknown>> = Object.create(null);
+  for (const [name, value] of Object.entries(bindings)) {
+    if (name !== "GRAPH_GRANTS" && !name.startsWith("GRAPH_GRANTS_")) continue;
+    if (!/^GRAPH_GRANTS(?:_\d{2})?$/.test(name) || !record(value)) throw new GraphAuthorizationError();
+    for (const [client, graphs] of Object.entries(value)) {
+      if (!record(graphs)) throw new GraphAuthorizationError();
+      const target = merged[client] ??= Object.create(null) as Record<string, unknown>;
+      for (const [graph, permissions] of Object.entries(graphs)) {
+        if (Object.hasOwn(target, graph)) throw new GraphAuthorizationError();
+        target[graph] = permissions;
+      }
+    }
+  }
+  return staticAuthorizer(merged);
+}
 export async function authorizeGraph(authorizer: GraphAuthorizer, identity: ClientIdentity, request: GraphRequest): Promise<readonly GraphPermission[]> {
   const permissions = await authorizer.permissionsFor({ ...identity, graphId: request.graphId });
   if (!permissions.includes("read") || permissions.some(permission => permission !== "read" && permission !== "write")) throw new GraphAuthorizationError();

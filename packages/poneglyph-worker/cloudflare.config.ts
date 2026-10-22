@@ -2,6 +2,7 @@ import { bindings, defineConfig, exports } from "cf/config";
 import * as service from "./src/index.ts" with { type: "cf-worker" };
 import type { GraphPermission } from "./src/authorization.js";
 import { memorybenchGrants } from "./memorybench-grants.ts";
+import { splitGrantBindings } from "./src/grant-bindings.ts";
 
 // Deployment-owned policy. The generic service/authorizer has no product names.
 type GrantJson = Record<string, Record<string, GraphPermission[]>>;
@@ -25,6 +26,7 @@ const validationGrants: GrantJson = {
 };
 
 function makeServiceWorker(name: string, grants: GrantJson) {
+  const { GRAPH_GRANTS, ...extraGrants } = splitGrantBindings(grants);
   return {
     name,
     entrypoint: service,
@@ -39,7 +41,8 @@ function makeServiceWorker(name: string, grants: GrantJson) {
       GRAPH_LEDGERS: bindings.durableObject({ worker: name, exportName: "GraphLedgerDO" }),
       GRAPH_TREES: bindings.durableObject({ worker: name, exportName: "GraphTreeDO" }),
       GRAPH_SHARDS: bindings.durableObject({ worker: name, exportName: "GraphShardDO" }),
-      GRAPH_GRANTS: bindings.json(grants),
+      GRAPH_GRANTS: bindings.json(GRAPH_GRANTS),
+      ...Object.fromEntries(Object.entries(extraGrants).map(([key, value]) => [key, bindings.json(value)])),
     },
     exports: {
       GraphCoordinatorDO: exports.durableObject({ storage: "sqlite" }),

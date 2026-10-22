@@ -1,0 +1,4 @@
+{"fixtureOnly":true,"runId":"offline-locomo-a","pipeline":"all phases completed","realSqlite":true,"realMcp":true,"models":"scripted offline fixtures, not benchmark scores"}
+{"fixtureOnly":true,"runId":"offline-locomo-b","pipeline":"all phases completed","realSqlite":true,"realMcp":true,"models":"scripted offline fixtures, not benchmark scores"}
+{"fixtureOnly":true,"runId":"offline-longmemeval-a","pipeline":"all phases completed","realSqlite":true,"realMcp":true,"models":"scripted offline fixtures, not benchmark scores"}
+{"fixtureOnly":true,"runId":"offline-longmemeval-b","pipeline":"all phases completed","realSqlite":true,"realMcp":true,"models":"scripted offline fixtures, not benchmark scores"}
