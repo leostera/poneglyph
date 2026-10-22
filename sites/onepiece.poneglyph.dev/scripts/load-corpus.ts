@@ -158,7 +158,9 @@ async function send(txId: string, facts: readonly Fact[]): Promise<LoadAnswer> {
 class Stop extends Error {}
 /** Unknown after the replay budget. Stays pending under the SAME txId; never re-minted. */
 class Deferred extends Error {}
-const MAX_DEFERRED = 10;
+const MAX_DEFERRED = 25;
+const MAX_ACTIVE_WAITS = 45; // ~15 minutes
+const RECONCILE_ROUNDS = 3;
 async function loadBatch(batch: Batch, entry: BatchState): Promise<number> {
   const facts = await batch.load();
   if (facts.length !== batch.facts) throw new Stop(`${batch.key}: payload has ${facts.length} facts, plan says ${batch.facts}`);
@@ -166,6 +168,7 @@ async function loadBatch(batch: Batch, entry: BatchState): Promise<number> {
   let txId = entry.unresolved && entry.lastTxId ? entry.lastTxId : entry.aborts === 0 ? batch.txId : `${batch.txId}:retry:${entry.aborts}`;
   let aborts = entry.aborts;
   let replays = 0;
+  let activeWaits = 0;
   for (;;) {
     attempt++;
     await journal({ key: batch.key, txId, attempt, phase: "inflight", facts: batch.facts, sha256: batch.sha256 });
@@ -189,6 +192,9 @@ async function loadBatch(batch: Batch, entry: BatchState): Promise<number> {
       throw new Stop(`${batch.key}: rejected with HTTP ${answer.status}: ${answer.message ?? ""}`);
     }
     await journal({ key: batch.key, txId, attempt, phase: "unknown", status: answer.status, message: answer.message, elapsedMs });
+    // 423 "this transaction is active": the original execution is still running
+    // in its coordinator. Waiting is not a failed replay; give it time.
+    if (answer.message?.includes("transaction is active") && activeWaits++ < MAX_ACTIVE_WAITS) { await sleep(20_000); continue; }
     replays++;
     if (replays > MAX_UNKNOWN_REPLAYS) throw new Deferred(`${batch.key}: outcome still unknown after ${MAX_UNKNOWN_REPLAYS} same-ID replays; resume later to keep reconciling ${txId}`);
     await sleep(Math.min(30_000, 1_000 * 2 ** replays));
@@ -240,13 +246,28 @@ async function run(): Promise<void> {
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, todo.length) }, worker));
   await journalChain;
-  await journalHandle?.close();
-  if (stop) throw stop;
+  if (stop) { await journalHandle?.close(); throw stop; }
+  // Reconcile set-aside batches serially, still with their original txIds;
+  // coordinator recovery alarms get time to finish interrupted executions.
+  for (let round = 1; round <= RECONCILE_ROUNDS && deferred.length > 0; round++) {
+    const keys = new Set(deferred.map(message => message.split(":").slice(0, 2).join(":")));
+    deferred.length = 0;
+    console.log(JSON.stringify({ event: "reconcile", round, batches: [...keys] }));
+    await sleep(120_000);
+    const latest = await readJournal();
+    for (const batch of batches.filter(candidate => keys.has(candidate.key) && !latest.get(candidate.key)?.committed)) {
+      try { await loadBatch(batch, latest.get(batch.key)!); committedFacts += batch.facts; console.log(JSON.stringify({ event: "reconciled", key: batch.key })); }
+      catch (error) { if (error instanceof Deferred) deferred.push(error.message); else throw error; }
+    }
+    await journalChain;
+  }
   if (deferred.length > 0) {
     console.log(JSON.stringify({ event: "incomplete", deferred, note: "every other batch committed; resume to keep reconciling the same txIds" }));
     process.exitCode = 2;
+    await journalHandle?.close();
     return;
   }
+  await journalHandle?.close();
   console.log(JSON.stringify({ event: "complete", graphId: GRAPH_ID, batches: batches.length, committedFacts, totalFacts, minutes: Math.round((Date.now() - started) / 60_000) }));
 }
 
