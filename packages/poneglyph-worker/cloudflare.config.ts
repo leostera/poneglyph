@@ -1,6 +1,7 @@
 import { bindings, defineConfig, exports } from "cf/config";
 import * as service from "./src/index.ts" with { type: "cf-worker" };
 import type { GraphPermission } from "./src/authorization.js";
+import { memorybenchGrants } from "./memorybench-grants.ts";
 
 // Deployment-owned policy. The generic service/authorizer has no product names.
 type GrantJson = Record<string, Record<string, GraphPermission[]>>;
@@ -8,6 +9,7 @@ type GrantJson = Record<string, Record<string, GraphPermission[]>>;
 // The One Piece playground reads (MCP + browser), appends attributed browser
 // facts, and bulk-loads the pinned corpus, each through a distinct principal.
 const serviceGrants: GrantJson = {
+  ...memorybenchGrants,
   playground: { "onepiece-wiki": ["read"] },
   "playground-writer": { "onepiece-wiki": ["read", "write"] },
   "playground-loader": { "onepiece-wiki": ["read", "write"] },

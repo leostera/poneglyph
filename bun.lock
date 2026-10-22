@@ -143,6 +143,25 @@
         "typescript": "5.9.3",
       },
     },
+    "sites/memorybench.poneglyph.dev": {
+      "name": "@poneglyph/site-memorybench",
+      "dependencies": {
+        "@leostera/poneglyph": "workspace:*",
+        "@leostera/poneglyph-mcp": "workspace:*",
+        "@leostera/poneglyph-worker": "workspace:*",
+      },
+      "devDependencies": {
+        "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+        "@modelcontextprotocol/client": "2.3.1",
+        "@types/node": "25.6.0",
+        "cf": "1.0.0-beta.14",
+        "esbuild": "0.28.2",
+        "miniflare": "5.20261006.1-alpha",
+        "tsx": "4.23.15",
+        "typescript": "5.9.3",
+        "vite": "8.3.4",
+      },
+    },
     "sites/onepiece.poneglyph.dev": {
       "name": "@poneglyph/site-playground",
       "dependencies": {
@@ -452,6 +471,8 @@
     "@poneglyph/example-deployed-todo-smoke": ["@poneglyph/example-deployed-todo-smoke@workspace:examples/deployed-todo-smoke"],
 
     "@poneglyph/example-onepiece-load": ["@poneglyph/example-onepiece-load@workspace:examples/onepiece-load"],
+
+    "@poneglyph/site-memorybench": ["@poneglyph/site-memorybench@workspace:sites/memorybench.poneglyph.dev"],
 
     "@poneglyph/site-playground": ["@poneglyph/site-playground@workspace:sites/onepiece.poneglyph.dev"],
 

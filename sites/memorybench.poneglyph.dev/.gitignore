@@ -1,0 +1,4 @@
+.cloudflare/
+.artifacts/
+node_modules/
+.env*

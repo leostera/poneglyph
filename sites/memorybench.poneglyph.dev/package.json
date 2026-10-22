@@ -1,0 +1,30 @@
+{
+  "name": "@poneglyph/site-memorybench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cf dev",
+    "dev:operator": "cf dev --mode operator",
+    "typecheck": "cf workers types && tsc --noEmit",
+    "build": "bun run typecheck && cf build",
+    "deploy": "bun run build && cf deploy",
+    "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node sites/memorybench.poneglyph.dev/test",
+    "check": "bun run typecheck && bun run test"
+  },
+  "dependencies": {
+    "@leostera/poneglyph": "workspace:*",
+    "@leostera/poneglyph-mcp": "workspace:*",
+    "@leostera/poneglyph-worker": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+    "@modelcontextprotocol/client": "2.3.1",
+    "@types/node": "25.6.0",
+    "cf": "1.0.0-beta.14",
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261006.1-alpha",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vite": "8.3.4"
+  }
+}
