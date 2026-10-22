@@ -24,6 +24,4 @@ export function selectGraph(value: string | null): GraphScope | undefined {
   return value === null ? undefined : GRAPH_SCOPES.get(value);
 }
 export const GRAPH_HEADER = "x-memorybench-graph";
-export const HOST = "memorybench.poneglyph.dev";
-// Pinned local runtime supports October 13; no storage runtime upgrade.
-export const COMPATIBILITY_DATE = "2026-10-13";
+export { HOST, COMPATIBILITY_DATE } from "./runtime.js";

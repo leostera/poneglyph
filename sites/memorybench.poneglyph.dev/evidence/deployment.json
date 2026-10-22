@@ -1,0 +1,56 @@
+{
+  "status": "deployed-control-plane-verified; local hostname resolution blocks authenticated data-plane verification",
+  "host": "memorybench.poneglyph.dev",
+  "networkProbe": { "systemLookup": "ENOTFOUND", "cloudflared": "failed to get app info: no such host", "directDnsQuery": "returns Cloudflare addresses", "existingOnepieceHttps": 302, "unprivilegedCacheFlush": "did not resolve the discrepancy", "resolverOrForcedIpBypassUsed": false },
+  "temporaryToken": { "id": "778bb1091048e441fb6f65cbe8c888c4", "revocation": "pending: personal-profile DELETE and token listing both return HTTP 403 / code 9109", "secretStorage": "0600 temporary file only; never committed" },
+  "workerId": "6df59602822848df8fc18494daa7ce49",
+  "siteVersion": "e1149e35-f74e-4f07-be02-1a6dc9ac6d73",
+  "serviceVersion": "c37e0cc1-6883-4626-91d3-37a096686814",
+  "access": {
+    "id": "d8ba61a5-16b6-4c6b-be3b-f361f47e1168",
+    "aud": "2a1820cd36392d673415ff39ed8d1f5bb187e8e5135c351d1117904c21c1f77a",
+    "destinations": [
+      {
+        "type": "worker",
+        "worker_id": "6df59602822848df8fc18494daa7ce49"
+      }
+    ],
+    "allowed_idps": [
+      "4cae3344-b5e5-479e-8b2f-d3ca8322d9cb"
+    ],
+    "session_duration": "1000h",
+    "options_preflight_bypass": false
+  },
+  "policy": {
+    "id": "d5717f04-bc01-46d5-bc7f-e62020de9537",
+    "decision": "allow",
+    "include": [
+      {
+        "cloudflare_account_member": {
+          "account_id": "0f436d2aabf1f872be90b8dd9d5715e6"
+        }
+      }
+    ]
+  },
+  "grants": {
+    "variables": 34,
+    "maxVariableBytes": 4084,
+    "readerGraphs": 1020,
+    "loaderGraphs": 1020,
+    "onepieceReadGrantPreserved": true
+  },
+  "model": "@cf/openai/gpt-oss-120b",
+  "gateway": "default",
+  "liveModelSmoke": {
+    "directChat": "OK",
+    "upstreamSdkResponses": "OK"
+  },
+  "offlineRootCheck": {
+    "filesPassed": 74,
+    "filesSkipped": 2,
+    "testsPassed": 369,
+    "testsSkipped": 2,
+    "failures": 0,
+    "bun": "1.4.2"
+  }
+}
