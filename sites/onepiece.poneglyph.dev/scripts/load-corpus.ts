@@ -156,6 +156,9 @@ async function send(txId: string, facts: readonly Fact[]): Promise<LoadAnswer> {
 }
 
 class Stop extends Error {}
+/** Unknown after the replay budget. Stays pending under the SAME txId; never re-minted. */
+class Deferred extends Error {}
+const MAX_DEFERRED = 10;
 async function loadBatch(batch: Batch, entry: BatchState): Promise<number> {
   const facts = await batch.load();
   if (facts.length !== batch.facts) throw new Stop(`${batch.key}: payload has ${facts.length} facts, plan says ${batch.facts}`);
@@ -187,7 +190,7 @@ async function loadBatch(batch: Batch, entry: BatchState): Promise<number> {
     }
     await journal({ key: batch.key, txId, attempt, phase: "unknown", status: answer.status, message: answer.message, elapsedMs });
     replays++;
-    if (replays > MAX_UNKNOWN_REPLAYS) throw new Stop(`${batch.key}: outcome still unknown after ${MAX_UNKNOWN_REPLAYS} same-ID replays; resume later to keep reconciling ${txId}`);
+    if (replays > MAX_UNKNOWN_REPLAYS) throw new Deferred(`${batch.key}: outcome still unknown after ${MAX_UNKNOWN_REPLAYS} same-ID replays; resume later to keep reconciling ${txId}`);
     await sleep(Math.min(30_000, 1_000 * 2 ** replays));
   }
 }
@@ -200,7 +203,11 @@ async function run(): Promise<void> {
   if (!probe.ok) throw new Error(`operator readiness query failed with HTTP ${probe.status}`);
   await probe.body?.cancel();
   const state = await readJournal();
-  const todo = batches.filter(batch => !state.get(batch.key)?.committed);
+  // Previously unresolved batches go last so one stuck transaction cannot block
+  // independent batches; they are still replayed with their original txId.
+  const pending = batches.filter(batch => !state.get(batch.key)?.committed);
+  const todo = [...pending.filter(batch => !state.get(batch.key)?.unresolved), ...pending.filter(batch => state.get(batch.key)?.unresolved)];
+  const deferred: string[] = [];
   const totalFacts = batches.reduce((sum, batch) => sum + batch.facts, 0);
   let committedFacts = batches.filter(batch => state.get(batch.key)?.committed).reduce((sum, batch) => sum + batch.facts, 0);
   console.log(JSON.stringify({ event: "start", graphId: GRAPH_ID, pendingBatches: todo.length, totalBatches: batches.length, committedFacts, totalFacts, concurrency }));
@@ -221,13 +228,25 @@ async function run(): Promise<void> {
             batchesPerSecond: Math.round(rate * 100) / 100, etaMinutes: Math.round((todo.length - completed) / rate / 60),
             batchMs: { p50: sorted[Math.floor(sorted.length / 2)], p95: sorted[Math.floor(sorted.length * 0.95)] } }));
         }
-      } catch (error) { stop = error instanceof Error ? error : new Error(String(error)); }
+      } catch (error) {
+        if (error instanceof Deferred && deferred.length < MAX_DEFERRED) {
+          deferred.push(error.message);
+          console.log(JSON.stringify({ event: "deferred", message: error.message, deferred: deferred.length }));
+          continue;
+        }
+        stop = error instanceof Error ? error : new Error(String(error));
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, todo.length) }, worker));
   await journalChain;
   await journalHandle?.close();
   if (stop) throw stop;
+  if (deferred.length > 0) {
+    console.log(JSON.stringify({ event: "incomplete", deferred, note: "every other batch committed; resume to keep reconciling the same txIds" }));
+    process.exitCode = 2;
+    return;
+  }
   console.log(JSON.stringify({ event: "complete", graphId: GRAPH_ID, batches: batches.length, committedFacts, totalFacts, minutes: Math.round((Date.now() - started) / 60_000) }));
 }
 
