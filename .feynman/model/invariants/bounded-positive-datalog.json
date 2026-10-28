@@ -1,0 +1,17 @@
+{
+  "statement": "A query contains at least one positive binary fact relation, no more than 64 total clauses, and every builtin variable is bound by a fact relation; unsupported or unbounded syntax is rejected before evaluation.",
+  "enforcement": ["runtime", "test-time"],
+  "enforcedAt": [
+    {
+      "trigger": "Client application calls GraphClient.query",
+      "frames": [
+        { "symbol": "HttpGraphClient.query", "anchor": "packages/poneglyph/src/client.ts#HttpGraphClient.query", "note": "Parses Datalog source before sending the request." },
+        { "symbol": "parseDatalogQuery", "anchor": "packages/poneglyph/src/datalog/parser.ts#parseDatalogQuery", "note": "Tokenizes and parses only the supported relation and builtin forms." },
+        { "symbol": "createDatalogQuery", "anchor": "packages/poneglyph/src/datalog/ast.ts#createDatalogQuery", "note": "Requires a positive fact relation, enforces the clause bound, and checks builtin variables are bound." }
+      ]
+    }
+  ],
+  "consequence": "The evaluator receives a bounded query AST rather than unsupported syntax or unbound constraint work.",
+  "tests": ["packages/poneglyph/tests/client.test.ts", "packages/poneglyph/tests/datalog.test.ts"],
+  "anchors": ["packages/poneglyph/src/datalog/ast.ts", "packages/poneglyph/src/datalog/parser.ts"]
+}

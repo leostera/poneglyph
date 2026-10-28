@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "third-party",
+  "runsOn": { "location": "browser", "platform": "Web browser" },
+  "summary": "The browser renders the One Piece playground page and carries its same-origin requests to the playground Worker.",
+  "talksTo": ["onepiece-playground-page", "onepiece-playground-worker"],
+  "anchors": ["sites/onepiece.poneglyph.dev/README.md"]
+}

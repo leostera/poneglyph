@@ -1,0 +1,6 @@
+{
+  "summary": "Defines portable typed fact and Datalog semantics, the HTTP client, Worker API, and canonical graph coordinator/ledger/tree/shard storage implementation.",
+  "actors": ["database-worker", "client-application", "quickstart-example"],
+  "footprint": { "paths": ["packages/poneglyph/src/", "packages/poneglyph/cloudflare.config.ts"] },
+  "anchors": ["packages/poneglyph/src/index.ts", "packages/poneglyph/src/worker.ts"]
+}

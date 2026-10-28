@@ -1,0 +1,8 @@
+{
+  "kind": "person",
+  "provenance": "ambient",
+  "runsOn": { "location": "local" },
+  "summary": "A benchmark operator prepares pinned MemoryBench inputs, starts a controlled variant run, and reviews its retrieval and answer results.",
+  "talksTo": ["memorybench-program", "memorybench-operator-worker"],
+  "anchors": ["sites/memorybench.poneglyph.dev/README.md"]
+}

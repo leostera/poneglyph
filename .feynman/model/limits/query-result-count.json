@@ -1,0 +1,8 @@
+{
+  "subject": "Rows returned by one query",
+  "value": 2000,
+  "kind": "count",
+  "about": ["protocols/graph-http-v1", "flows/query-datalog"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#MAX_QUERY_RESULTS", "packages/poneglyph/src/storage/query-results.ts#collectQueryRows"]
+}

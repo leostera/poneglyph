@@ -1,0 +1,24 @@
+{
+  "summary": "Explore the One Piece graph in the protected playground",
+  "actor": "playground-explorer",
+  "need": "Inspect connected wiki and semantic facts through an interactive graph client without building a separate application.",
+  "value": "Query answers, an observed schema snapshot, and optionally newly committed demo facts attributed to the signed-in user.",
+  "stages": [
+    {
+      "action": "Opens the playground in a browser and signs in through the configured Cloudflare Access policy.",
+      "sees": "The protected query, write-facts, schema, and MCP connection interface.",
+      "entry": "sites/onepiece.poneglyph.dev/src/app/App.tsx"
+    },
+    {
+      "action": "Runs a curated or free-form Datalog query and inspects returned rows and read metrics.",
+      "sees": "Typed graph results and per-query timing and snapshot information.",
+      "entry": "sites/onepiece.poneglyph.dev/src/app/QueryPanel.tsx"
+    },
+    {
+      "action": "Inspects observed fields or appends typed facts as an atomic transaction.",
+      "sees": "Fields and value tags from one snapshot, or a committed transaction receipt and read-back option.",
+      "entry": "sites/onepiece.poneglyph.dev/src/app/SchemaPanel.tsx"
+    }
+  ],
+  "anchors": ["sites/onepiece.poneglyph.dev/README.md", "sites/onepiece.poneglyph.dev/src/app/App.tsx"]
+}

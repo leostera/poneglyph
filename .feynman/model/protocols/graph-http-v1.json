@@ -1,0 +1,86 @@
+{
+  "summary": "Versioned JSON HTTP contract for graph writes, Datalog queries, schema observations, and point entity reads.",
+  "style": "http",
+  "transport": "POST or GET to the Poneglyph Worker URL, optionally under an application path prefix; consumers may also reach the Worker through a service binding.",
+  "server": "database-worker",
+  "clients": ["client-application", "quickstart-example", "graph-rpc-worker"],
+  "framing": "One JSON request and one JSON response per HTTP request; graph IDs appear in the URL path; POST bodies are bounded and parsed before storage dispatch.",
+  "version": "Path prefix /v1; package version 0.1.0 is experimental without a stable compatibility promise.",
+  "messages": [
+    {
+      "name": "POST /v1/graphs/{graphId}/transactions",
+      "kind": "route",
+      "summary": "Submits one non-empty batch of typed facts; the server creates the transaction identity.",
+      "fields": [
+        { "name": "graphId", "type": "GraphId", "note": "Lowercase graph identifier in the URL." },
+        { "name": "facts", "type": "FactInput[]", "note": "Each fact has source, entity, field, tagged value, and optional retraction; client defaults retraction to false." },
+        { "name": "clientRequestToken", "type": "string", "required": false, "note": "Optional non-empty graph-scoped retry key, at most 256 UTF-8 bytes." }
+      ],
+      "returns": [
+        { "name": "txId", "type": "TransactionId", "note": "Server-minted identity, returned only after successful commit." }
+      ]
+    },
+    {
+      "name": "POST /v1/graphs/{graphId}/query",
+      "kind": "route",
+      "summary": "Evaluates one Datalog source string over a consistent graph snapshot.",
+      "fields": [
+        { "name": "graphId", "type": "GraphId", "note": "Lowercase graph identifier in the URL." },
+        { "name": "query", "type": "string", "note": "Bounded positive binary-relation Datalog subset with builtins." }
+      ],
+      "returns": [
+        { "name": "rows", "type": "Record<string, DatalogValue>[]", "note": "Complete result bag; duplicate rows are retained." },
+        { "name": "snapshotSeq", "type": "number", "note": "Maximum sequence in the returned subtree vector, not a graph-global clock." },
+        { "name": "sequenceScope", "type": "'subtree-vector'" },
+        { "name": "snapshotVector", "type": "{prefix:string,sequence:number,epoch:number}[]" },
+        { "name": "metrics", "type": "QueryMetrics" }
+      ]
+    },
+    {
+      "name": "POST /v1/graphs/{graphId}/schema",
+      "kind": "route",
+      "summary": "Observes active fields and root fact-value tags at one leased subtree-vector snapshot.",
+      "fields": [
+        { "name": "graphId", "type": "GraphId", "note": "Lowercase graph identifier in the URL." },
+        { "name": "body", "type": "{}", "note": "Must be an empty JSON object." }
+      ],
+      "returns": [
+        { "name": "snapshotSeq", "type": "number" },
+        { "name": "sequenceScope", "type": "'subtree-vector'" },
+        { "name": "snapshotVector", "type": "SchemaSnapshotOwner[]" },
+        { "name": "fields", "type": "{field:string,valueTags:ObservedValueTag[]}[]", "note": "Observed inventory, not required fields or universal value constraints." }
+      ]
+    },
+    {
+      "name": "GET /v1/graphs/{graphId}/entities?uri={entityUri}",
+      "kind": "route",
+      "summary": "Reads one current derived entity projection at a pinned owner snapshot.",
+      "fields": [
+        { "name": "graphId", "type": "GraphId", "note": "Lowercase graph identifier in the URL." },
+        { "name": "uri", "type": "Uri", "note": "Absolute entity URI in the query string." }
+      ],
+      "returns": [
+        { "name": "entity", "type": "EntityProjection | null" },
+        { "name": "snapshotSeq", "type": "number" }
+      ]
+    },
+    {
+      "name": "HTTP error",
+      "kind": "record",
+      "summary": "Rejected or incomplete requests return an error object rather than a partial successful result.",
+      "fields": [
+        { "name": "error", "type": "string" },
+        { "name": "retryable", "type": "boolean", "required": false },
+        { "name": "offset", "type": "number", "required": false, "note": "Parser location for invalid Datalog source." }
+      ],
+      "returns": [
+        { "name": "status", "type": "HTTP status", "note": "400 invalid input, 404 unknown path, 405 wrong method, 408 time budget, 413 exceeded budget, 423 contention, or 5xx unavailable/uncertain." }
+      ]
+    }
+  ],
+  "parsing": [
+    { "summary": "The typed client parses graph IDs, facts, tokens, Datalog source, and server response shapes before treating them as trusted values.", "anchors": ["packages/poneglyph/src/client.ts#HttpGraphClient", "packages/poneglyph/src/domain/fact.ts#parseFactBatch", "packages/poneglyph/src/domain/schema-observation.ts#parseGraphSchemaObservation"] },
+    { "summary": "The Worker parses the graph route and the coordinator parses bounded JSON bodies and action-specific request shapes before dispatch.", "anchors": ["packages/poneglyph/src/worker.ts#default.fetch", "packages/poneglyph/src/storage/coordinator-facade.ts#parseGraphRoute", "packages/poneglyph/src/storage/http.ts#readJsonBody"] }
+  ],
+  "anchors": ["packages/poneglyph/src/client.ts", "packages/poneglyph/src/worker.ts", "packages/poneglyph/src/storage/coordinator-facade.ts"]
+}

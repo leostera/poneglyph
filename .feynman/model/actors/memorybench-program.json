@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "third-party",
+  "runsOn": { "location": "local", "platform": "Node.js and the pinned MemoryBench checkout" },
+  "summary": "The upstream MemoryBench program runs its ingestion, retrieval, answer, and judging phases using Poneglyph provider adapters.",
+  "talksTo": ["memorybench-worker"],
+  "anchors": ["sites/memorybench.poneglyph.dev/README.md"]
+}

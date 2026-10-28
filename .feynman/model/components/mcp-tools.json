@@ -1,0 +1,7 @@
+{
+  "summary": "Composes read-only Poneglyph MCP dataset-description, observed-schema, and Datalog query tools into stateless HTTP Workers handlers.",
+  "actors": ["onepiece-playground-worker", "memorybench-worker"],
+  "dependsOn": ["poneglyph-core"],
+  "footprint": { "paths": ["packages/poneglyph-mcp/src/"] },
+  "anchors": ["packages/poneglyph-mcp/src/index.ts", "packages/poneglyph-mcp/src/server.ts"]
+}

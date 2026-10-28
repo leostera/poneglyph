@@ -1,0 +1,18 @@
+{
+  "statement": "A typed-client write is sent only after every fact has absolute URI identities, a supported recursively tagged value, and a boolean retraction state; an invalid draft is rejected locally.",
+  "enforcement": ["runtime", "test-time"],
+  "enforcedAt": [
+    {
+      "trigger": "Client application calls GraphClient.transact",
+      "frames": [
+        { "symbol": "HttpGraphClient.transact", "anchor": "packages/poneglyph/src/client.ts#HttpGraphClient.transact", "note": "Normalizes omitted retraction flags and parses the complete fact batch before HTTP." },
+        { "symbol": "parseFactBatch", "anchor": "packages/poneglyph/src/domain/fact.ts#parseFactBatch", "note": "Requires a non-empty batch and parses every fact draft." },
+        { "symbol": "parseFactDraft", "anchor": "packages/poneglyph/src/domain/fact.ts#parseFactDraft", "note": "Parses source/entity/field URIs, typed value, and retraction flag." },
+        { "symbol": "parseFactValue", "anchor": "packages/poneglyph/src/domain/fact-value.ts#parseFactValue", "note": "Validates supported tags, nested shape, URI references, dates, bytes, and integer values." }
+      ]
+    }
+  ],
+  "consequence": "Malformed or non-canonical data cannot be mistaken for a valid client-side graph write.",
+  "tests": ["packages/poneglyph/tests/client.test.ts", "packages/poneglyph/tests/fact-model.test.ts"],
+  "anchors": ["packages/poneglyph/src/client.ts", "packages/poneglyph/src/domain/fact.ts", "packages/poneglyph/src/domain/fact-value.ts"]
+}

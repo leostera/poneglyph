@@ -1,0 +1,8 @@
+{
+  "subject": "UTF-8 shard scan bytes consumed by one query",
+  "value": 20000000,
+  "kind": "size",
+  "about": ["flows/query-datalog"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#MAX_QUERY_SCAN_BYTES"]
+}

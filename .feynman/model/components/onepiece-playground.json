@@ -1,0 +1,7 @@
+{
+  "summary": "Implements the One Piece browser playground, same-origin graph API, query/schema UI, attributed writes, and read-only MCP application boundary.",
+  "actors": ["onepiece-playground-page", "onepiece-playground-worker"],
+  "dependsOn": ["poneglyph-core", "graph-rpc-service", "mcp-tools"],
+  "footprint": { "paths": ["sites/onepiece.poneglyph.dev/src/"] },
+  "anchors": ["sites/onepiece.poneglyph.dev/src/index.ts", "sites/onepiece.poneglyph.dev/src/app/App.tsx"]
+}

@@ -1,0 +1,8 @@
+{
+  "subject": "Maximum nested list/map depth in a tagged fact value",
+  "value": 64,
+  "kind": "depth",
+  "about": ["protocols/graph-http-v1"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/domain/fact-value.ts#MAX_VALUE_DEPTH"]
+}

@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "first-party",
+  "runsOn": { "location": "cloud", "provider": "Cloudflare", "platform": "Workers" },
+  "summary": "The protected MemoryBench application exposes read-only MCP retrieval over isolated benchmark graphs and applies request admission before database access.",
+  "talksTo": ["graph-rpc-worker", "cloudflare-access", "cloudflare-rate-limiter", "mcp-agent"],
+  "anchors": ["sites/memorybench.poneglyph.dev/src/index.ts", "sites/memorybench.poneglyph.dev/cloudflare.config.ts"]
+}

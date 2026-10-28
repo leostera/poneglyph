@@ -1,0 +1,17 @@
+{
+  "statement": "Queries return a complete result bag with duplicate rows and tagged values intact, or fail for a producer, row-count, scan, response-byte, or cancellation error; they do not report a truncated partial success.",
+  "enforcement": ["runtime", "test-time"],
+  "enforcedAt": [
+    {
+      "trigger": "GraphCoordinatorDO evaluates a query",
+      "frames": [
+        { "symbol": "GraphCoordinatorDO.evaluateQuery", "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.evaluateQuery", "note": "Awaits full row materialization and maps evaluation/budget failures to an error response." },
+        { "symbol": "collectQueryRows", "anchor": "packages/poneglyph/src/storage/query-results.ts#collectQueryRows", "note": "Materializes the entire bag and throws when the result count or UTF-8 response budget is exceeded." },
+        { "symbol": "readTupleStream", "anchor": "packages/poneglyph/src/datalog/scan-stream.ts#readTupleStream", "note": "Requires a valid explicit completion frame and enforces scan limits before a producer is trusted." }
+      ]
+    }
+  ],
+  "consequence": "A caller can distinguish a complete empty or populated answer from an incomplete or over-budget query.",
+  "tests": ["packages/poneglyph/tests/query-results.test.ts", "packages/poneglyph/tests/scan-stream.test.ts", "packages/poneglyph/tests/datalog.test.ts"],
+  "anchors": ["packages/poneglyph/src/storage/query-results.ts", "packages/poneglyph/src/datalog/scan-stream.ts"]
+}

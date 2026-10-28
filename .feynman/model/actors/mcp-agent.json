@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "third-party",
+  "runsOn": { "location": "remote", "platform": "MCP client or agent host" },
+  "summary": "An MCP-capable agent or client discovers dataset guidance, observes the graph schema, and submits read-only Datalog queries.",
+  "talksTo": ["onepiece-playground-worker", "memorybench-worker"],
+  "anchors": ["packages/poneglyph-mcp/README.md", "sites/onepiece.poneglyph.dev/README.md"]
+}

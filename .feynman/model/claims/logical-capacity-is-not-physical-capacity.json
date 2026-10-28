@@ -1,0 +1,8 @@
+{
+  "statement": "The 1 TB capacity simulation demonstrates logical prefix-shard accounting only; it writes zero synthetic fact rows and does not establish physical Durable Object capacity.",
+  "status": "supported",
+  "epistemic": "stated",
+  "note": "The simulation reports physicalRowsWritten: 0 and is explicitly tested as a synthetic accounting exercise, not a storage-capacity measurement.",
+  "evidence": ["packages/poneglyph/src/storage/capacity-simulation.ts#simulateCapacityEnvelope", "packages/poneglyph/tests/capacity.test.ts"],
+  "about": ["components/poneglyph-core"]
+}

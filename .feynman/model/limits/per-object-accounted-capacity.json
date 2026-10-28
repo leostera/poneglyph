@@ -1,0 +1,8 @@
+{
+  "subject": "Conservatively accounted storage per Durable Object",
+  "value": 8000000000,
+  "kind": "size",
+  "about": ["flows/write-fact-transaction"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#MAX_ACCOUNTED_BYTES_PER_DO", "packages/poneglyph/src/storage/capacity.ts#accountStorage"]
+}

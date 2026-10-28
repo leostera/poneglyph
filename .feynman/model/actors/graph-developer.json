@@ -1,0 +1,8 @@
+{
+  "kind": "person",
+  "provenance": "ambient",
+  "runsOn": { "location": "local" },
+  "summary": "An application developer chooses a fact vocabulary and uses Poneglyph's client or example to connect an application to a graph Worker.",
+  "talksTo": ["client-application", "quickstart-example"],
+  "anchors": ["README.md", "packages/poneglyph/README.md", "examples/client-quickstart/README.md"]
+}

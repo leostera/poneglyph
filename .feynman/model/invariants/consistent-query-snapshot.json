@@ -1,0 +1,17 @@
+{
+  "statement": "A query evaluates only against a complete set of compatible read leases captured from the facade's durable safe vector; it does not assemble a result from independently sampled owner heads.",
+  "enforcement": ["runtime", "test-time"],
+  "enforcedAt": [
+    {
+      "trigger": "GraphCoordinatorDO evaluates a query",
+      "frames": [
+        { "symbol": "GraphCoordinatorDO.evaluateQuery", "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.evaluateQuery", "note": "Captures the durable safe vector before acquiring the query read cut." },
+        { "symbol": "GraphCoordinatorDO.acquireQueryReadCut", "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.acquireQueryReadCut", "note": "Selects owner roots for the query and requests a lease cut from the captured vector." },
+        { "symbol": "acquireParallelReadCut", "anchor": "packages/poneglyph/src/storage/read-cut.ts#acquireParallelReadCut", "note": "Waits for every requested lease, releases late successes after failure, and rejects expired cuts." }
+      ]
+    }
+  ],
+  "consequence": "A reader sees one closed subtree-vector snapshot or receives an error; it cannot observe a fractured cross-owner write.",
+  "tests": ["packages/poneglyph/tests/read-cut.test.ts", "packages/poneglyph/tests/integrated-storage.test.ts"],
+  "anchors": ["packages/poneglyph/src/storage/coordinator-facade.ts", "packages/poneglyph/src/storage/read-cut.ts"]
+}

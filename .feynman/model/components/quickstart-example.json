@@ -1,0 +1,7 @@
+{
+  "summary": "Demonstrates the public typed client by submitting a tokenized multi-fact transaction and querying a relation join.",
+  "actors": ["quickstart-example"],
+  "dependsOn": ["poneglyph-core"],
+  "footprint": { "paths": ["examples/client-quickstart/src/"] },
+  "anchors": ["examples/client-quickstart/src/main.ts"]
+}

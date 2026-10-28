@@ -1,0 +1,8 @@
+{
+  "subject": "Retention period for graph-scoped client request tokens and transaction outcomes",
+  "value": 604800000,
+  "kind": "interval",
+  "about": ["flows/write-fact-transaction", "flows/retry-unknown-write"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#TRANSACTION_IDEMPOTENCY_RETENTION_MS"]
+}

@@ -1,0 +1,9 @@
+{
+  "kind": "program",
+  "provenance": "first-party",
+  "runsOn": { "location": "browser", "platform": "Web browser" },
+  "summary": "The One Piece playground page lets a signed-in user inspect and query the graph, observe schema, and submit attributed typed facts.",
+  "host": "browser",
+  "talksTo": ["onepiece-playground-worker"],
+  "anchors": ["sites/onepiece.poneglyph.dev/src/app/App.tsx", "sites/onepiece.poneglyph.dev/README.md"]
+}

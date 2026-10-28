@@ -1,0 +1,41 @@
+{
+  "summary": "Validate and submit an atomic graph write",
+  "trigger": "A client application calls transact with facts and optionally a graph-scoped clientRequestToken.",
+  "outcome": "On success, the caller receives only the server-minted txId after the transaction is committed and published; a later query can observe it.",
+  "steps": [
+    {
+      "actor": "client-application",
+      "action": "The typed client defaults omitted retraction flags, parses every fact and retry token, then sends the graph-scoped transaction request.",
+      "target": "database-worker",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "properties": ["Invalid facts or tokens fail locally before network admission."],
+      "anchor": "packages/poneglyph/src/client.ts#HttpGraphClient.transact"
+    },
+    {
+      "actor": "database-worker",
+      "action": "The Worker validates the graph route and forwards the request to that graph's coordinator facade.",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/worker.ts#default.fetch"
+    },
+    {
+      "actor": "database-worker",
+      "action": "The facade delegates the transaction to durable graph transaction authority and waits for its successful terminal response.",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "properties": ["The server owns the transaction ID.", "A request token binds retries to the same graph and exact payload."],
+      "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.fetch"
+    },
+    {
+      "actor": "database-worker",
+      "action": "The Worker returns the successful receipt without exposing internal status or commit sequence fields.",
+      "target": "client-application",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "properties": ["The receipt contains exactly txId."],
+      "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.fetch"
+    }
+  ],
+  "anchors": ["packages/poneglyph/src/client.ts", "packages/poneglyph/src/worker.ts", "packages/poneglyph/src/storage/coordinator-facade.ts", "packages/poneglyph/tests/integrated-storage.test.ts"]
+}

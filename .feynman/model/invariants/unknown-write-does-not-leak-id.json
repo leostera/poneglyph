@@ -1,0 +1,17 @@
+{
+  "statement": "When a write response is unsuccessful or unreadable, the public client does not disclose an internal transaction ID as though the write's outcome were known; callers may resolve an unknown outcome only by resending the exact facts with the same graph-scoped token.",
+  "enforcement": ["runtime", "test-time"],
+  "enforcedAt": [
+    {
+      "trigger": "Public Worker handles a transaction request whose result is not a valid committed witness",
+      "frames": [
+        { "symbol": "GraphCoordinatorDO.fetch", "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.fetch", "note": "Routes the public transaction request to the transaction dispatcher." },
+        { "symbol": "publicTransactionResponse", "anchor": "packages/poneglyph/src/storage/transaction-request.ts#publicTransactionResponse", "note": "Returns only the txId on a verified committed response and strips txId from failure bodies." },
+        { "symbol": "HttpTransport.post", "anchor": "packages/poneglyph/src/client.ts#HttpTransport.post", "note": "Reports network/read failures as errors without fabricating a transaction receipt." }
+      ]
+    }
+  ],
+  "consequence": "Callers cannot confuse uncertain delivery with a known commit and can safely retry one logical request using its exact token and payload.",
+  "tests": ["packages/poneglyph/tests/client.test.ts", "packages/poneglyph/tests/write-correctness.test.ts", "packages/poneglyph/tests/integrated-storage.test.ts"],
+  "anchors": ["packages/poneglyph/src/storage/transaction-request.ts", "packages/poneglyph/src/client.ts"]
+}

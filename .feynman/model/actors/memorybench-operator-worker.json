@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "first-party",
+  "runsOn": { "location": "local", "platform": "Cloudflare Workers local development runtime" },
+  "summary": "A loopback-only operator Worker accepts scoped MemoryBench ingestion batches and writes them through a dedicated loader principal; it is not deployed as a public route.",
+  "talksTo": ["graph-rpc-worker", "benchmark-operator"],
+  "anchors": ["sites/memorybench.poneglyph.dev/src/operator.ts", "sites/memorybench.poneglyph.dev/cloudflare.config.ts"]
+}

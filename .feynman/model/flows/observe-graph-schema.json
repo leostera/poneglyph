@@ -1,0 +1,38 @@
+{
+  "summary": "Observe fields and value tags present in a graph snapshot",
+  "trigger": "A client application calls getSchema for a graph.",
+  "outcome": "The caller receives a complete, sorted inventory of active fields and root value tags tied to one subtree-vector snapshot; it is observational, not a constraint schema.",
+  "steps": [
+    {
+      "actor": "client-application",
+      "action": "The typed client posts an empty JSON object to the graph schema route.",
+      "target": "database-worker",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/client.ts#HttpGraphClient.getSchema"
+    },
+    {
+      "actor": "database-worker",
+      "action": "The Worker dispatches the request to the graph coordinator facade, which leases all required owner roots and enumerates the leaves at those captured epochs and sequences.",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.observeGraphSchema"
+    },
+    {
+      "actor": "database-worker",
+      "action": "The facade merges and sorts distinct field/value-tag pairs, returns the exact snapshot vector, then releases all read leases.",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "properties": ["The operation fails rather than returning a partial inventory."],
+      "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.observeGraphSchema"
+    },
+    {
+      "actor": "client-application",
+      "action": "The client validates the complete schema observation and its vector summary before exposing it.",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/domain/schema-observation.ts#parseGraphSchemaObservation"
+    }
+  ],
+  "anchors": ["packages/poneglyph/src/client.ts", "packages/poneglyph/src/storage/coordinator-facade.ts", "packages/poneglyph/src/domain/schema-observation.ts", "packages/poneglyph/tests/integrated-storage.test.ts"]
+}

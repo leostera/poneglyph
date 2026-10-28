@@ -1,0 +1,8 @@
+{
+  "kind": "service",
+  "provenance": "third-party",
+  "runsOn": { "location": "cloud", "provider": "Cloudflare", "platform": "Cloudflare Access" },
+  "summary": "Cloudflare Access protects the hosted playground endpoints and supplies the audience-bound identity that the application Worker verifies.",
+  "talksTo": ["onepiece-playground-worker", "memorybench-worker"],
+  "anchors": ["sites/onepiece.poneglyph.dev/src/api.ts", "sites/memorybench.poneglyph.dev/cloudflare.config.ts"]
+}

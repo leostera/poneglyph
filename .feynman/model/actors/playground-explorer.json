@@ -1,0 +1,8 @@
+{
+  "kind": "person",
+  "provenance": "ambient",
+  "runsOn": { "location": "local" },
+  "summary": "A signed-in playground user queries the One Piece graph, inspects observed fields, or appends attributed demo facts.",
+  "talksTo": ["browser", "mcp-agent"],
+  "anchors": ["sites/onepiece.poneglyph.dev/README.md"]
+}

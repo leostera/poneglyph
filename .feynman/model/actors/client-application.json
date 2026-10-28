@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "third-party",
+  "runsOn": { "location": "remote", "platform": "Application runtime" },
+  "summary": "A consuming application uses Poneglyph's typed client to submit facts and run graph queries over HTTP or a Worker service binding.",
+  "talksTo": ["database-worker", "graph-rpc-worker"],
+  "anchors": ["packages/poneglyph/README.md", "packages/poneglyph-worker/README.md"]
+}

@@ -1,0 +1,8 @@
+{
+  "subject": "Facts in one transaction",
+  "value": 1000,
+  "kind": "count",
+  "about": ["protocols/graph-http-v1", "flows/write-fact-transaction"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#MAX_TRANSACTION_FACTS"]
+}

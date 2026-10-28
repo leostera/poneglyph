@@ -1,0 +1,26 @@
+{
+  "summary": "Build an application that stores and queries connected facts",
+  "actor": "graph-developer",
+  "need": "Application state is more useful when claims retain their source and relationships can be joined instead of copied into denormalized records.",
+  "value": "A graph-scoped typed client that commits sourced facts atomically and returns query results from a consistent graph snapshot.",
+  "stages": [
+    {
+      "action": "Chooses URI identifiers and a vocabulary for the application's entities, fields, values, and sources.",
+      "sees": "The client exposes typed fact and query primitives without imposing an application schema.",
+      "entry": "packages/poneglyph/README.md"
+    },
+    {
+      "action": "Configures the client for a Worker endpoint and submits related facts with an idempotency token.",
+      "sees": "A successful transaction returns its server-minted transaction ID after commit.",
+      "flows": ["write-fact-transaction", "retry-unknown-write"],
+      "entry": "examples/client-quickstart/src/main.ts"
+    },
+    {
+      "action": "Queries relationships, reads an entity projection, and inspects fields observed at a graph snapshot.",
+      "sees": "Typed result rows, an entity projection or null, snapshot identity, and an observed field/value-tag inventory.",
+      "flows": ["query-datalog", "read-entity-projection", "observe-graph-schema"],
+      "entry": "packages/poneglyph/src/client.ts#GraphClient.query"
+    }
+  ],
+  "anchors": ["README.md", "packages/poneglyph/README.md", "examples/client-quickstart/README.md"]
+}

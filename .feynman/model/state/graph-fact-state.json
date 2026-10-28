@@ -1,0 +1,6 @@
+{
+  "owner": "database-worker",
+  "summary": "Each graph's shard Durable Objects persist the append-only fact log as truth and maintain active-fact, value-index, and entity-version projections for current and leased reads.",
+  "lifetime": "SQLite-backed Durable Object state persists across Worker requests and actor eviction. Fact-log entries remain append-only; derived projection versions may be pruned only after active read leases no longer need them.",
+  "anchors": ["packages/poneglyph/src/storage/coordinator.ts#GraphTreeDO.beginReadLease", "packages/poneglyph/tests/integrated-storage.test.ts", "packages/poneglyph/tests/query-results.test.ts"]
+}

@@ -1,0 +1,8 @@
+{
+  "subject": "Coordinator time budget for a query or schema observation",
+  "value": 20000,
+  "kind": "timeout",
+  "about": ["flows/query-datalog", "flows/observe-graph-schema"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#QUERY_TIMEOUT_MS", "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.evaluateQuery"]
+}

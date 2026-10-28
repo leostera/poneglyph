@@ -1,0 +1,18 @@
+{
+  "statement": "A schema observation identifies the exact subtree snapshot vector and reports a sorted complete inventory of observed active fields and FactValue tags, not write constraints or a graph-global sequence.",
+  "enforcement": ["runtime", "test-time", "documented"],
+  "enforcedAt": [
+    {
+      "trigger": "Client application calls GraphClient.getSchema",
+      "frames": [
+        { "symbol": "HttpGraphClient.getSchema", "anchor": "packages/poneglyph/src/client.ts#HttpGraphClient.getSchema", "note": "Starts the request and validates the returned schema after the server replies." },
+        { "symbol": "default.fetch", "anchor": "packages/poneglyph/src/worker.ts#default.fetch", "note": "Routes the graph schema request to its coordinator facade." },
+        { "symbol": "GraphCoordinatorDO.observeGraphSchema", "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.observeGraphSchema", "note": "Reads all leaves under a leased cut, merges fields, and fails if complete response limits are exceeded." },
+        { "symbol": "parseGraphSchemaObservation", "anchor": "packages/poneglyph/src/domain/schema-observation.ts#parseGraphSchemaObservation", "note": "Requires a non-empty unique snapshot vector, snapshotSeq equal to its maximum sequence, unique canonical fields, and known unique value tags." }
+      ]
+    }
+  ],
+  "consequence": "Consumers can identify the read snapshot and must not mistake the observed inventory for schema enforcement or completeness of a data import.",
+  "tests": ["packages/poneglyph/tests/client.test.ts", "packages/poneglyph/tests/integrated-storage.test.ts"],
+  "anchors": ["packages/poneglyph/src/domain/schema-observation.ts", "packages/poneglyph/src/storage/coordinator-facade.ts"]
+}

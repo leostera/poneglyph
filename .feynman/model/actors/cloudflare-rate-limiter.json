@@ -1,0 +1,8 @@
+{
+  "kind": "service",
+  "provenance": "third-party",
+  "runsOn": { "location": "cloud", "provider": "Cloudflare", "platform": "Workers rate limiting" },
+  "summary": "Cloudflare rate-limit bindings provide bounded admission for hosted API, write, MCP, and MemoryBench retrieval requests.",
+  "talksTo": ["onepiece-playground-worker", "memorybench-worker"],
+  "anchors": ["sites/onepiece.poneglyph.dev/src/rate-limit.ts", "sites/memorybench.poneglyph.dev/cloudflare.config.ts"]
+}

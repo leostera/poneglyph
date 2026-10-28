@@ -1,0 +1,31 @@
+{
+  "summary": "Read one entity's current derived projection",
+  "trigger": "A client application sends GET /v1/graphs/{graphId}/entities?uri={entityUri} to the Worker.",
+  "outcome": "The caller receives the entity projection or null at the pinned owner snapshot, together with its snapshot sequence.",
+  "steps": [
+    {
+      "actor": "client-application",
+      "action": "Sends an absolute entity URI in the graph-scoped entity route.",
+      "target": "database-worker",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/worker.ts#default.fetch"
+    },
+    {
+      "actor": "database-worker",
+      "action": "Validates the URI, hashes it to its owner root, acquires that root's read cut, resolves the current leaf, and reads the projection at the leased sequence.",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.readEntity"
+    },
+    {
+      "actor": "database-worker",
+      "action": "Returns the projection or a null entity result, then releases the exact read lease.",
+      "target": "client-application",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.readEntity"
+    }
+  ],
+  "anchors": ["packages/poneglyph/src/worker.ts", "packages/poneglyph/src/storage/coordinator-facade.ts", "README.md"]
+}

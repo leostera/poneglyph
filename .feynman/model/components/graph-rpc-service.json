@@ -1,0 +1,7 @@
+{
+  "summary": "Provides private graph-scoped Worker RPC, binding-principal authorization, and the canonical Durable Object actor assembly used by applications.",
+  "actors": ["graph-rpc-worker"],
+  "dependsOn": ["poneglyph-core"],
+  "footprint": { "paths": ["packages/poneglyph-worker/src/", "packages/poneglyph-worker/cloudflare.config.ts"] },
+  "anchors": ["packages/poneglyph-worker/src/index.ts", "packages/poneglyph-worker/src/authorization.ts"]
+}

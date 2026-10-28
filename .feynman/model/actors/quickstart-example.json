@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "first-party",
+  "runsOn": { "location": "local", "platform": "Node.js" },
+  "summary": "The runnable client quickstart demonstrates writing related facts and querying them with the published typed client.",
+  "talksTo": ["database-worker"],
+  "anchors": ["examples/client-quickstart/src/main.ts", "examples/client-quickstart/README.md"]
+}

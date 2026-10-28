@@ -1,0 +1,24 @@
+{
+  "summary": "Ask a protected Poneglyph graph through MCP",
+  "actor": "mcp-agent",
+  "need": "An agent needs dataset guidance and a read-only way to inspect relationships without receiving database write capability.",
+  "value": "Dataset-specific query guidance, an observed schema snapshot, and complete typed query results from the selected graph.",
+  "stages": [
+    {
+      "action": "Connects to the playground's MCP endpoint using an Access-compatible transport.",
+      "sees": "A read-only MCP server protected by the same account-member Access policy.",
+      "entry": "sites/onepiece.poneglyph.dev/src/index.ts"
+    },
+    {
+      "action": "Calls dataset description and schema tools before constructing a graph query.",
+      "sees": "Query syntax and limits plus observed fields and value tags at a declared snapshot.",
+      "entry": "packages/poneglyph-mcp/src/server.ts"
+    },
+    {
+      "action": "Submits a Datalog query against the graph.",
+      "sees": "Typed result rows or a reported query error; the MCP surface does not expose writes.",
+      "entry": "packages/poneglyph-mcp/src/server.ts"
+    }
+  ],
+  "anchors": ["packages/poneglyph-mcp/README.md", "sites/onepiece.poneglyph.dev/README.md"]
+}

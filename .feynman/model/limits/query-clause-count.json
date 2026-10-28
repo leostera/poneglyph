@@ -1,0 +1,8 @@
+{
+  "subject": "Fact relations plus builtin clauses in one Datalog query",
+  "value": 64,
+  "kind": "count",
+  "about": ["protocols/graph-http-v1", "flows/query-datalog"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/datalog/ast.ts#MAX_QUERY_CLAUSES"]
+}

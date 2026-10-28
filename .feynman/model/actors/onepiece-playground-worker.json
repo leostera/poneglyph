@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "first-party",
+  "runsOn": { "location": "cloud", "provider": "Cloudflare", "platform": "Workers" },
+  "summary": "The protected One Piece application Worker serves the browser app, authenticated query/schema/write API, and read-only MCP endpoint for its configured graph.",
+  "talksTo": ["graph-rpc-worker", "cloudflare-access", "cloudflare-rate-limiter", "browser"],
+  "anchors": ["sites/onepiece.poneglyph.dev/src/index.ts", "sites/onepiece.poneglyph.dev/cloudflare.config.ts"]
+}

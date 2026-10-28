@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "first-party",
+  "runsOn": { "location": "cloud", "provider": "Cloudflare", "platform": "Workers" },
+  "summary": "The canonical database Worker exposes graph-scoped requests and assembles the Durable Object facade, transaction ledger, owner trees, and shard storage.",
+  "talksTo": ["cloudflare-durable-objects"],
+  "anchors": ["packages/poneglyph/src/worker.ts", "packages/poneglyph/cloudflare.config.ts"]
+}

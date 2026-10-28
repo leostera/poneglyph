@@ -1,0 +1,8 @@
+{
+  "kind": "program",
+  "provenance": "first-party",
+  "runsOn": { "location": "cloud", "provider": "Cloudflare", "platform": "Workers service binding" },
+  "summary": "The private graph-scoped RPC Worker authenticates each binding principal, checks deployment grants, and delegates permitted reads and writes to the canonical database Worker.",
+  "talksTo": ["database-worker"],
+  "anchors": ["packages/poneglyph-worker/src/index.ts", "packages/poneglyph-worker/cloudflare.config.ts"]
+}

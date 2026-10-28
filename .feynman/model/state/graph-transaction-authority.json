@@ -1,0 +1,6 @@
+{
+  "owner": "database-worker",
+  "summary": "Graph ledgers retain transaction identity, payload-bound outcome journals, and request-token mappings; owner trees retain visibility sequences, routing epochs, entity reservations, and read leases; the facade retains a durable safe-vector mirror.",
+  "lifetime": "Durable Object SQLite state survives actor eviction. Transaction outcomes and request-token mappings have bounded retention; active leases expire, and completed split metadata is retired after older snapshots no longer depend on it.",
+  "anchors": ["packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.cachedSafeVector", "packages/poneglyph/src/storage/coordinator.ts#GraphTreeDO.beginReadLease", "packages/poneglyph/tests/integrated-storage.test.ts"]
+}

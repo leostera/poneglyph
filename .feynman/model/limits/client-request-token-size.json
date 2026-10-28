@@ -1,0 +1,8 @@
+{
+  "subject": "Graph-scoped clientRequestToken",
+  "value": 256,
+  "kind": "size",
+  "about": ["protocols/graph-http-v1", "flows/retry-unknown-write"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/domain/identifiers.ts#MAX_CLIENT_REQUEST_TOKEN_BYTES"]
+}

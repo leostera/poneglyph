@@ -1,0 +1,8 @@
+{
+  "subject": "Retained transaction outcomes per graph before new writes fail closed on quota",
+  "value": 100000,
+  "kind": "count",
+  "about": ["flows/write-fact-transaction", "flows/retry-unknown-write"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#MAX_RETAINED_TRANSACTION_OUTCOMES", "packages/poneglyph/tests/integrated-storage.test.ts"]
+}

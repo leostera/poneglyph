@@ -1,0 +1,7 @@
+{
+  "summary": "Implements the MemoryBench graph-scoped MCP retrieval site, provider adapters, journaled ingestion operator, and local benchmark integration.",
+  "actors": ["memorybench-worker", "memorybench-operator-worker", "memorybench-program"],
+  "dependsOn": ["poneglyph-core", "graph-rpc-service", "mcp-tools"],
+  "footprint": { "paths": ["sites/memorybench.poneglyph.dev/src/", "sites/memorybench.poneglyph.dev/bench/"] },
+  "anchors": ["sites/memorybench.poneglyph.dev/src/index.ts", "sites/memorybench.poneglyph.dev/src/operator.ts", "sites/memorybench.poneglyph.dev/bench/provider.ts"]
+}

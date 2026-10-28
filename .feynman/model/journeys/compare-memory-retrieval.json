@@ -1,0 +1,24 @@
+{
+  "summary": "Compare MemoryBench retrieval variants backed by Poneglyph",
+  "actor": "benchmark-operator",
+  "need": "Measure how deterministic fact extraction and model-assisted extraction affect retrieval and answer quality over pinned memory datasets.",
+  "value": "A resumable benchmark run with retrieval contexts, answers, judgments, and reports for selected dataset and variant; scripted offline smoke runs are not accuracy evidence.",
+  "stages": [
+    {
+      "action": "Checks out the pinned upstream MemoryBench revision and supplies hash-verified dataset files.",
+      "sees": "The audited dataset identities, container plan, and isolated graph scopes for benchmark variants.",
+      "entry": "sites/memorybench.poneglyph.dev/scripts/audit-datasets.ts"
+    },
+    {
+      "action": "Runs the local operator to journal and ingest the prepared sessions into the authorized graph namespace.",
+      "sees": "Batch outcomes and durable checkpoints that can be resumed without changing transaction identity.",
+      "entry": "sites/memorybench.poneglyph.dev/src/operator.ts"
+    },
+    {
+      "action": "Runs an upstream MemoryBench dataset/variant and reviews its generated report.",
+      "sees": "Per-run retrieval and answer evaluation output; hosted validation and benchmark results remain distinct from offline scripted smoke evidence.",
+      "entry": "sites/memorybench.poneglyph.dev/scripts/run-benchmark.ts"
+    }
+  ],
+  "anchors": ["sites/memorybench.poneglyph.dev/README.md", "docs/rfds/RFD0006-public-read-only-mcp-playground.md"]
+}

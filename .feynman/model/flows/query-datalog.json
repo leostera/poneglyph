@@ -1,0 +1,40 @@
+{
+  "summary": "Run a bounded Datalog query over a consistent graph snapshot",
+  "trigger": "A client application calls query with a Datalog source string.",
+  "outcome": "The caller receives complete typed result rows, their subtree-vector snapshot identity, and access metrics, or a query error instead of a partial result.",
+  "steps": [
+    {
+      "actor": "client-application",
+      "action": "The typed client parses the Datalog source locally and posts it to the graph query route.",
+      "target": "database-worker",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "properties": ["Invalid query text is rejected before network admission."],
+      "anchor": "packages/poneglyph/src/client.ts#HttpGraphClient.query"
+    },
+    {
+      "actor": "database-worker",
+      "action": "The Worker matches the graph route and dispatches the query to its graph coordinator facade.",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/worker.ts#default.fetch"
+    },
+    {
+      "actor": "database-worker",
+      "action": "The facade pins a compatible leased owner snapshot, evaluates relation joins and builtins against shard scans, and releases the read cut on success or failure.",
+      "component": "poneglyph-core",
+      "protocol": "shard-scan-ndjson",
+      "properties": ["Results preserve bag multiplicity.", "Scan, result, response-size, and time budgets fail closed."],
+      "anchor": "packages/poneglyph/src/storage/coordinator-facade.ts#GraphCoordinatorDO.evaluateQuery"
+    },
+    {
+      "actor": "database-worker",
+      "action": "The typed client validates the returned snapshot, rows, metrics, and tagged values before returning them to the application.",
+      "target": "client-application",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "anchor": "packages/poneglyph/src/client.ts#parseQueryResult"
+    }
+  ],
+  "anchors": ["packages/poneglyph/src/client.ts", "packages/poneglyph/src/storage/coordinator-facade.ts", "packages/poneglyph/tests/query-results.test.ts", "packages/poneglyph/tests/read-cut.test.ts"]
+}

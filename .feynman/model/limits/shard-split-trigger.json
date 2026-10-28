@@ -1,0 +1,8 @@
+{
+  "subject": "Projected database bytes that trigger a shard split requirement",
+  "value": 5000000000,
+  "kind": "size",
+  "about": ["flows/write-fact-transaction"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#SHARD_SPLIT_TRIGGER_BYTES", "packages/poneglyph/src/storage/capacity.ts#accountStorage"]
+}

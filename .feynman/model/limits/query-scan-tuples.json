@@ -1,0 +1,8 @@
+{
+  "subject": "Fact tuples scanned across all shards for one query",
+  "value": 50000,
+  "kind": "count",
+  "about": ["flows/query-datalog"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/storage/constants.ts#MAX_QUERY_TUPLES", "packages/poneglyph/src/datalog/scan-stream.ts#ScanFrames.accept"]
+}

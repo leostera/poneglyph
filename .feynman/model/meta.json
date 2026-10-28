@@ -1,0 +1,11 @@
+{
+  "system": "poneglyph",
+  "summary": "Poneglyph is an experimental semantic graph database for Cloudflare Workers: applications append typed, sourced facts and query connected facts with a bounded Datalog language. It coordinates atomic writes across sharded Durable Objects and provides snapshot-consistent reads through a typed client and graph-scoped Worker service. The repository also includes a protected One Piece playground with browser and read-only MCP access, plus a MemoryBench adapter for comparing memory retrieval variants.",
+  "source": {
+    "repository": ".",
+    "commit": "0ccdf350ce1870251d815b1fcd2b6497bff7a464",
+    "worktree": true
+  },
+  "extractedBy": "feynman",
+  "extraction": "bootstrap"
+}

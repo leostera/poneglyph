@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sources": {
+    "packages/poneglyph/src/client.ts#HttpGraphClient.getSchema": "7e5fa184418e",
+    "packages/poneglyph/src/client.ts#HttpGraphClient.transact": "d4541e9b0d23",
+    "packages/poneglyph/src/domain/schema-observation.ts#parseGraphSchemaObservation": "9f4e6d6a6654",
+    "packages/poneglyph/src/storage/constants.ts#MAX_QUERY_RESPONSE_BYTES": "80c0d5421f6c",
+    "packages/poneglyph/src/storage/constants.ts#MAX_QUERY_RESULTS": "d89e99d54c16",
+    "packages/poneglyph/src/storage/constants.ts#MAX_QUERY_SHARD_FANOUT": "d602a8090ce9",
+    "packages/poneglyph/src/storage/constants.ts#QUERY_TIMEOUT_MS": "13d498ce108d",
+    "packages/poneglyph/src/storage/constants.ts#READ_LEASE_TTL_MS": "7db97d95b3fd",
+    "packages/poneglyph/src/storage/coordinator-facade.ts:233-318": "4e9bf9708006",
+    "packages/poneglyph/src/storage/coordinator-facade.ts:250-306": "b8f2f7acc5cf",
+    "packages/poneglyph/src/storage/coordinator-facade.ts:299-318": "64f1a668455e",
+    "packages/poneglyph/src/storage/coordinator-facade.ts:446-479": "07375a5d7833",
+    "packages/poneglyph/src/storage/coordinator-facade.ts:51-89": "89a8ab2ebc1f",
+    "packages/poneglyph/src/storage/coordinator.ts:329-353": "44671149bc03",
+    "packages/poneglyph/src/storage/coordinator.ts:354-365": "c72314f15e29",
+    "packages/poneglyph/src/storage/coordinator.ts:519-526": "7157989f889e",
+    "packages/poneglyph/src/storage/forest.ts#TREE_PREFIXES": "0fa889fa0692",
+    "packages/poneglyph/src/storage/routing.ts#listShardLeaves": "99b68a94fd7f",
+    "packages/poneglyph/src/storage/shard.ts:143-190": "04deb8347c55",
+    "packages/poneglyph/src/storage/shard.ts:466-503": "83bb17371fd1",
+    "packages/poneglyph/src/storage/shard.ts:712-793": "86675305b374",
+    "packages/poneglyph/src/storage/transaction.ts:342-383": "42f94e623f99",
+    "packages/poneglyph/src/storage/transaction.ts:342-396": "7d5a59db1403",
+    "packages/poneglyph/src/worker.ts:10-21": "a7227723dd2e"
+  }
+}

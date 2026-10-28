@@ -1,0 +1,8 @@
+{
+  "subject": "Datalog query source string",
+  "value": 8192,
+  "kind": "size",
+  "about": ["protocols/graph-http-v1", "flows/query-datalog"],
+  "epistemic": "stated",
+  "anchors": ["packages/poneglyph/src/datalog/parser.ts#MAX_QUERY_LENGTH"]
+}

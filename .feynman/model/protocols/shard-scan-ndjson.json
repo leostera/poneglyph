@@ -1,0 +1,33 @@
+{
+  "summary": "Internal streamed shard scan format used while a query assembles complete results.",
+  "style": "ndjson",
+  "transport": "ReadableStream of UTF-8 bytes between Durable Object actors inside a Worker invocation.",
+  "server": "database-worker",
+  "clients": ["database-worker"],
+  "framing": "One JSON object per newline; chunks may split UTF-8 code points or records. A scan must end with one explicit matching scan-complete record; clean EOF alone is failure.",
+  "version": "Internal tuple and scan-complete records; no independent compatibility version.",
+  "messages": [
+    {
+      "name": "fact tuple",
+      "kind": "record",
+      "summary": "One entity/value result from a shard scan.",
+      "fields": [
+        { "name": "entity", "type": "absolute URI string" },
+        { "name": "value", "type": "DatalogValue" }
+      ]
+    },
+    {
+      "name": "scan-complete",
+      "kind": "record",
+      "summary": "Explicit terminal count certifying successful exhaustion of the shard query.",
+      "fields": [
+        { "name": "type", "type": "'scan-complete'" },
+        { "name": "tuples", "type": "non-negative safe integer", "note": "Must equal the number of preceding tuple records." }
+      ]
+    }
+  ],
+  "parsing": [
+    { "summary": "The query coordinator validates each JSON frame, canonical entity URI, tagged value, tuple count, byte count, row size, terminal placement, and fatal UTF-8 decoding before accepting a scan.", "anchors": ["packages/poneglyph/src/datalog/scan-stream.ts#readTupleStream", "packages/poneglyph/src/datalog/scan-stream.ts#ScanFrames.accept"] }
+  ],
+  "anchors": ["packages/poneglyph/src/datalog/scan-stream.ts"]
+}

@@ -1,0 +1,8 @@
+{
+  "kind": "service",
+  "provenance": "third-party",
+  "runsOn": { "location": "cloud", "provider": "Cloudflare", "platform": "SQLite-backed Durable Objects" },
+  "summary": "Cloudflare supplies durable, per-object SQLite storage and the actors used by Poneglyph to persist transaction journals, routing state, facts, and indexes.",
+  "talksTo": ["database-worker"],
+  "anchors": ["packages/poneglyph/cloudflare.config.ts", "packages/poneglyph/README.md"]
+}

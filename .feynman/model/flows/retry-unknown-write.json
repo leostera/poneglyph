@@ -1,0 +1,26 @@
+{
+  "summary": "Retry a write whose delivery outcome is unknown",
+  "trigger": "A client application loses the HTTP response or cannot reach the Worker after submitting a transaction.",
+  "outcome": "The application either receives the original durable receipt for the same token and exact facts, or receives a distinct error; the client does not invent a transaction ID or retry automatically.",
+  "steps": [
+    {
+      "actor": "client-application",
+      "action": "The HTTP transport reports a network/read failure without exposing a transaction identity that may have committed.",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "properties": ["Delivery may be unknown.", "No automatic retry is issued."],
+      "anchor": "packages/poneglyph/src/client.ts#HttpTransport.post"
+    },
+    {
+      "actor": "client-application",
+      "action": "The caller retains and resubmits the identical facts with the same clientRequestToken.",
+      "target": "database-worker",
+      "component": "poneglyph-core",
+      "protocol": "graph-http-v1",
+      "properties": ["The token must be reused only with the exact same graph and payload."],
+      "ref": "write-fact-transaction",
+      "anchor": "packages/poneglyph/src/client.ts#HttpGraphClient.transact"
+    }
+  ],
+  "anchors": ["packages/poneglyph/src/client.ts", "packages/poneglyph/tests/client.test.ts", "packages/poneglyph/tests/integrated-storage.test.ts"]
+}
