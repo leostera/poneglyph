@@ -2,6 +2,8 @@
 
 An interactive, incremental explanation of how a fact moves through Poneglyph. This is a learning aid, not a replacement for the implementation contracts in [RFD0004](rfds/RFD0004-expandable-cloudflare-sharding.md) and [RFD0005](rfds/RFD0005-write-path-experiment.md).
 
+Try the [interactive transaction-visibility playground](explainers/transactions/index.html) to step through single-shard writes, distributed commits, rejections, and recovery.
+
 ## Step 1: Facts, identifiers, and meaning
 
 A fact draft contains URI identifiers for its source, entity, and field, plus a typed value and a retraction flag:
