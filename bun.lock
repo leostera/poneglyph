@@ -198,6 +198,27 @@
         "vite": "8.3.4",
       },
     },
+    "sites/poneglyph.dev": {
+      "name": "@poneglyph/site-www",
+      "dependencies": {
+        "@cloudflare/kumo": "2.15.0",
+        "@phosphor-icons/react": "^2.1.10",
+        "react": "19",
+        "react-dom": "19",
+      },
+      "devDependencies": {
+        "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+        "@tailwindcss/vite": "4",
+        "@types/node": "25.6.0",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "@vitejs/plugin-react": "^6.1.2",
+        "cf": "1.0.0-beta.14",
+        "tailwindcss": "4",
+        "typescript": "5.9.3",
+        "vite": "8.3.4",
+      },
+    },
   },
   "trustedDependencies": [
     "esbuild",
@@ -475,6 +496,8 @@
     "@poneglyph/site-memorybench": ["@poneglyph/site-memorybench@workspace:sites/memorybench.poneglyph.dev"],
 
     "@poneglyph/site-playground": ["@poneglyph/site-playground@workspace:sites/onepiece.poneglyph.dev"],
+
+    "@poneglyph/site-www": ["@poneglyph/site-www@workspace:sites/poneglyph.dev"],
 
     "@poneglyph/write-path-bench": ["@poneglyph/write-path-bench@workspace:packages/write-path-bench"],
 

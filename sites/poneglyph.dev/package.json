@@ -1,0 +1,31 @@
+{
+  "name": "@poneglyph/site-www",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cf dev",
+    "typecheck": "cf workers types && tsc --noEmit",
+    "build": "bun run typecheck && cf build",
+    "deploy": "bun run build && cf deploy",
+    "test": "bun run --cwd ../.. vitest run --config vitest.config.ts --project=node sites/poneglyph.dev/test",
+    "check": "bun run typecheck && bun run test"
+  },
+  "dependencies": {
+    "@cloudflare/kumo": "2.15.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "react": "19",
+    "react-dom": "19"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+    "@tailwindcss/vite": "4",
+    "@types/node": "25.6.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "cf": "1.0.0-beta.14",
+    "tailwindcss": "4",
+    "typescript": "5.9.3",
+    "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,27 @@
+@source "../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@source "./";
+@import "@cloudflare/kumo/styles/tailwind";
+@import "tailwindcss";
+
+html { scroll-behavior: smooth; }
+html, body { min-height: 100%; }
+body { font-feature-settings: "cv11", "ss01"; }
+.font-code { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+.hero-grid {
+  background-image: radial-gradient(circle, color-mix(in oklab, currentColor 18%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at 75% 30%, black, transparent 70%);
+}
+
+.dl-predicate { color: #0b5cd5; font-weight: 600; }
+.dl-variable { color: #a1420c; }
+.dl-string { color: #12784a; }
+[data-mode="dark"] .dl-predicate { color: #74aaff; }
+[data-mode="dark"] .dl-variable { color: #ffb36b; }
+[data-mode="dark"] .dl-string { color: #6fdc9f; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
