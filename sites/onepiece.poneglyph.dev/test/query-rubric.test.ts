@@ -15,7 +15,7 @@ describe("published One Piece query contract", () => {
   it("uses get_schema for observations instead of publishing a static predicate inventory", () => {
     assert.equal("predicates" in DATASET, false);
     assert.equal("predicateFields" in QUERY_RUBRIC, false);
-    assert.match(DATASET.schemaObservation, /declared subtree-vector snapshot/i);
+    assert.match(DATASET.schemaObservation, /not a schema/i);
     assert.match(QUERY_RUBRIC.dataScope, /get_schema/);
   });
 
@@ -52,7 +52,7 @@ describe("published One Piece query contract", () => {
 
   it("publishes the value-index access path and the complete read metrics contract", () => {
     assert.match(QUERY_RUBRIC.physicalOperators.join(" "), /value_key index.*exact typed-value predicates/i);
-    assert.match(DATASET.resultContract, /distinct leaves touched.*tree-read-lease acquisitions/i);
+    assert.match(DATASET.resultContract, /distinct shards touched.*read leases/i);
   });
 
   it("keeps the documented boundary: positive facts required, builtins bind-only, no negation or unsupported calls", () => {

@@ -2,10 +2,10 @@ import type { FactInput, FactValue, QueryResult, TransactionReceipt } from "@leo
 
 // The browser playground's HTTP surface. It owns no storage: reads use the
 // read-only service principal, writes use a separate principal granted write on
-// exactly one graph. Identity comes only from the runtime-verified Access
-// context; caller headers, cookies and body fields never select a principal.
+// exactly one graph. The playground is public: every visitor shares the
+// "anonymous" author and is rate limited per edge IP. Caller headers, cookies
+// and body fields never select a principal.
 
-export const ACCESS_AUDIENCE = "81f3a2c62b68cd12e073e0678ec7a786968deed4853e90679528580350b0db3c";
 export const API_RATE_LIMIT = { namespace: "2026102101", simple: { limit: 120, period: 60 as const } };
 export const WRITE_RATE_LIMIT = { namespace: "2026102102", simple: { limit: 20, period: 60 as const } };
 export const API_LIMITS = Object.freeze({
@@ -40,7 +40,8 @@ export type ApiOptions = Readonly<{
 }>;
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
-type Member = Readonly<{ email: string; author: string }>;
+type Visitor = Readonly<{ author: string; rateKey: string }>;
+export const ANONYMOUS_AUTHOR = "anonymous";
 type Parsed<T> = { ok: true; value: T } | { ok: false; response: Response };
 
 const NO_STORE = { "cache-control": "no-store", "x-content-type-options": "nosniff" };
@@ -52,7 +53,7 @@ function fail(status: number, error: string, extra: Record<string, unknown> = {}
 }
 
 export function createApiHandler(options: ApiOptions) {
-  return async (request: Request, env: ApiEnv, ctx: Pick<ExecutionContext, "access">): Promise<Response> => {
+  return async (request: Request, env: ApiEnv): Promise<Response> => {
     const url = new URL(request.url);
     // Loopback hosts exist only in local previews; the public route is fixed.
     const origin = LOOPBACK_HOSTS.has(url.hostname) ? url.origin : `https://${options.host}`;
@@ -68,46 +69,38 @@ export function createApiHandler(options: ApiOptions) {
     const fetchSite = request.headers.get("sec-fetch-site");
     if (fetchSite !== null && fetchSite !== "same-origin" && fetchSite !== "none") return fail(403, "Cross-site requests are not allowed");
 
-    const member = await authenticate(ctx);
-    if (!member.ok) return member.response;
-    const admitted = await admit(env.API_RATE_LIMITER, `api:${member.value.author}`, API_RATE_LIMIT.simple.period);
+    const visitor = identify(request);
+    const admitted = await admit(env.API_RATE_LIMITER, `api:${visitor.rateKey}`, API_RATE_LIMIT.simple.period);
     if (admitted) return admitted;
 
     if (route === "GET /api/session") {
-      return json({ ...options.session, graphId: options.graphId, user: { email: member.value.email, author: member.value.author }, limits: API_LIMITS, writableValueTypes: WRITABLE_VALUE_TYPES });
+      return json({ ...options.session, graphId: options.graphId, user: { author: visitor.author }, limits: API_LIMITS, writableValueTypes: WRITABLE_VALUE_TYPES });
     }
     if (route === "GET /api/schema") return schema(env, options.graphId);
     const body = await readJson(request);
     if (!body.ok) return body.response;
     if (route === "POST /api/query") return query(env, options.graphId, body.value);
-    const writeAdmitted = await admit(env.WRITE_RATE_LIMITER, `write:${member.value.author}`, WRITE_RATE_LIMIT.simple.period);
+    const writeAdmitted = await admit(env.WRITE_RATE_LIMITER, `write:${visitor.rateKey}`, WRITE_RATE_LIMIT.simple.period);
     if (writeAdmitted) return writeAdmitted;
-    return write(env, options.graphId, member.value, body.value);
+    return write(env, options.graphId, visitor, body.value);
   };
 }
 
-async function authenticate(ctx: Pick<ExecutionContext, "access">): Promise<Parsed<Member>> {
-  // The runtime verifies the Access JWT for this Worker. It is not propagated
-  // over service bindings, so direct invocations have no identity.
-  if (!ctx.access || ctx.access.aud !== ACCESS_AUDIENCE) return { ok: false, response: fail(401, "Sign in through Cloudflare Access to use the playground") };
-  let email: unknown;
-  try { email = (await ctx.access.getIdentity())?.email; }
-  catch { return { ok: false, response: fail(503, "Access identity is temporarily unavailable") }; }
-  if (typeof email !== "string" || email.length === 0 || email.length > 320) return { ok: false, response: fail(403, "An authenticated account member is required") };
-  // Facts record a stable pseudonymous author, never the email address.
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(email.toLowerCase())));
-  const author = Array.from(digest.slice(0, 8), byte => byte.toString(16).padStart(2, "0")).join("");
-  return { ok: true, value: { email, author } };
+function identify(request: Request): Visitor {
+  // Rate limits key on the edge-set client IP; missing edge metadata (local
+  // dev, direct invocation) shares one bucket.
+  const ip = request.headers.get("cf-connecting-ip")?.trim();
+  return { author: ANONYMOUS_AUTHOR, rateKey: ip && ip.length <= 64 ? `ip:${ip}` : "ip:unknown-client" };
 }
 
 async function admit(limiter: Limiter | undefined, key: string, period: number): Promise<Response | undefined> {
-  if (!limiter) return fail(503, "Admission is temporarily unavailable", {}, { "retry-after": "60" });
+  if (!limiter) return fail(503, "Rate limiter unavailable; try again shortly", {}, { "retry-after": "60" });
   try {
     const { success } = await limiter.limit({ key });
-    return success ? undefined : fail(429, "Rate limit exceeded; wait before sending another request", {}, { "retry-after": String(period) });
+    return success ? undefined : fail(429, "Too many requests; try again in a minute", {}, { "retry-after": String(period) });
   } catch {
     // Fail closed: an unavailable limiter never means unlimited.
-    return fail(503, "Admission is temporarily unavailable", {}, { "retry-after": "60" });
+    return fail(503, "Rate limiter unavailable; try again shortly", {}, { "retry-after": "60" });
   }
 }
 
@@ -172,10 +165,10 @@ async function query(env: ApiEnv, graphId: string, body: Record<string, unknown>
     const failure = safeFailure(error);
     const serverMs = elapsed(started);
     if (failure.input || (failure.status !== undefined && failure.status < 500)) {
-      return fail(failure.status ?? 400, failure.message ?? "The query was rejected", { kind: "rejected", timing: { serverMs } });
+      return fail(failure.status ?? 400, failure.message ?? "Invalid query", { kind: "rejected", timing: { serverMs } });
     }
     console.error(JSON.stringify({ event: "playground-query-unavailable", status: failure.status }));
-    return fail(502, "A complete answer is unavailable; no partial rows were returned", { kind: "unavailable", timing: { serverMs } });
+    return fail(502, "The database couldn't answer right now; try again", { kind: "unavailable", timing: { serverMs } });
   }
 }
 
@@ -189,7 +182,7 @@ async function schema(env: ApiEnv, graphId: string): Promise<Response> {
   } catch (error) {
     const failure = safeFailure(error);
     console.error(JSON.stringify({ event: "playground-schema-unavailable", status: failure.status }));
-    return fail(502, "Schema observation is unavailable", { timing: { serverMs: elapsed(started) } });
+    return fail(502, "Couldn't list fields", { timing: { serverMs: elapsed(started) } });
   }
 }
 
@@ -240,13 +233,13 @@ function parseValue(input: unknown): FactValue | string {
   return { type, value } as FactValue;
 }
 
-async function write(env: ApiEnv, graphId: string, member: Member, body: Record<string, unknown>): Promise<Response> {
-  const parsed = parseWriteRequest(body, member.author);
+async function write(env: ApiEnv, graphId: string, visitor: Visitor, body: Record<string, unknown>): Promise<Response> {
+  const parsed = parseWriteRequest(body, visitor.author);
   if (!parsed.ok) return fail(400, parsed.error, { delivery: "not-sent" });
   if (!env.PONEGLYPH_WRITER) return fail(503, "Write binding is unavailable", { delivery: "not-sent" });
   // The author scope makes tokens per-user; replaying the same token and
   // facts is idempotent, so the browser may safely retry an unknown outcome.
-  const clientRequestToken = `playground:${member.author}:${parsed.value.requestToken}`;
+  const clientRequestToken = `playground:${visitor.author}:${parsed.value.requestToken}`;
   const started = performance.now();
   try {
     using graph = await env.PONEGLYPH_WRITER.getGraph({ graphId });
@@ -261,10 +254,10 @@ async function write(env: ApiEnv, graphId: string, member: Member, body: Record<
     // A 4xx is a definitive answer from storage (invalid, conflicting token, or
     // aborted); nothing was applied. Anything else leaves delivery unknown.
     if (failure.input || (failure.status !== undefined && failure.status < 500)) {
-      return fail(failure.status ?? 400, failure.message ?? "The transaction was rejected", { delivery: "rejected", timing: { serverMs } });
+      return fail(failure.status ?? 400, failure.message ?? "Not saved", { delivery: "rejected", timing: { serverMs } });
     }
     console.error(JSON.stringify({ event: "playground-write-unknown", status: failure.status }));
-    return fail(503, "Write outcome unknown. Retrying with the same request token is safe.", {
+    return fail(503, "We don't know if this was saved. Retrying won't create duplicates.", {
       delivery: "unknown", requestToken: parsed.value.requestToken, timing: { serverMs },
     });
   }

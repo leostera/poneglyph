@@ -4,7 +4,11 @@
 
 Implemented prototype and initial bounded deployment (2026-10-14), at the user's explicit request: Agents SDK, initially anonymous rate-limited MCP, six synthetic facts, then a generic private RPC service and tiny playground composition. The initial dedicated database/public Worker deployed from `3592158`; its seed committed at `6c000bb`. The central-service cutover is recorded separately below. Prior hosted load/query receipts and DNS failures are historical evidence only. On 2026-10-16 the owner removed the prior deployment and Durable Object namespaces; the routing-version-9 graph was freshly deployed with no migration or corpus import. A later authorized smoke test added six active synthetic fixture facts to the graph. Canonical storage's bounded correctness/performance evidence remains in [RFD0005](./RFD0005-write-path-experiment.md); it does not establish universal correctness or hosted performance.
 
-## Current deployment: Cloudflare-account members only (2026-10-14)
+## Current deployment: public, no Access (2026-10-25)
+
+At the owner's explicit request the playground was opened to everyone. Playground version `2b448f03-7b04-4a90-908b-9c5af6cb875f` removed the Worker's Access-audience gate; anonymous visitors use the shared author `anonymous` and are rate limited per edge IP (MCP 30/min, API 120/min, writes 20/min; limiters fail closed). Access application `17e9e6e4-edf9-4fdc-bead-b8575669dcb4` was then deleted; its reusable account-member policy was left in place. Anonymous probes after deletion returned 200 for `/` and `/api/session`, a complete query answer, and an MCP `initialize` result. Public writes are accepted into `onepiece-wiki` under `playground:author:anonymous`; corpus facts are never overwritten. This supersedes the Access-only sections below, which are retained as history. To restore member-only access, recreate the Access app for the live Worker and reintroduce the Worker-side audience gate.
+
+## Previous deployment: Cloudflare-account members only (2026-10-14)
 
 The user changed this site's access policy and chose `https://onepiece.poneglyph.dev/mcp`. This section supersedes historical anonymous/no-login deployment requirements below; the reusable MCP package remains generic. The current site configuration deploys this exact hostname and its runtime allowlist accepts it plus loopback development hosts. The old public hostname is not an alternate runtime entrypoint in this latest configuration.
 

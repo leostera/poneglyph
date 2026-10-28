@@ -10,11 +10,11 @@ export type QueryMetrics = Readonly<{
 export type ExampleQuery = Readonly<{ id: string; title: string; description: string; query: string }>;
 export type Session = Readonly<{
   graphId: string;
-  user: { email: string; author: string };
+  user: { author: string };
   limits: { factsPerWrite: number; queryCharacters: number; valueCharacters: number };
   writableValueTypes: readonly string[];
   examples: readonly ExampleQuery[];
-  dataset: { name: string; note: string; limitations: readonly string[]; entityIdentity: string; queryLanguage: string };
+  about: readonly { title: string; body: string }[];
   mcp: { url: string; instructions: string };
 }>;
 
@@ -27,21 +27,18 @@ export type WriteOutcome =
   | { ok: true; txId: string; facts: readonly FactDraft[]; roundTripMs: number; serverMs: number }
   | { ok: false; status: number; error: string; delivery: "not-sent" | "rejected" | "unknown"; roundTripMs: number };
 
-export class Unauthenticated extends Error {}
-
 function now(): number { return performance.now(); }
 function round(value: number): number { return Math.round(value * 10) / 10; }
 
 async function call(path: string, init?: RequestInit): Promise<{ status: number; body: Record<string, unknown> | undefined }> {
   const response = await fetch(path, { ...init, credentials: "same-origin", headers: { ...(init?.body ? { "content-type": "application/json" } : {}), accept: "application/json" } });
-  if (response.status === 401) throw new Unauthenticated();
   const body = await response.json().catch(() => undefined) as Record<string, unknown> | undefined;
   return { status: response.status, body };
 }
 
 export async function getSession(): Promise<Session> {
   const { status, body } = await call("/api/session");
-  if (status !== 200 || !body) throw new Error(typeof body?.["error"] === "string" ? body["error"] : `Session failed (HTTP ${status})`);
+  if (status !== 200 || !body) throw new Error(typeof body?.["error"] === "string" ? body["error"] : `HTTP ${status}`);
   return body as unknown as Session;
 }
 
@@ -55,9 +52,8 @@ export async function runQuery(query: string): Promise<QueryOutcome> {
       return { ok: true, rows: body["rows"] as Row[], snapshotSeq: body["snapshotSeq"] as number, metrics: body["metrics"] as QueryMetrics, roundTripMs, serverMs: serverMs ?? 0 };
     }
     return { ok: false, status, error: typeof body?.["error"] === "string" ? body["error"] : `HTTP ${status}`, kind: body?.["kind"] === "rejected" || (status >= 400 && status < 500) ? "rejected" : "unavailable", roundTripMs, serverMs };
-  } catch (error) {
-    if (error instanceof Unauthenticated) throw error;
-    return { ok: false, status: 0, error: "Network error: the request did not complete", kind: "transport", roundTripMs: round(now() - started) };
+  } catch {
+    return { ok: false, status: 0, error: "Network error; the request didn't complete", kind: "transport", roundTripMs: round(now() - started) };
   }
 }
 
@@ -71,9 +67,8 @@ export async function submitFacts(facts: readonly FactDraft[], requestToken: str
     }
     const delivery = body?.["delivery"] === "rejected" || body?.["delivery"] === "not-sent" ? body["delivery"] : status >= 400 && status < 500 ? "not-sent" : "unknown";
     return { ok: false, status, error: typeof body?.["error"] === "string" ? body["error"] : `HTTP ${status}`, delivery, roundTripMs };
-  } catch (error) {
-    if (error instanceof Unauthenticated) throw error;
-    return { ok: false, status: 0, error: "Network error: the outcome is unknown", delivery: "unknown", roundTripMs: round(now() - started) };
+  } catch {
+    return { ok: false, status: 0, error: "Network error; we don't know if this was saved", delivery: "unknown", roundTripMs: round(now() - started) };
   }
 }
 

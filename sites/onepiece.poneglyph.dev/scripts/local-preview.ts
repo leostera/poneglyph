@@ -1,6 +1,5 @@
 // Local, offline preview of the browser playground against real canonical
-// SQLite actors. Embeds the built client (run `bun run build:client` first), simulates
-// the Access identity, and loads the v5 overlay plus a slice of pinned base
+// SQLite actors. Embeds the built client (run `bun run build:client` first) and loads the v5 overlay plus a slice of pinned base
 // batches into a temporary graph. No Cloudflare credentials or network.
 //
 //   bun run preview:local [-- --base-batches=40 --port=8790]
@@ -10,7 +9,7 @@ import { resolve } from "node:path";
 import { build } from "esbuild";
 import { clientAssetsModule } from "../build/client-assets.js";
 import { Log, LogLevel, Miniflare } from "miniflare";
-import { ACCESS_AUDIENCE, API_RATE_LIMIT, WRITE_RATE_LIMIT } from "../src/api.js";
+import { API_RATE_LIMIT, WRITE_RATE_LIMIT } from "../src/api.js";
 import { parseApprovedBatch, parseImportPlan } from "../src/import-contract.js";
 import { RATE_LIMIT } from "../src/rate-limit.js";
 import { COMPATIBILITY_DATE, GRAPH_ID } from "../src/runtime.js";
@@ -32,8 +31,7 @@ await build({ absWorkingDir: site, entryPoints: { playground: "src/index.ts", da
 const manifest = (contents: string) => ({ mainModule: "index.mjs", modules: { "index.mjs": { type: "esm" as const, contents } } });
 const grants = { playground: { [GRAPH_ID]: ["read"] }, "playground-writer": { [GRAPH_ID]: ["read", "write"] }, "playground-loader": { [GRAPH_ID]: ["read", "write"] } };
 const runtime = new Miniflare({ port, host: "127.0.0.1", resourcePersistencePath: resolve(directory, "state"), telemetry: { enabled: false }, log: new Log(LogLevel.WARN), workers: [
-  { dev: { access: { aud: ACCESS_AUDIENCE, identity: { email: "preview@example.test" } } },
-    config: { name: "playground", manifest: manifest(await readFile(resolve(directory, "playground.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"], env: {
+  { config: { name: "playground", manifest: manifest(await readFile(resolve(directory, "playground.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"], env: {
       PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground" } },
       PONEGLYPH_WRITER: { type: "worker", worker: "database", props: { clientId: "playground-writer" } },
       MCP_RATE_LIMITER: { type: "rate-limit", ...RATE_LIMIT }, API_RATE_LIMITER: { type: "rate-limit", ...API_RATE_LIMIT }, WRITE_RATE_LIMITER: { type: "rate-limit", ...WRITE_RATE_LIMIT },

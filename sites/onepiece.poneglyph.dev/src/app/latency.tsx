@@ -23,11 +23,11 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
 export function LatencyBreakdown({ roundTripMs, serverMs, metrics }: { roundTripMs: number; serverMs: number; metrics?: QueryMetrics }) {
   const timing = metrics?.timing;
   const segments = [
-    { label: "Network + edge", ms: Math.max(0, roundTripMs - serverMs), className: "bg-kumo-line", hint: "Browser → Cloudflare edge → Worker and back, including Access and TLS." },
-    { label: "Worker + RPC", ms: Math.max(0, serverMs - (timing?.executionMs ?? 0)), className: "bg-kumo-badge-purple", hint: "Playground Worker plus the service-binding hop to the Poneglyph service." },
-    { label: "Snapshot", ms: timing?.snapshotMs ?? 0, className: "bg-kumo-warning", hint: "Capture the safe vector and acquire exact tree read leases." },
-    { label: "Evaluate", ms: timing?.evaluationMs ?? 0, className: "bg-kumo-brand", hint: "Scan shards and join in the Datalog evaluator." },
-    { label: "Release", ms: timing?.releaseMs ?? 0, className: "bg-kumo-success", hint: "Release the read leases." },
+    { label: "Network + edge", ms: Math.max(0, roundTripMs - serverMs), className: "bg-kumo-line", hint: "Your browser to Cloudflare and back." },
+    { label: "Worker + RPC", ms: Math.max(0, serverMs - (timing?.executionMs ?? 0)), className: "bg-kumo-badge-purple", hint: "The playground Worker and its call to Poneglyph." },
+    { label: "Snapshot", ms: timing?.snapshotMs ?? 0, className: "bg-kumo-warning", hint: "Pick a consistent point to read from." },
+    { label: "Evaluate", ms: timing?.evaluationMs ?? 0, className: "bg-kumo-brand", hint: "Scanning and joining." },
+    { label: "Release", ms: timing?.releaseMs ?? 0, className: "bg-kumo-success", hint: "Clean up after reading." },
   ];
   const total = Math.max(1, segments.reduce((sum, segment) => sum + segment.ms, 0));
   return (
@@ -52,23 +52,28 @@ export function QueryStats({ roundTripMs, serverMs, metrics, rows, snapshotSeq }
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat accent label="Round trip" value={formatMs(roundTripMs)} hint="Measured in your browser: request sent → full JSON response received." />
-        <Stat label="Worker" value={formatMs(serverMs)} hint="Measured in the playground Worker around the database RPC." />
-        <Stat label="Database" value={formatMs(metrics.timing?.executionMs)} hint="Query coordinator wall time: snapshot + evaluation + release." />
-        <Stat label="Evaluation" value={formatMs(metrics.timing?.evaluationMs)} hint="Shard scans and Datalog joins." />
+        <Stat accent label="Round trip" value={formatMs(roundTripMs)} hint="In your browser." />
+        <Stat label="Worker" value={formatMs(serverMs)} hint="In the playground Worker." />
+        <Stat label="Database" value={formatMs(metrics.timing?.executionMs)} hint="Inside Poneglyph." />
+        <Stat label="Evaluation" value={formatMs(metrics.timing?.evaluationMs)} hint="Scanning and joining." />
       </div>
       <LatencyBreakdown roundTripMs={roundTripMs} serverMs={serverMs} metrics={metrics} />
       <div className="flex flex-wrap gap-1.5">
         <Badge variant="neutral">{rows} {rows === 1 ? "row" : "rows"}</Badge>
-        {(metrics.cacheHits ?? 0) > 0 && <Tooltip content="The coordinator reused a complete cached result whose exact snapshot identity was still current."><Badge variant="success">cache hit</Badge></Tooltip>}
-        <Tooltip content="Highest commit sequence among the tree roots this query leased. Every row comes from one transaction-closed cut; it is not a global clock, so entity-bound queries that lease one root report that root's sequence."><Badge variant="neutral">snapshot {snapshotSeq}</Badge></Tooltip>
-        <Badge variant="outline">{metrics.scanCalls} scans</Badge>
+        {(metrics.cacheHits ?? 0) > 0 && <Tooltip content="Served from cache; nothing changed since the last identical query."><Badge variant="success">cache hit</Badge></Tooltip>}
         <Badge variant="outline">{metrics.shardRequests} shard requests</Badge>
-        {metrics.distinctShardsTouched !== undefined && <Badge variant="outline">{metrics.distinctShardsTouched} leaves</Badge>}
-        {metrics.treeReadLeaseAcquisitions !== undefined && <Badge variant="outline">{metrics.treeReadLeaseAcquisitions} read leases</Badge>}
-        <Badge variant="outline">{metrics.tuplesRead.toLocaleString()} tuples read</Badge>
+        <Badge variant="outline">{metrics.tuplesRead.toLocaleString()} facts scanned</Badge>
         <Badge variant="outline">{formatBytes(metrics.bytesRead)} read</Badge>
       </div>
+      <details className="text-xs text-kumo-subtle">
+        <summary className="cursor-pointer select-none">Details</summary>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <Tooltip content="Every row was read from the same consistent point in time. The number isn't comparable across queries."><Badge variant="neutral">snapshot {snapshotSeq}</Badge></Tooltip>
+          <Badge variant="outline">{metrics.scanCalls} scans</Badge>
+          {metrics.distinctShardsTouched !== undefined && <Badge variant="outline">{metrics.distinctShardsTouched} shards touched</Badge>}
+          {metrics.treeReadLeaseAcquisitions !== undefined && <Badge variant="outline">{metrics.treeReadLeaseAcquisitions} read leases</Badge>}
+        </div>
+      </details>
     </div>
   );
 }
@@ -97,12 +102,12 @@ export function SessionLatency({ entries, onPick }: { entries: readonly HistoryE
   return (
     <LayerCard>
       <LayerCard.Secondary className="flex items-center justify-between">
-        <span>Session latency</span>
-        <Text variant="secondary" size="xs">{queries.length} queries · {writes.length} writes</Text>
+        <span>Your queries</span>
+        <Text variant="secondary" size="xs">{queries.length} {queries.length === 1 ? "query" : "queries"} · {writes.length} {writes.length === 1 ? "write" : "writes"}</Text>
       </LayerCard.Secondary>
       <LayerCard.Primary className="flex flex-col gap-4">
         {queries.length === 0 ? (
-          <Text variant="secondary" size="sm">Run a query to start measuring. Every request is timed in your browser, in the Worker, and inside the database.</Text>
+          <Text variant="secondary" size="sm">Run a query to see timings here.</Text>
         ) : (
           <>
             <table className="w-full text-sm">
@@ -113,7 +118,7 @@ export function SessionLatency({ entries, onPick }: { entries: readonly HistoryE
               </tbody>
             </table>
             <Sparkline entries={entries} />
-            <Text variant="secondary" size="xs">Grey: browser round trip. Blue: time inside the database. Small samples; percentiles are descriptive, not SLOs.</Text>
+            <Text variant="secondary" size="xs">Grey: round trip. Blue: database.</Text>
           </>
         )}
         <div className="flex max-h-[28rem] flex-col divide-y divide-kumo-hairline overflow-y-auto">

@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
 import { describe, it } from "vitest";
-import { parseFactsSource, starterSource } from "../src/app/facts-source.js";
+import { fieldLiteralPrefix, observedRelationFields, parseFactsSource, starterSource } from "../src/app/facts-source.js";
 
 describe("facts editor source", () => {
+  it("suggests only fields observed with reference values and detects field-literal prefixes", () => {
+    assert.deepEqual(observedRelationFields([
+      { field: "z:link", valueTags: ["reference"] },
+      { field: "a:member_of", valueTags: ["text", "reference"] },
+      { field: "b:name", valueTags: ["text"] },
+      { field: "z:link", valueTags: ["reference"] },
+    ]), ["a:member_of", "z:link"]);
+    assert.equal(fieldLiteralPrefix('  { field: "onepiece:mem'), "onepiece:mem");
+    assert.equal(fieldLiteralPrefix("{ field: 'wiki:link"), "wiki:link");
+    assert.equal(fieldLiteralPrefix('{ entity: "onepiece:pirate'), undefined);
+    assert.equal(fieldLiteralPrefix('{ field: "onepiece:name", value: "text'), undefined);
+  });
+
   it("parses the starter module into typed drafts without evaluating it", () => {
     const parsed = parseFactsSource(starterSource("abc"), 25);
     assert.ok(parsed.ok);
@@ -22,7 +35,7 @@ describe("facts editor source", () => {
     const fact = (body: string) => `export default [${body}] satisfies Fact[];`;
     for (const [source, message] of [
       ["const x = 1", /export default/],
-      [fact(`{ entity: x, field: "c:d", value: { type: "text", value: "v" } }`), /object literal/],
+      [fact(`{ entity: x, field: "c:d", value: { type: "text", value: "v" } }`), /plain values only/],
       [fact(`{ entity: "a:b", field: "c:d", value: { type: "number", value: 9007199254740993 } }`), /quote/],
       [fact(`{ entity: "a:b", field: "c:d", value: { type: "number", value: 1.5 } }`), /integers/],
       [fact(`{ entity: "a:b", field: "c:d", source: "forged", value: { type: "text", value: "v" } }`), /unknown key "source"/],

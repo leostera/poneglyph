@@ -6,13 +6,13 @@ import { Table } from "@cloudflare/kumo/components/table";
 import { Text } from "@cloudflare/kumo/components/text";
 import { MagnifyingGlassIcon, TreeStructureIcon, WarningIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { getSchema, Unauthenticated, type SchemaOutcome } from "./api.ts";
+import { getSchema, type SchemaOutcome } from "./api.ts";
 import type { HistoryEntry } from "./latency.tsx";
 import { formatMs } from "./values.tsx";
 
 type RecordEntry = (entry: Omit<HistoryEntry, "id" | "at">) => void;
 
-export function SchemaPanel({ record, onSignedOut, openQuery }: { record: RecordEntry; onSignedOut: () => void; openQuery: (query: string, run: boolean) => void }) {
+export function SchemaPanel({ record, openQuery }: { record: RecordEntry; openQuery: (query: string, run: boolean) => void }) {
   const [loading, setLoading] = useState(false);
   const [outcome, setOutcome] = useState<SchemaOutcome | undefined>();
   const observe = async () => {
@@ -21,19 +21,18 @@ export function SchemaPanel({ record, onSignedOut, openQuery }: { record: Record
       const result = await getSchema();
       setOutcome(result);
       record({ kind: "schema", label: "get_schema", ok: result.ok, roundTripMs: result.roundTripMs, ...(result.ok ? { serverMs: result.serverMs, snapshotSeq: result.snapshotSeq, rows: result.fields.length } : {}) });
-    } catch (error) { if (error instanceof Unauthenticated) onSignedOut(); }
-    finally { setLoading(false); }
+    } finally { setLoading(false); }
   };
   return (
     <div className="flex flex-col gap-4">
       <LayerCard>
-        <LayerCard.Secondary>Observed schema</LayerCard.Secondary>
+        <LayerCard.Secondary>Fields in use</LayerCard.Secondary>
         <LayerCard.Primary className="flex flex-col gap-3">
-          <Text variant="secondary" size="sm">Poneglyph has no declared schema: any URI can be a field. This reads every leaf at one snapshot and reports which fields and value types are actually present. It is an observation, not a constraint.</Text>
-          <div><Button variant="primary" icon={<TreeStructureIcon />} loading={loading} onClick={() => void observe()}>Observe fields</Button></div>
+          <Text variant="secondary" size="sm">Poneglyph has no fixed schema; any name can be a field. This lists the fields that currently hold data, and their value types.</Text>
+          <div><Button variant="primary" icon={<TreeStructureIcon />} loading={loading} onClick={() => void observe()}>List fields</Button></div>
         </LayerCard.Primary>
       </LayerCard>
-      {outcome && !outcome.ok && <Banner variant="alert" icon={<WarningIcon weight="fill" />} title="Schema observation unavailable" description={outcome.error} />}
+      {outcome && !outcome.ok && <Banner variant="alert" icon={<WarningIcon weight="fill" />} title="Couldn't list fields" description={outcome.error} />}
       {outcome?.ok && (
         <LayerCard>
           <LayerCard.Secondary className="flex flex-wrap items-center gap-2">

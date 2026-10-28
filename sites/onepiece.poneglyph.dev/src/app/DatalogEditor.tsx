@@ -96,7 +96,7 @@ export function DatalogEditor({ value, onChange, onRun, fields, maxLength, label
         extensions: [
           history(), closeBrackets(), bracketMatching(), datalog, syntaxHighlighting(highlight), theme, EditorView.lineWrapping,
           autocompletion({ override: [completions(fields)], icons: false }),
-          placeholderExtension("field:name(Entity, Value), other:field(Entity, Other)"),
+          placeholderExtension('onepiece:name(Who, "Nico Robin")'),
           EditorState.changeFilter.of(transaction => transaction.newDoc.length <= maxLength),
           Prec.highest(keymap.of([{ key: "Mod-Enter", run: () => { callbacks.current.onRun(); return true; } }])),
           keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...completionKeymap, indentWithTab]),

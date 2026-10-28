@@ -6,10 +6,12 @@ import { test } from "vitest";
 import { build, type Plugin } from "esbuild";
 import { Miniflare, Log, LogLevel } from "miniflare";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { ACCESS_AUDIENCE, API_LIMITS, API_RATE_LIMIT, WRITE_RATE_LIMIT } from "../src/api.js";
-import { DATASET, EXAMPLE_QUERIES, MCP_URL, PUBLIC_HOST } from "../src/dataset.js";
+import { API_LIMITS, API_RATE_LIMIT, WRITE_RATE_LIMIT } from "../src/api.js";
+import { EXAMPLE_QUERIES, MCP_URL, PUBLIC_HOST } from "../src/dataset.js";
 import { RATE_LIMIT } from "../src/rate-limit.js";
 import { COMPATIBILITY_DATE, GRAPH_ID } from "../src/runtime.js";
+
+const luffyPageQuery = EXAMPLE_QUERIES.find(example => example.id === "luffy-page")!.query;
 
 const site = resolve(import.meta.dirname, "..");
 // Stand-in for the embedded browser build (see build/client-assets.ts).
@@ -46,7 +48,7 @@ const jsonPost = (body: unknown, headers: Record<string, string> = {}) => ({
 });
 
 // Finite native integration over real canonical SQLite actors with tiny
-// fixture facts. Not a corpus load, hosted Access test or benchmark.
+// fixture facts. Not a corpus load, hosted test or benchmark.
 test("browser API, MCP and loader operator reach the canonical runtime within their boundaries", async () => {
   const directory = await mkdtemp(resolve(tmpdir(), "poneglyph-playground-test-"));
   let complete = false;
@@ -68,8 +70,7 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
     } as const;
     runtime = new Miniflare({ port: 0, host: "127.0.0.1", resourcePersistencePath: resolve(directory, "state"),
       telemetry: { enabled: false }, log: new Log(LogLevel.WARN), workers: [
-        { dev: { access: { aud: ACCESS_AUDIENCE, identity: { email: "member@example.test" } } },
-          config: { name: "playground", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"], env: playgroundEnv } },
+        { config: { name: "playground", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"], env: playgroundEnv } },
         { config: {
           name: "database",
           manifest: manifest(await readFile(resolve(directory, "database.mjs"), "utf8")),
@@ -92,8 +93,7 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
         { config: { name: "operator", manifest: manifest(await readFile(resolve(directory, "operator.mjs"), "utf8")), compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
           env: { PONEGLYPH: { type: "worker", worker: "database", props: { clientId: "playground-loader" } } } } },
         // Same public entrypoint without limiters or database: fail closed.
-        { dev: { access: { aud: ACCESS_AUDIENCE, identity: { email: "member@example.test" } } },
-          config: { name: "unadmitted", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
+        { config: { name: "unadmitted", manifest: playground, compatibilityDate: COMPATIBILITY_DATE, compatibilityFlags: ["nodejs_compat"],
           env: { MCP_RATE_LIMITER: { type: "rate-limit", namespace: "2026101402", simple: { limit: 1, period: 60 } } } } },
       ] });
     await runtime.ready;
@@ -116,7 +116,7 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
     assert.equal(loaded.graphId, GRAPH_ID);
     const replayed = await (await load()).json() as Record<string, unknown>;
     assert.deepEqual(replayed, loaded);
-    const operatorQuery = await (await operator.fetch("http://127.0.0.1/query", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: EXAMPLE_QUERIES[0]!.query }) })).json() as { rows: unknown[] };
+    const operatorQuery = await (await operator.fetch("http://127.0.0.1/query", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: luffyPageQuery }) })).json() as { rows: unknown[] };
     assert.deepEqual(operatorQuery.rows, [{ Page: { type: "string", value: luffy } }]);
 
     // Host routing and static assets with security headers.
@@ -126,7 +126,7 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
     assert.match(await home.text(), /id=root/);
     assert.match(home.headers.get("content-security-policy") ?? "", /script-src 'self'/);
     assert.equal(home.headers.get("x-frame-options"), "DENY");
-    assert.equal(home.headers.get("cache-control"), "private, no-cache");
+    assert.equal(home.headers.get("cache-control"), "no-cache");
     assert.equal((await active.dispatchFetch(`${ORIGIN}/`, { method: "POST", body: "{}" })).status, 405);
     assert.match(await (await active.dispatchFetch(`${ORIGIN}/write`)).text(), /id=root/);
     const script = await active.dispatchFetch(`${ORIGIN}/assets/app.js`);
@@ -136,24 +136,10 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
     assert.deepEqual([...new Uint8Array(await (await active.dispatchFetch(`${ORIGIN}/logo.png`)).arrayBuffer())], [0x89, 0x50, 0x4e, 0x47]);
     assert.equal((await active.dispatchFetch(`${ORIGIN}/missing.js`)).status, 404);
 
-    // Without a verified Access context every public route fails closed,
-    // including the shell and MCP (defense in depth behind the edge app).
-    const unverified = await active.getWorker("playground");
-    for (const path of ["/", "/assets/app.js", "/mcp", "/api/session"]) {
-      const response = await unverified.fetch(`${ORIGIN}${path}`, { method: path === "/mcp" ? "POST" : "GET", body: path === "/mcp" ? "{}" : undefined });
-      assert.equal(response.status, 401, path); await response.text();
-    }
-
-    // Direct invocation carries no Access identity: the API refuses it.
-    const direct = await active.getWorker("playground");
-    const anonymous = await direct.fetch(`${ORIGIN}/api/session`);
-    assert.equal(anonymous.status, 401); await anonymous.text();
-
-    // HTTP ingress receives the simulated, runtime-verified Access context.
+    // The playground is public: anonymous visitors share one author.
     const session = await (await active.dispatchFetch(`${ORIGIN}/api/session`, { headers: { "sec-fetch-site": "same-origin" } })).json() as Record<string, any>;
     assert.equal(session.graphId, GRAPH_ID);
-    assert.equal(session.user.email, "member@example.test");
-    assert.match(session.user.author, /^[0-9a-f]{16}$/);
+    assert.equal(session.user.author, "anonymous");
     assert.equal(session.examples.length, EXAMPLE_QUERIES.length);
     assert.equal(session.limits.factsPerWrite, API_LIMITS.factsPerWrite);
     assert.equal(session.mcp.url, MCP_URL);
@@ -218,10 +204,10 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
     const schema = await (await active.dispatchFetch(`${ORIGIN}/api/schema`)).json() as { schema: { fields: { field: string }[] } };
     assert.ok(schema.schema.fields.some(field => field.field === "onepiece:member_of"));
 
-    // Direct invocations of a second deployment still have no identity.
+    // A deployment without limiters fails closed rather than unlimited.
     const unadmittedWorker = await active.getWorker("unadmitted");
-    const noAccess = await unadmittedWorker.fetch(`${ORIGIN}/api/session`);
-    assert.equal(noAccess.status, 401); await noAccess.text();
+    const noLimiter = await unadmittedWorker.fetch(`${ORIGIN}/api/session`);
+    assert.equal(noLimiter.status, 503); await noLimiter.text();
 
     // MCP stays read-only on the same graph.
     await client.connect(new StreamableHTTPClientTransport(new URL(MCP_URL), { fetch: async (input, init) => {
@@ -234,12 +220,12 @@ test("browser API, MCP and loader operator reach the canonical runtime within th
     const described = await client.callTool({ name: "describe_dataset", arguments: {} });
     assert.ok("content" in described && described.content[0]?.type === "text");
     assert.equal(JSON.parse(described.content[0].text).graphId, GRAPH_ID);
-    const mcpAnswer = await client.callTool({ name: "query", arguments: { query: DATASET.examples[0] } });
+    const mcpAnswer = await client.callTool({ name: "query", arguments: { query: luffyPageQuery } });
     assert.ok("content" in mcpAnswer && mcpAnswer.content[0]?.type === "text");
     assert.deepEqual(JSON.parse(mcpAnswer.content[0].text).rows, [{ Page: { type: "string", value: luffy } }]);
     const batched = await active.dispatchFetch(MCP_URL, { method: "POST", headers: { "content-type": "application/json", accept: "application/json, text/event-stream" }, body: JSON.stringify([
-      { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "query", arguments: { query: DATASET.examples[0] } } },
-      { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "query", arguments: { query: DATASET.examples[0] } } },
+      { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "query", arguments: { query: luffyPageQuery } } },
+      { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "query", arguments: { query: luffyPageQuery } } },
     ]) });
     assert.equal(batched.status, 400); await batched.text();
     const preflight = await active.dispatchFetch(MCP_URL, { method: "OPTIONS", headers: { origin: "https://any-agent.example" } });

@@ -5,7 +5,7 @@ import * as monaco from "./monaco.ts";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import TypeScriptWorker from "monaco-editor/languages/features/typescript/ts.worker.js?worker";
 import { useEffect, useRef } from "react";
-import { FACT_TYPES } from "./facts-source.ts";
+import { FACT_TYPES, fieldLiteralPrefix } from "./facts-source.ts";
 
 self.MonacoEnvironment = {
   getWorker: (_id: string, label: string) => (label === "typescript" || label === "javascript" ? new TypeScriptWorker() : new EditorWorker()),
@@ -20,14 +20,16 @@ const themeFor = () => (document.documentElement.dataset.mode === "dark" ? "vs-d
 export type EditorProblems = { errors: number; first?: string };
 
 /** Uncontrolled: the editor owns its text. `reset.nonce` changes replace it (undoably). */
-export default function FactsEditor({ reset, onChange, onCommit, onProblems }: {
-  reset: { text: string; nonce: number }; onChange: (value: string) => void; onCommit: () => void; onProblems: (problems: EditorProblems) => void;
+export default function FactsEditor({ reset, relationFields, onChange, onCommit, onProblems }: {
+  reset: { text: string; nonce: number }; relationFields: readonly string[]; onChange: (value: string) => void; onCommit: () => void; onProblems: (problems: EditorProblems) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const appliedReset = useRef(reset.nonce);
   const callbacks = useRef({ onChange, onCommit, onProblems });
+  const relationFieldsRef = useRef(relationFields);
   callbacks.current = { onChange, onCommit, onProblems };
+  relationFieldsRef.current = relationFields;
 
   useEffect(() => {
     const model = monaco.editor.getModel(MODEL_URI) ?? monaco.editor.createModel(reset.text, "typescript", MODEL_URI);
@@ -43,6 +45,22 @@ export default function FactsEditor({ reset, onChange, onCommit, onProblems }: {
     editor.current = instance;
     instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => callbacks.current.onCommit());
     const changes = model.onDidChangeContent(() => callbacks.current.onChange(model.getValue()));
+    const relations = monaco.languages.registerCompletionItemProvider("typescript", {
+      triggerCharacters: ['"', "'"],
+      provideCompletionItems(currentModel, position) {
+        const line = currentModel.getLineContent(position.lineNumber).slice(0, position.column - 1);
+        const prefix = fieldLiteralPrefix(line);
+        if (prefix === undefined) return { suggestions: [] };
+        const range = new monaco.Range(position.lineNumber, position.column - prefix.length, position.lineNumber, position.column);
+        return { suggestions: relationFieldsRef.current.map(field => ({
+          label: field,
+          insertText: field,
+          kind: monaco.languages.CompletionItemKind.Field,
+          detail: "Links to another entity",
+          range,
+        })) };
+      },
+    });
     const markers = monaco.editor.onDidChangeMarkers(uris => {
       if (!uris.some(uri => uri.toString() === MODEL_URI.toString())) return;
       const errors = monaco.editor.getModelMarkers({ resource: MODEL_URI }).filter(marker => marker.severity === monaco.MarkerSeverity.Error);
@@ -51,7 +69,7 @@ export default function FactsEditor({ reset, onChange, onCommit, onProblems }: {
     });
     const modes = new MutationObserver(() => monaco.editor.setTheme(themeFor()));
     modes.observe(document.documentElement, { attributes: true, attributeFilter: ["data-mode"] });
-    return () => { modes.disconnect(); markers.dispose(); changes.dispose(); instance.dispose(); editor.current = null; };
+    return () => { modes.disconnect(); markers.dispose(); relations.dispose(); changes.dispose(); instance.dispose(); editor.current = null; };
     // The model is created once per mount; resets apply below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

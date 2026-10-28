@@ -1,15 +1,15 @@
 # One Piece playground
 
-Developer-facing browser playground and read-only MCP endpoint for Poneglyph at `https://onepiece.poneglyph.dev`, built with React and [Kumo](https://kumo-ui.com). The whole host is protected by a Worker-scoped Cloudflare Access app for members of the owner's Cloudflare account. It is an application of Poneglyph (see [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md)), not a separate database.
+Developer-facing browser playground and read-only MCP endpoint for Poneglyph at `https://onepiece.poneglyph.dev`, built with React and [Kumo](https://kumo-ui.com). The site is public: no sign-in is required, and every route is rate limited per IP. It is an application of Poneglyph (see [RFD0006](../../docs/rfds/RFD0006-public-read-only-mcp-playground.md)), not a separate database.
 
 - **Query**: curated and free-form Datalog over the `onepiece-wiki` graph, with per-query latency (browser round trip, Worker, database, snapshot/evaluate/release phases) plus shard requests, leases, tuples and bytes read. A session panel keeps p50/p95/max and a sparkline.
-- **Write facts**: assert or retract up to 25 typed facts per atomic transaction. The server assigns `source = playground:author:<sha256(email) prefix>` and an idempotent request token; storage 4xx is reported as rejected, anything else as unknown delivery (retry with the same token).
+- **Write facts**: assert or retract up to 25 typed facts per atomic transaction. The server assigns `source = playground:author:anonymous` and an idempotent request token; storage 4xx is reported as rejected, anything else as unknown delivery (retry with the same token).
 - **Schema**: observed fields and value tags at one snapshot.
 - **Connect an agent**: MCP config for `/mcp` (tools `describe_dataset`, `get_schema`, `query`; read-only).
 
 ## Boundaries
 
-- `/api/*` requires the runtime-verified Access identity (`ctx.access`, audience-checked), same-origin JSON, bounded bodies, and rate limits before parsing (API 120/min, writes 20/min per member). Missing limiters or bindings fail closed.
+- `/api/*` is anonymous but requires same-origin JSON, bounded bodies, and rate limits keyed by edge IP before parsing (API 120/min, writes 20/min). Missing limiters or bindings fail closed.
 - `PONEGLYPH` (`playground`) is read-only; `PONEGLYPH_WRITER` (`playground-writer`) has read/write on `onepiece-wiki` only. MCP uses the read-only binding. Grants live in `packages/poneglyph-worker/cloudflare.config.ts`.
 - The loader principal `playground-loader` is used only by the loopback operator (`bun run dev:seed`, port 8878) and is not part of the public Worker.
 

@@ -2,8 +2,8 @@ import { createPublicPoneglyphMcpWorker } from "@leostera/poneglyph-mcp";
 import type { InferEnv } from "cf/config";
 import type { playgroundBindings } from "../cloudflare.config.ts";
 import clientAssets from "virtual:playground-client";
-import { ACCESS_AUDIENCE, createApiHandler } from "./api.js";
-import { CONNECTION_TEXT, DATASET, EXAMPLE_QUERIES, MCP_URL, PUBLIC_HOST } from "./dataset.js";
+import { createApiHandler } from "./api.js";
+import { ABOUT, CONNECTION_TEXT, DATASET, EXAMPLE_QUERIES, MCP_URL, PUBLIC_HOST } from "./dataset.js";
 import { admitMcpRequest } from "./rate-limit.js";
 import { GRAPH_ID } from "./runtime.js";
 
@@ -25,16 +25,15 @@ const mcpWorker = createPublicPoneglyphMcpWorker<PlaygroundEnv>({
 const api = createApiHandler({
   host: PUBLIC_HOST,
   graphId: GRAPH_ID,
-  session: { dataset: { name: DATASET.name, note: DATASET.currentDataNote, limitations: DATASET.limitations, entityIdentity: DATASET.entityIdentity, queryLanguage: DATASET.queryLanguage }, examples: EXAMPLE_QUERIES, mcp: { url: MCP_URL, instructions: CONNECTION_TEXT } },
+  session: { about: ABOUT, examples: EXAMPLE_QUERIES, mcp: { url: MCP_URL, instructions: CONNECTION_TEXT } },
 });
 
-// The client is embedded in this bundle (no static-assets router), so Access
-// and ctx.access apply to every response. See build/client-assets.ts.
+// The client is embedded in this bundle (no static-assets router) and served
+// by Worker code with security headers. See build/client-assets.ts.
 const CONTENT_SECURITY_POLICY = [
   "default-src 'none'", "script-src 'self'", "style-src 'self' 'unsafe-inline'", "img-src 'self' data:", "font-src 'self' data:",
   "connect-src 'self'", "worker-src 'self'", "frame-ancestors 'none'", "base-uri 'none'", "form-action 'none'",
 ].join("; ");
-const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const decoded = new Map<string, Uint8Array<ArrayBuffer>>();
 
 function client(request: Request): Response {
@@ -47,7 +46,7 @@ function client(request: Request): Response {
   const headers = new Headers({
     "content-type": asset.type,
     etag: asset.etag,
-    "cache-control": path.startsWith("/assets/") ? "private, max-age=31536000, immutable" : "private, no-cache",
+    "cache-control": path.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "no-cache",
     "content-security-policy": CONTENT_SECURITY_POLICY,
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
@@ -62,20 +61,12 @@ function client(request: Request): Response {
   return new Response(request.method === "HEAD" ? null : body, { headers });
 }
 
-// Defense in depth: the edge Access app must have admitted this request. If
-// Access is ever detached from the Worker, every route fails closed instead of
-// silently becoming public. Loopback hosts exist only in local development.
-function admitted(url: URL, ctx: ExecutionContext): boolean {
-  return LOOPBACK_HOSTS.has(url.hostname) || ctx.access?.aud === ACCESS_AUDIENCE;
-}
-
 export default {
-  async fetch(request: Request, env: PlaygroundEnv, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: PlaygroundEnv): Promise<Response> {
     const url = new URL(request.url);
     if (!ALLOWED_HOSTS.includes(url.hostname)) return new Response("Invalid host", { status: 403 });
-    if (!admitted(url, ctx)) return new Response("Sign in through Cloudflare Access", { status: 401, headers: { "cache-control": "no-store" } });
     if (url.pathname === "/mcp") return mcpWorker.fetch(request, env);
-    if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return api(request, env, ctx);
+    if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return api(request, env);
     return client(request);
   },
 } satisfies ExportedHandler<PlaygroundEnv>;

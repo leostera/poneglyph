@@ -26,22 +26,22 @@ type FactValue =
   | { type: "date"; value: string }
   /** RFC 3339, e.g. "2026-10-21T12:00:00Z" */
   | { type: "date_time"; value: string };
-/** One append-only fact. The playground assigns the source (your author hash). */
+/** One fact. The playground sets the source for you. */
 interface Fact {
   /** Entity URI. New entities: pick any URI, e.g. "playground:pirate:<something>". */
   entity: Uri;
-  /** Field URI: any URI is allowed; known corpus fields autocomplete. */
+  /** Field URI. Any URI works; common fields autocomplete. */
   field: KnownField | (Uri & {});
   value: FactValue;
-  /** true appends a retraction that hides a matching earlier assertion. */
+  /** true undoes an earlier fact with the same entity, field and value. */
   retract?: boolean;
 }
 `;
 
 export function starterSource(author: string): string {
   const entity = `playground:pirate:${author}-${Math.random().toString(36).slice(2, 7)}`;
-  return `// One atomic transaction: every fact commits together or not at all.
-// ⌘/Ctrl+Enter commits. Values are typed; hover a field for docs.
+  return `// All of these are saved together, or none are.
+// Hover any field for help. ⌘↵ saves.
 export default [
   { entity: "${entity}", field: "onepiece:name", value: { type: "text", value: "Captain Demo" } },
   { entity: "${entity}", field: "onepiece:bounty", value: { type: "number", value: 1500000000 } },
@@ -57,6 +57,16 @@ export default [
 
 export type ParsedFacts = { ok: true; facts: FactDraft[] } | { ok: false; error: string };
 
+/** Relation suggestions are observational: only fields with reference values in this snapshot. */
+export function observedRelationFields(fields: readonly { field: string; valueTags: readonly string[] }[]): string[] {
+  return [...new Set(fields.filter(field => field.valueTags.includes("reference")).map(field => field.field))].sort();
+}
+
+/** Extract the current field literal prefix before the Monaco cursor, if editing one. */
+export function fieldLiteralPrefix(line: string): string | undefined {
+  return /\bfield\s*:\s*(["'])([^"'\\]*)$/.exec(line)?.[2];
+}
+
 const VALUE_TYPES = new Set(["text", "number", "boolean", "reference", "date", "date_time"]);
 
 export function parseFactsSource(source: string, limit: number): ParsedFacts {
@@ -69,9 +79,9 @@ export function parseFactsSource(source: string, limit: number): ParsedFacts {
   if (!/^(satisfies\s+Fact\[\]\s*)?;?$/.test(rest)) return { ok: false, error: "Only `satisfies Fact[]` may follow the array." };
   let value: unknown;
   try { value = JSON5.parse(source.slice(open, end + 1)); }
-  catch (error) { return { ok: false, error: `Not a plain object literal: ${error instanceof Error ? error.message : String(error)}. Expressions and variables are not evaluated.` }; }
+  catch (error) { return { ok: false, error: `Use plain values only; variables and expressions aren't supported (${error instanceof Error ? error.message : String(error)}).` }; }
   if (!Array.isArray(value) || value.length === 0) return { ok: false, error: "Write at least one fact." };
-  if (value.length > limit) return { ok: false, error: `At most ${limit} facts per transaction (got ${value.length}).` };
+  if (value.length > limit) return { ok: false, error: `At most ${limit} facts at a time (got ${value.length}).` };
   const facts: FactDraft[] = [];
   for (const [index, candidate] of value.entries()) {
     const fact = shape(candidate);
