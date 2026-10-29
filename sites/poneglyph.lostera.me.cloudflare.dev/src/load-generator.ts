@@ -3,6 +3,8 @@
 // service binding, so every write is its own invocation of this Worker.
 import { DurableObject } from "cloudflare:workers";
 import type { StorageEnv } from "../../../packages/poneglyph/src/storage/environment.ts";
+import { treeForKey } from "../../../packages/poneglyph/src/storage/forest.ts";
+import { virtualKeyForEntity } from "../../../packages/poneglyph/src/storage/keys.ts";
 
 export type BenchEnv = StorageEnv & Readonly<{
   DATABASE: Fetcher;
@@ -17,6 +19,8 @@ export type WriteLoad = Readonly<{
   factsPerTransaction: number;
   /** Entities are `bench:entity:${n}` for n below this. */
   entitySpace: number;
+  /** Only entities owned by this 4-bit owner prefix, to load one owner tree. */
+  owner?: string;
   startAt: number;
 }>;
 
@@ -34,13 +38,22 @@ export class LoadGenerator extends DurableObject<BenchEnv> {
     const statuses: Record<string, number> = {}, perSecond: Record<string, number> = {}, latencies: number[] = [];
     const timings: Record<string, {totalMs: number; count: number}> = {};
     let accepted = 0;
+    // Entities in the requested owner, found by sampling before the clock starts.
+    const pool: string[] = [];
+    if (load.owner !== undefined) {
+      for (let attempts = 0; pool.length < 2_000 && attempts < 100_000; attempts++) {
+        const entity = `bench:entity:${Math.floor(Math.random() * load.entitySpace)}`;
+        if (treeForKey(await virtualKeyForEntity(load.graph, entity)) === load.owner) pool.push(entity);
+      }
+    }
+    const pick = () => pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)]! : `bench:entity:${Math.floor(Math.random() * load.entitySpace)}`;
     await new Promise(resolve => setTimeout(resolve, Math.max(0, load.startAt - Date.now())));
     const deadline = load.startAt + load.seconds * 1000;
     await Promise.all(Array.from({length: load.writers}, async (_, writer) => {
       for (let n = 0; Date.now() < deadline; n++) {
         const facts = Array.from({length: load.factsPerTransaction}, (_, index) => ({
           source: `bench:g${load.generator}w${writer}`,
-          entity: `bench:entity:${Math.floor(Math.random() * load.entitySpace)}`,
+          entity: pick(),
           field: "bench:value",
           value: {type: "text", value: `g${load.generator}w${writer}n${n}i${index}`},
           retraction: false,
@@ -88,9 +101,10 @@ export async function runWriteBench(request: Request, env: BenchEnv): Promise<Re
   const graph = typeof input["graph"] === "string" ? input["graph"] : `bench-${crypto.randomUUID()}`;
   const generators = count("generators", 4, 64), writers = count("writers", 8, 64), seconds = count("seconds", 10, 120);
   const factsPerTransaction = count("factsPerTransaction", 1, 100), entitySpace = count("entitySpace", 1_000_000, 1_000_000_000);
-  const startAt = Date.now() + 2_000;
+  const owner = typeof input["owner"] === "string" && /^[01]{4}$/.test(input["owner"]) ? input["owner"] : undefined;
+  const startAt = Date.now() + (owner === undefined ? 2_000 : 8_000);
   const results = await Promise.all(Array.from({length: generators}, (_, generator) =>
-    env.LOAD_GENERATOR.getByName(`generator-${generator}`).run({graph, generator, writers, seconds, factsPerTransaction, entitySpace, startAt})));
+    env.LOAD_GENERATOR.getByName(`generator-${generator}`).run({graph, generator, writers, seconds, factsPerTransaction, entitySpace, startAt, ...(owner === undefined ? {} : {owner})})));
   const latencies = results.flatMap(result => result.latencies).sort((a, b) => a - b);
   const statuses: Record<string, number> = {}, perSecond: Record<string, number> = {};
   const timings: Record<string, {totalMs: number; count: number}> = {};

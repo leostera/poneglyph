@@ -19,6 +19,7 @@ import {
   MAX_TRANSACTION_BYTES,
   MAX_SQL_BINDINGS,
   TRANSACTION_IDEMPOTENCY_RETENTION_MS,
+  MIN_IDEMPOTENCY_RETENTION_MS,
   SHARD_SCAN_PAGE_SIZE,
   SPLIT_COPY_PAGE_SIZE,
   MAX_QUERY_RESULTS,
@@ -58,6 +59,8 @@ type ActiveValueRow = Readonly<{
   join_value_index: number;
 }>;
 
+/** Released outcomes a shard keeps before retiring the oldest early (see evictReleasedOutcomes). */
+const MAX_RETAINED_SHARD_OUTCOMES = 200_000;
 const SCAN_CURSOR_COLUMNS = ["entity", "fact_id", "value_index", "join_fact_id", "join_value_index"] as const;
 
 const EMPTY_ENTITY_SCAN = "SELECT entity, fact_id, value_index, datalog_type, datalog_value, fact_id AS join_fact_id, value_index AS join_value_index FROM active_values WHERE 0";
@@ -291,6 +294,19 @@ export class GraphShardDO extends DurableObject<Env> {
     });
   }
 
+  /**
+   * A busy shard retires released outcomes before their seven days are up:
+   * past its allocation, the oldest ones older than the guaranteed replay
+   * window go. Released outcomes no longer pin anything at the owner.
+   */
+  private evictReleasedOutcomes(): void {
+    const released = this.ctx.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM shard_transactions WHERE owner_released = 1").one().count;
+    if (released <= MAX_RETAINED_SHARD_OUTCOMES) return;
+    this.ctx.storage.sql.exec(`DELETE FROM shard_transactions WHERE tx_id IN (
+      SELECT tx_id FROM shard_transactions WHERE owner_released = 1 AND status IN ('committed', 'cancelled') AND created_at_ms < ?
+      ORDER BY created_at_ms LIMIT ?)`, Date.now() - MIN_IDEMPOTENCY_RETENTION_MS, Math.min(5_000, released - MAX_RETAINED_SHARD_OUTCOMES));
+  }
+
   override async alarm(): Promise<void> {
     const identity = this.ctx.storage.sql.exec<ShardIdentity>("SELECT * FROM shard_identity").toArray()[0];
     if (!identity) return;
@@ -308,6 +324,7 @@ export class GraphShardDO extends DurableObject<Env> {
         WHERE status IN ('committed', 'cancelled') AND owner_released = 1 AND created_at_ms < ? ORDER BY created_at_ms LIMIT 100`,
         Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS).toArray();
       this.ctx.storage.transactionSync(() => {for (const row of expired) this.ctx.storage.sql.exec("DELETE FROM shard_transactions WHERE tx_id = ? AND owner_released = 1", row.tx_id);});
+      this.evictReleasedOutcomes();
     } finally {await this.scheduleOutcomeMaintenance();}
   }
 

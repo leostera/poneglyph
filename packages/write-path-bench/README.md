@@ -87,7 +87,7 @@ See [the result index](results/README.md) for the clean 100k iteration. Earlier 
 - SDK retry classification honors explicit boolean server hints; the permanent retained-outcome quota is non-retryable, while temporary busy/read-lease pressure remains retryable.
 - Post-commit pruning failures no longer turn a durable published commit into a failed write response; cleanup is deferred without changing fact/index commit requirements.
 - Busy responses, retry exhaustion, and transport failures are part of each result. Local generator/runtime limitations must not be mistaken for a cloud DO request-rate ceiling.
-- The baseline retains at most 100,000 transaction outcomes for seven days. At 100k facts the largest transaction count is 50,000, so this iteration does **not** exercise that limit. At 1M the two-fact case needs 500,000 transactions and exposes it. Keep that known limitation for scale-up; never raise it, switch graphs, shrink transactions, or route failed facts through a fallback to make a load pass.
+- A graph retains up to 1,600,000 transaction outcomes (100,000 per ledger and per owner tree) for up to seven days. At its allocation it forgets the oldest terminal outcomes older than 15 minutes, and fails closed (429) only if every retained outcome is younger. Never switch graphs, shrink transactions, or route failed facts through a fallback to make a load pass.
 
 No Cloudflare load performance is claimed. Historical candidate experiments are closed; any correctness/performance change to the canonical implementation must be a separately identified revision with new validation. Preserve every original outcome and source/corpus identity. No load is automatically started by the cutover.
 

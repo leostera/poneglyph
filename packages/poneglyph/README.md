@@ -52,7 +52,7 @@ const db = createDatabase({
 const {txId} = await db.transact(facts, {clientRequestToken: "release:seed-001"});
 ```
 
-The server mints an internal transaction ID for each submission and returns it only in the successful `{ txId }` receipt. Request/network/protocol errors do not expose it, because delivery may be unknown. The client never retries automatically. To retry one logical request safely, provide the same optional `clientRequestToken` (a non-empty string of at most 256 UTF-8 bytes) and exact facts; the token is graph-scoped, concurrent duplicates share the durable outcome, changed facts conflict, and mappings are retained for seven days subject to capacity. Without a token, each submission is a new transaction. Internal sequences remain implementation details.
+The server mints an internal transaction ID for each submission and returns it only in the successful `{ txId }` receipt. Request/network/protocol errors do not expose it, because delivery may be unknown. The client never retries automatically. To retry one logical request safely, provide the same optional `clientRequestToken` (a non-empty string of at most 256 UTF-8 bytes) and exact facts; the token is graph-scoped, concurrent duplicates share the durable outcome, changed facts conflict, and mappings are retained for at least 15 minutes and up to seven days, as capacity allows (a busy graph forgets its oldest outcomes first). Without a token, each submission is a new transaction. Internal sequences remain implementation details.
 
 ## API and architecture limits
 

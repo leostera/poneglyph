@@ -64,4 +64,26 @@ describe("write correctness regressions", () => {
     const total = await runInDurableObject(ledger, (_instance, state) => state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions").one().count);
     expect(total).toBe(LEDGER_OUTCOME_LIMIT);
   });
+  it("makes room at a full allocation by forgetting terminal outcomes older than the guaranteed replay window", async () => {
+    const graph = `test-${crypto.randomUUID()}`, txId = "correctness:evict-seed";
+    expect((await post(graph, txId, [fact("wiki:person:evict")])).status).toBe(200);
+    const name = await transactionCoordinatorName(graph, txId), ledger = env.GRAPH_LEDGERS.getByName(name);
+    await runInDurableObject(ledger, (_instance, state) => {
+      const columns = state.storage.sql.exec<{name: string}>("PRAGMA table_info(candidate_transactions)").toArray().map(row => row.name);
+      const select = columns.map(column => column === "tx_id" ? "'old:' || ids.i" : column === "created_at_ms" ? "ids.i" : `original.${column}`).join(", ");
+      state.storage.sql.exec(`WITH RECURSIVE ids(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM ids WHERE i < ?)
+        INSERT INTO candidate_transactions (${columns.join(", ")}) SELECT ${select}
+        FROM ids CROSS JOIN (SELECT * FROM candidate_transactions WHERE tx_id = ?) original`, LEDGER_OUTCOME_LIMIT - 1, txId);
+    });
+    let next: string | undefined;
+    for (let i = 0; i < 1000 && !next; i++) {const id = `correctness:evict-new-${i}`; if (await transactionCoordinatorName(graph, id) === name) next = id;}
+    if (!next) throw new Error("bounded same-bucket fixture search failed");
+    expect((await post(graph, next, [fact("wiki:person:evict-new")])).status).toBe(200);
+    await runInDurableObject(ledger, (_instance, state) => {
+      // The oldest outcomes went; the recent seed is still answered from its record.
+      expect(state.storage.sql.exec("SELECT 1 FROM candidate_transactions WHERE tx_id = 'old:1'").toArray()).toHaveLength(0);
+      expect(state.storage.sql.exec("SELECT 1 FROM candidate_transactions WHERE tx_id = ?", txId).toArray()).toHaveLength(1);
+      expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM candidate_transactions").one().count).toBeLessThanOrEqual(LEDGER_OUTCOME_LIMIT);
+    });
+  });
 });

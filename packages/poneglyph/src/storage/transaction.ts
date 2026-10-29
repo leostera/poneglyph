@@ -5,7 +5,7 @@ import { MAX_TRANSACTION_BYTES, MAX_TRANSACTION_FACTS, MAX_TRANSACTION_PARTICIPA
 import { accountStorage } from "./capacity.js";
 import { canonicalBatchJson, jsonResponse, sha256Hex } from "./http.js";
 import { LEDGER_OUTCOME_LIMIT, LEDGER_RECOVERY_DELAY_MS, treeCoordinatorName } from "./forest.js";
-import { retainedLedgerOutcomeCount } from "./ledger-capacity.js";
+import { evictLedgerOutcomes, retainedLedgerOutcomeCount } from "./ledger-capacity.js";
 import { coordinatorObjectName, shardObjectName } from "./keys.js";
 import { factAsJson } from "./protocol.js";
 import { integer, planBatch, parseWritePlan, type WritePlan, type OwnerPlan, type ParticipantPlan } from "./plan.js";
@@ -67,7 +67,8 @@ export class DistributedTransaction {
             SELECT token_hash FROM client_request_tokens WHERE terminal_at_ms IS NOT NULL AND created_at_ms < ? LIMIT 100
           )`, expiredBefore,
         );
-        const count = retainedLedgerOutcomeCount(this.storage);
+        let count = retainedLedgerOutcomeCount(this.storage);
+        if (count >= LEDGER_OUTCOME_LIMIT) {evictLedgerOutcomes(this.storage); count = retainedLedgerOutcomeCount(this.storage);}
         const usesTokenReservation = this.storage.sql.exec(
           "SELECT 1 FROM client_request_tokens WHERE tx_id = ?", this.txId,
         ).toArray().length > 0;
@@ -101,7 +102,11 @@ export class DistributedTransaction {
 
   private read(): Intent | undefined { return this.storage.sql.exec<Intent>("SELECT * FROM candidate_transactions WHERE tx_id = ?", this.txId).toArray()[0]; }
   private phase(phase: Phase): Intent {
-    this.storage.sql.exec("UPDATE candidate_transactions SET phase = ? WHERE tx_id = ?", phase, this.txId); return this.read()!;
+    // A terminal outcome answers replays from its payload hash; the batch itself is no longer needed.
+    if (phase === "complete" || phase === "aborted")
+      this.storage.sql.exec("UPDATE candidate_transactions SET phase = ?, batch_json = '' WHERE tx_id = ?", phase, this.txId);
+    else this.storage.sql.exec("UPDATE candidate_transactions SET phase = ? WHERE tx_id = ?", phase, this.txId);
+    return this.read()!;
   }
   private receipt(intent: Intent): Response {return jsonResponse({txId: this.txId, status: "committed", commitSeq: intent.commit_seq, sequenceScope: "subtree-vector"});}
   private aborted(intent: Intent): Response {return jsonResponse({txId: intent.tx_id, status: "aborted", retryable: false}, 422);}

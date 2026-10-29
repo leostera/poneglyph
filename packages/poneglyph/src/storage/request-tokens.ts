@@ -5,7 +5,7 @@ import { isRecord } from "../domain/result.js";
 import { MAX_TRANSACTION_BYTES, MAX_TRANSACTION_FACTS, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "./constants.js";
 import { LEDGER_OUTCOME_LIMIT, ledgerBucketForRequestToken, transactionIdForLedgerBucket } from "./forest.js";
 import type { TransactionLedger } from "./ledger.js";
-import { retainedLedgerOutcomeCount } from "./ledger-capacity.js";
+import { evictLedgerOutcomes, retainedLedgerOutcomeCount } from "./ledger-capacity.js";
 import { accountStorage } from "./capacity.js";
 import { canonicalBatchJson, jsonResponse, readJsonBody, sha256Hex } from "./http.js";
 import { factAsJson } from "./protocol.js";
@@ -121,7 +121,8 @@ export class ClientRequestTokenCoordinator {
       }
       if (row !== undefined) return row.payload_hash === payloadHash ? {kind: "selected", row} : {kind: "conflict"};
 
-      const count = retainedLedgerOutcomeCount(this.storage);
+      let count = retainedLedgerOutcomeCount(this.storage);
+      if (count + 2 > LEDGER_OUTCOME_LIMIT) {evictLedgerOutcomes(this.storage, now); count = retainedLedgerOutcomeCount(this.storage);}
       if (count + 2 > LEDGER_OUTCOME_LIMIT) {
         return {kind: "capacity", status: 429, message: "ledger reached its shared retained-outcome allocation"};
       }

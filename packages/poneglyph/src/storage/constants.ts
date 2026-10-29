@@ -10,7 +10,13 @@ export const MAX_SPLITS_PER_WRITE = 8;
 
 export const MAX_ACCOUNTED_BYTES_PER_DO = 8_000_000_000;
 export const TRANSACTION_IDEMPOTENCY_RETENTION_MS = 7 * 24 * 60 * 60 * 1_000;
-export const MAX_RETAINED_TRANSACTION_OUTCOMES = 100_000;
+// Outcomes are kept for idempotent replay for up to seven days. Past this many
+// per graph, the oldest terminal ones older than the guaranteed minimum window
+// make room; if every retained outcome is younger, writes fail closed.
+export const MAX_RETAINED_TRANSACTION_OUTCOMES = 1_600_000;
+export const MIN_IDEMPOTENCY_RETENTION_MS = 15 * 60 * 1_000;
+/** Terminal outcomes evicted per admission when an object is at its allocation. */
+export const OUTCOME_EVICTION_BATCH = 64;
 export const SHARD_SPLIT_TRIGGER_BYTES = 5_000_000_000;
 export const MINIMUM_UNCERTAINTY_HEADROOM_BYTES = 2_000_000_000;
 export const MINIMUM_WAL_RESERVE_BYTES = 64_000_000;

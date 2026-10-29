@@ -1,6 +1,6 @@
 import type { Uri } from "../domain/identifiers.js";
 import { accountStorage } from "./capacity.js";
-import { TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "./constants.js";
+import { MIN_IDEMPOTENCY_RETENTION_MS, OUTCOME_EVICTION_BATCH, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "./constants.js";
 import { TREE_OUTCOME_LIMIT } from "./forest.js";
 
 export type OwnerReservationTicket = Readonly<{reservationTicket: number; directoryEpoch: number}>;
@@ -64,7 +64,15 @@ export class OwnerWrites {
         if (this.storage.sql.exec("SELECT 1 FROM entity_write_locks WHERE entity = ?", entity).toArray().length)
           throw new OwnerWriteError(423, "entity is reserved by another transaction", true);
       }
-      const count = this.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_reservations").one().count;
+      let count = this.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_reservations").one().count;
+      if (count >= TREE_OUTCOME_LIMIT) {
+        // Forget the oldest terminal outcomes past the guaranteed replay window.
+        this.storage.sql.exec(`DELETE FROM tree_reservations WHERE tx_id IN (
+          SELECT tx_id FROM tree_reservations WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?
+            AND tx_id NOT IN (SELECT tx_id FROM tree_publication_slots)
+          ORDER BY created_at_ms LIMIT ?)`, now - MIN_IDEMPOTENCY_RETENTION_MS, OUTCOME_EVICTION_BATCH);
+        count = this.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_reservations").one().count;
+      }
       if (count >= TREE_OUTCOME_LIMIT) throw new OwnerWriteError(429, "owner retained-outcome allocation is full");
       const encoder = new TextEncoder();
       const lockBytes = entities.reduce((sum, entity) => sum + encoder.encode(entity).byteLength + encoder.encode(txId).byteLength + 256, 0);
