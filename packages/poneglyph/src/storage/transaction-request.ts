@@ -64,7 +64,8 @@ export async function publicTransactionResponse(response: Response, expectedTxId
         typeof body["commitSeq"] !== "number" || !Number.isSafeInteger(body["commitSeq"]) || body["commitSeq"] < 1) {
       return jsonResponse({error: "transaction coordinator returned an invalid or unreadable commit witness", retryable: true}, 502);
     }
-    return jsonResponse({txId: expectedTxId});
+    const timing = response.headers.get("server-timing");
+    return jsonResponse({txId: expectedTxId}, 200, timing === null ? undefined : new Headers({"server-timing": timing}));
   }
 
   const text = await response.text().catch(() => "");

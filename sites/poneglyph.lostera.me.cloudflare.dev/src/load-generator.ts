@@ -25,11 +25,14 @@ export type WriteLoadResult = Readonly<{
   statuses: Record<string, number>;
   latencies: number[];
   perSecond: Record<string, number>;
+  /** Summed Server-Timing durations per name, and how many responses reported each. */
+  timings: Record<string, {totalMs: number; count: number}>;
 }>;
 
 export class LoadGenerator extends DurableObject<BenchEnv> {
   async run(load: WriteLoad): Promise<WriteLoadResult> {
     const statuses: Record<string, number> = {}, perSecond: Record<string, number> = {}, latencies: number[] = [];
+    const timings: Record<string, {totalMs: number; count: number}> = {};
     let accepted = 0;
     await new Promise(resolve => setTimeout(resolve, Math.max(0, load.startAt - Date.now())));
     const deadline = load.startAt + load.seconds * 1000;
@@ -51,6 +54,12 @@ export class LoadGenerator extends DurableObject<BenchEnv> {
           status = String(response.status);
           if (response.ok) {
             await response.arrayBuffer();
+            for (const part of (response.headers.get("server-timing") ?? "").split(",")) {
+              const match = /^\s*([\w-]+);dur=(\d+)/.exec(part);
+              if (!match) continue;
+              const entry = timings[match[1]!] ??= {totalMs: 0, count: 0};
+              entry.totalMs += Number(match[2]); entry.count++;
+            }
             const done = Date.now();
             latencies.push(done - started); accepted++;
             const second = String(Math.floor((done - load.startAt) / 1000));
@@ -65,7 +74,7 @@ export class LoadGenerator extends DurableObject<BenchEnv> {
         statuses[status] = (statuses[status] ?? 0) + 1;
       }
     }));
-    return {accepted, statuses, latencies, perSecond};
+    return {accepted, statuses, latencies, perSecond, timings};
   }
 }
 
@@ -84,7 +93,11 @@ export async function runWriteBench(request: Request, env: BenchEnv): Promise<Re
     env.LOAD_GENERATOR.getByName(`generator-${generator}`).run({graph, generator, writers, seconds, factsPerTransaction, entitySpace, startAt})));
   const latencies = results.flatMap(result => result.latencies).sort((a, b) => a - b);
   const statuses: Record<string, number> = {}, perSecond: Record<string, number> = {};
+  const timings: Record<string, {totalMs: number; count: number}> = {};
   for (const result of results) {
+    for (const [key, value] of Object.entries(result.timings)) {
+      const entry = timings[key] ??= {totalMs: 0, count: 0}; entry.totalMs += value.totalMs; entry.count += value.count;
+    }
     for (const [key, value] of Object.entries(result.statuses)) statuses[key] = (statuses[key] ?? 0) + value;
     for (const [key, value] of Object.entries(result.perSecond)) perSecond[key] = (perSecond[key] ?? 0) + value;
   }
@@ -94,6 +107,7 @@ export async function runWriteBench(request: Request, env: BenchEnv): Promise<Re
     graph, generators, writers, seconds, factsPerTransaction, accepted,
     writesPerSecond: accepted / seconds, factsPerSecond: accepted * factsPerTransaction / seconds,
     latencyMs: {p50: pick(0.5), p90: pick(0.9), p99: pick(0.99), max: latencies.at(-1) ?? null},
+    meanServerTimingMs: Object.fromEntries(Object.entries(timings).map(([key, value]) => [key, Math.round(value.totalMs / value.count)])),
     perSecond, statuses,
   });
 }

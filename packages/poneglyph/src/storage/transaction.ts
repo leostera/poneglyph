@@ -28,6 +28,8 @@ const MAX_PLANNING_ATTEMPTS = 3;
 
 export class DistributedTransaction {
   private active = false;
+  // Wall time spent waiting on each kind of call, reported as Server-Timing.
+  private readonly timings = new Map<string, number>();
   constructor(private readonly storage: DurableObjectStorage, private readonly env: StorageEnv,
     private readonly txId: string, private readonly scheduleRecovery: () => Promise<void>, private readonly cache: BatchCache) {}
 
@@ -81,8 +83,11 @@ export class DistributedTransaction {
           VALUES (?, ?, ?, ?, '[]', 'planning', 0, 0, ?, ?)`, this.txId, graph, hash, json, now, now + LEDGER_RECOVERY_DELAY_MS);
       }
       this.cache.put(this.txId, json, batch);
-      await this.scheduleRecovery();
-      return await this.advance(recovery);
+      const started = Date.now();
+      await this.timed("ledger-schedule", () => this.scheduleRecovery());
+      const response = await this.advance(recovery);
+      this.timings.set("ledger-total", Date.now() - started);
+      return withServerTiming(response, this.timings);
     } catch (error) {
       return jsonResponse({error: error instanceof Error ? error.message : String(error), txId: this.txId, retryable: true}, 503);
     } finally {
@@ -104,13 +109,24 @@ export class DistributedTransaction {
     if (!parsed.ok || parsed.value.txId !== this.txId || await sha256Hex(canonicalBatchJson(parsed.value)) !== intent.payload_hash) throw new Error("corrupt durable canonical journal");
     this.cache.put(this.txId, intent.batch_json, parsed.value); return parsed.value;
   }
+  private async timed<T>(name: string, run: () => Promise<T>): Promise<T> {
+    const started = Date.now();
+    try {return await run();}
+    finally {this.timings.set(name, (this.timings.get(name) ?? 0) + Date.now() - started);}
+  }
   private async tree(intent: Intent, owner: Pick<OwnerPlan, "prefix">, action: string, extra: object = {}): Promise<Response> {
+    return this.timed(action, () => this.treeCall(intent, owner, action, extra));
+  }
+  private async treeCall(intent: Intent, owner: Pick<OwnerPlan, "prefix">, action: string, extra: object): Promise<Response> {
     return this.env.GRAPH_TREES.getByName(treeCoordinatorName(intent.graph_id, owner.prefix)).fetch(`https://owner.internal/${action}`, {
       method: "POST", body: JSON.stringify({graphId: intent.graph_id, prefix: owner.prefix, txId: this.txId, payloadHash: intent.payload_hash,
         identityTimeMs: intent.created_at_ms, ...extra}),
     });
   }
   private async participant(intent: Intent, plan: WritePlan, participant: ParticipantPlan, batch: FactBatch, action: string): Promise<Response> {
+    return this.timed(action, () => this.participantCall(intent, plan, participant, batch, action));
+  }
+  private async participantCall(intent: Intent, plan: WritePlan, participant: ParticipantPlan, batch: FactBatch, action: string): Promise<Response> {
     const owner = plan.owners.find(o => o.prefix === participant.owner)!;
     return this.env.GRAPH_SHARDS.getByName(shardObjectName(intent.graph_id, participant.address.prefix)).fetch(`https://shard.internal/${action}`, {
       method: "POST", body: JSON.stringify({graphId: intent.graph_id, shardPrefix: participant.address.prefix,
@@ -414,4 +430,11 @@ export class DistributedTransaction {
 
 function isSingleOwnerAtomic(plan: WritePlan): boolean {
   return plan.owners.length === 1 && plan.participants.length === 1;
+}
+
+function withServerTiming(response: Response, timings: ReadonlyMap<string, number>): Response {
+  if (timings.size === 0) return response;
+  const headers = new Headers(response.headers);
+  headers.set("server-timing", [...timings].map(([name, ms]) => `${name.replace(/[^a-z0-9-]/gi, "")};dur=${ms}`).join(", "));
+  return new Response(response.body, {status: response.status, headers});
 }
