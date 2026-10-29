@@ -1,0 +1,17 @@
+{
+  "name": "@poneglyph/site-lostera-bench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "cf workers types && tsc --noEmit",
+    "build": "bun run typecheck && cf build",
+    "deploy": "bun run build && cf deploy"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "cf": "1.0.0-beta.14",
+    "typescript": "5.9.3",
+    "@cloudflare/vite-plugin": "2.0.0-beta.sha-91c870c02",
+    "vite": "8.3.4"
+  }
+}

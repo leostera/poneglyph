@@ -7,3 +7,7 @@
 - `poneglyph.dev` is the static public landing page (Worker `poneglyph-www`, Kumo + Tailwind). It has no bindings and calls no Poneglyph API; it only links to the playground and repository. Keep its claims consistent with the README and RFDs.
 - Default checks are offline, including a finite native integration with tiny synthetic facts. Never trigger deployment, account lookups, a wiki/corpus load or benchmarks through build/check/test.
 - Read `docs/rfds/RFD0006-public-read-only-mcp-playground.md` for the application boundary and rollout limits. A built server, advertised schema, empty response or passing fixture does not prove that the One Piece corpus was loaded.
+
+## poneglyph.lostera.me.cloudflare.dev
+
+Temporary production benchmark target for the write path, on Leo's individual work account (`776b37f0f2474156eb01cf93c764b2e9`, cf profile `lostera`). It serves the plain graph HTTP API (`/v1/graphs/<graph>/{transactions,query,schema,entities}`) behind the account's Access app ("Just Me") and a bearer token (`PONEGLYPH_TOKEN` secret; local copy in `~/.config/poneglyph/lostera-bench-token`). Send `cf-access-token: $(cloudflared access token -app=https://poneglyph.lostera.me.cloudflare.dev)` and `authorization: Bearer <token>`. `POST /_bench/writes` runs edge load generators (`{generators, writers, seconds, factsPerTransaction, entitySpace, graph?}`).
