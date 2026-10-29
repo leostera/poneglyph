@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { traceCall } from "./call-trace.js";
 import type { StorageEnv as Env } from "./environment.js";
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseUri, type Uri } from "../domain/identifiers.js";
@@ -50,6 +51,7 @@ export class GraphTreeDO extends DurableObject<Env> {
   }
 
   override async fetch(request: Request): Promise<Response> {
+    traceCall("tree", request);
     const path = new URL(request.url).pathname;
     if (request.method === "POST" && path.startsWith("/_tree-")) {
       try { return await this.treeControl(request); }

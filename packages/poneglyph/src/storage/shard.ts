@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { traceCall } from "./call-trace.js";
 import type { StorageEnv as Env } from "./environment.js";
 import { TREE_DEPTH, treeCoordinatorName } from "./forest.js";
 import { parseFactBatch } from "../domain/fact.js";
@@ -107,6 +108,7 @@ export class GraphShardDO extends DurableObject<Env> {
   }
 
   override async fetch(request: Request): Promise<Response> {
+    traceCall("shard", request);
     const path = new URL(request.url).pathname;
     try {
       if (request.method === "POST") {

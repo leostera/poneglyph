@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { traceCall } from "./call-trace.js";
 import { ClientRequestTokenCoordinator } from "./request-tokens.js";
 import type { StorageEnv } from "./environment.js";
 import { TransactionLedger } from "./ledger.js";
@@ -21,6 +22,7 @@ export class GraphLedgerDO extends DurableObject<LedgerEnv> {
   }
 
   override async fetch(request: Request): Promise<Response> {
+    traceCall("ledger", request);
     const { pathname } = new URL(request.url);
     if (request.method === "POST" && pathname === "/_transact") return this.ledger.fetch(request);
     if (request.method === "POST" && pathname === "/_request") return this.requestTokens.fetch(request);

@@ -1,4 +1,5 @@
 import { DurableObject, tracing } from "cloudflare:workers";
+import { traceCall } from "./call-trace.js";
 import { acquireParallelReadCut, queryReadPrefixes, releaseParallelReadCut } from "./read-cut.js";
 import { parseReadIdentity, readIdentityMatches, type ReadIdentity } from "./read-identity.js";
 import type { StorageEnv as Env } from "./environment.js";
@@ -49,6 +50,7 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
   }
 
   override async fetch(request: Request): Promise<Response> {
+    traceCall("facade", request);
     const path = new URL(request.url).pathname;
     if (request.method === "POST" && path === "/_publish-vector") return await this.publishSafeVector(request);
     if (request.method === "POST" && path === "/_advance-vector-epoch") return await this.advanceSafeVectorEpoch(request);
