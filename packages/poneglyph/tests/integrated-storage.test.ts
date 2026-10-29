@@ -8,7 +8,7 @@ import { auditFactStorage } from "../src/testing/storage-audit.js";
 import { sha256Hex, canonicalBatchJson } from "../src/storage/http.js";
 import { parseFactBatch } from "../src/domain/fact.js";
 import { dispatchInternalTransaction } from "../src/storage/transaction-request.js";
-import { MAX_ACCOUNTED_BYTES_PER_DO, SHARD_SPLIT_TRIGGER_BYTES, MAX_RETAINED_TRANSACTION_OUTCOMES, MAX_TRANSACTION_BYTES, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "../src/storage/constants.js";
+import { MAX_ACCOUNTED_BYTES_PER_DO, MAX_RETAINED_TRANSACTION_OUTCOMES, MAX_TRANSACTION_BYTES, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "../src/storage/constants.js";
 import { BatchCache } from "../src/storage/batch-cache.js";
 import { ensureTreeSchema, ensureShardSchema } from "../src/storage/sql.js";
 
@@ -976,7 +976,6 @@ describe("integrated storage authority", () => {
 
   it.each([
     {reason: "accounted capacity", size: MAX_ACCOUNTED_BYTES_PER_DO, error: "per-DO accounted capacity limit exceeded"},
-    {reason: "split trigger", size: SHARD_SPLIT_TRIGGER_BYTES, error: "shard must split before admitting more writes"},
   ])("decides $reason admission at the shard's atomic step and records the rejection", async ({size, error}) => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), id = "integrated:capacity-changed";
     const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, root));
@@ -1343,5 +1342,71 @@ describe("integrated storage authority", () => {
       expect(sql.exec("SELECT tx_id, publication_seq, state, held FROM tree_publication_slots").toArray())
         .toEqual([{tx_id: "old", publication_seq: 2, state: "open", held: 1}]);
     });
+  });
+
+  it.each([
+    {reason: "size", policy: {sizeBytes: 1}},
+    {reason: "call-rate", policy: {callsPerSecond: 0.5, windowSeconds: 1}},
+  ])("splits a shard on its own when its $reason passes the split policy, while writes keep landing", async ({policy}) => {
+    const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph);
+    const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, root));
+    // A low-traffic owner never splits: the default policy is far above this.
+    expect(await writeStatus(graph, "integrated:auto-split-seed", [fact(first)])).toMatchObject({status: 200});
+    await runInDurableObject(leaf, instance => {
+      Reflect.set(instance, "splitPolicy", {...Reflect.get(instance, "splitPolicy") as object, ...policy});
+    });
+    await new Promise(resolve => setTimeout(resolve, 1_100));
+    // Spread over whole seconds: the rate is averaged over finished seconds.
+    for (let i = 0; i < 3; i++) {
+      expect(await writeStatus(graph, `integrated:auto-split-${i}`, [fact(same, false, `v${i}`)])).toMatchObject({status: 200});
+      if (i < 2) await new Promise(resolve => setTimeout(resolve, 600));
+    }
+    // The shard asks from its alarm, which may already be running on its own.
+    await runDurableObjectAlarm(leaf);
+    for (let i = 0; i < 100; i++) {
+      const role = await runInDurableObject(leaf, (_instance, state) => state.storage.sql.exec<{role: string}>("SELECT role FROM shard_identity").one().role);
+      if (role === "router") break;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    await runInDurableObject(leaf, (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT role FROM shard_identity").one()).toMatchObject({role: "router"}));
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT directory_epoch, topology_op_id FROM graph_state").one()).toMatchObject({directory_epoch: 1, topology_op_id: null}));
+    expect(await writeStatus(graph, "integrated:after-auto-split", [fact(first, false, "later")])).toMatchObject({status: 200});
+    const read = await query(graph); expect(read.status).toBe(200);
+    expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(5);
+  });
+
+  it("drains in-flight writers before an automatic split and holds new writers until it is done", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:drained";
+    expect(await writeStatus(graph, "integrated:drain-seed", [fact(first)])).toMatchObject({status: 200});
+    await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), async instance => {
+      const atomic = Reflect.get(instance, "atomic");
+      let release!: () => void, enter!: () => void;
+      const entered = new Promise<void>(resolve => {enter = resolve;}), gate = new Promise<void>(resolve => {release = resolve;});
+      Reflect.set(instance, "atomic", async (request: Request) => {
+        if ((await request.clone().json() as {txId: string}).txId === id) {enter(); await gate;}
+        return atomic.call(instance, request);
+      });
+      try {
+        const held = writeStatus(graph, id, [fact(same)]);
+        await entered;
+        const splitting = env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)).fetch("https://owner.internal/_tree-split", {
+          method: "POST", body: JSON.stringify({graphId: graph, prefix: root, sourcePrefix: root, drain: true, force: true}),
+        }).then(async response => ({status: response.status, body: await response.text()}));
+        await new Promise(resolve => setTimeout(resolve, 50));
+        // The owner is fenced: a new writer waits (replanning) instead of failing.
+        const waiting = writeStatus(graph, "integrated:during-drain", [fact(first, false, "fenced")]);
+        await new Promise(resolve => setTimeout(resolve, 50));
+        release();
+        expect(await held).toMatchObject({status: 200});
+        const splitAnswer = await splitting; expect(splitAnswer, splitAnswer.body).toMatchObject({status: 200});
+        expect(await waiting).toMatchObject({status: 200});
+      } finally {release(); Reflect.set(instance, "atomic", atomic);}
+    });
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT directory_epoch FROM graph_state").one()).toMatchObject({directory_epoch: 1}));
+    const read = await query(graph); expect(read.status).toBe(200);
+    expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(3);
   });
 });

@@ -18,6 +18,8 @@ type OwnerState = Readonly<{visible_seq: number; next_write_seq: number; directo
 
 /** The lock's answer when a writer planned against an old owner directory. */
 export const STALE_OWNER_EPOCH = "provisional owner epoch changed";
+/** The lock's answer while the owner is fenced for a split. */
+export const OWNER_TOPOLOGY_FENCED = "owner topology fence is active";
 
 export class OwnerWriteError extends Error {
   constructor(readonly status: number, message: string, readonly retryable = false) { super(message); }
@@ -57,7 +59,7 @@ export class OwnerWrites {
         if (count !== entities.length) throw new OwnerWriteError(409, "pending owner entity set is inconsistent");
         return {reservationTicket: prior.ticket_seq, directoryEpoch: prior.directory_epoch};
       }
-      if (state.topology_op_id !== null) throw new OwnerWriteError(423, "owner topology fence is active", true);
+      if (state.topology_op_id !== null) throw new OwnerWriteError(423, OWNER_TOPOLOGY_FENCED, true);
       for (const entity of entities) {
         if (this.storage.sql.exec("SELECT 1 FROM entity_write_locks WHERE entity = ?", entity).toArray().length)
           throw new OwnerWriteError(423, "entity is reserved by another transaction", true);

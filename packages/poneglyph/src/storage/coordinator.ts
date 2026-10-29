@@ -40,6 +40,9 @@ type SplitRow = Readonly<{
   created_at_ms: number;
 }>;
 
+/** How long an automatic split waits for in-flight writers and readers to finish. */
+const SPLIT_DRAIN_MS = 20_000;
+
 /** How long a finishing writer waits for earlier revisions before answering "retry". */
 const FINISH_WAIT_MS = 10_000;
 
@@ -129,6 +132,7 @@ export class GraphTreeDO extends DurableObject<Env> {
     const graphId = parseGraphId(input.value["graphId"]);
     const prefix = parseVirtualPrefix(input.value["prefix"]);
     const force = input.value["force"] === true;
+    const drain = input.value["drain"] === true;
     const stopAfterPages = input.value["stopAfterPages"];
     if (!graphId.ok || !prefix.ok || (stopAfterPages !== undefined &&
         (typeof stopAfterPages !== "number" || !Number.isSafeInteger(stopAfterPages) || stopAfterPages < 1))) {
@@ -155,7 +159,8 @@ export class GraphTreeDO extends DurableObject<Env> {
         return jsonResponse({status: "already-split", prefix: prefix.value, directoryEpoch: current.directory_epoch, visibleSeq: current.visible_seq});
       }
     }
-    const migrationId = this.reserveSplit(prefix.value, force);
+    const migrationId = this.reserveSplit(prefix.value, force, drain);
+    if (drain) await this.drainForSplit(migrationId);
     const interrupted = await this.performSplit(migrationId, stopAfterPages as number | undefined);
     if (interrupted instanceof Response) return interrupted;
     const state = this.readGraphState();
@@ -182,10 +187,31 @@ export class GraphTreeDO extends DurableObject<Env> {
     if (!ok) throw new CoordinatorError(503, "topology safe-vector publication incomplete");
   }
 
-  private reserveSplit(prefix: VirtualPrefix, force: boolean): string {
+  /**
+   * An automatic split fences the owner first and then waits for in-flight
+   * writers and readers to finish: new reservations and read leases get a
+   * retryable 423 meanwhile. Under steady load an owner always has writers,
+   * so waiting for a quiet moment would never split it.
+   */
+  private async drainForSplit(migrationId: string): Promise<void> {
+    const deadline = Date.now() + SPLIT_DRAIN_MS;
+    while (this.readGraphState().writer_tx_id !== null || this.ownerWrites.hasWriters() || this.hasReadLease()) {
+      if (Date.now() >= deadline) {
+        this.clearSplit(migrationId);
+        throw new CoordinatorError(503, "owner did not drain in time for a split");
+      }
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    // Writers that finished while draining moved the visible revision the split starts from.
+    this.ctx.storage.transactionSync(() => this.ctx.storage.sql.exec(
+      "UPDATE graph_splits SET base_visible_seq = (SELECT visible_seq FROM graph_state WHERE singleton = 1) WHERE migration_id = ? AND phase = 'copying'",
+      migrationId));
+  }
+
+  private reserveSplit(prefix: VirtualPrefix, force: boolean, drain = false): string {
     return this.ctx.storage.transactionSync(() => {
       const state = this.readGraphState();
-      if (state.writer_tx_id !== null || this.ownerWrites.hasWriters() || this.hasReadLease())
+      if (!drain && (state.writer_tx_id !== null || this.ownerWrites.hasWriters() || this.hasReadLease()))
         throw new CoordinatorError(423, "cannot split while entity reservations or read leases are pending");
       if (state.topology_op_id !== null) {
         const existing = this.readSplit(state.topology_op_id);

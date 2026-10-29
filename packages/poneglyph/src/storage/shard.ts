@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { traceCall } from "./call-trace.js";
 import type { StorageEnv as Env } from "./environment.js";
 import { TREE_DEPTH, treeCoordinatorName } from "./forest.js";
+import { CallRate, DEFAULT_SPLIT_POLICY, splitReason, type SplitPolicy, type SplitReason } from "./split-policy.js";
 import { parseFactBatch } from "../domain/fact.js";
 import { parseFactValue, type FactValue } from "../domain/fact-value.js";
 import { compareUnicodeScalars } from "../domain/string-order.js";
@@ -102,6 +103,11 @@ export class GraphShardDO extends DurableObject<Env> {
   );
   // One exact-payload slot; replacing/evicting it never loses durable staging.
   private staged: Readonly<{payloadJson: string; batch: ParticipantBatch}> | undefined;
+  // Automatic splitting: calls this object serves, and when it last asked its owner to split it.
+  protected splitPolicy: SplitPolicy = DEFAULT_SPLIT_POLICY;
+  private readonly callRate = new CallRate();
+  private splitRequestedAt = 0;
+  private splitWanted: SplitReason | undefined;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     void ctx.blockConcurrencyWhile(async () => ensureShardSchema(ctx.storage));
@@ -123,12 +129,12 @@ export class GraphShardDO extends DurableObject<Env> {
           case "/_count": return await this.countRange(request);
           case "/_abort-split": return await this.abortSplit(request);
           case "/_retire": return await this.retire(request);
-          case "/_atomic": return await this.atomic(request);
-          case "/_prepare": return await this.prepare(request);
-          case "/_commit": return await this.commit(request);
+          case "/_atomic": return await this.counted(() => this.atomic(request));
+          case "/_prepare": return await this.counted(() => this.prepare(request));
+          case "/_commit": return await this.counted(() => this.commit(request));
           case "/_cancel": return await this.cancel(request);
-          case "/_scan": return await this.scan(request);
-          case "/_entity": return await this.getEntity(request);
+          case "/_scan": return await this.counted(() => this.scan(request));
+          case "/_entity": return await this.counted(() => this.getEntity(request));
           case "/_schema": return await this.observeSchema(request);
           case "/_prune": return await this.prune(request);
         }
@@ -138,6 +144,37 @@ export class GraphShardDO extends DurableObject<Env> {
       const status = error instanceof ShardProtocolError ? error.status : 500;
       return jsonResponse({ error: errorMessage(error) }, status);
     }
+  }
+
+  /** Serves a call that counts toward the split policy, then asks for a split if the policy says so. */
+  private async counted(serve: () => Promise<Response>): Promise<Response> {
+    this.callRate.record();
+    const response = await serve();
+    await this.considerSplit();
+    return response;
+  }
+
+  private async considerSplit(): Promise<void> {
+    const now = Date.now();
+    if (this.splitWanted !== undefined || now - this.splitRequestedAt < this.splitPolicy.retryAfterMs) return;
+    const identity = this.ctx.storage.sql.exec<ShardIdentity>("SELECT * FROM shard_identity").toArray()[0];
+    if (identity?.role !== "leaf" || identity.migration_state !== "active") return;
+    const reason = splitReason(this.splitPolicy, identity.prefix.length, this.callRate, this.ctx.storage.sql.databaseSize, now);
+    if (reason === undefined) return;
+    // The owner tree copies this shard into two children; ask from the alarm
+    // so no write waits for it.
+    this.splitWanted = reason; this.splitRequestedAt = now;
+    try {await this.ctx.storage.setAlarm(now);} catch (error) {console.warn("split request deferred", String(error)); this.splitWanted = undefined;}
+  }
+
+  private async requestSplit(identity: ShardIdentity, reason: SplitReason): Promise<void> {
+    const root = identity.prefix.slice(0, TREE_DEPTH) as VirtualPrefix;
+    const response = await this.env.GRAPH_TREES.getByName(treeCoordinatorName(identity.graph_id, root)).fetch("https://owner.internal/_tree-split", {
+      method: "POST", body: JSON.stringify({graphId: identity.graph_id, prefix: root, sourcePrefix: identity.prefix, drain: true}),
+    });
+    const body = await response.text();
+    console.log(JSON.stringify({event: "poneglyph.shard.split-requested", prefix: identity.prefix, reason, status: response.status,
+      outcome: body.slice(0, 200)}));
   }
 
   private async atomic(request: Request): Promise<Response> {
@@ -257,6 +294,11 @@ export class GraphShardDO extends DurableObject<Env> {
   override async alarm(): Promise<void> {
     const identity = this.ctx.storage.sql.exec<ShardIdentity>("SELECT * FROM shard_identity").toArray()[0];
     if (!identity) return;
+    const wanted = this.splitWanted;
+    if (wanted !== undefined) {
+      this.splitWanted = undefined;
+      try {await this.requestSplit(identity, wanted);} catch (error) {console.warn("split request failed", String(error));}
+    }
     const rows = this.ctx.storage.sql.exec<AtomicRecord>(`SELECT * FROM shard_transactions
       WHERE status IN ('committed', 'cancelled') AND owner_released = 0 ORDER BY created_at_ms LIMIT 100`).toArray();
     try {
@@ -1328,11 +1370,11 @@ export class GraphShardDO extends DurableObject<Env> {
   }
 
   // The authoritative admission check: atomic and prepare decide here, at the
-  // fenced shard, so the ledger needs no separate capacity round trip.
+  // fenced shard, so the ledger needs no separate capacity round trip. Past
+  // the split trigger the shard keeps admitting writes and asks to be split.
   private assertCapacity(facts: readonly import("../domain/fact.js").FactDraft[]): ReturnType<typeof accountStorage> {
     const account = this.capacityFor(facts);
     if (!account.canAdmit) throw new ShardProtocolError(413, `per-DO accounted capacity limit exceeded (${account.projectedAccountedBytes} bytes)`);
-    if (account.shouldSplit) throw new ShardProtocolError(413, "shard must split before admitting more writes");
     return account;
   }
 }

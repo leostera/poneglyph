@@ -12,7 +12,7 @@ import { integer, planBatch, parseWritePlan, type WritePlan, type OwnerPlan, typ
 import type { StorageEnv } from "./environment.js";
 import type { BatchCache } from "./batch-cache.js";
 import { writeDirectoryCache } from "./directory-cache.js";
-import { STALE_OWNER_EPOCH } from "./owner-writes.js";
+import { OWNER_TOPOLOGY_FENCED, STALE_OWNER_EPOCH } from "./owner-writes.js";
 import { classifyParticipantFailure, type ParticipantFailureCode } from "./transaction-diagnostics.js";
 
 type Phase = "planning" | "reserving" | "preparing" | "committing" | "atomic-delegated" | "cancelling" | "complete" | "aborted";
@@ -25,6 +25,8 @@ type PlanningResult = {kind: "continue"; plan: WritePlan} | {kind: "respond"; re
 type PreparationResult = {kind: "continue"} | {kind: "respond"; response: Response};
 
 const MAX_PLANNING_ATTEMPTS = 3;
+/** How long a write waits, replanning, for an owner that is fenced for a split. */
+const MAX_FENCE_WAIT_MS = 30_000;
 
 export class DistributedTransaction {
   private active = false;
@@ -193,7 +195,7 @@ export class DistributedTransaction {
     return parseWritePlan(intent.plan_json, intent.graph_id, batch, reservation);
   }
 
-  private async planAndReserve(intent: Intent, batch: FactBatch, attempt = 0): Promise<PlanningResult> {
+  private async planAndReserve(intent: Intent, batch: FactBatch, attempt = 0, fencedSince?: number): Promise<PlanningResult> {
     // Directory entries and routes come from the ledger's cache when it has
     // them; the owner lock below rejects a plan built on a stale epoch.
     const initialPlan = await planBatch(this.env, intent.graph_id, batch,
@@ -227,7 +229,15 @@ export class DistributedTransaction {
           // The owner split since this ledger cached its directory: plan again.
           writeDirectoryCache.forgetOwners(intent.graph_id, initialPlan.owners.map(candidate => candidate.prefix));
           this.storage.sql.exec("UPDATE candidate_transactions SET phase = 'planning', plan_json = NULL, trees_json = '[]' WHERE tx_id = ?", this.txId);
-          return this.planAndReserve(this.read()!, batch, attempt + 1);
+          return this.planAndReserve(this.read()!, batch, attempt + 1, fencedSince);
+        }
+        const now = Date.now();
+        if (response.status === 423 && isRecord(value) && value["error"] === OWNER_TOPOLOGY_FENCED && now - (fencedSince ?? now) < MAX_FENCE_WAIT_MS) {
+          // The owner is splitting: wait and plan again against its new directory.
+          writeDirectoryCache.forgetOwners(intent.graph_id, initialPlan.owners.map(candidate => candidate.prefix));
+          this.storage.sql.exec("UPDATE candidate_transactions SET phase = 'planning', plan_json = NULL, trees_json = '[]' WHERE tx_id = ?", this.txId);
+          await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+          return this.planAndReserve(this.read()!, batch, 0, fencedSince ?? now);
         }
         this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);
         return {kind: "respond", response: jsonResponse(
