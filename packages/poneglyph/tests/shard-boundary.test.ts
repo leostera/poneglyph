@@ -19,7 +19,7 @@ async function fixture(graph: string) {
 describe("native shard request boundary", () => {
   it("rejects malformed decision commands with the existing messages before mutating shard state", async () => {
     const f = await fixture("decision-boundary"), before = await f.snapshot();
-    for (const path of ["/_commit", "/_cancel", "/_decision-finalize"]) {
+    for (const path of ["/_commit", "/_cancel"]) {
       for (const {body, error} of [
         {body: "{", error: "request body must be valid JSON"},
         {body: "[]", error: "expected a commit object"},

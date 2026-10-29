@@ -39,6 +39,11 @@ async function fixtures(graph: string) {
   return {first, same, other, root, otherRoot: treeForKey(await virtualKeyForEntity(graph, other))};
 }
 
+// Writers no longer wait for shards to release retained outcomes; the shard's
+// maintenance alarm proves release in one batched owner call.
+async function settleOutcomes(graph: string, ...prefixes: string[]) {
+  for (const prefix of prefixes) await runDurableObjectAlarm(env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix)));
+}
 async function recover(graph: string, id: string) {
   const ledger = env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id));
   await runInDurableObject(ledger, (_instance, state) => state.storage.sql.exec("UPDATE candidate_transactions SET next_recovery_at_ms = 0 WHERE tx_id = ?", id));
@@ -329,6 +334,7 @@ describe("integrated storage authority", () => {
     expect(await writeStatus(graph, id, [fact(first), fact(same)])).toMatchObject({status: 200});
     expect(await writeStatus(graph, id, [fact(first), fact(same)])).toMatchObject({status: 200});
     expect(await writeStatus(graph, id, [fact(first, false, "changed")])).toMatchObject({status: 409});
+    await settleOutcomes(graph, root);
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT status, decision_kind, atomic_fact_count, owner_released FROM shard_transactions").one())
         .toMatchObject({status: "committed", decision_kind: "atomic", atomic_fact_count: 2, owner_released: 1});
@@ -371,6 +377,7 @@ describe("integrated storage authority", () => {
       expect(vector.filter(owner => owner.prefix === root || owner.prefix === otherRoot))
         .toEqual([root, otherRoot].sort().map(prefix => ({prefix, directory_epoch: 0, visible_seq: 1})));
     });
+    await settleOutcomes(graph, root, otherRoot);
     for (const owner of [root, otherRoot]) {
       await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, owner)), (_instance, state) => {
         expect(state.storage.sql.exec("SELECT status, decision_kind, owner_released, reserved_mutation_bytes FROM shard_transactions").one())
@@ -503,6 +510,7 @@ describe("integrated storage authority", () => {
       reasonCode: "inactive-fact-retraction", rejectionStatus: 422})]);
     expect(JSON.stringify(diagnostics)).not.toContain(first);
     expect(JSON.stringify(diagnostics)).not.toContain(id);
+    await settleOutcomes(graph, root);
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT status, decision_kind, owner_released FROM shard_transactions").one())
         .toMatchObject({status: "cancelled", decision_kind: "atomic", owner_released: 1});
@@ -721,6 +729,7 @@ describe("integrated storage authority", () => {
     await evictDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)));
     await evictDurableObject(firstLeaf); await evictDurableObject(second);
     expect(await writeStatus(graph, id, [fact(first), fact(other)])).toMatchObject({status: 200});
+    await settleOutcomes(graph, root, otherRoot);
     for (const owner of [root, otherRoot]) await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, owner)), (_instance, state) => {
       expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1);
       expect(state.storage.sql.exec("SELECT reserved_mutation_bytes, owner_released FROM shard_transactions").one()).toMatchObject({reserved_mutation_bytes: 0, owner_released: 1});
@@ -792,6 +801,9 @@ describe("integrated storage authority", () => {
       try {expect(await writeStatus(graph, id, facts)).toMatchObject({status: 200});}
       finally {Reflect.set(instance, method, original);}
       expect(state.storage.sql.exec("SELECT role, migration_state FROM shard_identity").one()).toMatchObject({role: "router", migration_state: "retired"});
+    });
+    await settleOutcomes(graph, published);
+    await runInDurableObject(leaf, (_instance, state) => {
       expect(state.storage.sql.exec("SELECT owner_released FROM shard_transactions WHERE tx_id = ?", id).one()).toMatchObject({owner_released: 1});
       expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0);
     });
@@ -880,14 +892,10 @@ describe("integrated storage authority", () => {
     }
   });
 
-  it("preserves acknowledgement when finalization fails and proves exact ticket release without touching facts", async () => {
-    const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), id = "integrated:finalization-failure";
+  it("acknowledges before the shard proves outcome release, then proves exact ticket release without touching facts", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), id = "integrated:finalization-deferred";
     const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, root));
-    await runInDurableObject(leaf, async instance => {
-      const finalize = Reflect.get(instance, "finalizeDecision"); Reflect.set(instance, "finalizeDecision", () => new Response("deferred", {status: 503}));
-      try {expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});}
-      finally {Reflect.set(instance, "finalizeDecision", finalize);}
-    });
+    expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
     await runInDurableObject(leaf, (_instance, state) => expect(state.storage.sql.exec("SELECT owner_released FROM shard_transactions").one()).toMatchObject({owner_released: 0}));
     await runDurableObjectAlarm(leaf);
     await runInDurableObject(leaf, (_instance, state) => {
@@ -1102,8 +1110,8 @@ describe("integrated storage authority", () => {
       const read = await query(graph); expect(read.status).toBe(200);
       expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(0);
       expect(await split(graph, root)).toMatchObject({status: 423});
-      const proof = await control("_tree-atomic-proof", {commitSeq: 1, decision: "committed"});
-      expect(proof.status).toBe(200); expect(JSON.parse(proof.body)).toMatchObject({authorityReleased: false});
+      const proof = await control("_tree-atomic-proofs", {proofs: [{txId: id, payloadHash: hash, identityTimeMs: anchor, commitSeq: 1, directoryEpoch: 0, decision: "committed"}]});
+      expect(proof.status).toBe(200); expect(JSON.parse(proof.body)).toEqual({released: [false]});
       expect(await control("_tree-lock", {entities: [first]})).toMatchObject({status: 409});
     } finally {
       // Test cleanup only; there is no product repair on any query/recovery path.
@@ -1152,24 +1160,18 @@ describe("integrated storage authority", () => {
       expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1));
   });
 
-  it("bounds participant publication proofs and terminal sweeps to 100 records with six workers and never deletes facts", async () => {
+  it("proves at most 100 retained outcomes per alarm in one owner call, sweeps terminals and never deletes facts", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, root));
-    await runInDurableObject(leaf, async instance => {
-      const finalize = Reflect.get(instance, "finalizeDecision");
-      Reflect.set(instance, "finalizeDecision", () => new Response("deferred", {status: 503}));
-      try {for (let i = 0; i < 105; i++) expect(await writeStatus(graph, `integrated:proof-${i}`, [fact(first, true)])).toMatchObject({status: 422});}
-      finally {Reflect.set(instance, "finalizeDecision", finalize);}
-    });
+    for (let i = 0; i < 105; i++) expect(await writeStatus(graph, `integrated:proof-${i}`, [fact(first, true)])).toMatchObject({status: 422});
     await runInDurableObject(leaf, async (instance: storage.GraphShardDO, state) => {
-      const prove = Reflect.get(instance, "proveOwnerRelease");
+      const prove = Reflect.get(instance, "proveOwnerReleases");
       const runAlarm = Reflect.get(instance, "alarm") as () => Promise<void>;
-      let calls = 0, live = 0, peak = 0;
-      Reflect.set(instance, "proveOwnerRelease", async (...args: unknown[]) => {
-        calls++; live++; peak = Math.max(peak, live);
-        try {return await prove.apply(instance, args);} finally {live--;}
+      const batches: number[] = [];
+      Reflect.set(instance, "proveOwnerReleases", async (rows: unknown[], ...rest: unknown[]) => {
+        batches.push(rows.length); return prove.call(instance, rows, ...rest);
       });
-      try {await runAlarm.call(instance); expect(calls).toBe(100); expect(peak).toBeLessThanOrEqual(6);}
-      finally {Reflect.set(instance, "proveOwnerRelease", prove);}
+      try {await runAlarm.call(instance); expect(batches).toEqual([100]);}
+      finally {Reflect.set(instance, "proveOwnerReleases", prove);}
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM shard_transactions WHERE owner_released = 0").one().count).toBe(5);
       await runAlarm.call(instance);
       expect(state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM shard_transactions WHERE owner_released = 0").one().count).toBe(0);

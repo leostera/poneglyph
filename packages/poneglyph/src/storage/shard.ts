@@ -125,7 +125,6 @@ export class GraphShardDO extends DurableObject<Env> {
           case "/_abort-split": return await this.abortSplit(request);
           case "/_retire": return await this.retire(request);
           case "/_atomic": return await this.atomic(request);
-          case "/_decision-finalize": return await this.finalizeDecision(request);
           case "/_prepare": return await this.prepare(request);
           case "/_commit": return await this.commit(request);
           case "/_cancel": return await this.cancel(request);
@@ -217,19 +216,6 @@ export class GraphShardDO extends DurableObject<Env> {
     return context;
   }
 
-  private async finalizeDecision(request: Request): Promise<Response> {
-    const control = await this.readControl(request); if (!control.ok) return control.response;
-    const identity = this.ctx.storage.sql.exec<ShardIdentity>("SELECT * FROM shard_identity").toArray()[0];
-    const row = this.atomicRecord(control.value.txId);
-    if (!identity || !row || row.status === "prepared" || decisionContext(this.outcomeContext(row, identity)) !== decisionContext(control.value))
-      return jsonResponse({error: "participant finalization witness mismatch"}, 409);
-    // Internal ledger notice follows all apply/cancel and owner publication;
-    // only the exact old context is updated, including on a retired router.
-    this.ctx.storage.sql.exec("UPDATE shard_transactions SET owner_released = 1 WHERE tx_id = ?", row.tx_id);
-    try {await this.scheduleOutcomeMaintenance();} catch (error) {console.warn("participant expiry scheduling deferred", String(error));}
-    return jsonResponse({status: "finalized"});
-  }
-
   private async scheduleOutcomeMaintenance(): Promise<void> {
     const pending = this.ctx.storage.sql.exec("SELECT 1 FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND owner_released = 0 LIMIT 1").toArray().length > 0;
     const expiry = this.ctx.storage.sql.exec<{at: number | null}>("SELECT MIN(created_at_ms) AS at FROM shard_transactions WHERE status IN ('committed', 'cancelled') AND owner_released = 1").one().at;
@@ -239,18 +225,34 @@ export class GraphShardDO extends DurableObject<Env> {
     if (current === null || due < current) await this.ctx.storage.setAlarm(due);
   }
 
-  private async proveOwnerRelease(row: AtomicRecord, identity: ShardIdentity): Promise<void> {
-    const context = this.outcomeContext(row, identity), prefix = identity.prefix.slice(0, TREE_DEPTH) as VirtualPrefix;
-    const response = await this.env.GRAPH_TREES.getByName(treeCoordinatorName(identity.graph_id, prefix)).fetch("https://owner.internal/_tree-atomic-proof", {
-      method: "POST", body: JSON.stringify({...context, prefix, decision: row.status === "committed" ? "committed" : "aborted"}),
+  // Retained outcomes are released by proving, in one batched call per alarm,
+  // that the owner tree no longer holds the transaction's authority. Writers
+  // never wait for this: it only governs when outcome rows may expire.
+  private async proveOwnerReleases(rows: readonly AtomicRecord[], identity: ShardIdentity): Promise<void> {
+    if (rows.length === 0) return;
+    const prefix = identity.prefix.slice(0, TREE_DEPTH) as VirtualPrefix;
+    const contexts = rows.map(row => this.outcomeContext(row, identity));
+    const response = await this.env.GRAPH_TREES.getByName(treeCoordinatorName(identity.graph_id, prefix)).fetch("https://owner.internal/_tree-atomic-proofs", {
+      method: "POST", body: JSON.stringify({graphId: identity.graph_id, prefix, proofs: rows.map((row, index) => ({
+        txId: row.tx_id, payloadHash: row.payload_hash, identityTimeMs: row.created_at_ms, commitSeq: contexts[index]!.commitSeq,
+        directoryEpoch: contexts[index]!.directoryEpoch, decision: row.status === "committed" ? "committed" : "aborted"}))}),
     });
     const proof: unknown = await response.json();
-    if (response.ok && isRecord(proof) && proof["authorityReleased"] === true)
-      this.ctx.storage.sql.exec(`UPDATE shard_transactions SET owner_released = 1
-        WHERE tx_id = ? AND payload_hash = ? AND created_at_ms = ? AND decision_kind = ?
-        AND atomic_commit_seq IS ? AND atomic_statement_ms IS ? AND atomic_generation IS ? AND atomic_directory_epoch IS ? AND decision_context_json IS ?`,
-        row.tx_id, row.payload_hash, row.created_at_ms, row.decision_kind, row.atomic_commit_seq, row.atomic_statement_ms,
-        row.atomic_generation, row.atomic_directory_epoch, row.decision_context_json);
+    const released = isRecord(proof) ? proof["released"] : undefined;
+    if (!response.ok || !Array.isArray(released) || released.length !== rows.length) {
+      console.warn("participant publication proof deferred", response.status);
+      return;
+    }
+    this.ctx.storage.transactionSync(() => {
+      for (const [index, row] of rows.entries()) {
+        if (released[index] !== true) continue;
+        this.ctx.storage.sql.exec(`UPDATE shard_transactions SET owner_released = 1
+          WHERE tx_id = ? AND payload_hash = ? AND created_at_ms = ? AND decision_kind = ?
+          AND atomic_commit_seq IS ? AND atomic_statement_ms IS ? AND atomic_generation IS ? AND atomic_directory_epoch IS ? AND decision_context_json IS ?`,
+          row.tx_id, row.payload_hash, row.created_at_ms, row.decision_kind, row.atomic_commit_seq, row.atomic_statement_ms,
+          row.atomic_generation, row.atomic_directory_epoch, row.decision_context_json);
+      }
+    });
   }
 
   override async alarm(): Promise<void> {
@@ -258,19 +260,12 @@ export class GraphShardDO extends DurableObject<Env> {
     if (!identity) return;
     const rows = this.ctx.storage.sql.exec<AtomicRecord>(`SELECT * FROM shard_transactions
       WHERE status IN ('committed', 'cancelled') AND owner_released = 0 ORDER BY created_at_ms LIMIT 100`).toArray();
-    let index = 0;
-    const worker = async () => {
-      while (index < rows.length) {
-        const row = rows[index++]!;
-        try {await this.proveOwnerRelease(row, identity);}
-        catch (error) {console.warn("participant publication proof deferred", row.tx_id, String(error));}
-      }
-    };
     try {
-      await Promise.all(Array.from({length: 6}, worker));
+      try {await this.proveOwnerReleases(rows, identity);}
+      catch (error) {console.warn("participant publication proof deferred", String(error));}
       const expired = this.ctx.storage.sql.exec<{tx_id: string}>(`SELECT tx_id FROM shard_transactions
-        WHERE status IN ('committed', 'cancelled') AND owner_released = 1 AND created_at_ms < ? ORDER BY created_at_ms LIMIT ?`,
-        Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS, 100 - rows.length).toArray();
+        WHERE status IN ('committed', 'cancelled') AND owner_released = 1 AND created_at_ms < ? ORDER BY created_at_ms LIMIT 100`,
+        Date.now() - TRANSACTION_IDEMPOTENCY_RETENTION_MS).toArray();
       this.ctx.storage.transactionSync(() => {for (const row of expired) this.ctx.storage.sql.exec("DELETE FROM shard_transactions WHERE tx_id = ? AND owner_released = 1", row.tx_id);});
     } finally {await this.scheduleOutcomeMaintenance();}
   }

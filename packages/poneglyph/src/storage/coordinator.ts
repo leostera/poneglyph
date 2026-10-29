@@ -530,18 +530,26 @@ export class GraphTreeDO extends DurableObject<Env> {
       this.releaseReadLease(body["readId"]); return jsonResponse({ status: "released" });
     }
     if (action === "/_tree-transaction") throw new CoordinatorError(404, "coarse local transaction path is not part of G");
+    if (action === "/_tree-atomic-proofs") {
+      // Shards prove many retained outcomes in one call from their maintenance alarm.
+      const proofs = body["proofs"];
+      if (!Array.isArray(proofs) || proofs.length === 0 || proofs.length > 100) throw new CoordinatorError(400, "invalid outcome proof batch");
+      return jsonResponse({released: proofs.map(proof => {
+        if (!isRecord(proof)) throw new CoordinatorError(400, "invalid outcome proof");
+        const {txId, payloadHash, identityTimeMs, commitSeq, directoryEpoch, decision} = proof;
+        if (typeof txId !== "string" || typeof payloadHash !== "string" || !/^[a-f0-9]{64}$/.test(payloadHash) ||
+            typeof identityTimeMs !== "number" || !Number.isSafeInteger(identityTimeMs) || identityTimeMs < 0 ||
+            typeof commitSeq !== "number" || !Number.isSafeInteger(commitSeq) || commitSeq < 0 ||
+            typeof directoryEpoch !== "number" || !Number.isSafeInteger(directoryEpoch) || directoryEpoch < 0 ||
+            decision !== "committed" && decision !== "aborted") throw new CoordinatorError(400, "invalid outcome proof tuple");
+        return this.ownerWrites.authorityReleased(txId, payloadHash, commitSeq, directoryEpoch, identityTimeMs, decision);
+      })});
+    }
     const txId = body["txId"], hash = body["payloadHash"];
     if (typeof txId !== "string" || typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash)) throw new CoordinatorError(400, "invalid transaction control identity");
     const identityTime = body["identityTimeMs"];
     if (typeof identityTime !== "number" || !Number.isSafeInteger(identityTime) || identityTime < 0)
       throw new CoordinatorError(400, "invalid transaction identity anchor");
-    if (action === "/_tree-atomic-proof") {
-      const seq = body["commitSeq"], epoch = body["directoryEpoch"], decision = body["decision"];
-      if (typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1 ||
-          typeof epoch !== "number" || !Number.isSafeInteger(epoch) || epoch < 0 ||
-          decision !== "committed" && decision !== "aborted") throw new CoordinatorError(400, "invalid local authority proof tuple");
-      return jsonResponse({authorityReleased: this.ownerWrites.authorityReleased(txId, hash, seq, epoch, identityTime, decision)});
-    }
     if (action === "/_tree-lock") {
       const epoch = body["directoryEpoch"];
       if (typeof epoch !== "number" || !Number.isSafeInteger(epoch) || epoch < 0) throw new CoordinatorError(400, "invalid provisional directory epoch");

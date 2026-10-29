@@ -194,9 +194,7 @@ export class DistributedTransaction {
     await this.publishSafeVector(intent, plan);
     await this.releasePublicationGates(intent, plan);
 
-    const terminal = this.phase("complete");
-    await this.finalize(intent, plan, batch);
-    return this.receipt(terminal);
+    return this.receipt(this.phase("complete"));
   }
 
   private abortUnplannedRecovery(): Response {
@@ -370,17 +368,7 @@ export class DistributedTransaction {
       await this.releasePublicationGates(intent, plan);
     }
     const terminal = this.phase(witness.status === "committed" ? "complete" : "aborted");
-    await this.finalize(intent, plan, batch);
     return witness.status === "committed" ? this.receipt(terminal) : this.aborted(terminal);
-  }
-  private async finalize(intent: Intent, plan: WritePlan, batch: FactBatch): Promise<void> {
-    await Promise.all(plan.participants.map(async participant => {
-      try {
-        const response = await this.participant(intent, plan, participant, batch, "_decision-finalize");
-        const ok = response.ok; await response.arrayBuffer();
-        if (!ok) throw new Error(`finalization status ${response.status}`);
-      } catch (error) {console.warn("participant outcome finalization deferred", String(error));}
-    }));
   }
   private async publish(intent: Intent, plan: WritePlan): Promise<void> {
     for (const owner of plan.owners) {
@@ -447,6 +435,5 @@ export class DistributedTransaction {
       this.storage.sql.exec("UPDATE candidate_transactions SET participant_witness = 1 WHERE tx_id = ?", this.txId);
     }
     await this.release(intent, plan, true); this.phase("aborted");
-    await this.finalize(intent, plan, batch);
   }
 }
