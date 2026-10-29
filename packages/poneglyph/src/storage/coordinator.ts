@@ -383,6 +383,7 @@ export class GraphTreeDO extends DurableObject<Env> {
       }
       this.ctx.storage.sql.exec("UPDATE graph_splits SET phase = 'cutover' WHERE migration_id = ?", migrationId);
     });
+    this.ownerWrites.invalidateFrontier();
     return undefined;
   }
 

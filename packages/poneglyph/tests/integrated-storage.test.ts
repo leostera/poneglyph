@@ -1329,7 +1329,7 @@ describe("integrated storage authority", () => {
     await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
       const sql = state.storage.sql;
       for (const statement of ["DROP TRIGGER tree_reservations_inserted", "DROP TRIGGER tree_reservations_deleted",
-        "DROP TABLE tree_counts", "DROP INDEX tree_reservations_by_expiry", "DROP TABLE tree_publication_slots"]) sql.exec(statement);
+        "DROP TABLE tree_counts", "DROP INDEX tree_reservations_by_expiry", "DROP INDEX tree_publication_slots_held", "DROP TABLE tree_publication_slots"]) sql.exec(statement);
       sql.exec(`CREATE TABLE tree_publication_gates (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1), tx_id TEXT NOT NULL UNIQUE, payload_hash TEXT NOT NULL,
         reservation_ticket INTEGER NOT NULL CHECK (reservation_ticket > 0), publication_seq INTEGER NOT NULL CHECK (publication_seq > 0),
@@ -1338,7 +1338,7 @@ describe("integrated storage authority", () => {
       sql.exec("INSERT INTO tree_publication_gates VALUES (1, 'old', ?, 99, 2, 0, 1)", "a".repeat(64));
       sql.exec("UPDATE poneglyph_schema SET version = 4");
       ensureTreeSchema(state.storage);
-      expect(sql.exec("SELECT version FROM poneglyph_schema").one()).toMatchObject({version: 6});
+      expect(sql.exec("SELECT version FROM poneglyph_schema").one()).toMatchObject({version: 7});
       expect(sql.exec("SELECT reservations FROM tree_counts").one()).toMatchObject({reservations: 2});
       expect(sql.exec("SELECT name FROM sqlite_master WHERE name = 'tree_publication_gates'").toArray()).toHaveLength(0);
       expect(sql.exec("SELECT tx_id, publication_seq, state, held FROM tree_publication_slots").toArray())

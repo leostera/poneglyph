@@ -24,6 +24,7 @@ export default defineConfig({
       GRAPH_TREES: bindings.durableObject({ worker: NAME, exportName: "GraphTreeDO" }),
       GRAPH_SHARDS: bindings.durableObject({ worker: NAME, exportName: "GraphShardDO" }),
       LOAD_GENERATOR: bindings.durableObject({ worker: NAME, exportName: "LoadGenerator" }),
+      CEILING_PROBE: bindings.durableObject({ worker: NAME, exportName: "CeilingProbe" }),
       DATABASE: bindings.worker({ worker: NAME, exportName: "Internal" }),
     },
     exports: {
@@ -32,6 +33,7 @@ export default defineConfig({
       GraphTreeDO: exports.durableObject({ storage: "sqlite" }),
       GraphShardDO: exports.durableObject({ storage: "sqlite" }),
       LoadGenerator: exports.durableObject({ storage: "sqlite" }),
+      CeilingProbe: exports.durableObject({ storage: "sqlite" }),
       Internal: exports.worker(),
     },
     observability: { enabled: true, logs: { enabled: true, invocationLogs: true, headSamplingRate: 0.05 } },

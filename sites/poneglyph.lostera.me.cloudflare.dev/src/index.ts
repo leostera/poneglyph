@@ -9,6 +9,7 @@ import { runWriteBench, type BenchEnv } from "./load-generator.ts";
 
 export { GraphCoordinatorDO, GraphLedgerDO, GraphTreeDO, GraphShardDO } from "../../../packages/poneglyph/src/storage/implementation.ts";
 export { LoadGenerator } from "./load-generator.ts";
+export { CeilingProbe } from "./probe.ts";
 
 type Env = BenchEnv & Readonly<{PONEGLYPH_TOKEN?: string}>;
 

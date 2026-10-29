@@ -36,6 +36,9 @@ const SWEEP_EVERY = 64;
 
 export class OwnerWrites {
   private reservationsSinceSweep = SWEEP_EVERY;
+  // Every finishing writer and every waiter asks for the frontier; it only
+  // changes when a revision opens, finishes or is released, or the epoch moves.
+  private frontierMemo: OwnerFrontier | undefined;
   constructor(private readonly storage: DurableObjectStorage) {}
 
   hasWriters(): boolean {
@@ -137,10 +140,12 @@ export class OwnerWrites {
   }
 
   private openSlot(txId: string, hash: string, ticket: number, epoch: number, identityTime: number, held: boolean): number {
-    const slots = this.storage.sql.exec<{open: number; highest: number | null}>(
-      "SELECT COUNT(*) AS open, MAX(publication_seq) AS highest FROM tree_publication_slots").one();
-    if (slots.open >= MAX_OPEN_PUBLICATION_SLOTS) throw new OwnerWriteError(423, "too many publications are in flight on this owner", true);
-    const publicationSeq = Math.max(this.state().visible_seq, slots.highest ?? 0) + 1;
+    this.frontierMemo = undefined;
+    const highest = this.storage.sql.exec<{highest: number | null}>("SELECT MAX(publication_seq) AS highest FROM tree_publication_slots").one().highest ?? 0;
+    const visible = this.state().visible_seq;
+    // Revisions in flight all lie between the visible one and the highest.
+    if (highest - visible >= MAX_OPEN_PUBLICATION_SLOTS) throw new OwnerWriteError(423, "too many publications are in flight on this owner", true);
+    const publicationSeq = Math.max(visible, highest) + 1;
     if (!Number.isSafeInteger(publicationSeq) || publicationSeq >= Number.MAX_SAFE_INTEGER)
       throw new OwnerWriteError(429, "owner publication revision space is exhausted");
     this.storage.sql.exec(`INSERT INTO tree_publication_slots
@@ -151,6 +156,13 @@ export class OwnerWrites {
 
   /** Where publication stands now. */
   frontier(): OwnerFrontier {
+    return this.frontierMemo ??= this.readFrontier();
+  }
+
+  /** Forget the remembered frontier after an outside change to the directory epoch. */
+  invalidateFrontier(): void { this.frontierMemo = undefined; }
+
+  private readFrontier(): OwnerFrontier {
     const state = this.state();
     const held = this.storage.sql.exec<{seq: number | null}>(
       "SELECT MIN(publication_seq) AS seq FROM tree_publication_slots WHERE held = 1").one().seq;
@@ -159,6 +171,7 @@ export class OwnerWrites {
   }
 
   release(txId: string, hash: string, identityTime: number, abort: boolean): void {
+    this.frontierMemo = undefined;
     this.storage.transactionSync(() => {
       const row = this.read(txId);
       if (!row) return;
@@ -193,6 +206,7 @@ export class OwnerWrites {
 
   /** Marks the write applied at its revision; the owner's visible revision advances over finished ones. */
   publish(txId: string, hash: string, ticket: number, publicationSeq: number, identityTime: number): void {
+    this.frontierMemo = undefined;
     this.storage.transactionSync(() => {
       const row = this.read(txId);
       if (!row || row.payload_hash !== hash || row.ticket_seq !== ticket || row.created_at_ms !== identityTime)
@@ -218,6 +232,7 @@ export class OwnerWrites {
 
   /** A distributed write lets its revision into the graph's safe vector once it has published there. */
   releasePublicationGate(txId: string, hash: string, ticket: number, publicationSeq: number, identityTime: number): void {
+    this.frontierMemo = undefined;
     this.storage.transactionSync(() => {
       const slot = this.readSlot(txId);
       const row = this.read(txId);
@@ -244,6 +259,7 @@ export class OwnerWrites {
    * revisions, and forgets finished, released revisions it has passed.
    */
   private advance(): void {
+    this.frontierMemo = undefined;
     const state = this.state();
     let visible = state.visible_seq;
     for (;;) {

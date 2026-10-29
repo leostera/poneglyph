@@ -3,13 +3,18 @@
 // service binding, so every write is its own invocation of this Worker.
 import { DurableObject } from "cloudflare:workers";
 import type { StorageEnv } from "../../../packages/poneglyph/src/storage/environment.ts";
-import { treeForKey } from "../../../packages/poneglyph/src/storage/forest.ts";
+import { treeCoordinatorName, treeForKey } from "../../../packages/poneglyph/src/storage/forest.ts";
 import { virtualKeyForEntity } from "../../../packages/poneglyph/src/storage/keys.ts";
+import type { CeilingProbe, ProbeMode } from "./probe.ts";
 
 export type BenchEnv = StorageEnv & Readonly<{
   DATABASE: Fetcher;
   LOAD_GENERATOR: DurableObjectNamespace<LoadGenerator>;
+  CEILING_PROBE: DurableObjectNamespace<CeilingProbe>;
 }>;
+
+/** Instead of graph writes, call one probe object directly (RFD0011). */
+export type ProbeLoad = Readonly<{name: string; mode: ProbeMode; transport: "fetch" | "rpc" | "tree"}>;
 
 export type WriteLoad = Readonly<{
   graph: string;
@@ -21,6 +26,7 @@ export type WriteLoad = Readonly<{
   entitySpace: number;
   /** Only entities owned by this 4-bit owner prefix, to load one owner tree. */
   owner?: string;
+  probe?: ProbeLoad;
   startAt: number;
 }>;
 
@@ -61,9 +67,41 @@ export class LoadGenerator extends DurableObject<BenchEnv> {
         const started = Date.now();
         let status: string;
         try {
-          const response = await this.env.DATABASE.fetch(`https://database.internal/v1/graphs/${load.graph}/transactions`, {
-            method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({facts}),
-          });
+          const body = JSON.stringify({facts});
+          if (load.probe?.transport === "tree") {
+            // One owner tree alone: the lock and finish a single-owner write makes.
+            const tree = this.env.GRAPH_TREES.getByName(treeCoordinatorName(load.graph, load.owner as never));
+            const identity = {graphId: load.graph, prefix: load.owner, txId: `poneglyph:tx:probe:${load.generator}:${writer}:${n}`,
+              payloadHash: crypto.randomUUID().replaceAll("-", "").padEnd(64, "0"), identityTimeMs: Date.now()};
+            const lock = await tree.fetch("https://owner.internal/_tree-lock", {method: "POST",
+              body: JSON.stringify({...identity, entities: [facts[0]!.entity], directoryEpoch: 0, gate: true})});
+            const ticket = await lock.json() as Record<string, unknown>;
+            if (!lock.ok) throw new Error(`lock ${lock.status} ${JSON.stringify(ticket).slice(0, 60)}`);
+            const finish = await tree.fetch("https://owner.internal/_tree-finish", {method: "POST",
+              body: JSON.stringify({...identity, reservationTicket: ticket["reservationTicket"], publicationSeq: ticket["publicationSeq"], singleOwner: true})});
+            await finish.arrayBuffer();
+            if (!finish.ok) throw new Error(`finish ${finish.status}`);
+            const done = Date.now();
+            latencies.push(done - started); accepted++;
+            const second = String(Math.floor((done - load.startAt) / 1000));
+            perSecond[second] = (perSecond[second] ?? 0) + 1;
+            statuses["200"] = (statuses["200"] ?? 0) + 1;
+            continue;
+          }
+          if (load.probe?.transport === "rpc") {
+            await this.env.CEILING_PROBE.getByName(load.probe.name).hit(load.probe.mode, body);
+            const done = Date.now();
+            latencies.push(done - started); accepted++;
+            const second = String(Math.floor((done - load.startAt) / 1000));
+            perSecond[second] = (perSecond[second] ?? 0) + 1;
+            statuses["200"] = (statuses["200"] ?? 0) + 1;
+            continue;
+          }
+          const response = load.probe !== undefined
+            ? await this.env.CEILING_PROBE.getByName(load.probe.name).fetch(`https://probe.internal/${load.probe.mode}`, {method: "POST", body})
+            : await this.env.DATABASE.fetch(`https://database.internal/v1/graphs/${load.graph}/transactions`, {
+              method: "POST", headers: {"content-type": "application/json"}, body,
+            });
           status = String(response.status);
           if (response.ok) {
             await response.arrayBuffer();
@@ -103,8 +141,14 @@ export async function runWriteBench(request: Request, env: BenchEnv): Promise<Re
   const factsPerTransaction = count("factsPerTransaction", 1, 100), entitySpace = count("entitySpace", 1_000_000, 1_000_000_000);
   const owner = typeof input["owner"] === "string" && /^[01]{4}$/.test(input["owner"]) ? input["owner"] : undefined;
   const startAt = Date.now() + (owner === undefined ? 2_000 : 8_000);
+  const rawProbe = input["probe"] as Partial<Record<string, unknown>> | undefined;
+  const probe: ProbeLoad | undefined = rawProbe === undefined ? undefined : {
+    name: typeof rawProbe["name"] === "string" ? rawProbe["name"] : `probe-${crypto.randomUUID()}`,
+    mode: rawProbe["mode"] === "write1" || rawProbe["mode"] === "write3" ? rawProbe["mode"] : "noop",
+    transport: rawProbe["transport"] === "rpc" || rawProbe["transport"] === "tree" ? rawProbe["transport"] : "fetch",
+  };
   const results = await Promise.all(Array.from({length: generators}, (_, generator) =>
-    env.LOAD_GENERATOR.getByName(`generator-${generator}`).run({graph, generator, writers, seconds, factsPerTransaction, entitySpace, startAt, ...(owner === undefined ? {} : {owner})})));
+    env.LOAD_GENERATOR.getByName(`generator-${generator}`).run({graph, generator, writers, seconds, factsPerTransaction, entitySpace, startAt, ...(owner === undefined ? {} : {owner}), ...(probe === undefined ? {} : {probe})})));
   const latencies = results.flatMap(result => result.latencies).sort((a, b) => a - b);
   const statuses: Record<string, number> = {}, perSecond: Record<string, number> = {};
   const timings: Record<string, {totalMs: number; count: number}> = {};

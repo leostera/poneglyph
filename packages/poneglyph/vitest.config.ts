@@ -16,6 +16,7 @@ export default defineConfig({
         bindings: {
           TODO_SHARED_PASSPHRASE: "test-only-shared-passphrase",
           PONEGLYPH_RUN_BENCH: runBenchmark ? "1" : "0",
+          PONEGLYPH_TREE_BENCH_CALLERS: process.env["PONEGLYPH_TREE_BENCH_CALLERS"] ?? "32",
           PONEGLYPH_RUN_TRAFFIC: runTraffic ? "1" : "0",
         },
         durableObjects: {

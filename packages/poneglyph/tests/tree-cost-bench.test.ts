@@ -8,7 +8,8 @@ import { virtualKeyForEntity } from "../src/storage/keys.js";
 // concurrent callers, and reports owner-tree calls per second. Local workerd
 // numbers only compare revisions of the tree; they are not production rates.
 const RUN = (env as unknown as {PONEGLYPH_RUN_BENCH?: string}).PONEGLYPH_RUN_BENCH === "1";
-const WRITES = 3_000, CALLERS = 32, OWNER = "0101";
+const CALLERS = Number((env as unknown as {PONEGLYPH_TREE_BENCH_CALLERS?: string}).PONEGLYPH_TREE_BENCH_CALLERS ?? 32) || 32;
+const WRITES = 3_000, OWNER = "0101";
 
 describe.skipIf(!RUN)("owner tree cost microbenchmark", () => {
   it("measures lock + finish pairs per second on one owner tree", async () => {

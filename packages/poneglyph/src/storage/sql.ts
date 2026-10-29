@@ -52,6 +52,10 @@ const LEDGER_SCHEMA = [
   ...LEDGER_COUNT_SCHEMA,
 ];
 
+// The lowest held revision bounds what an owner may publish; finding it must
+// not scan every revision in flight.
+const HELD_SLOT_INDEX = `CREATE INDEX tree_publication_slots_held ON tree_publication_slots (publication_seq) WHERE held = 1`;
+
 // Owners hand out publication revisions to many writers at once. A revision
 // becomes visible once it and every lower one are done; a held revision (a
 // distributed write) stays out of the graph's safe vector until released.
@@ -74,6 +78,7 @@ const TREE_SCHEMA = [
   `CREATE INDEX tree_reservations_pending ON tree_reservations (phase) WHERE phase = 'preparing'`,
   `CREATE UNIQUE INDEX tree_reservations_by_publication_seq ON tree_reservations (commit_seq) WHERE phase = 'complete'`,
   ...PUBLICATION_SLOT_SCHEMA,
+  HELD_SLOT_INDEX,
   ...TREE_COUNT_SCHEMA,
   `CREATE TABLE entity_write_locks (entity TEXT PRIMARY KEY, tx_id TEXT NOT NULL, payload_hash TEXT NOT NULL)`,
   `CREATE INDEX entity_write_locks_by_transaction ON entity_write_locks (tx_id)`,
@@ -231,7 +236,7 @@ const SHARD_SCHEMA_VERSION = 8;
 const FACADE_SCHEMA_VERSION = 2;
 const LEDGER_SCHEMA_VERSION = 2;
 const LEDGER_MIGRATIONS: Readonly<Record<number, readonly string[]>> = {1: LEDGER_COUNT_SCHEMA};
-const TREE_SCHEMA_VERSION = 6;
+const TREE_SCHEMA_VERSION = 7;
 
 /** Upgrades from a persisted version to the next one, applied in order. */
 const TREE_MIGRATIONS: Readonly<Record<number, readonly string[]>> = {
@@ -245,6 +250,7 @@ const TREE_MIGRATIONS: Readonly<Record<number, readonly string[]>> = {
     `DROP TABLE tree_publication_gates`,
   ],
   5: TREE_COUNT_SCHEMA,
+  6: [HELD_SLOT_INDEX],
 };
 
 type SchemaKind = "g-facade" | "g-ledger" | "g-tree" | "g-shard";
