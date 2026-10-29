@@ -64,14 +64,14 @@ export class OwnerWrites {
         if (this.storage.sql.exec("SELECT 1 FROM entity_write_locks WHERE entity = ?", entity).toArray().length)
           throw new OwnerWriteError(423, "entity is reserved by another transaction", true);
       }
-      let count = this.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_reservations").one().count;
+      let count = this.storage.sql.exec<{count: number}>("SELECT reservations AS count FROM tree_counts WHERE singleton = 1").one().count;
       if (count >= TREE_OUTCOME_LIMIT) {
         // Forget the oldest terminal outcomes past the guaranteed replay window.
         this.storage.sql.exec(`DELETE FROM tree_reservations WHERE tx_id IN (
           SELECT tx_id FROM tree_reservations WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?
             AND tx_id NOT IN (SELECT tx_id FROM tree_publication_slots)
           ORDER BY created_at_ms LIMIT ?)`, now - MIN_IDEMPOTENCY_RETENTION_MS, OUTCOME_EVICTION_BATCH);
-        count = this.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_reservations").one().count;
+        count = this.storage.sql.exec<{count: number}>("SELECT reservations AS count FROM tree_counts WHERE singleton = 1").one().count;
       }
       if (count >= TREE_OUTCOME_LIMIT) throw new OwnerWriteError(429, "owner retained-outcome allocation is full");
       const encoder = new TextEncoder();

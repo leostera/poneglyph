@@ -1,4 +1,5 @@
 import { MIN_IDEMPOTENCY_RETENTION_MS, OUTCOME_EVICTION_BATCH } from "./constants.js";
+import { LEDGER_OUTCOME_LIMIT } from "./forest.js";
 
 /**
  * Count retained outcomes against one per-ledger budget. A token row without
@@ -21,6 +22,11 @@ export function evictLedgerOutcomes(storage: DurableObjectStorage, now = Date.no
 }
 
 export function retainedLedgerOutcomeCount(storage: DurableObjectStorage): number {
+  // Trigger-kept counts bound the exact figure from above (a token counts at
+  // most twice); only near the allocation is it worth counting exactly.
+  const counts = storage.sql.exec<{candidates: number; tokens: number}>("SELECT candidates, tokens FROM ledger_counts WHERE singleton = 1").one();
+  const upperBound = counts.candidates + 2 * counts.tokens;
+  if (upperBound + 2 < LEDGER_OUTCOME_LIMIT) return upperBound;
   return storage.sql.exec<{count: number}>(`SELECT
     (SELECT COUNT(*) FROM candidate_transactions)
     + (SELECT COUNT(*) FROM client_request_tokens)

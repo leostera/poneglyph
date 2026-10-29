@@ -6,6 +6,33 @@ const FACADE_SCHEMA = [
     visible_seq INTEGER NOT NULL CHECK (visible_seq >= 0))`,
 ];
 
+// Retained-outcome allocations are checked on every admission, so their
+// counts are kept by triggers instead of counting the tables each time.
+const LEDGER_COUNT_SCHEMA = [
+  `CREATE TABLE ledger_counts (singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+    candidates INTEGER NOT NULL CHECK (candidates >= 0), tokens INTEGER NOT NULL CHECK (tokens >= 0))`,
+  `INSERT INTO ledger_counts (singleton, candidates, tokens)
+    VALUES (1, (SELECT COUNT(*) FROM candidate_transactions), (SELECT COUNT(*) FROM client_request_tokens))`,
+  `CREATE TRIGGER ledger_candidates_inserted AFTER INSERT ON candidate_transactions
+    BEGIN UPDATE ledger_counts SET candidates = candidates + 1 WHERE singleton = 1; END`,
+  `CREATE TRIGGER ledger_candidates_deleted AFTER DELETE ON candidate_transactions
+    BEGIN UPDATE ledger_counts SET candidates = candidates - 1 WHERE singleton = 1; END`,
+  `CREATE TRIGGER ledger_tokens_inserted AFTER INSERT ON client_request_tokens
+    BEGIN UPDATE ledger_counts SET tokens = tokens + 1 WHERE singleton = 1; END`,
+  `CREATE TRIGGER ledger_tokens_deleted AFTER DELETE ON client_request_tokens
+    BEGIN UPDATE ledger_counts SET tokens = tokens - 1 WHERE singleton = 1; END`,
+] as const;
+
+const TREE_COUNT_SCHEMA = [
+  `CREATE INDEX tree_reservations_by_expiry ON tree_reservations (created_at_ms) WHERE phase IN ('complete', 'aborted')`,
+  `CREATE TABLE tree_counts (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), reservations INTEGER NOT NULL CHECK (reservations >= 0))`,
+  `INSERT INTO tree_counts (singleton, reservations) VALUES (1, (SELECT COUNT(*) FROM tree_reservations))`,
+  `CREATE TRIGGER tree_reservations_inserted AFTER INSERT ON tree_reservations
+    BEGIN UPDATE tree_counts SET reservations = reservations + 1 WHERE singleton = 1; END`,
+  `CREATE TRIGGER tree_reservations_deleted AFTER DELETE ON tree_reservations
+    BEGIN UPDATE tree_counts SET reservations = reservations - 1 WHERE singleton = 1; END`,
+] as const;
+
 const LEDGER_SCHEMA = [
   `CREATE TABLE ledger_context (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), graph_id TEXT NOT NULL, bucket TEXT NOT NULL)`,
   `CREATE TABLE client_request_tokens (
@@ -22,6 +49,7 @@ const LEDGER_SCHEMA = [
     participant_witness INTEGER NOT NULL DEFAULT 0 CHECK (participant_witness IN (0, 1)))`,
   `CREATE INDEX candidate_transactions_by_recovery ON candidate_transactions (next_recovery_at_ms) WHERE phase NOT IN ('complete', 'aborted')`,
   `CREATE INDEX candidate_transactions_by_expiry ON candidate_transactions (created_at_ms) WHERE phase IN ('complete', 'aborted')`,
+  ...LEDGER_COUNT_SCHEMA,
 ];
 
 // Owners hand out publication revisions to many writers at once. A revision
@@ -46,6 +74,7 @@ const TREE_SCHEMA = [
   `CREATE INDEX tree_reservations_pending ON tree_reservations (phase) WHERE phase = 'preparing'`,
   `CREATE UNIQUE INDEX tree_reservations_by_publication_seq ON tree_reservations (commit_seq) WHERE phase = 'complete'`,
   ...PUBLICATION_SLOT_SCHEMA,
+  ...TREE_COUNT_SCHEMA,
   `CREATE TABLE entity_write_locks (entity TEXT PRIMARY KEY, tx_id TEXT NOT NULL, payload_hash TEXT NOT NULL)`,
   `CREATE INDEX entity_write_locks_by_transaction ON entity_write_locks (tx_id)`,
   `CREATE TABLE IF NOT EXISTS graph_identity (
@@ -200,8 +229,9 @@ const SHARD_SCHEMA = [
 
 const SHARD_SCHEMA_VERSION = 8;
 const FACADE_SCHEMA_VERSION = 2;
-const LEDGER_SCHEMA_VERSION = 1;
-const TREE_SCHEMA_VERSION = 5;
+const LEDGER_SCHEMA_VERSION = 2;
+const LEDGER_MIGRATIONS: Readonly<Record<number, readonly string[]>> = {1: LEDGER_COUNT_SCHEMA};
+const TREE_SCHEMA_VERSION = 6;
 
 /** Upgrades from a persisted version to the next one, applied in order. */
 const TREE_MIGRATIONS: Readonly<Record<number, readonly string[]>> = {
@@ -214,6 +244,7 @@ const TREE_MIGRATIONS: Readonly<Record<number, readonly string[]>> = {
       FROM tree_publication_gates g LEFT JOIN tree_reservations r ON r.tx_id = g.tx_id`,
     `DROP TABLE tree_publication_gates`,
   ],
+  5: TREE_COUNT_SCHEMA,
 };
 
 type SchemaKind = "g-facade" | "g-ledger" | "g-tree" | "g-shard";
@@ -223,7 +254,7 @@ export function ensureFacadeSchema(storage: DurableObjectStorage): void {
 }
 
 export function ensureLedgerSchema(storage: DurableObjectStorage): void {
-  ensureSchema(storage, "g-ledger", LEDGER_SCHEMA_VERSION, LEDGER_SCHEMA);
+  ensureSchema(storage, "g-ledger", LEDGER_SCHEMA_VERSION, LEDGER_SCHEMA, LEDGER_MIGRATIONS);
 }
 
 export function ensureTreeSchema(storage: DurableObjectStorage): void {

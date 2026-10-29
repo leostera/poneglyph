@@ -10,7 +10,7 @@ import { parseFactBatch } from "../src/domain/fact.js";
 import { dispatchInternalTransaction } from "../src/storage/transaction-request.js";
 import { MAX_ACCOUNTED_BYTES_PER_DO, MAX_RETAINED_TRANSACTION_OUTCOMES, MAX_TRANSACTION_BYTES, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "../src/storage/constants.js";
 import { BatchCache } from "../src/storage/batch-cache.js";
-import { ensureTreeSchema, ensureShardSchema } from "../src/storage/sql.js";
+import { ensureTreeSchema, ensureShardSchema, ensureLedgerSchema } from "../src/storage/sql.js";
 
 const fact = (entity: string, retraction = false, value = "alive") => ({source: "agent:integrated", entity,
   field: "wiki:person:status", value: {type: "text", value}, retraction});
@@ -1323,12 +1323,13 @@ describe("integrated storage authority", () => {
     const read = await query(graph); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
   });
 
-  it("upgrades a version-4 owner tree's publication gate into a held publication slot", async () => {
+  it("upgrades a version-4 owner tree: its publication gate becomes a held slot and counts are kept by triggers", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph);
     expect(await writeStatus(graph, "integrated:migration-seed", [fact(first)])).toMatchObject({status: 200});
     await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
       const sql = state.storage.sql;
-      sql.exec("DROP TABLE tree_publication_slots");
+      for (const statement of ["DROP TRIGGER tree_reservations_inserted", "DROP TRIGGER tree_reservations_deleted",
+        "DROP TABLE tree_counts", "DROP INDEX tree_reservations_by_expiry", "DROP TABLE tree_publication_slots"]) sql.exec(statement);
       sql.exec(`CREATE TABLE tree_publication_gates (
         singleton INTEGER PRIMARY KEY CHECK (singleton = 1), tx_id TEXT NOT NULL UNIQUE, payload_hash TEXT NOT NULL,
         reservation_ticket INTEGER NOT NULL CHECK (reservation_ticket > 0), publication_seq INTEGER NOT NULL CHECK (publication_seq > 0),
@@ -1337,7 +1338,8 @@ describe("integrated storage authority", () => {
       sql.exec("INSERT INTO tree_publication_gates VALUES (1, 'old', ?, 99, 2, 0, 1)", "a".repeat(64));
       sql.exec("UPDATE poneglyph_schema SET version = 4");
       ensureTreeSchema(state.storage);
-      expect(sql.exec("SELECT version FROM poneglyph_schema").one()).toMatchObject({version: 5});
+      expect(sql.exec("SELECT version FROM poneglyph_schema").one()).toMatchObject({version: 6});
+      expect(sql.exec("SELECT reservations FROM tree_counts").one()).toMatchObject({reservations: 2});
       expect(sql.exec("SELECT name FROM sqlite_master WHERE name = 'tree_publication_gates'").toArray()).toHaveLength(0);
       expect(sql.exec("SELECT tx_id, publication_seq, state, held FROM tree_publication_slots").toArray())
         .toEqual([{tx_id: "old", publication_seq: 2, state: "open", held: 1}]);
@@ -1408,5 +1410,19 @@ describe("integrated storage authority", () => {
       expect(state.storage.sql.exec("SELECT directory_epoch FROM graph_state").one()).toMatchObject({directory_epoch: 1}));
     const read = await query(graph); expect(read.status).toBe(200);
     expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(3);
+  });
+
+  it("upgrades a version-1 ledger to trigger-kept outcome counts", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first} = await fixtures(graph), id = "integrated:ledger-migration";
+    expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) => {
+      const sql = state.storage.sql;
+      for (const statement of ["DROP TRIGGER ledger_candidates_inserted", "DROP TRIGGER ledger_candidates_deleted",
+        "DROP TRIGGER ledger_tokens_inserted", "DROP TRIGGER ledger_tokens_deleted", "DROP TABLE ledger_counts"]) sql.exec(statement);
+      sql.exec("UPDATE poneglyph_schema SET version = 1");
+      ensureLedgerSchema(state.storage);
+      expect(sql.exec("SELECT version FROM poneglyph_schema").one()).toMatchObject({version: 2});
+      expect(sql.exec("SELECT candidates, tokens FROM ledger_counts").one()).toMatchObject({candidates: 1, tokens: 0});
+    });
   });
 });
