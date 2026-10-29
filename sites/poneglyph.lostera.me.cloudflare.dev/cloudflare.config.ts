@@ -34,6 +34,6 @@ export default defineConfig({
       LoadGenerator: exports.durableObject({ storage: "sqlite" }),
       Internal: exports.worker(),
     },
-    observability: { enabled: true, logs: { enabled: true, invocationLogs: false } },
+    observability: { enabled: true, logs: { enabled: true, invocationLogs: true, headSamplingRate: 0.05 } },
   },
 });

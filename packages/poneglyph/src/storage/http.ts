@@ -7,6 +7,14 @@ export async function readJsonBody(
   maxBytes: number,
 ): Promise<ParseResult<unknown>> {
   if (request.body === null) return rejected("body", "request body is required");
+  // Internal calls send string bodies with a known length: read them whole.
+  const declared = Number(request.headers.get("content-length") ?? NaN);
+  if (Number.isSafeInteger(declared) && declared >= 0) {
+    if (declared > maxBytes) return rejected("body", `request body exceeds the ${maxBytes}-byte limit`);
+    let whole: string;
+    try { whole = await request.text(); } catch { return rejected("body", "could not read the request body"); }
+    try { return { ok: true, value: JSON.parse(whole) as unknown }; } catch { return rejected("body", "request body must be valid JSON"); }
+  }
   const reader = request.body.getReader();
   const decoder = new TextDecoder();
   let text = "";

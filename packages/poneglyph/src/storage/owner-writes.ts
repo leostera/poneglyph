@@ -31,7 +31,11 @@ export class OwnerWriteError extends Error {
 // next publication revision, and an owner's visible revision advances over the
 // contiguous prefix of finished ones. Entity locks keep a single entity's
 // writes in revision order.
+/** Reservations between sweeps of expired terminal outcomes. */
+const SWEEP_EVERY = 64;
+
 export class OwnerWrites {
+  private reservationsSinceSweep = SWEEP_EVERY;
   constructor(private readonly storage: DurableObjectStorage) {}
 
   hasWriters(): boolean {
@@ -40,13 +44,25 @@ export class OwnerWrites {
       UNION ALL SELECT 1 FROM tree_publication_slots LIMIT 1`).toArray().length > 0;
   }
 
-  reserve(txId: string, hash: string, entities: readonly Uri[], epoch: number, identityTime: number): OwnerReservationTicket {
+  reserve(txId: string, hash: string, entities: readonly Uri[], epoch: number, identityTime: number): OwnerReservationTicket & Readonly<{fresh?: true}> {
     const keys = JSON.stringify(entities);
     return this.storage.transactionSync(() => {
       const now = Date.now();
-      this.storage.sql.exec(`DELETE FROM tree_reservations WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?
-        AND tx_id NOT IN (SELECT tx_id FROM tree_publication_slots)`, now - TRANSACTION_IDEMPOTENCY_RETENTION_MS);
-      const prior = this.read(txId), state = this.state();
+      // Expired outcomes only cost space, and the allocation check below
+      // evicts when full, so sweeping every call is wasted work.
+      if (++this.reservationsSinceSweep >= SWEEP_EVERY) {
+        this.reservationsSinceSweep = 0;
+        this.storage.sql.exec(`DELETE FROM tree_reservations WHERE tx_id IN (
+          SELECT tx_id FROM tree_reservations WHERE phase IN ('complete', 'aborted') AND created_at_ms < ?
+            AND tx_id NOT IN (SELECT tx_id FROM tree_publication_slots) LIMIT 1000)`, now - TRANSACTION_IDEMPOTENCY_RETENTION_MS);
+      }
+      let prior = this.read(txId);
+      const state = this.state();
+      // An expired terminal predecessor of this ID is forgotten now, not at the next sweep.
+      if (prior && prior.phase !== "preparing" && prior.created_at_ms < now - TRANSACTION_IDEMPOTENCY_RETENTION_MS && !this.readSlot(txId)) {
+        this.storage.sql.exec("DELETE FROM tree_reservations WHERE tx_id = ?", txId);
+        prior = undefined;
+      }
       if (prior && (prior.payload_hash !== hash || prior.entities_json !== keys || prior.created_at_ms !== identityTime)) throw new OwnerWriteError(409, "owner reservation identity or entity-set conflict");
       // A completed old owner outcome must not become half of a newly admitted
       // transaction after the graph-wide identity window expires.
@@ -60,10 +76,9 @@ export class OwnerWrites {
         return {reservationTicket: prior.ticket_seq, directoryEpoch: prior.directory_epoch};
       }
       if (state.topology_op_id !== null) throw new OwnerWriteError(423, OWNER_TOPOLOGY_FENCED, true);
-      for (const entity of entities) {
-        if (this.storage.sql.exec("SELECT 1 FROM entity_write_locks WHERE entity = ?", entity).toArray().length)
-          throw new OwnerWriteError(423, "entity is reserved by another transaction", true);
-      }
+      const placeholders = entities.map(() => "?").join(", ");
+      if (this.storage.sql.exec(`SELECT 1 FROM entity_write_locks WHERE entity IN (${placeholders}) LIMIT 1`, ...entities).toArray().length)
+        throw new OwnerWriteError(423, "entity is reserved by another transaction", true);
       let count = this.storage.sql.exec<{count: number}>("SELECT reservations AS count FROM tree_counts WHERE singleton = 1").one().count;
       if (count >= TREE_OUTCOME_LIMIT) {
         // Forget the oldest terminal outcomes past the guaranteed replay window.
@@ -87,7 +102,7 @@ export class OwnerWrites {
         VALUES (?, ?, ?, ?, ?, 'preparing', ?)`, txId, hash, keys, ticket, state.directory_epoch, identityTime);
       for (const entity of entities) this.storage.sql.exec("INSERT INTO entity_write_locks (entity, tx_id, payload_hash) VALUES (?, ?, ?)", entity, txId, hash);
       this.storage.sql.exec("UPDATE graph_state SET next_write_seq = ? WHERE singleton = 1", ticket);
-      return {reservationTicket: ticket, directoryEpoch: state.directory_epoch};
+      return {reservationTicket: ticket, directoryEpoch: state.directory_epoch, fresh: true};
     });
   }
 
@@ -117,18 +132,21 @@ export class OwnerWrites {
       // first. Writers take owners in prefix order, so they cannot deadlock.
       if (held && this.storage.sql.exec("SELECT 1 FROM tree_publication_slots WHERE held = 1 LIMIT 1").toArray().length > 0)
         throw new OwnerWriteError(423, "another transaction owns the publication gate", true);
-      const open = this.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_publication_slots").one().count;
-      if (open >= MAX_OPEN_PUBLICATION_SLOTS) throw new OwnerWriteError(423, "too many publications are in flight on this owner", true);
-      const state = this.state();
-      const highest = this.storage.sql.exec<{seq: number | null}>("SELECT MAX(publication_seq) AS seq FROM tree_publication_slots").one().seq ?? 0;
-      const publicationSeq = Math.max(state.visible_seq, highest) + 1;
-      if (!Number.isSafeInteger(publicationSeq) || publicationSeq >= Number.MAX_SAFE_INTEGER)
-        throw new OwnerWriteError(429, "owner publication revision space is exhausted");
-      this.storage.sql.exec(`INSERT INTO tree_publication_slots
-        (tx_id, payload_hash, reservation_ticket, publication_seq, directory_epoch, created_at_ms, state, held)
-        VALUES (?, ?, ?, ?, ?, ?, 'open', ?)`, txId, hash, ticket, publicationSeq, epoch, identityTime, held ? 1 : 0);
-      return {reservationTicket: ticket, publicationSeq, directoryEpoch: epoch};
+      return {reservationTicket: ticket, publicationSeq: this.openSlot(txId, hash, ticket, epoch, identityTime, held), directoryEpoch: epoch};
     });
+  }
+
+  private openSlot(txId: string, hash: string, ticket: number, epoch: number, identityTime: number, held: boolean): number {
+    const slots = this.storage.sql.exec<{open: number; highest: number | null}>(
+      "SELECT COUNT(*) AS open, MAX(publication_seq) AS highest FROM tree_publication_slots").one();
+    if (slots.open >= MAX_OPEN_PUBLICATION_SLOTS) throw new OwnerWriteError(423, "too many publications are in flight on this owner", true);
+    const publicationSeq = Math.max(this.state().visible_seq, slots.highest ?? 0) + 1;
+    if (!Number.isSafeInteger(publicationSeq) || publicationSeq >= Number.MAX_SAFE_INTEGER)
+      throw new OwnerWriteError(429, "owner publication revision space is exhausted");
+    this.storage.sql.exec(`INSERT INTO tree_publication_slots
+      (tx_id, payload_hash, reservation_ticket, publication_seq, directory_epoch, created_at_ms, state, held)
+      VALUES (?, ?, ?, ?, ?, ?, 'open', ?)`, txId, hash, ticket, publicationSeq, epoch, identityTime, held ? 1 : 0);
+    return publicationSeq;
   }
 
   /** Where publication stands now. */
@@ -165,9 +183,11 @@ export class OwnerWrites {
   reserveAndGate(txId: string, hash: string, entities: readonly Uri[], epoch: number, identityTime: number):
     OwnerReservationTicket & Readonly<{publicationSeq: number}> {
     return this.storage.transactionSync(() => {
-      const ticket = this.reserve(txId, hash, entities, epoch, identityTime);
-      const gate = this.acquirePublicationGate(txId, hash, ticket.reservationTicket, ticket.directoryEpoch, identityTime, false);
-      return {...ticket, publicationSeq: gate.publicationSeq};
+      const {fresh, ...ticket} = this.reserve(txId, hash, entities, epoch, identityTime);
+      // A reservation made in this same transaction needs no re-validation.
+      const publicationSeq = fresh ? this.openSlot(txId, hash, ticket.reservationTicket, ticket.directoryEpoch, identityTime, false)
+        : this.acquirePublicationGate(txId, hash, ticket.reservationTicket, ticket.directoryEpoch, identityTime, false).publicationSeq;
+      return {...ticket, publicationSeq};
     });
   }
 
@@ -187,9 +207,10 @@ export class OwnerWrites {
         throw new OwnerWriteError(409, "owner publication gate is missing or changed");
       if (row.phase !== "preparing" || row.directory_epoch !== this.state().directory_epoch)
         throw new OwnerWriteError(409, "owner publication lost its ordered revision");
-      this.assertOwnedSet(row, txId, hash);
+      // Releasing the locks proves they were all still held: the count must match.
+      const released = this.storage.sql.exec("DELETE FROM entity_write_locks WHERE tx_id = ? AND payload_hash = ? RETURNING entity", txId, hash).toArray().length;
+      if (released !== (JSON.parse(row.entities_json) as unknown[]).length) throw new OwnerWriteError(409, "owner lock membership changed");
       this.storage.sql.exec("UPDATE tree_reservations SET phase = 'complete', commit_seq = ? WHERE tx_id = ?", publicationSeq, txId);
-      this.storage.sql.exec("DELETE FROM entity_write_locks WHERE tx_id = ? AND payload_hash = ?", txId, hash);
       this.storage.sql.exec("UPDATE tree_publication_slots SET state = 'done' WHERE tx_id = ?", txId);
       this.advance();
     });

@@ -56,6 +56,8 @@ export class GraphTreeDO extends DurableObject<Env> {
   // publication in flight to it: concurrent writers share one facade call.
   private facadeShown: Readonly<{directoryEpoch: number; seq: number}> = {directoryEpoch: -1, seq: 0};
   private facadeFlight: Promise<void> | undefined;
+  // The graph and prefix this object has already confirmed it serves.
+  private confirmedIdentity: string | undefined;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -585,12 +587,18 @@ export class GraphTreeDO extends DurableObject<Env> {
       reservations: this.ctx.storage.sql.exec("SELECT phase, COUNT(*) AS count FROM tree_reservations GROUP BY phase").toArray(),
       transactions: this.ctx.storage.sql.exec("SELECT tx_id, phase FROM tree_reservations").toArray(),
       databaseBytes: this.ctx.storage.sql.databaseSize });
-    this.assertGraphIdentity(graph.value);
-    this.ctx.storage.transactionSync(() => {
-      const prior = this.ctx.storage.sql.exec<{prefix: string}>("SELECT prefix FROM tree_context").toArray()[0];
-      if (prior && prior.prefix !== prefix.value) throw new CoordinatorError(409, "subtree object identity mismatch");
-      this.ctx.storage.sql.exec("INSERT OR IGNORE INTO tree_context (singleton, prefix) VALUES (1, ?)", prefix.value);
-    });
+    // Identity is durable once confirmed; later calls only compare it.
+    const identity = `${graph.value}\u0000${prefix.value}`;
+    if (this.confirmedIdentity !== identity) {
+      if (this.confirmedIdentity !== undefined) throw new CoordinatorError(409, "subtree object identity mismatch");
+      this.assertGraphIdentity(graph.value);
+      this.ctx.storage.transactionSync(() => {
+        const prior = this.ctx.storage.sql.exec<{prefix: string}>("SELECT prefix FROM tree_context").toArray()[0];
+        if (prior && prior.prefix !== prefix.value) throw new CoordinatorError(409, "subtree object identity mismatch");
+        this.ctx.storage.sql.exec("INSERT OR IGNORE INTO tree_context (singleton, prefix) VALUES (1, ?)", prefix.value);
+      });
+      this.confirmedIdentity = identity;
+    }
     const action = new URL(request.url).pathname;
     if (action === "/_tree-split") return this.requestSplit(new Request("https://tree.internal/_split", {
       method: "POST", body: JSON.stringify({...body, prefix: body["sourcePrefix"]}),
@@ -651,7 +659,8 @@ export class GraphTreeDO extends DurableObject<Env> {
       }
       const unique = [...new Set(entities)].sort();
       if (body["gate"] === true) return jsonResponse(this.ownerWrites.reserveAndGate(txId, hash, unique, epoch, identityTime));
-      return jsonResponse(this.ownerWrites.reserve(txId, hash, unique, epoch, identityTime));
+      const {fresh: _fresh, ...ticket} = this.ownerWrites.reserve(txId, hash, unique, epoch, identityTime);
+      return jsonResponse(ticket);
     }
     if (action === "/_tree-gate") {
       const ticket = body["reservationTicket"], epoch = body["directoryEpoch"];
