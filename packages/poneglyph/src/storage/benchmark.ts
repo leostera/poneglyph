@@ -1,7 +1,7 @@
 import { GraphCoordinatorDO } from "./coordinator-facade.js";
 import { GraphShardDO } from "./shard.js";
 import { auditFactStorage } from "../testing/storage-audit.js";
-import { TREE_DEPTH, TREE_PREFIXES, LEDGER_BUCKETS, ledgerCoordinatorName, treeCoordinatorName, transactionCoordinatorName } from "./forest.js";
+import { TREE_DEPTH, TREE_PREFIXES, ledgerBucketsForGraph, ledgerCoordinatorName, treeCoordinatorName, transactionCoordinatorName } from "./forest.js";
 import { parseVirtualPrefix, shardObjectName } from "./keys.js";
 import { isRecord } from "../domain/result.js";
 
@@ -35,7 +35,7 @@ export class BenchCoordinatorDO extends GraphCoordinatorDO {
       const rows = await response.json() as {phase: string}[];
       if (!response.ok || rows.length !== 1 || !["complete", "aborted"].includes(rows[0]!.phase)) throw new Error(`unresolved transaction coordinator ${txId}`);
     }
-    const ledgers = await Promise.all(LEDGER_BUCKETS.map(async bucket => {
+    const ledgers = await Promise.all(ledgerBucketsForGraph(graphId).map(async bucket => {
       const response = await this.env.GRAPH_LEDGERS.getByName(ledgerCoordinatorName(graphId, bucket)).fetch("https://ledger.internal/_ledger-audit", {method: "POST"});
       if (!response.ok) throw new Error("ledger audit failed");
       const summary = await response.json() as {phases: {phase: string; count: number}[]; databaseBytes: number};

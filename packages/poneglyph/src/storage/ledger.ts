@@ -3,7 +3,7 @@ import { parseFactBatch, type FactBatch } from "../domain/fact.js";
 import { parseTransactionId } from "../domain/identifiers.js";
 import { isRecord } from "../domain/result.js";
 import { MAX_TRANSACTION_BYTES, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "./constants.js";
-import { LEDGER_BUCKETS, LEDGER_RECOVERY_DELAY_MS, ledgerBucketForTransactionId } from "./forest.js";
+import { isLedgerBucket, LEDGER_RECOVERY_DELAY_MS, ledgerBucketForTransactionId } from "./forest.js";
 import { jsonResponse, readJsonBody } from "./http.js";
 import type { StorageEnv } from "./environment.js";
 import { DistributedTransaction } from "./transaction.js";
@@ -34,7 +34,7 @@ export class TransactionLedger {
     if (!raw.ok || !isRecord(raw.value)) return jsonResponse({error: "invalid transaction envelope"}, 400);
     const graph = parseGraphId(raw.value["graphId"]), batch = parseFactBatch(raw.value["batch"]);
     if (!graph.ok || !batch.ok) return jsonResponse({error: "invalid graph or fact batch"}, 400);
-    const bucket = await ledgerBucketForTransactionId(batch.value.txId);
+    const bucket = await ledgerBucketForTransactionId(graph.value, batch.value.txId);
     if (!this.bindIdentity(graph.value, bucket)) return jsonResponse({error: "transaction escapes its ledger identity"}, 409);
     return this.executeBatch(graph.value, batch.value);
   }
@@ -52,7 +52,7 @@ export class TransactionLedger {
   }
 
   bindIdentity(graphId: string, bucket: string): boolean {
-    if (!LEDGER_BUCKETS.includes(bucket)) return false;
+    if (!isLedgerBucket(graphId, bucket)) return false;
     return this.storage.transactionSync(() => {
       const context = this.storage.sql.exec<{graph_id: string; bucket: string}>("SELECT graph_id, bucket FROM ledger_context").toArray()[0];
       if (context) return context.graph_id === graphId && context.bucket === bucket;
@@ -62,7 +62,7 @@ export class TransactionLedger {
   }
 
   async statusFor(graphId: string, txId: string): Promise<{phase: string; createdAtMs?: number}> {
-    const bucket = await ledgerBucketForTransactionId(txId);
+    const bucket = await ledgerBucketForTransactionId(graphId, txId);
     const context = this.storage.sql.exec<{graph_id: string; bucket: string}>("SELECT graph_id, bucket FROM ledger_context").toArray()[0];
     if (!context || context.graph_id !== graphId || context.bucket !== bucket) return {phase: "missing"};
     const row = this.storage.sql.exec<{phase: string; created_at_ms: number}>(
@@ -72,7 +72,7 @@ export class TransactionLedger {
   }
 
   async executeBatch(graph: GraphId, batch: FactBatch): Promise<Response> {
-    if (!this.bindIdentity(graph, await ledgerBucketForTransactionId(batch.txId)))
+    if (!this.bindIdentity(graph, await ledgerBucketForTransactionId(graph, batch.txId)))
       return jsonResponse({error: "transaction escapes its ledger identity"}, 409);
     return this.execute(graph, batch);
   }

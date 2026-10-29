@@ -68,7 +68,7 @@ export class ClientRequestTokenCoordinator {
       return toResponse(await active.result);
     }
 
-    const selected = this.selectOrCreate(tokenHash, payloadHash);
+    const selected = this.selectOrCreate(tokenHash, payloadHash, graph.value, bucket);
     if (selected.kind === "conflict") return jsonResponse({error: "clientRequestToken was already used with different facts"}, 409);
     if (selected.kind === "capacity") return jsonResponse({error: selected.message, retryable: false}, selected.status);
 
@@ -106,7 +106,7 @@ export class ClientRequestTokenCoordinator {
     await this.scheduleAlarm();
   }
 
-  private selectOrCreate(tokenHash: string, payloadHash: string):
+  private selectOrCreate(tokenHash: string, payloadHash: string, graphId: string, bucket: string):
     | Readonly<{kind: "selected"; row: RequestTokenRow}>
     | Readonly<{kind: "conflict"}>
     | Readonly<{kind: "capacity"; status: number; message: string}> {
@@ -131,7 +131,7 @@ export class ClientRequestTokenCoordinator {
       });
       if (!capacity.canAdmit) return {kind: "capacity", status: 413, message: "request-token metadata capacity exceeded"};
 
-      const txId = transactionIdForLedgerBucket(tokenHash[0]!);
+      const txId = transactionIdForLedgerBucket(graphId, bucket);
       this.storage.sql.exec(
         `INSERT INTO client_request_tokens (token_hash, payload_hash, tx_id, created_at_ms, terminal_at_ms, terminal_status)
          VALUES (?, ?, ?, ?, NULL, NULL)`,

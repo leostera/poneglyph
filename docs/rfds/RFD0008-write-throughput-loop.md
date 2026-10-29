@@ -58,6 +58,7 @@ At the one-owner bench the tree spends 1.7 ms (lock) + 2.6 ms (finish) of JavaSc
 |---|---|---|---|---|
 | — | Baseline | 1,937 | 146 | — |
 | [RFD0009](./RFD0009-owner-tree-cpu-diet.md) | Owner tree CPU diet | 2,055 (median) | 221 (median) | Kept; owner +35% |
+| [RFD0010](./RFD0010-wider-ledger-fanout.md) | 64 ledgers (prefix-gated) | 2,328 vs 1,658 (2,048 writers) | — | Promising; needs per-graph ledger count |
 
 ## Ideas not yet tried
 
