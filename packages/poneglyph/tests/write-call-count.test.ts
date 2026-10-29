@@ -36,7 +36,7 @@ describe("durable object calls per write", () => {
     const result = await traced(graph, [fact(first)]);
     expect(result.status).toBe(200);
     expect(result.calls).toEqual([
-      "facade /v1/graphs/:graph/transactions", "ledger /_transact", "tree /_tree-directory", "shard /_route", "shard /_preflight",
+      "ledger /_transact", "tree /_tree-directory", "shard /_route", "shard /_preflight",
       "tree /_tree-lock", "tree /_tree-gate", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
       "tree /_tree-release-gate", "shard /_decision-finalize",
     ]);
@@ -47,7 +47,7 @@ describe("durable object calls per write", () => {
     const result = await traced(graph, [fact(first), fact(otherRoot)]);
     expect(result.status).toBe(200);
     expect(result.calls).toEqual([
-      "facade /v1/graphs/:graph/transactions", "ledger /_transact", "tree /_tree-directory", "tree /_tree-directory",
+      "ledger /_transact", "tree /_tree-directory", "tree /_tree-directory",
       "shard /_route", "shard /_route", "shard /_preflight", "shard /_preflight", "tree /_tree-lock", "tree /_tree-lock",
       "shard /_prepare", "shard /_prepare", "tree /_tree-gate", "tree /_tree-gate", "shard /_commit", "shard /_commit",
       "tree /_tree-finish", "tree /_tree-finish", "facade /_publish-vector", "tree /_tree-release-gate", "tree /_tree-release-gate",
@@ -60,7 +60,7 @@ describe("durable object calls per write", () => {
     const result = await traced(graph, [fact(first)], "calls:token-1");
     expect(result.status).toBe(200);
     expect(result.calls).toEqual([
-      "facade /v1/graphs/:graph/transactions", "ledger /_request", "tree /_tree-directory", "shard /_route", "shard /_preflight",
+      "ledger /_request", "tree /_tree-directory", "shard /_route", "shard /_preflight",
       "tree /_tree-lock", "tree /_tree-gate", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
       "tree /_tree-release-gate", "shard /_decision-finalize",
     ]);

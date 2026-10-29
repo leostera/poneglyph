@@ -110,7 +110,7 @@ describe("integrated storage authority", () => {
     expect(remaining.snapshotVector.find(owner => owner.sequence > 0)).toMatchObject({sequence: 2});
   });
 
-  it("routes a tokenized public write through coordinator, same-ledger mapping, tree, and shard roles", async () => {
+  it("routes a tokenized public write straight to its ledger, then tree and shard roles", async () => {
     const graph = `test-${crypto.randomUUID()}`, token = `integration:chain:${crypto.randomUUID()}`;
     const facade = env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph));
     let facadeCalls = 0, originalFetch: unknown;
@@ -128,7 +128,8 @@ describe("integrated storage authority", () => {
     expect(response.status, await response.clone().text()).toBe(200);
     const txId = (await response.json() as {txId: string}).txId;
     await runInDurableObject(facade, instance => Reflect.set(instance, "fetch", originalFetch));
-    expect(facadeCalls).toBe(1);
+    // The facade is not on the write ingress path: the Worker derives the ledger.
+    expect(facadeCalls).toBe(0);
 
     const ledgerName = await tokenLedgerName(graph, token);
     expect(await transactionCoordinatorName(graph, txId)).toBe(ledgerName);
