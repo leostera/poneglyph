@@ -144,7 +144,13 @@ export class GraphCoordinatorDO extends DurableObject<FacadeEnv> {
         let changed = false;
         for (const owner of owners) {
           const current = this.ctx.storage.sql.exec<SafeVectorRow>("SELECT * FROM graph_safe_vector WHERE prefix = ?", owner.prefix).toArray()[0];
-          if (!current || current.directory_epoch !== owner.directoryEpoch || owner.publicationSeq < current.visible_seq)
+          if (!current) throw new CoordinatorError(409, "safe-vector owner is unknown");
+          // Single-owner writes release their gate before publishing here, so a
+          // later write or a split can overtake them. Owners publish in order,
+          // so a newer revision or epoch already includes this one.
+          if (owners.length === 1 && (current.directory_epoch > owner.directoryEpoch ||
+              current.directory_epoch === owner.directoryEpoch && owner.publicationSeq <= current.visible_seq)) continue;
+          if (current.directory_epoch !== owner.directoryEpoch || owner.publicationSeq < current.visible_seq)
             throw new CoordinatorError(409, "safe-vector owner epoch or revision regressed");
           if (owner.publicationSeq === current.visible_seq) continue;
           this.ctx.storage.sql.exec("UPDATE graph_safe_vector SET visible_seq = ? WHERE prefix = ?", owner.publicationSeq, owner.prefix);

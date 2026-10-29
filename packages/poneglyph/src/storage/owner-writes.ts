@@ -105,8 +105,41 @@ export class OwnerWrites {
       if (row.phase !== "preparing") return;
       this.assertOwnedSet(row, txId, hash);
       this.storage.sql.exec("DELETE FROM entity_write_locks WHERE tx_id = ? AND payload_hash = ?", txId, hash);
+      // A gate taken together with the lock publishes nothing until finish, so
+      // releasing an unpublished reservation also releases its gate.
+      this.storage.sql.exec("DELETE FROM tree_publication_gates WHERE singleton = 1 AND tx_id = ? AND payload_hash = ?", txId, hash);
       if (abort) this.storage.sql.exec("UPDATE tree_reservations SET phase = 'aborted' WHERE tx_id = ?", txId);
       else this.storage.sql.exec("DELETE FROM tree_reservations WHERE tx_id = ?", txId);
+    });
+  }
+
+  /**
+   * Single-owner writes take the publication gate with the lock. If another
+   * writer holds the gate, the lock still stands and the caller acquires the
+   * gate separately.
+   */
+  reserveAndGate(txId: string, hash: string, entities: readonly Uri[], epoch: number, identityTime: number):
+    OwnerReservationTicket & Readonly<{publicationSeq: number | null}> {
+    return this.storage.transactionSync(() => {
+      const ticket = this.reserve(txId, hash, entities, epoch, identityTime);
+      try {
+        return {...ticket, publicationSeq: this.acquirePublicationGate(txId, hash, ticket.reservationTicket, ticket.directoryEpoch, identityTime).publicationSeq};
+      } catch (error) {
+        if (error instanceof OwnerWriteError && error.status === 423) return {...ticket, publicationSeq: null};
+        throw error;
+      }
+    });
+  }
+
+  /**
+   * Publishes a single-owner write and releases its gate in one step. A
+   * single-owner write has no other owner to stay atomic with, so the graph's
+   * safe vector may learn about it after later writes on this owner.
+   */
+  publishAndRelease(txId: string, hash: string, ticket: number, publicationSeq: number, identityTime: number): void {
+    this.storage.transactionSync(() => {
+      this.publish(txId, hash, ticket, publicationSeq, identityTime);
+      this.releasePublicationGate(txId, hash, ticket, publicationSeq, identityTime);
     });
   }
 

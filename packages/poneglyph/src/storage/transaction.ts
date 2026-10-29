@@ -191,8 +191,11 @@ export class DistributedTransaction {
     intent = this.read()!;
 
     const owners: OwnerPlan[] = [];
+    // A single-owner, single-shard write needs the publication gate right
+    // after its lock, so take both in one owner call.
+    const gate = isSingleOwnerAtomic(initialPlan);
     for (const owner of initialPlan.owners) {
-      const response = await this.tree(intent, owner, "_tree-lock", {entities: owner.entities, directoryEpoch: owner.directoryEpoch});
+      const response = await this.tree(intent, owner, "_tree-lock", {entities: owner.entities, directoryEpoch: owner.directoryEpoch, gate});
       const value: unknown = await response.json();
       if (!response.ok) {
         await this.release(intent, initialPlan, false);
@@ -204,12 +207,14 @@ export class DistributedTransaction {
       if (!isRecord(value) || integer(value["directoryEpoch"]) !== owner.directoryEpoch) {
         throw new Error("provisional owner epoch changed");
       }
-      owners.push({...owner, reservationTicket: integer(value["reservationTicket"], 1)});
+      const publicationSeq = gate && value["publicationSeq"] !== null ? integer(value["publicationSeq"], 1) : 0;
+      if (publicationSeq > 0 && publicationSeq <= owner.visibleSeq) throw new Error("owner publication revision did not advance its captured frontier");
+      owners.push({...owner, reservationTicket: integer(value["reservationTicket"], 1), publicationSeq});
     }
 
     const plan = {...initialPlan, owners};
-    this.storage.sql.exec(`UPDATE candidate_transactions SET phase = 'preparing', plan_json = ?, commit_seq = 0, statement_time_ms = ? WHERE tx_id = ?`,
-      JSON.stringify(plan), Date.now(), this.txId);
+    this.storage.sql.exec(`UPDATE candidate_transactions SET phase = 'preparing', plan_json = ?, commit_seq = ?, statement_time_ms = ? WHERE tx_id = ?`,
+      JSON.stringify(plan), Math.max(0, ...owners.map(owner => owner.publicationSeq)), Date.now(), this.txId);
     intent = this.read()!;
 
     return {kind: "continue", plan};
@@ -311,9 +316,9 @@ export class DistributedTransaction {
       this.storage.sql.exec("UPDATE candidate_transactions SET local_witness_json = ? WHERE tx_id = ?", JSON.stringify(witness), this.txId);
     }
     if (witness.status === "committed") {
-      await this.publish(intent, plan);
+      // One owner: finish releases the gate, then the safe vector catches up.
+      await this.publish(intent, plan, true);
       await this.publishSafeVector(intent, plan);
-      await this.releasePublicationGates(intent, plan);
     } else {
       console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "atomic",
         reasonCode: classifyParticipantFailure(rejectionStatus, rejection), rejectionStatus}));
@@ -323,10 +328,11 @@ export class DistributedTransaction {
     const terminal = this.phase(witness.status === "committed" ? "complete" : "aborted");
     return witness.status === "committed" ? this.receipt(terminal) : this.aborted(terminal);
   }
-  private async publish(intent: Intent, plan: WritePlan): Promise<void> {
+  private async publish(intent: Intent, plan: WritePlan, releaseGate = false): Promise<void> {
+    if (releaseGate && plan.owners.length !== 1) throw new Error("only a single-owner write may release its gate on finish");
     for (const owner of plan.owners) {
       const response = await this.tree(intent, owner, "_tree-finish", {
-        reservationTicket: owner.reservationTicket, publicationSeq: owner.publicationSeq,
+        reservationTicket: owner.reservationTicket, publicationSeq: owner.publicationSeq, releaseGate,
       });
       const ok = response.ok; await response.arrayBuffer(); if (!ok) throw new Error("owner publication incomplete");
     }
@@ -389,4 +395,8 @@ export class DistributedTransaction {
     }
     await this.release(intent, plan, true); this.phase("aborted");
   }
+}
+
+function isSingleOwnerAtomic(plan: WritePlan): boolean {
+  return plan.owners.length === 1 && plan.participants.length === 1;
 }

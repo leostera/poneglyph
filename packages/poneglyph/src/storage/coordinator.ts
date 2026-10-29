@@ -564,6 +564,7 @@ export class GraphTreeDO extends DurableObject<Env> {
         entities.push(entity.value);
       }
       const unique = [...new Set(entities)].sort();
+      if (body["gate"] === true) return jsonResponse(this.ownerWrites.reserveAndGate(txId, hash, unique, epoch, identityTime));
       return jsonResponse(this.ownerWrites.reserve(txId, hash, unique, epoch, identityTime));
     }
     if (action === "/_tree-gate") {
@@ -582,7 +583,8 @@ export class GraphTreeDO extends DurableObject<Env> {
       if (typeof ticket !== "number" || !Number.isSafeInteger(ticket) || ticket < 1 ||
           typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1)
         throw new CoordinatorError(400, "invalid owner publication identity");
-      this.ownerWrites.publish(txId, hash, ticket, seq, identityTime);
+      if (body["releaseGate"] === true) this.ownerWrites.publishAndRelease(txId, hash, ticket, seq, identityTime);
+      else this.ownerWrites.publish(txId, hash, ticket, seq, identityTime);
       return jsonResponse({status: "complete"});
     }
     if (action === "/_tree-release-gate") {

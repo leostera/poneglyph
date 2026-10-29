@@ -37,8 +37,7 @@ describe("durable object calls per write", () => {
     expect(result.status).toBe(200);
     expect(result.calls).toEqual([
       "ledger /_transact", "tree /_tree-directory", "shard /_route",
-      "tree /_tree-lock", "tree /_tree-gate", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
-      "tree /_tree-release-gate",
+      "tree /_tree-lock", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
     ]);
   });
 
@@ -60,8 +59,7 @@ describe("durable object calls per write", () => {
     expect(result.status).toBe(200);
     expect(result.calls).toEqual([
       "ledger /_request", "tree /_tree-directory", "shard /_route",
-      "tree /_tree-lock", "tree /_tree-gate", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
-      "tree /_tree-release-gate",
+      "tree /_tree-lock", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
     ]);
   });
 });

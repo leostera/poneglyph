@@ -790,7 +790,10 @@ describe("integrated storage authority", () => {
       expect(row).toMatchObject({phase: distributed ? "committing" : "atomic-delegated", participant_witness: distributed ? 1 : 0});
       if (!distributed) expect(row["local_witness_json"]).not.toBeNull();
     });
-    expect(await split(graph, published)).toMatchObject({status: 423});
+    // A single-owner finish releases the owner gate with publication, so the
+    // owner may split before the graph's safe vector catches up; the split
+    // republishes the owner's head. A distributed write keeps its gates until then.
+    expect(await split(graph, published)).toMatchObject({status: distributed ? 423 : 200});
     await recover(graph, id);
     expect(await split(graph, published)).toMatchObject({status: 200});
     await evictDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)));
@@ -1259,5 +1262,45 @@ describe("integrated storage authority", () => {
     await runDurableObjectAlarm(leaf);
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(2));
+  });
+
+  it("publishes concurrent single-owner writes in order when lock and gate share one call and the gate is contended", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), entities: string[] = [];
+    for (let i = 0; entities.length < 8; i++) {
+      const entity = `wiki:person:gate-${i}`;
+      if (treeForKey(await virtualKeyForEntity(graph, entity)) === root) entities.push(entity);
+    }
+    expect(await writeStatus(graph, "integrated:gate-seed", [fact(first)])).toMatchObject({status: 200});
+    const trace: string[] = []; (globalThis as {__poneglyphCallTrace?: string[]}).__poneglyphCallTrace = trace;
+    let results: {status: number}[];
+    try {results = await Promise.all(entities.map((entity, index) => writeStatus(graph, `integrated:gate-${index}`, [fact(entity)])));}
+    finally {delete (globalThis as {__poneglyphCallTrace?: string[]}).__poneglyphCallTrace;}
+    // Contended writers fall back to acquiring the gate separately.
+    expect(trace.filter(call => call === "tree /_tree-gate").length).toBeGreaterThan(0);
+    expect(results.map(result => result.status)).toEqual(entities.map(() => 200));
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
+      expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 9});
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0);
+      expect(state.storage.sql.exec("SELECT * FROM entity_write_locks").toArray()).toHaveLength(0);
+    });
+    await runInDurableObject(env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT visible_seq FROM graph_safe_vector WHERE prefix = ?", root).one()).toMatchObject({visible_seq: 9}));
+    const read = await query(graph); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(9);
+  });
+
+  it("ignores a single-owner safe-vector publication that a later revision or split already covers", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph);
+    for (let i = 0; i < 2; i++) expect(await writeStatus(graph, `integrated:stale-${i}`, [fact(first, false, `v${i}`)])).toMatchObject({status: 200});
+    const facade = env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph));
+    const publish = async (owners: object[]) => {
+      const response = await facade.fetch("https://graph.internal/_publish-vector", {method: "POST", body: JSON.stringify({graphId: graph, owners})});
+      return {status: response.status, body: await response.json()};
+    };
+    expect(await publish([{prefix: root, directoryEpoch: 0, publicationSeq: 1}])).toMatchObject({status: 200});
+    expect(await split(graph, root)).toMatchObject({status: 200});
+    expect(await publish([{prefix: root, directoryEpoch: 0, publicationSeq: 2}])).toMatchObject({status: 200});
+    await runInDurableObject(facade, (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT directory_epoch, visible_seq FROM graph_safe_vector WHERE prefix = ?", root).one())
+        .toMatchObject({directory_epoch: 1, visible_seq: 2}));
   });
 });
