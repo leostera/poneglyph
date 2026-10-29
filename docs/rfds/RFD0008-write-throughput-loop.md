@@ -16,6 +16,8 @@ Raise sustained writes per second, per graph and per owner tree, while keeping e
 4. Run the two standard benches on fresh graphs, then pull per-call CPU and wall time from Workers telemetry.
 5. Record the result, what we learned and what to try next in that RFD, and add a row below.
 
+**Compare by interleaved A/B only.** The platform's speed drifts over a day: the same code gave ~2,000 writes/s at 06:00 UTC and ~1,200 at 16:00. Deploy the previous revision and the candidate alternately in one session, at least two rounds, and compare those runs only. The site under an older revision needs the newer bench files (its Durable Object classes must match), and a second checkout needs `--profile lostera`.
+
 ## Standard benches
 
 Load comes from `LoadGenerator` Durable Objects on the edge (`POST /_bench/writes`, see `sites/poneglyph.lostera.me.cloudflare.dev`). Each writer sends one single-fact transaction at a time to a random entity, no client-side retries, 30 s per run, a fresh graph per run.
@@ -60,9 +62,11 @@ At the one-owner bench the tree spends 1.7 ms (lock) + 2.6 ms (finish) of JavaSc
 | [RFD0009](./RFD0009-owner-tree-cpu-diet.md) | Owner tree CPU diet | 2,055 (median) | 221 (median) | Kept; owner +35% |
 | [RFD0010](./RFD0010-wider-ledger-fanout.md) | 64 ledgers (prefix-gated) | 2,328 vs 1,658 (2,048 writers) | — | Promising; needs per-graph ledger count |
 | [RFD0011](./RFD0011-object-ceilings-and-constant-time-owner.md) | Probe object ceilings; constant-time owner tree | — | 185 (shard-bound) | Kept; tree alone +52% |
-| [RFD0012](./RFD0012-split-on-reachable-traffic.md) | Split at 100 calls/s or 1 GB; fast parallel copy | — | splits in 3–5 s | In progress |
+| [RFD0012](./RFD0012-split-on-reachable-traffic.md) | Split at 100 calls/s or 1 GB; fast parallel copy | — | splits in 3–5 s | Kept; no gain at high load (head-of-line visibility) |
 
 ## Ideas not yet tried
+
+- Admission control per owner: cap writes in flight and queue lock requests FIFO in the tree.
 
 - Batch owner-tree calls in the ledger: one tree call carries many writes.
 - More owner trees for new graphs (`TREE_DEPTH` 5 or 6: 32 or 64 trees).
