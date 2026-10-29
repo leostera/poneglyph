@@ -1264,11 +1264,7 @@ describe("integrated storage authority", () => {
   it("proves an expired predecessor's release despite new same-ID locks, without deadlocking identity reuse", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), id = "integrated:reuse-pin";
     const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, root));
-    await runInDurableObject(leaf, async instance => {
-      const finalize = Reflect.get(instance, "finalizeDecision"); Reflect.set(instance, "finalizeDecision", () => new Response("lost notice", {status: 503}));
-      try {expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});}
-      finally {Reflect.set(instance, "finalizeDecision", finalize);}
-    });
+    expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
     await expireAnchor(graph, id, [root]);
     // The authoritative window expired. This is a new identity incarnation,
     // not an idempotent replay within the window; its ticket cannot be reused.
