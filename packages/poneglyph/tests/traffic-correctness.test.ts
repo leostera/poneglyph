@@ -186,7 +186,8 @@ async function queryWithRetry(graph: string): Promise<Readonly<{result: QueryRes
     if (response.ok) {
       const result = JSON.parse(text) as QueryResult;
       expect(result.snapshotSeq).toBeGreaterThanOrEqual(0);
-      expect(result.metrics.tuplesRead).toBeGreaterThanOrEqual(result.rows.length);
+      // A cached answer at an unchanged safe vector reads no tuples.
+      if (result.metrics.cacheHits === 0) expect(result.metrics.tuplesRead).toBeGreaterThanOrEqual(result.rows.length);
       return {result, retries: attempt};
     }
     let value: unknown;

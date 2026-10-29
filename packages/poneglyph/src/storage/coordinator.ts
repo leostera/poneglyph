@@ -4,7 +4,7 @@ import type { StorageEnv as Env } from "./environment.js";
 import { parseGraphId, type GraphId } from "../domain/graph-id.js";
 import { parseUri, type Uri } from "../domain/identifiers.js";
 import { isRecord } from "../domain/result.js";
-import { OwnerWrites, OwnerWriteError } from "./owner-writes.js";
+import { OwnerWrites, OwnerWriteError, type OwnerFrontier } from "./owner-writes.js";
 import { ensureTreeSchema } from "./sql.js";
 import { accountStorage } from "./capacity.js";
 import { jsonResponse, readJsonBody } from "./http.js";
@@ -40,9 +40,19 @@ type SplitRow = Readonly<{
   created_at_ms: number;
 }>;
 
+/** How long a finishing writer waits for earlier revisions before answering "retry". */
+const FINISH_WAIT_MS = 10_000;
+
+type FrontierWaiter = {readonly until: (frontier: OwnerFrontier) => boolean; readonly resolve: () => void};
+
 export class GraphTreeDO extends DurableObject<Env> {
   private activeTopologyOpId: string | undefined;
   private readonly ownerWrites: OwnerWrites;
+  private readonly frontierWaiters = new Set<FrontierWaiter>();
+  // What the graph's safe vector is known to show for this owner, and the
+  // publication in flight to it: concurrent writers share one facade call.
+  private facadeShown: Readonly<{directoryEpoch: number; seq: number}> = {directoryEpoch: -1, seq: 0};
+  private facadeFlight: Promise<void> | undefined;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -62,6 +72,56 @@ export class GraphTreeDO extends DurableObject<Env> {
   }
 
   override async alarm(): Promise<void> {}
+
+  private notifyFrontier(): void {
+    if (this.frontierWaiters.size === 0) return;
+    const frontier = this.ownerWrites.frontier();
+    for (const waiter of this.frontierWaiters) if (waiter.until(frontier)) {this.frontierWaiters.delete(waiter); waiter.resolve();}
+  }
+
+  private async waitForFrontier(until: (frontier: OwnerFrontier) => boolean): Promise<void> {
+    if (until(this.ownerWrites.frontier())) return;
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.frontierWaiters.delete(waiter);
+        reject(new CoordinatorError(503, "owner publication is waiting for earlier writes"));
+      }, FINISH_WAIT_MS);
+      const waiter: FrontierWaiter = {until, resolve: () => {clearTimeout(timer); resolve();}};
+      this.frontierWaiters.add(waiter);
+    });
+  }
+
+  /**
+   * Makes the graph's safe vector show this owner at `seq` or later. Writers
+   * that arrive while a publication is in flight wait for it and then share
+   * the next one, so the facade sees at most one call per owner at a time.
+   */
+  private async publishToFacade(graphId: GraphId, seq: number): Promise<void> {
+    for (;;) {
+      const frontier = this.ownerWrites.frontier();
+      if (this.facadeShown.directoryEpoch >= frontier.directoryEpoch && this.facadeShown.seq >= seq) return;
+      if (this.facadeFlight !== undefined) {
+        try {await this.facadeFlight;} catch { /* the writer that started it reports; try again */ }
+        continue;
+      }
+      const flight = this.sendToFacade(graphId, frontier);
+      this.facadeFlight = flight.finally(() => {this.facadeFlight = undefined;});
+      await flight;
+    }
+  }
+
+  private async sendToFacade(graphId: GraphId, frontier: OwnerFrontier): Promise<void> {
+    const response = await this.env.GRAPH_FACADES.getByName(coordinatorObjectName(graphId)).fetch("https://graph.internal/_publish-vector", {
+      method: "POST", body: JSON.stringify({graphId, owners: [{
+        prefix: this.treePrefix(), directoryEpoch: frontier.directoryEpoch, publicationSeq: frontier.publishableSeq,
+      }]}),
+    });
+    const ok = response.ok; await response.arrayBuffer();
+    if (!ok) throw new CoordinatorError(503, "cluster safe-vector publication incomplete");
+    const shown = this.facadeShown;
+    if (frontier.directoryEpoch > shown.directoryEpoch || frontier.directoryEpoch === shown.directoryEpoch && frontier.publishableSeq > shown.seq)
+      this.facadeShown = {directoryEpoch: frontier.directoryEpoch, seq: frontier.publishableSeq};
+  }
 
   private async requestSplit(request: Request): Promise<Response> {
     const input = await readJsonBody(request, 8_192);
@@ -572,10 +632,11 @@ export class GraphTreeDO extends DurableObject<Env> {
       if (typeof ticket !== "number" || !Number.isSafeInteger(ticket) || ticket < 1 ||
           typeof epoch !== "number" || !Number.isSafeInteger(epoch) || epoch < 0)
         throw new CoordinatorError(400, "invalid publication gate identity");
-      return jsonResponse(this.ownerWrites.acquirePublicationGate(txId, hash, ticket, epoch, identityTime));
+      return jsonResponse(this.ownerWrites.acquirePublicationGate(txId, hash, ticket, epoch, identityTime, body["held"] !== false));
     }
     if (action === "/_tree-unlock") {
       this.ownerWrites.release(txId, hash, identityTime, body["abort"] === true);
+      this.notifyFrontier();
       return jsonResponse({status: "released"});
     }
     if (action === "/_tree-finish") {
@@ -583,8 +644,17 @@ export class GraphTreeDO extends DurableObject<Env> {
       if (typeof ticket !== "number" || !Number.isSafeInteger(ticket) || ticket < 1 ||
           typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1)
         throw new CoordinatorError(400, "invalid owner publication identity");
-      if (body["releaseGate"] === true) this.ownerWrites.publishAndRelease(txId, hash, ticket, seq, identityTime);
-      else this.ownerWrites.publish(txId, hash, ticket, seq, identityTime);
+      this.ownerWrites.publish(txId, hash, ticket, seq, identityTime);
+      this.notifyFrontier();
+      if (body["singleOwner"] === true) {
+        // Nothing else must become visible with this write: answer once the
+        // graph's safe vector shows it, sharing the facade call with others.
+        await this.waitForFrontier(frontier => frontier.publishableSeq >= seq);
+        await this.publishToFacade(graph.value, seq);
+      } else {
+        // A distributed write publishes all its owners to the facade itself.
+        await this.waitForFrontier(frontier => frontier.visibleSeq >= seq);
+      }
       return jsonResponse({status: "complete"});
     }
     if (action === "/_tree-release-gate") {
@@ -593,6 +663,7 @@ export class GraphTreeDO extends DurableObject<Env> {
           typeof seq !== "number" || !Number.isSafeInteger(seq) || seq < 1)
         throw new CoordinatorError(400, "invalid publication gate identity");
       this.ownerWrites.releasePublicationGate(txId, hash, ticket, seq, identityTime);
+      this.notifyFrontier();
       return jsonResponse({status: "released"});
     }
     throw new CoordinatorError(404, "unknown tree operation");

@@ -63,7 +63,7 @@ async function expireAnchor(graph: string, id: string, roots: readonly ReturnTyp
   for (const root of roots) {
     await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
       state.storage.sql.exec("UPDATE tree_reservations SET created_at_ms = 0 WHERE tx_id = ?", id);
-      state.storage.sql.exec("UPDATE tree_publication_gates SET created_at_ms = 0 WHERE tx_id = ?", id);
+      state.storage.sql.exec("UPDATE tree_publication_slots SET created_at_ms = 0 WHERE tx_id = ?", id);
     });
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), (_instance, state) =>
       state.storage.sql.exec(`UPDATE shard_transactions SET created_at_ms = 0,
@@ -387,7 +387,7 @@ describe("integrated storage authority", () => {
       await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) => {
         expect(state.storage.sql.exec("SELECT phase FROM tree_reservations").one()).toMatchObject({phase: "complete"});
         expect(state.storage.sql.exec("SELECT * FROM entity_write_locks").toArray()).toHaveLength(0);
-        expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0);
+        expect(state.storage.sql.exec("SELECT * FROM tree_publication_slots").toArray()).toHaveLength(0);
         expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 1});
       });
     }
@@ -413,13 +413,13 @@ describe("integrated storage authority", () => {
     expect(lost).toBe(true);
     for (const owner of [root, otherRoot]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 1});
-      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(1);
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_slots").toArray()).toHaveLength(1);
     });
     const committedView = await query(graph); expect(committedView.status).toBe(200);
     expect((await committedView.json() as {rows: unknown[]}).rows).toHaveLength(2);
     await recover(graph, id);
     for (const owner of [root, otherRoot]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) =>
-      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0));
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_slots").toArray()).toHaveLength(0));
     await runInDurableObject(facade, (_instance, state) => expect(state.storage.sql.exec("SELECT frontier FROM graph_safe_frontier").one())
       .toMatchObject({frontier: 1}));
     const read = await query(graph); expect(read.status).toBe(200);
@@ -448,7 +448,7 @@ describe("integrated storage authority", () => {
     expect(lost).toBe(true);
     for (const owner of [firstOwner, secondOwner]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 1});
-      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_gates").one()).toMatchObject({count: 1});
+      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_slots").one()).toMatchObject({count: 1});
     });
     await runInDurableObject(env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)), (_instance, state) =>
       expect(state.storage.sql.exec("SELECT frontier FROM graph_safe_frontier").one()).toMatchObject({frontier: 0}));
@@ -458,7 +458,7 @@ describe("integrated storage authority", () => {
     const read = await query(graph); expect(read.status).toBe(200);
     expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
     for (const owner of [firstOwner, secondOwner]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) =>
-      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0));
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_slots").toArray()).toHaveLength(0));
   });
 
   it("recovers a partial owner-gate acquisition without exposing participants", async () => {
@@ -481,11 +481,11 @@ describe("integrated storage authority", () => {
     finally { await runInDurableObject(secondTree, instance => Reflect.set(instance, "fetch", originalFetch)); }
     expect(injected).toBe(true);
     await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, firstOwner)), (_instance, state) => {
-      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_gates").one()).toMatchObject({count: 1});
+      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_slots").one()).toMatchObject({count: 1});
       expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 0});
     });
     await runInDurableObject(secondTree, (_instance, state) => {
-      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_gates").one()).toMatchObject({count: 0});
+      expect(state.storage.sql.exec("SELECT COUNT(*) AS count FROM tree_publication_slots").one()).toMatchObject({count: 0});
       expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 0});
     });
     const oldView = await query(graph); expect(oldView.status).toBe(200);
@@ -494,7 +494,7 @@ describe("integrated storage authority", () => {
     const read = await query(graph); expect(read.status).toBe(200);
     expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
     for (const owner of [firstOwner, secondOwner]) await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) =>
-      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0));
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_slots").toArray()).toHaveLength(0));
   });
 
   it("records a sanitized atomic-abort diagnostic and releases all owner fences", async () => {
@@ -518,7 +518,7 @@ describe("integrated storage authority", () => {
     });
     await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT phase FROM tree_reservations WHERE tx_id = ?", id).one()).toMatchObject({phase: "aborted"});
-      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0);
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_slots").toArray()).toHaveLength(0);
     });
     await runInDurableObject(env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)), (_instance, state) =>
       expect(state.storage.sql.exec("SELECT frontier FROM graph_safe_frontier").one()).toMatchObject({frontier: 0}));
@@ -543,7 +543,7 @@ describe("integrated storage authority", () => {
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1));
   });
 
-  it("allows disjoint reservation but serializes same-owner publication without exposing a fractured read", async () => {
+  it("lets a higher revision apply but not become visible or acknowledged before a lower one", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:held-low-ticket";
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), async (instance, state) => {
       const atomic = Reflect.get(instance, "atomic");
@@ -569,8 +569,12 @@ describe("integrated storage authority", () => {
           expect(ownerState.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 0});
           expect(ownerState.storage.sql.exec("SELECT ticket_seq, phase FROM tree_reservations WHERE tx_id = ?", id).one())
             .toMatchObject({ticket_seq: 1, phase: "preparing"});
+          // The higher revision finished; it waits for revision 1 to become visible.
+          expect(ownerState.storage.sql.exec("SELECT publication_seq, state FROM tree_publication_slots ORDER BY publication_seq").toArray())
+            .toEqual([{publication_seq: 1, state: "open"}, {publication_seq: 2, state: "done"}]);
         });
-        expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0);
+        // Disjoint writes apply concurrently; readers only see revisions up to the visible one.
+        expect(auditFactStorage(state.storage, 0).facts).toHaveLength(1);
       } finally {
         release(); Reflect.set(instance, "atomic", atomic);
         const [answer, higherAnswer] = await Promise.all([held, higher]);
@@ -607,7 +611,7 @@ describe("integrated storage authority", () => {
       for (let attempt = 0; attempt < 50 && !bothGated; attempt++) {
         const counts = await Promise.all(roots.map(owner => runInDurableObject(
           env.GRAPH_TREES.getByName(treeCoordinatorName(graph, owner)), (_instance, state) =>
-            state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_publication_gates").one().count)));
+            state.storage.sql.exec<{count: number}>("SELECT COUNT(*) AS count FROM tree_publication_slots").one().count)));
         bothGated = counts.every(count => count === 1);
         if (!bothGated) await new Promise(resolve => setTimeout(resolve, 10));
       }
@@ -736,7 +740,7 @@ describe("integrated storage authority", () => {
     });
   });
 
-  it("retains a distributed applied outcome beyond expiry while another same-leaf writer publishes", async () => {
+  it("retains a distributed applied outcome beyond expiry while a later same-owner writer waits for it", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, other, root, otherRoot} = await fixtures(graph), id = "integrated:partial-apply";
     await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, otherRoot)), async instance => {
       const commit = Reflect.get(instance, "commit"); Reflect.set(instance, "commit", () => new Response("unavailable", {status: 503}));
@@ -745,13 +749,15 @@ describe("integrated storage authority", () => {
     });
     await expireAnchor(graph, id, [root, otherRoot]);
     const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)); await runDurableObjectAlarm(leaf);
-    expect(await writeStatus(graph, "integrated:disjoint-after-apply", [fact(same)])).toMatchObject({status: 503});
     await runInDurableObject(leaf, (_instance, state) => expect(state.storage.sql.exec("SELECT status, owner_released FROM shard_transactions WHERE tx_id = ?", id).one())
       .toMatchObject({status: "committed", owner_released: 0}));
     const oldView = await query(graph); expect(oldView.status).toBe(200);
     expect((await oldView.json() as {rows: unknown[]}).rows).toHaveLength(0);
-    await recover(graph, id);
+    // A later same-owner write applies at the next revision and waits for the
+    // stuck distributed one, which the ledger's recovery alarm completes.
     expect(await writeStatus(graph, "integrated:disjoint-after-apply", [fact(same)])).toMatchObject({status: 200});
+    await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
+      expect(state.storage.sql.exec("SELECT phase FROM candidate_transactions WHERE tx_id = ?", id).one()).toMatchObject({phase: "complete"}));
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(2));
     const read = await query(graph); expect(read.status).toBe(200); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(3);
   });
@@ -1265,7 +1271,7 @@ describe("integrated storage authority", () => {
     await runInDurableObject(leaf, (_instance, state) => expect(auditFactStorage(state.storage, 0).facts).toHaveLength(2));
   });
 
-  it("publishes concurrent single-owner writes in order when lock and gate share one call and the gate is contended", async () => {
+  it("publishes concurrent single-owner writes in revision order without a gate, sharing facade calls", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), entities: string[] = [];
     for (let i = 0; entities.length < 8; i++) {
       const entity = `wiki:person:gate-${i}`;
@@ -1276,12 +1282,13 @@ describe("integrated storage authority", () => {
     let results: {status: number}[];
     try {results = await Promise.all(entities.map((entity, index) => writeStatus(graph, `integrated:gate-${index}`, [fact(entity)])));}
     finally {delete (globalThis as {__poneglyphCallTrace?: string[]}).__poneglyphCallTrace;}
-    // Contended writers fall back to acquiring the gate separately.
-    expect(trace.filter(call => call === "tree /_tree-gate").length).toBeGreaterThan(0);
+    // Concurrent writers take revisions together; nobody waits for a gate.
+    expect(trace.filter(call => call === "tree /_tree-gate")).toHaveLength(0);
+    expect(trace.filter(call => call === "facade /_publish-vector").length).toBeLessThanOrEqual(entities.length);
     expect(results.map(result => result.status)).toEqual(entities.map(() => 200));
     await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
       expect(state.storage.sql.exec("SELECT visible_seq FROM graph_state").one()).toMatchObject({visible_seq: 9});
-      expect(state.storage.sql.exec("SELECT * FROM tree_publication_gates").toArray()).toHaveLength(0);
+      expect(state.storage.sql.exec("SELECT * FROM tree_publication_slots").toArray()).toHaveLength(0);
       expect(state.storage.sql.exec("SELECT * FROM entity_write_locks").toArray()).toHaveLength(0);
     });
     await runInDurableObject(env.GRAPH_FACADES.getByName(storage.coordinatorObjectName(graph)), (_instance, state) =>
@@ -1315,5 +1322,26 @@ describe("integrated storage authority", () => {
     expect(trace.filter(call => call === "tree /_tree-lock")).toHaveLength(2);
     expect(trace.filter(call => call === "tree /_tree-directory")).toHaveLength(1);
     const read = await query(graph); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
+  });
+
+  it("upgrades a version-4 owner tree's publication gate into a held publication slot", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph);
+    expect(await writeStatus(graph, "integrated:migration-seed", [fact(first)])).toMatchObject({status: 200});
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), (_instance, state) => {
+      const sql = state.storage.sql;
+      sql.exec("DROP TABLE tree_publication_slots");
+      sql.exec(`CREATE TABLE tree_publication_gates (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1), tx_id TEXT NOT NULL UNIQUE, payload_hash TEXT NOT NULL,
+        reservation_ticket INTEGER NOT NULL CHECK (reservation_ticket > 0), publication_seq INTEGER NOT NULL CHECK (publication_seq > 0),
+        directory_epoch INTEGER NOT NULL CHECK (directory_epoch >= 0), created_at_ms INTEGER NOT NULL)`);
+      sql.exec("INSERT INTO tree_reservations (tx_id, payload_hash, entities_json, ticket_seq, directory_epoch, phase, created_at_ms) VALUES ('old', ?, '[]', 99, 0, 'preparing', 1)", "a".repeat(64));
+      sql.exec("INSERT INTO tree_publication_gates VALUES (1, 'old', ?, 99, 2, 0, 1)", "a".repeat(64));
+      sql.exec("UPDATE poneglyph_schema SET version = 4");
+      ensureTreeSchema(state.storage);
+      expect(sql.exec("SELECT version FROM poneglyph_schema").one()).toMatchObject({version: 5});
+      expect(sql.exec("SELECT name FROM sqlite_master WHERE name = 'tree_publication_gates'").toArray()).toHaveLength(0);
+      expect(sql.exec("SELECT tx_id, publication_seq, state, held FROM tree_publication_slots").toArray())
+        .toEqual([{tx_id: "old", publication_seq: 2, state: "open", held: 1}]);
+    });
   });
 });

@@ -221,7 +221,7 @@ export class DistributedTransaction {
       if (!isRecord(value) || integer(value["directoryEpoch"]) !== owner.directoryEpoch) {
         throw new Error("provisional owner epoch changed");
       }
-      const publicationSeq = gate && value["publicationSeq"] !== null ? integer(value["publicationSeq"], 1) : 0;
+      const publicationSeq = gate ? integer(value["publicationSeq"], 1) : 0;
       if (publicationSeq > 0 && publicationSeq <= owner.visibleSeq) throw new Error("owner publication revision did not advance its captured frontier");
       owners.push({...owner, reservationTicket: integer(value["reservationTicket"], 1), publicationSeq});
     }
@@ -330,24 +330,23 @@ export class DistributedTransaction {
       this.storage.sql.exec("UPDATE candidate_transactions SET local_witness_json = ? WHERE tx_id = ?", JSON.stringify(witness), this.txId);
     }
     if (witness.status === "committed") {
-      // One owner: finish releases the gate, then the safe vector catches up.
+      // One owner: its finish answers once the graph's safe vector shows the write.
       await this.publish(intent, plan, true);
-      await this.publishSafeVector(intent, plan);
     } else {
       console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "atomic",
         reasonCode: classifyParticipantFailure(rejectionStatus, rejection), rejectionStatus}));
+      // Releasing the reservation also gives up its unheld publication revision.
       await this.release(intent, plan, true);
-      await this.releasePublicationGates(intent, plan);
     }
     const terminal = this.phase(witness.status === "committed" ? "complete" : "aborted");
     return witness.status === "committed" ? this.receipt(terminal) : this.aborted(terminal);
   }
-  private async publish(intent: Intent, plan: WritePlan, releaseGate = false): Promise<void> {
-    if (releaseGate && plan.owners.length !== 1) throw new Error("only a single-owner write may release its gate on finish");
+  private async publish(intent: Intent, plan: WritePlan, singleOwner = false): Promise<void> {
+    if (singleOwner && plan.owners.length !== 1) throw new Error("only a single-owner write may publish through its owner");
     // Every owner already holds its gate, so publication order between owners does not matter.
     await Promise.all(plan.owners.map(async owner => {
       const response = await this.tree(intent, owner, "_tree-finish", {
-        reservationTicket: owner.reservationTicket, publicationSeq: owner.publicationSeq, releaseGate,
+        reservationTicket: owner.reservationTicket, publicationSeq: owner.publicationSeq, singleOwner,
       });
       const ok = response.ok; await response.arrayBuffer(); if (!ok) throw new Error("owner publication incomplete");
     }));
@@ -359,8 +358,9 @@ export class DistributedTransaction {
       let value: unknown;
       let response: Response;
       for (let attempt = 0; ; attempt++) {
+        // Only a distributed write holds its revisions out of the safe vector until it publishes them together.
         response = await this.tree(intent, owner, "_tree-gate", {
-          reservationTicket: owner.reservationTicket, directoryEpoch: owner.directoryEpoch,
+          reservationTicket: owner.reservationTicket, directoryEpoch: owner.directoryEpoch, held: plan.owners.length > 1,
         });
         if (response.status !== 423 || attempt >= 11) { value = await response.json(); break; }
         await response.arrayBuffer();

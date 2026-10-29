@@ -37,7 +37,8 @@ describe("durable object calls per write", () => {
       "ledger /_transact", "tree /_tree-directory", "shard /_route",
       "tree /_tree-lock", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
     ]);
-    // The first write cached the owner's directory entry and leaf route.
+    // The first write cached the owner's directory entry and leaf route. The
+    // owner tree, not the ledger, publishes to the facade (shared between writers).
     const warm = await traced(graph, [fact(sameRoot)]);
     expect(warm.calls).toEqual([
       "ledger /_transact", "tree /_tree-lock", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",

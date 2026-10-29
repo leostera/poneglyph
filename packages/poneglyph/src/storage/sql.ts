@@ -24,6 +24,19 @@ const LEDGER_SCHEMA = [
   `CREATE INDEX candidate_transactions_by_expiry ON candidate_transactions (created_at_ms) WHERE phase IN ('complete', 'aborted')`,
 ];
 
+// Owners hand out publication revisions to many writers at once. A revision
+// becomes visible once it and every lower one are done; a held revision (a
+// distributed write) stays out of the graph's safe vector until released.
+const PUBLICATION_SLOT_SCHEMA = [
+  `CREATE TABLE tree_publication_slots (
+    tx_id TEXT PRIMARY KEY, payload_hash TEXT NOT NULL,
+    reservation_ticket INTEGER NOT NULL CHECK (reservation_ticket > 0),
+    publication_seq INTEGER NOT NULL UNIQUE CHECK (publication_seq > 0),
+    directory_epoch INTEGER NOT NULL CHECK (directory_epoch >= 0), created_at_ms INTEGER NOT NULL,
+    state TEXT NOT NULL CHECK (state IN ('open', 'done')), held INTEGER NOT NULL CHECK (held IN (0, 1))
+  )`,
+] as const;
+
 const TREE_SCHEMA = [
   `CREATE TABLE tree_context (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), prefix TEXT NOT NULL)`,
   `CREATE TABLE tree_reservations (tx_id TEXT PRIMARY KEY, payload_hash TEXT NOT NULL,
@@ -32,11 +45,7 @@ const TREE_SCHEMA = [
     commit_seq INTEGER NOT NULL DEFAULT 0, created_at_ms INTEGER NOT NULL)`,
   `CREATE INDEX tree_reservations_pending ON tree_reservations (phase) WHERE phase = 'preparing'`,
   `CREATE UNIQUE INDEX tree_reservations_by_publication_seq ON tree_reservations (commit_seq) WHERE phase = 'complete'`,
-  `CREATE TABLE tree_publication_gates (
-    singleton INTEGER PRIMARY KEY CHECK (singleton = 1), tx_id TEXT NOT NULL UNIQUE, payload_hash TEXT NOT NULL,
-    reservation_ticket INTEGER NOT NULL CHECK (reservation_ticket > 0), publication_seq INTEGER NOT NULL CHECK (publication_seq > 0),
-    directory_epoch INTEGER NOT NULL CHECK (directory_epoch >= 0), created_at_ms INTEGER NOT NULL
-  )`,
+  ...PUBLICATION_SLOT_SCHEMA,
   `CREATE TABLE entity_write_locks (entity TEXT PRIMARY KEY, tx_id TEXT NOT NULL, payload_hash TEXT NOT NULL)`,
   `CREATE INDEX entity_write_locks_by_transaction ON entity_write_locks (tx_id)`,
   `CREATE TABLE IF NOT EXISTS graph_identity (
@@ -192,7 +201,20 @@ const SHARD_SCHEMA = [
 const SHARD_SCHEMA_VERSION = 8;
 const FACADE_SCHEMA_VERSION = 2;
 const LEDGER_SCHEMA_VERSION = 1;
-const TREE_SCHEMA_VERSION = 4;
+const TREE_SCHEMA_VERSION = 5;
+
+/** Upgrades from a persisted version to the next one, applied in order. */
+const TREE_MIGRATIONS: Readonly<Record<number, readonly string[]>> = {
+  4: [
+    ...PUBLICATION_SLOT_SCHEMA,
+    `INSERT INTO tree_publication_slots
+      (tx_id, payload_hash, reservation_ticket, publication_seq, directory_epoch, created_at_ms, state, held)
+      SELECT g.tx_id, g.payload_hash, g.reservation_ticket, g.publication_seq, g.directory_epoch, g.created_at_ms,
+        CASE WHEN r.phase = 'preparing' THEN 'open' ELSE 'done' END, 1
+      FROM tree_publication_gates g LEFT JOIN tree_reservations r ON r.tx_id = g.tx_id`,
+    `DROP TABLE tree_publication_gates`,
+  ],
+};
 
 type SchemaKind = "g-facade" | "g-ledger" | "g-tree" | "g-shard";
 
@@ -205,14 +227,17 @@ export function ensureLedgerSchema(storage: DurableObjectStorage): void {
 }
 
 export function ensureTreeSchema(storage: DurableObjectStorage): void {
-  ensureSchema(storage, "g-tree", TREE_SCHEMA_VERSION, TREE_SCHEMA);
+  ensureSchema(storage, "g-tree", TREE_SCHEMA_VERSION, TREE_SCHEMA, TREE_MIGRATIONS);
 }
 
 export function ensureShardSchema(storage: DurableObjectStorage): void {
   ensureSchema(storage, "g-shard", SHARD_SCHEMA_VERSION, SHARD_SCHEMA);
 }
 
-function ensureSchema(storage: DurableObjectStorage, kind: SchemaKind, version: number, statements: readonly string[]): void {
+function ensureSchema(
+  storage: DurableObjectStorage, kind: SchemaKind, version: number, statements: readonly string[],
+  migrations: Readonly<Record<number, readonly string[]>> = {},
+): void {
   storage.transactionSync(() => {
     const schemaMarkerExists = storage.sql.exec<{ name: string }>(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'poneglyph_schema'",
@@ -222,9 +247,15 @@ function ensureSchema(storage: DurableObjectStorage, kind: SchemaKind, version: 
       const marker = storage.sql.exec<{ kind: string; version: number }>(
         "SELECT kind, version FROM poneglyph_schema WHERE singleton = 1",
       ).toArray()[0];
-      if (marker?.kind !== kind || marker.version !== version) {
+      if (marker?.kind !== kind || marker.version > version) {
         throw new Error(`unsupported ${kind} Durable Object schema marker; refusing to reinterpret persisted data`);
       }
+      for (let from = marker.version; from < version; from++) {
+        const steps = migrations[from];
+        if (steps === undefined) throw new Error(`no ${kind} schema migration from version ${from}; refusing to reinterpret persisted data`);
+        for (const statement of steps) storage.sql.exec(statement);
+      }
+      if (marker.version !== version) storage.sql.exec("UPDATE poneglyph_schema SET version = ? WHERE singleton = 1", version);
       return;
     }
 
