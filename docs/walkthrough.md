@@ -130,7 +130,7 @@ Routing uses the tree directory's current leaf prefix, shard generation, and dir
 
 Poneglyph does not probe whether a named DO happens to exist and treat absence as a routing answer. It starts at the computed four-bit root, calls that `GraphShardDO`'s `/_route`, and follows persisted `leaf`/`router` metadata and the next hash bit until it reaches a leaf. `getByName` gives a deterministic stub; addressing an uninitialized name can create a fresh DO, so “the DO was absent” is not a safe way to discover the owner. Unlike Fokos's learned topology hints, Poneglyph currently re-reads its explicit prefix-router metadata rather than maintaining a cross-request route cache. A future cache would need epoch/generation validation and safe fallback to a known ancestor.
 
-Preflight is an early, read-only check—not a reservation and not a commit. A candidate shard verifies that the facts really map to its range, that it is the active leaf at the expected generation, and whether the current capacity estimate admits the write or crosses the split trigger. The current trigger is a projected SQLite database size of 5,000,000,000 bytes (about 5 GB), counting the current database size plus estimated pending fact-log, index, projection, and transaction-staging growth. Preflight does not perform a split. If the trigger still applies on recheck after the tree reservation, the current transaction is aborted; the write path does not automatically split or prepare/commit the facts. Splitting is a separate operator/control-plane `POST /_split` to the graph coordinator facade, delegated to the owner tree. The tree coordinates a bounded copy from the source shard into two child shards, verifies the copy, then cuts over the directory epoch and treats the old source as a router. For Luffy's current `0111` prefix, the children would be `01110` and `01111`, named `node:v9:5-70` and `node:v9:5-78`. Once the split completes, submit a new transaction; a terminally aborted `txId` cannot be reused for the retry. After tree owners reserve entities, a shard's `prepare` performs the authoritative fact/retraction validation and capacity check while the write fences are held.
+There is no separate preflight: the shard's `_atomic` (or `_prepare`) call is the authoritative check that the facts map to its range, that it is the active leaf at the expected generation, and that its accounted capacity admits the write. Splitting does not block writes. A shard asks its owner tree to split it when its calls average more than 100 per second over five seconds, or its SQLite database passes 1,000,000,000 bytes (about 1 GB). The owner tree fences new writes and reads on that owner, waits for in-flight ones to finish, copies the shard into two children, verifies the copy, cuts over the directory epoch and treats the old shard as a router. Writers that meet the fence wait and plan again. Operators can still request a split with `POST /_split` on the graph coordinator facade. For Luffy's current `0111` prefix, the children would be `01110` and `01111`, named `node:v9:5-70` and `node:v9:5-78`.
 
 These checks cost extra DO calls. Preflight, participant prepare, and participant apply fan out in parallel across leaf shards; owner reservations and publication are currently sent one owner at a time. The number of participant leaves is bounded, so a transaction's coordination work is bounded too, but it grows with the number of owners/leaves it touches.
 
@@ -282,17 +282,17 @@ sequenceDiagram
     P->>S: PONEGLYPH_IMPORT.getGraph({ graphId: onepiece })
     S-->>P: ReadWriteGraph capability
     P->>S: graph.transactApprovedBatch(facts, { txId })
-    S->>G: dispatchGraphRequest → POST /transactions
-    G->>L: dispatchPublicTransaction → POST /_transact
+    S->>L: dispatchGraphRequest → POST /_transact (no facade hop)
     L->>L: Persist intent + payload hash; arm recovery
-    L->>T: _tree-directory
-    L->>R: _route, then _preflight
+    L->>T: _tree-directory (only when not cached)
+    L->>R: _route (only when not cached)
     L->>L: Persist exact plan
-    L->>T: _tree-lock for the Luffy entity
+    L->>T: _tree-lock for the Luffy entity, with its publication revision
     L->>R: _atomic (single-shard transaction)
     R-->>L: Durable local decision witness
-    L->>T: _tree-finish publishes visibility
-    L->>R: _decision-finalize
+    L->>T: _tree-finish
+    T->>G: _publish-vector (shared by concurrent writers)
+    T-->>L: Visible
     L-->>S: Committed receipt
     S-->>P: RPC result
     P-->>C: Import receipt

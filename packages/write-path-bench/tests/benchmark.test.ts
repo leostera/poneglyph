@@ -81,6 +81,7 @@ test("packaged transact path: parallel application Workers, auth, request-token 
     assert.equal((await verify(runtime, batches, result.outcomes)).persistedFacts, 200);
     const postRestartReplay = await fetch(runtime.endpoints[0]!, {method: "POST", headers: {authorization: `Bearer ${runtime.token}`}, body: batches[0]!.body});
     assert.equal(postRestartReplay.status, 200);
-    assert.equal((record(await postRestartReplay.json()).txId), result.outcomes[0]?.serverTxId, "durable request-token mapping survives runtime restart");
+    assert.equal((record(await postRestartReplay.json()).txId), result.outcomes.find(outcome => outcome.txId === batches[0]!.txId)?.serverTxId,
+      "durable request-token mapping survives runtime restart");
   } finally { await runtime.mf.dispose(); await rm(directory, { recursive: true, force: true }); }
 });

@@ -17,7 +17,7 @@ export const MAX_RETAINED_TRANSACTION_OUTCOMES = 1_600_000;
 export const MIN_IDEMPOTENCY_RETENTION_MS = 15 * 60 * 1_000;
 /** Terminal outcomes evicted per admission when an object is at its allocation. */
 export const OUTCOME_EVICTION_BATCH = 64;
-export const SHARD_SPLIT_TRIGGER_BYTES = 5_000_000_000;
+export const SHARD_SPLIT_TRIGGER_BYTES = 1_000_000_000;
 export const MINIMUM_UNCERTAINTY_HEADROOM_BYTES = 2_000_000_000;
 export const MINIMUM_WAL_RESERVE_BYTES = 64_000_000;
 
@@ -41,4 +41,4 @@ export const MAX_SCAN_PAGE_CACHE_BYTES = 131_072;
 export const READ_LEASE_TTL_MS = 30_000;
 export const QUERY_TIMEOUT_MS = 20_000;
 export const SHARD_SCAN_PAGE_SIZE = 128;
-export const SPLIT_COPY_PAGE_SIZE = 128;
+export const SPLIT_COPY_PAGE_SIZE = 2_000;

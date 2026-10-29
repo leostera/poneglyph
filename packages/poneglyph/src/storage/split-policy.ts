@@ -17,9 +17,13 @@ export type SplitPolicy = Readonly<{
   retryAfterMs: number;
 }>;
 
-/** About half of what one Durable Object takes (~800 calls/s), sustained for 5 s. */
+/**
+ * About half of what one shard serves (RFD0011: ~200-300 writes/s, each about
+ * ten indexed inserts), sustained for 5 s, so a hot shard splits before it
+ * saturates.
+ */
 export const DEFAULT_SPLIT_POLICY: SplitPolicy = {
-  callsPerSecond: 400,
+  callsPerSecond: 100,
   windowSeconds: 5,
   sizeBytes: SHARD_SPLIT_TRIGGER_BYTES,
   maxDepth: TREE_DEPTH + 12,

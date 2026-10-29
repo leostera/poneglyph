@@ -162,14 +162,25 @@ export class GraphTreeDO extends DurableObject<Env> {
       }
     }
     const migrationId = this.reserveSplit(prefix.value, force, drain);
-    if (drain) await this.drainForSplit(migrationId);
-    const interrupted = await this.performSplit(migrationId, stopAfterPages as number | undefined);
-    if (interrupted instanceof Response) return interrupted;
-    const state = this.readGraphState();
-    await this.publishTopologyVector(graphId.value, state.directory_epoch, state.visible_seq);
-    this.finishTopology(migrationId);
-    await this.pruneVersions();
-    return jsonResponse({ status: "split", prefix: prefix.value, directoryEpoch: state.directory_epoch, visibleSeq: state.visible_seq });
+    const started = Date.now();
+    const log = (stage: string, extra: object = {}) => console.log(JSON.stringify({event: "poneglyph.tree.split", stage, prefix: prefix.value,
+      migrationId, elapsedMs: Date.now() - started, ...extra}));
+    log("started", {drain});
+    try {
+      if (drain) {await this.drainForSplit(migrationId); log("drained");}
+      const interrupted = await this.performSplit(migrationId, stopAfterPages as number | undefined);
+      if (interrupted instanceof Response) {log("interrupted", {status: interrupted.status}); return interrupted;}
+      log("copied");
+      const state = this.readGraphState();
+      await this.publishTopologyVector(graphId.value, state.directory_epoch, state.visible_seq);
+      this.finishTopology(migrationId);
+      await this.pruneVersions();
+      log("finished", {directoryEpoch: state.directory_epoch});
+      return jsonResponse({ status: "split", prefix: prefix.value, directoryEpoch: state.directory_epoch, visibleSeq: state.visible_seq });
+    } catch (error) {
+      log("failed", {error: errorMessage(error), fenced: this.readGraphState().topology_op_id !== null});
+      throw error;
+    }
   }
 
   private finishTopology(migrationId: string): void {
@@ -199,6 +210,14 @@ export class GraphTreeDO extends DurableObject<Env> {
     const deadline = Date.now() + SPLIT_DRAIN_MS;
     while (this.readGraphState().writer_tx_id !== null || this.ownerWrites.hasWriters() || this.hasReadLease()) {
       if (Date.now() >= deadline) {
+        const count = (sql: string) => this.ctx.storage.sql.exec<{n: number}>(sql).one().n;
+        console.log(JSON.stringify({event: "poneglyph.tree.split-drain-timeout", migrationId, writer: this.readGraphState().writer_tx_id,
+          preparing: count("SELECT COUNT(*) AS n FROM tree_reservations WHERE phase = 'preparing'"),
+          locks: count("SELECT COUNT(*) AS n FROM entity_write_locks"),
+          openSlots: count("SELECT COUNT(*) AS n FROM tree_publication_slots WHERE state = 'open'"),
+          doneSlots: count("SELECT COUNT(*) AS n FROM tree_publication_slots WHERE state = 'done'"),
+          heldSlots: count("SELECT COUNT(*) AS n FROM tree_publication_slots WHERE held = 1"),
+          readLease: this.hasReadLease()}));
         this.clearSplit(migrationId);
         throw new CoordinatorError(503, "owner did not drain in time for a split");
       }
@@ -302,63 +321,50 @@ export class GraphTreeDO extends DurableObject<Env> {
         await this.postShard(childPrefix as VirtualPrefix, "_init-child", { graphId, prefix: childPrefix, migrationId, reservedBytes });
       }
 
-      for (const table of ["fact_log", "active_facts", "active_values", "entity_versions"] as const) {
-        for (const childPrefix of children) {
-          let pageNumber = 0;
-          let afterRowId = 0;
-          while (true) {
-            const exported = await this.postShard(sourcePrefix, "_export", {
-              graphId,
-              sourcePrefix,
-              targetPrefix: childPrefix,
-              migrationId,
-              table,
-              pageNumber,
-              afterRowId,
-            });
-            const rows = exported["rows"];
-            const nextRowId = exported["nextRowId"];
-            const hasMore = exported["hasMore"];
-            const pageHash = exported["pageHash"];
-            if (!Array.isArray(rows) || typeof nextRowId !== "number" || typeof hasMore !== "boolean" || typeof pageHash !== "string") {
-              throw new CoordinatorError(502, "source returned an invalid split page");
-            }
-            if (rows.length > 0) {
-              await this.postShard(childPrefix as VirtualPrefix, "_import", {
-                graphId,
-                targetPrefix: childPrefix,
-                migrationId,
-                table,
-                pageNumber,
-                pageHash,
-                rows,
-              });
-              copiedPages += 1;
-              if (stopAfterPages !== undefined && copiedPages >= stopAfterPages) {
-                return jsonResponse({ status: "copy-interrupted-for-recovery-test", migrationId, copiedPages }, 503, { "retry-after": "1" });
-              }
-            }
-            if (!hasMore) break;
-            if (nextRowId <= afterRowId || pageNumber > 1_000_000) throw new CoordinatorError(500, "split export cursor failed to advance");
-            afterRowId = nextRowId;
-            pageNumber += 1;
+      // Each table/child pair is an independent ordered stream of pages; the
+      // eight streams run at once. A recovery test that interrupts after an
+      // exact page count copies them one at a time so the count is exact.
+      const tables = ["fact_log", "active_facts", "active_values", "entity_versions"] as const;
+      const streams = tables.flatMap(table => children.map(childPrefix => ({table, childPrefix})));
+      let interrupted = false;
+      const copyStream = async ({table, childPrefix}: (typeof streams)[number]) => {
+        let pageNumber = 0;
+        let afterRowId = 0;
+        while (!interrupted) {
+          const exported = await this.postShard(sourcePrefix, "_export", {
+            graphId, sourcePrefix, targetPrefix: childPrefix, migrationId, table, pageNumber, afterRowId,
+          });
+          const rows = exported["rows"];
+          const nextRowId = exported["nextRowId"];
+          const hasMore = exported["hasMore"];
+          const pageHash = exported["pageHash"];
+          if (!Array.isArray(rows) || typeof nextRowId !== "number" || typeof hasMore !== "boolean" || typeof pageHash !== "string") {
+            throw new CoordinatorError(502, "source returned an invalid split page");
           }
+          if (rows.length > 0) {
+            await this.postShard(childPrefix as VirtualPrefix, "_import", {graphId, targetPrefix: childPrefix, migrationId, table, pageNumber, pageHash, rows});
+            copiedPages += 1;
+            if (stopAfterPages !== undefined && copiedPages >= stopAfterPages) {interrupted = true; return;}
+          }
+          if (!hasMore) return;
+          if (nextRowId <= afterRowId || pageNumber > 1_000_000) throw new CoordinatorError(500, "split export cursor failed to advance");
+          afterRowId = nextRowId;
+          pageNumber += 1;
         }
-      }
+      };
+      if (stopAfterPages === undefined) await Promise.all(streams.map(copyStream));
+      else for (const stream of streams) await copyStream(stream);
+      if (interrupted) return jsonResponse({ status: "copy-interrupted-for-recovery-test", migrationId, copiedPages }, 503, { "retry-after": "1" });
 
-      for (const table of ["fact_log", "active_facts", "active_values", "entity_versions"] as const) {
-        for (const childPrefix of children) {
-          const sourceCount = await this.postShard(sourcePrefix, "_count", {
-            graphId, nodePrefix: sourcePrefix, rangePrefix: childPrefix, table,
-          });
-          const childCount = await this.postShard(childPrefix as VirtualPrefix, "_count", {
-            graphId, nodePrefix: childPrefix, rangePrefix: childPrefix, table,
-          });
-          if (sourceCount["count"] !== childCount["count"]) {
-            throw new CoordinatorError(503, `split verification count mismatch for ${table} at prefix ${childPrefix}`);
-          }
+      await Promise.all(streams.map(async ({table, childPrefix}) => {
+        const [sourceCount, childCount] = await Promise.all([
+          this.postShard(sourcePrefix, "_count", {graphId, nodePrefix: sourcePrefix, rangePrefix: childPrefix, table}),
+          this.postShard(childPrefix as VirtualPrefix, "_count", {graphId, nodePrefix: childPrefix, rangePrefix: childPrefix, table}),
+        ]);
+        if (sourceCount["count"] !== childCount["count"]) {
+          throw new CoordinatorError(503, `split verification count mismatch for ${table} at prefix ${childPrefix}`);
         }
-      }
+      }));
       for (const childPrefix of children) {
         await this.postShard(childPrefix as VirtualPrefix, "_finish-child", { graphId, prefix: childPrefix, migrationId });
       }

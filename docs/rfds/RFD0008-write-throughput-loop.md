@@ -23,7 +23,7 @@ Load comes from `LoadGenerator` Durable Objects on the edge (`POST /_bench/write
 - **Graph:** 32 generators × 32 writers (1,024 concurrent writers) across the whole graph.
 - **One owner:** 16 × 16 (256 writers), every entity inside owner tree `0101`. This measures the per-owner ceiling.
 
-Telemetry: invocation logs are sampled at 5% (`headSamplingRate: 0.05`); CPU and wall time per Durable Object call come from `$workers.cpuTimeMs` / `$workers.wallTimeMs`, grouped by entrypoint and path. Reported CPU counts JavaScript time only, so per-call runtime overhead (about 0.4–0.5 ms per event, per the hivemind note on Durable Object call rates) comes on top.
+Telemetry: invocation logs are sampled (`headSamplingRate` 0.05; 1.0 while diagnosing splits, so split logs aren't sampled away); CPU and wall time per Durable Object call come from `$workers.cpuTimeMs` / `$workers.wallTimeMs`, grouped by entrypoint and path. Reported CPU counts JavaScript time only, so per-call runtime overhead (about 0.4–0.5 ms per event, per the hivemind note on Durable Object call rates) comes on top.
 
 ## Baseline (version `4063950c`, commit `ad06780`)
 
@@ -60,6 +60,7 @@ At the one-owner bench the tree spends 1.7 ms (lock) + 2.6 ms (finish) of JavaSc
 | [RFD0009](./RFD0009-owner-tree-cpu-diet.md) | Owner tree CPU diet | 2,055 (median) | 221 (median) | Kept; owner +35% |
 | [RFD0010](./RFD0010-wider-ledger-fanout.md) | 64 ledgers (prefix-gated) | 2,328 vs 1,658 (2,048 writers) | — | Promising; needs per-graph ledger count |
 | [RFD0011](./RFD0011-object-ceilings-and-constant-time-owner.md) | Probe object ceilings; constant-time owner tree | — | 185 (shard-bound) | Kept; tree alone +52% |
+| [RFD0012](./RFD0012-split-on-reachable-traffic.md) | Split at 100 calls/s or 1 GB; fast parallel copy | — | splits in 3–5 s | In progress |
 
 ## Ideas not yet tried
 
