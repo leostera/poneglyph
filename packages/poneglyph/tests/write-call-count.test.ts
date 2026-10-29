@@ -30,14 +30,17 @@ async function entities(graph: string) {
 }
 
 describe("durable object calls per write", () => {
-  it("counts a single-entity write", async () => {
-    const graph = `calls-${crypto.randomUUID()}`, {first} = await entities(graph);
-    await traced(graph, [fact("wiki:person:warmup")]);
-    const result = await traced(graph, [fact(first)]);
-    expect(result.status).toBe(200);
-    expect(result.calls).toEqual([
+  it("counts a single-entity write, cold and then with a warm directory cache", async () => {
+    const graph = `calls-${crypto.randomUUID()}`, {first, sameRoot} = await entities(graph);
+    const cold = await traced(graph, [fact(first)]);
+    expect(cold.calls).toEqual([
       "ledger /_transact", "tree /_tree-directory", "shard /_route",
       "tree /_tree-lock", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
+    ]);
+    // The first write cached the owner's directory entry and leaf route.
+    const warm = await traced(graph, [fact(sameRoot)]);
+    expect(warm.calls).toEqual([
+      "ledger /_transact", "tree /_tree-lock", "shard /_atomic", "tree /_tree-finish", "facade /_publish-vector",
     ]);
   });
 

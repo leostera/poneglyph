@@ -26,13 +26,17 @@ export type WritePlan = Readonly<{owners: readonly OwnerPlan[]; participants: re
 type ParticipantGroup = {address: LeafAddress; owner: VirtualPrefix; entries: PlanEntry[]};
 
 type OwnerDirectory = (prefix: VirtualPrefix) => Promise<Pick<OwnerPlan, "directoryEpoch" | "visibleSeq">>;
+type LeafRouter = (graphId: GraphId, owner: VirtualPrefix, key: VirtualKey, directoryEpoch: number) => Promise<LeafAddress>;
 
-export async function planBatch(env: StorageEnv, graphId: string, batch: FactBatch, directory: OwnerDirectory): Promise<WritePlan> {
+export async function planBatch(
+  env: StorageEnv, graphId: string, batch: FactBatch, directory: OwnerDirectory,
+  route: LeafRouter = async (graph, _owner, key, epoch) => (await resolveKeyLeaf(env, graph, key, epoch)).address,
+): Promise<WritePlan> {
   const graph = parseGraphId(graphId);
   if (!graph.ok) throw new Error("corrupt journal graph");
   const keys = await indexEntityKeys(graph.value, batch);
   const owners = await planOwners(keys, directory);
-  const participants = await planParticipants(env, graph.value, batch, keys, owners);
+  const participants = await planParticipants(route, graph.value, batch, keys, owners);
   return {owners, participants};
 }
 
@@ -59,7 +63,7 @@ async function planOwners(keys: ReadonlyMap<Uri, VirtualKey>, directory: OwnerDi
 }
 
 async function planParticipants(
-  env: StorageEnv,
+  route: LeafRouter,
   graphId: GraphId,
   batch: FactBatch,
   keys: ReadonlyMap<Uri, VirtualKey>,
@@ -76,7 +80,7 @@ async function planParticipants(
     if (snapshot === undefined) throw new Error("planned fact has no owner snapshot");
     let address = routes.get(fact.entity);
     if (address === undefined) {
-      address = (await resolveKeyLeaf(env, graphId, key, snapshot.directoryEpoch)).address;
+      address = await route(graphId, owner, key, snapshot.directoryEpoch);
       routes.set(fact.entity, address);
     }
     // Preserve first-encounter participant order and every canonical fact index.

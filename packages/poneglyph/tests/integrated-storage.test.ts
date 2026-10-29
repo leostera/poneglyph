@@ -836,7 +836,7 @@ describe("integrated storage authority", () => {
     const read = await query(graph); expect(read.status).toBe(200); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
   });
 
-  it("does read-only planning outside reservations and rejects a stale split plan before any participant mutation", async () => {
+  it("does read-only planning outside reservations and replans a stale split plan before any participant mutation", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:provisional-split";
     await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), async instance => {
       // Hold the planned write just before it reserves: planning is done, nothing is locked.
@@ -857,10 +857,11 @@ describe("integrated storage authority", () => {
         const read = await query(graph); expect(read.status).toBe(200); await read.text();
         expect(await split(graph, root)).toMatchObject({status: 200});
       } finally {release(); Reflect.set(instance, "treeControl", control);}
-      const stale = await held; expect(stale.status).toBe(409); expect(await stale.json()).toMatchObject({retryable: true});
+      // The owner rejects the stale epoch at lock time; the ledger plans again.
+      const replanned = await held; expect(replanned.status).toBe(200); await replanned.text();
     });
     await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
-      expect(state.storage.sql.exec("SELECT * FROM candidate_transactions WHERE tx_id = ?", id).toArray()).toHaveLength(0));
+      expect(state.storage.sql.exec("SELECT phase FROM candidate_transactions WHERE tx_id = ?", id).one()).toMatchObject({phase: "complete"}));
     expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200});
     const read = await query(graph); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
   });
@@ -1302,5 +1303,17 @@ describe("integrated storage authority", () => {
     await runInDurableObject(facade, (_instance, state) =>
       expect(state.storage.sql.exec("SELECT directory_epoch, visible_seq FROM graph_safe_vector WHERE prefix = ?", root).one())
         .toMatchObject({directory_epoch: 1, visible_seq: 2}));
+  });
+
+  it("replans a write whose cached owner directory went stale after a split", async () => {
+    const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph);
+    expect(await writeStatus(graph, "integrated:cache-warm", [fact(first)])).toMatchObject({status: 200});
+    expect(await split(graph, root)).toMatchObject({status: 200});
+    const trace: string[] = []; (globalThis as {__poneglyphCallTrace?: string[]}).__poneglyphCallTrace = trace;
+    try {expect(await writeStatus(graph, "integrated:cache-stale", [fact(same)])).toMatchObject({status: 200});}
+    finally {delete (globalThis as {__poneglyphCallTrace?: string[]}).__poneglyphCallTrace;}
+    expect(trace.filter(call => call === "tree /_tree-lock")).toHaveLength(2);
+    expect(trace.filter(call => call === "tree /_tree-directory")).toHaveLength(1);
+    const read = await query(graph); expect((await read.json() as {rows: unknown[]}).rows).toHaveLength(2);
   });
 });

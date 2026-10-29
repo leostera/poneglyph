@@ -11,6 +11,9 @@ type PublicationGate = Readonly<{tx_id: string; payload_hash: string; reservatio
   publication_seq: number; directory_epoch: number; created_at_ms: number}>;
 type OwnerState = Readonly<{visible_seq: number; next_write_seq: number; directory_epoch: number; topology_op_id: string | null}>;
 
+/** The lock's answer when a writer planned against an old owner directory. */
+export const STALE_OWNER_EPOCH = "provisional owner epoch changed";
+
 export class OwnerWriteError extends Error {
   constructor(readonly status: number, message: string, readonly retryable = false) { super(message); }
 }
@@ -38,7 +41,7 @@ export class OwnerWrites {
       // A completed old owner outcome must not become half of a newly admitted
       // transaction after the graph-wide identity window expires.
       if (prior && prior.phase !== "preparing") throw new OwnerWriteError(409, "owner outcome remains retained");
-      if (state.directory_epoch !== epoch) throw new OwnerWriteError(409, "provisional owner epoch changed", true);
+      if (state.directory_epoch !== epoch) throw new OwnerWriteError(409, STALE_OWNER_EPOCH, true);
       if (prior) {
         if (prior.directory_epoch !== state.directory_epoch) throw new OwnerWriteError(409, "pending owner reservation lost its directory epoch");
         for (const entity of entities) this.assertLock(entity, txId, hash);

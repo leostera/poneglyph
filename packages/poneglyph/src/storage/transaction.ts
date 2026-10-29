@@ -11,6 +11,8 @@ import { factAsJson } from "./protocol.js";
 import { integer, planBatch, parseWritePlan, type WritePlan, type OwnerPlan, type ParticipantPlan } from "./plan.js";
 import type { StorageEnv } from "./environment.js";
 import type { BatchCache } from "./batch-cache.js";
+import { writeDirectoryCache } from "./directory-cache.js";
+import { STALE_OWNER_EPOCH } from "./owner-writes.js";
 import { classifyParticipantFailure, type ParticipantFailureCode } from "./transaction-diagnostics.js";
 
 type Phase = "planning" | "reserving" | "preparing" | "committing" | "atomic-delegated" | "cancelling" | "complete" | "aborted";
@@ -21,6 +23,8 @@ type LocalWitness = Readonly<{status: "committed" | "aborted"; txId: string; gra
 type ParticipantFailure = Readonly<{participant: number; status: number; reasonCode: ParticipantFailureCode}>;
 type PlanningResult = {kind: "continue"; plan: WritePlan} | {kind: "respond"; response: Response};
 type PreparationResult = {kind: "continue"} | {kind: "respond"; response: Response};
+
+const MAX_PLANNING_ATTEMPTS = 3;
 
 export class DistributedTransaction {
   private active = false;
@@ -173,13 +177,17 @@ export class DistributedTransaction {
     return parseWritePlan(intent.plan_json, intent.graph_id, batch, reservation);
   }
 
-  private async planAndReserve(intent: Intent, batch: FactBatch): Promise<PlanningResult> {
-    const initialPlan = await planBatch(this.env, intent.graph_id, batch, async prefix => {
-      const response = await this.tree(intent, {prefix}, "_tree-directory");
-      const value: unknown = await response.json();
-      if (!response.ok || !isRecord(value)) throw new Error("provisional owner directory unavailable");
-      return {directoryEpoch: integer(value["directoryEpoch"]), visibleSeq: integer(value["visibleSeq"])};
-    });
+  private async planAndReserve(intent: Intent, batch: FactBatch, attempt = 0): Promise<PlanningResult> {
+    // Directory entries and routes come from the ledger's cache when it has
+    // them; the owner lock below rejects a plan built on a stale epoch.
+    const initialPlan = await planBatch(this.env, intent.graph_id, batch,
+      prefix => writeDirectoryCache.owner(intent.graph_id, prefix, async () => {
+        const response = await this.tree(intent, {prefix}, "_tree-directory");
+        const value: unknown = await response.json();
+        if (!response.ok || !isRecord(value)) throw new Error("provisional owner directory unavailable");
+        return {directoryEpoch: integer(value["directoryEpoch"]), visibleSeq: integer(value["visibleSeq"])};
+      }),
+      (graph, owner, key, epoch) => writeDirectoryCache.leaf(this.env, graph, owner, key, epoch));
     if (initialPlan.participants.length > MAX_TRANSACTION_PARTICIPANTS) {
       this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);
       return {kind: "respond", response: jsonResponse({error: "participant limit exceeded", retryable: false}, 413)};
@@ -199,6 +207,12 @@ export class DistributedTransaction {
       const value: unknown = await response.json();
       if (!response.ok) {
         await this.release(intent, initialPlan, false);
+        if (response.status === 409 && isRecord(value) && value["error"] === STALE_OWNER_EPOCH && attempt < MAX_PLANNING_ATTEMPTS - 1) {
+          // The owner split since this ledger cached its directory: plan again.
+          writeDirectoryCache.forgetOwners(intent.graph_id, initialPlan.owners.map(candidate => candidate.prefix));
+          this.storage.sql.exec("UPDATE candidate_transactions SET phase = 'planning', plan_json = NULL, trees_json = '[]' WHERE tx_id = ?", this.txId);
+          return this.planAndReserve(this.read()!, batch, attempt + 1);
+        }
         this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);
         return {kind: "respond", response: jsonResponse(
           isRecord(value) ? value : {error: "owner reservation rejected", retryable: true}, response.status,
