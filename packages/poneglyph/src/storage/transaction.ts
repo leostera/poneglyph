@@ -238,10 +238,11 @@ export class DistributedTransaction {
         }
         const now = Date.now();
         if (response.status === 423 && isRecord(value) && value["error"] === OWNER_TOPOLOGY_FENCED && now - (fencedSince ?? now) < MAX_FENCE_WAIT_MS) {
-          // The owner is splitting: wait and plan again against its new directory.
-          writeDirectoryCache.forgetOwners(intent.graph_id, initialPlan.owners.map(candidate => candidate.prefix));
+          // The owner held this request through a long split: back off and plan
+          // again. The directory is only stale after a cutover, which answers
+          // STALE_OWNER_EPOCH instead, so the cached entry stays.
           this.storage.sql.exec("UPDATE candidate_transactions SET phase = 'planning', plan_json = NULL, trees_json = '[]' WHERE tx_id = ?", this.txId);
-          await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+          await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1_000));
           return this.planAndReserve(this.read()!, batch, 0, fencedSince ?? now);
         }
         this.storage.sql.exec("DELETE FROM candidate_transactions WHERE tx_id = ?", this.txId);

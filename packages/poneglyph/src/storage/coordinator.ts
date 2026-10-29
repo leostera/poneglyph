@@ -43,6 +43,13 @@ type SplitRow = Readonly<{
 /** How long an automatic split waits for in-flight writers and readers to finish. */
 const SPLIT_DRAIN_MS = 20_000;
 
+/**
+ * How long a lock request waits for a split in progress to end before it is
+ * answered "fenced". Holding it keeps fenced writers from retrying in a storm
+ * against the very owner that is splitting.
+ */
+const FENCE_HOLD_MS = 10_000;
+
 /** How long a finishing writer waits for earlier revisions before answering "retry". */
 const FINISH_WAIT_MS = 10_000;
 
@@ -52,6 +59,7 @@ export class GraphTreeDO extends DurableObject<Env> {
   private activeTopologyOpId: string | undefined;
   private readonly ownerWrites: OwnerWrites;
   private readonly frontierWaiters = new Set<FrontierWaiter>();
+  private readonly topologyWaiters = new Set<() => void>();
   // What the graph's safe vector is known to show for this owner, and the
   // publication in flight to it: concurrent writers share one facade call.
   private facadeShown: Readonly<{directoryEpoch: number; seq: number}> = {directoryEpoch: -1, seq: 0};
@@ -186,6 +194,22 @@ export class GraphTreeDO extends DurableObject<Env> {
   private finishTopology(migrationId: string): void {
     this.ctx.storage.transactionSync(() => {
       this.ctx.storage.sql.exec("UPDATE graph_state SET topology_op_id = NULL WHERE singleton = 1 AND topology_op_id = ?", migrationId);
+    });
+    this.notifyTopology();
+  }
+
+  private notifyTopology(): void {
+    for (const resolve of this.topologyWaiters) resolve();
+    this.topologyWaiters.clear();
+  }
+
+  /** Waits, up to `FENCE_HOLD_MS`, while a topology operation fences this owner. */
+  private async waitOutFence(): Promise<void> {
+    if (this.readGraphState().topology_op_id === null) return;
+    await new Promise<void>(resolve => {
+      const timer = setTimeout(() => {this.topologyWaiters.delete(done); resolve();}, FENCE_HOLD_MS);
+      const done = () => {clearTimeout(timer); resolve();};
+      this.topologyWaiters.add(done);
     });
   }
 
@@ -421,6 +445,7 @@ export class GraphTreeDO extends DurableObject<Env> {
       this.ctx.storage.sql.exec("DELETE FROM graph_splits WHERE migration_id = ? AND phase = 'copying'", migrationId);
       this.ctx.storage.sql.exec("UPDATE graph_state SET topology_op_id = NULL WHERE singleton = 1 AND topology_op_id = ?", migrationId);
     });
+    this.notifyTopology();
   }
 
   private beginReadLease(requestedSnapshotSeq: number, requestedDirectoryEpoch: number): ReadLease {
@@ -665,6 +690,7 @@ export class GraphTreeDO extends DurableObject<Env> {
         entities.push(entity.value);
       }
       const unique = [...new Set(entities)].sort();
+      await this.waitOutFence();
       if (body["gate"] === true) return jsonResponse(this.ownerWrites.reserveAndGate(txId, hash, unique, epoch, identityTime));
       const {fresh: _fresh, ...ticket} = this.ownerWrites.reserve(txId, hash, unique, epoch, identityTime);
       return jsonResponse(ticket);
