@@ -344,12 +344,13 @@ export class DistributedTransaction {
   }
   private async publish(intent: Intent, plan: WritePlan, releaseGate = false): Promise<void> {
     if (releaseGate && plan.owners.length !== 1) throw new Error("only a single-owner write may release its gate on finish");
-    for (const owner of plan.owners) {
+    // Every owner already holds its gate, so publication order between owners does not matter.
+    await Promise.all(plan.owners.map(async owner => {
       const response = await this.tree(intent, owner, "_tree-finish", {
         reservationTicket: owner.reservationTicket, publicationSeq: owner.publicationSeq, releaseGate,
       });
       const ok = response.ok; await response.arrayBuffer(); if (!ok) throw new Error("owner publication incomplete");
-    }
+    }));
   }
   private async acquirePublicationGates(intent: Intent, initialPlan: WritePlan): Promise<WritePlan> {
     let plan = initialPlan;
@@ -386,12 +387,12 @@ export class DistributedTransaction {
     if (!ok) throw new Error("cluster safe-vector publication incomplete");
   }
   private async releasePublicationGates(intent: Intent, plan: WritePlan): Promise<void> {
-    for (const owner of plan.owners) {
+    await Promise.all(plan.owners.map(async owner => {
       const response = await this.tree(intent, owner, "_tree-release-gate", {
         reservationTicket: owner.reservationTicket, publicationSeq: owner.publicationSeq,
       });
       const ok = response.ok; await response.arrayBuffer(); if (!ok) throw new Error("owner publication gate release incomplete");
-    }
+    }));
   }
   private async release(intent: Intent, plan: WritePlan, abort: boolean): Promise<void> {
     for (const owner of plan.owners) {
