@@ -3,12 +3,12 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import * as storage from "../src/storage/implementation.js";
 import { treeForKey, treeCoordinatorName, transactionCoordinatorName, tokenLedgerName, TREE_PREFIXES } from "../src/storage/forest.js";
-import { virtualKeyForEntity, shardObjectName, bitAt } from "../src/storage/keys.js";
+import { virtualKeyForEntity, shardObjectName, bitAt, type VirtualPrefix } from "../src/storage/keys.js";
 import { auditFactStorage } from "../src/testing/storage-audit.js";
 import { sha256Hex, canonicalBatchJson } from "../src/storage/http.js";
 import { parseFactBatch } from "../src/domain/fact.js";
 import { dispatchInternalTransaction } from "../src/storage/transaction-request.js";
-import { MAX_ACCOUNTED_BYTES_PER_DO, MAX_RETAINED_TRANSACTION_OUTCOMES, MAX_TRANSACTION_BYTES, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "../src/storage/constants.js";
+import { MAX_ACCOUNTED_BYTES_PER_DO, SHARD_SPLIT_TRIGGER_BYTES, MAX_RETAINED_TRANSACTION_OUTCOMES, MAX_TRANSACTION_BYTES, TRANSACTION_IDEMPOTENCY_RETENTION_MS } from "../src/storage/constants.js";
 import { BatchCache } from "../src/storage/batch-cache.js";
 import { ensureTreeSchema, ensureShardSchema } from "../src/storage/sql.js";
 
@@ -41,7 +41,7 @@ async function fixtures(graph: string) {
 
 // Writers no longer wait for shards to release retained outcomes; the shard's
 // maintenance alarm proves release in one batched owner call.
-async function settleOutcomes(graph: string, ...prefixes: string[]) {
+async function settleOutcomes(graph: string, ...prefixes: VirtualPrefix[]) {
   for (const prefix of prefixes) await runDurableObjectAlarm(env.GRAPH_SHARDS.getByName(shardObjectName(graph, prefix)));
 }
 async function recover(graph: string, id: string) {
@@ -835,11 +835,13 @@ describe("integrated storage authority", () => {
 
   it("does read-only planning outside reservations and rejects a stale split plan before any participant mutation", async () => {
     const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:provisional-split";
-    await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), async instance => {
-      const preflight = Reflect.get(instance, "preflight"); let enter!: () => void, release!: () => void;
+    await runInDurableObject(env.GRAPH_TREES.getByName(treeCoordinatorName(graph, root)), async instance => {
+      // Hold the planned write just before it reserves: planning is done, nothing is locked.
+      const control = Reflect.get(instance, "treeControl"); let enter!: () => void, release!: () => void;
       const entered = new Promise<void>(resolve => {enter = resolve;}), gate = new Promise<void>(resolve => {release = resolve;});
-      Reflect.set(instance, "preflight", async (request: Request) => {
-        if ((await request.clone().json() as {txId: string}).txId === id) {enter(); await gate;} return preflight.call(instance, request);
+      Reflect.set(instance, "treeControl", async (request: Request) => {
+        if (new URL(request.url).pathname === "/_tree-lock" && (await request.clone().json() as {txId: string}).txId === id) {enter(); await gate;}
+        return control.call(instance, request);
       });
       const held = write(graph, id, [fact(first)]);
       try {
@@ -851,7 +853,7 @@ describe("integrated storage authority", () => {
         expect(await writeStatus(graph, "integrated:during-planning", [fact(same)])).toMatchObject({status: 200});
         const read = await query(graph); expect(read.status).toBe(200); await read.text();
         expect(await split(graph, root)).toMatchObject({status: 200});
-      } finally {release(); Reflect.set(instance, "preflight", preflight);}
+      } finally {release(); Reflect.set(instance, "treeControl", control);}
       const stale = await held; expect(stale.status).toBe(409); expect(await stale.json()).toMatchObject({retryable: true});
     });
     await runInDurableObject(env.GRAPH_LEDGERS.getByName(await transactionCoordinatorName(graph, id)), (_instance, state) =>
@@ -962,37 +964,20 @@ describe("integrated storage authority", () => {
     expect(body.snapshotVector.find(value => value.prefix === otherRoot)?.sequence).toBe(6);
   });
 
-  it("does not replace actual atomic admission with an earlier positive provisional preflight", async () => {
+  it.each([
+    {reason: "accounted capacity", size: MAX_ACCOUNTED_BYTES_PER_DO, error: "per-DO accounted capacity limit exceeded"},
+    {reason: "split trigger", size: SHARD_SPLIT_TRIGGER_BYTES, error: "shard must split before admitting more writes"},
+  ])("decides $reason admission at the shard's atomic step and records the rejection", async ({size, error}) => {
     const graph = `test-${crypto.randomUUID()}`, {first, root} = await fixtures(graph), id = "integrated:capacity-changed";
-    await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), async (instance, state) => {
-      const preflight = Reflect.get(instance, "preflight");
-      Reflect.set(instance, "preflight", async (request: Request) => {
-        const body = await request.clone().json() as {txId: string};
-        const answer = await preflight.call(instance, request);
-        if (body.txId === id) state.storage.sql.exec("UPDATE shard_accounting SET synthetic_size_bytes = ?", MAX_ACCOUNTED_BYTES_PER_DO);
-        return answer;
-      });
-      try {expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 422});}
-      finally {Reflect.set(instance, "preflight", preflight); state.storage.sql.exec("UPDATE shard_accounting SET synthetic_size_bytes = 0");}
-      expect(state.storage.sql.exec("SELECT status, atomic_rejection_status FROM shard_transactions").one()).toMatchObject({status: "cancelled", atomic_rejection_status: 413});
+    const leaf = env.GRAPH_SHARDS.getByName(shardObjectName(graph, root));
+    await runInDurableObject(leaf, (_instance, state) => {state.storage.sql.exec("UPDATE shard_accounting SET synthetic_size_bytes = ?", size);});
+    expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 422});
+    await runInDurableObject(leaf, (_instance, state) => {
+      state.storage.sql.exec("UPDATE shard_accounting SET synthetic_size_bytes = 0");
+      const row = state.storage.sql.exec<{status: string; atomic_rejection_status: number; atomic_error: string}>(
+        "SELECT status, atomic_rejection_status, atomic_error FROM shard_transactions").one();
+      expect(row).toMatchObject({status: "cancelled", atomic_rejection_status: 413}); expect(row.atomic_error).toContain(error);
       expect(auditFactStorage(state.storage, 0).facts).toHaveLength(0);
-    });
-  });
-
-  it("rechecks provisional rejection after a disjoint visibility change instead of treating it as admission truth", async () => {
-    const graph = `test-${crypto.randomUUID()}`, {first, same, root} = await fixtures(graph), id = "integrated:negative-preflight";
-    await runInDurableObject(env.GRAPH_SHARDS.getByName(shardObjectName(graph, root)), async instance => {
-      const preflight = Reflect.get(instance, "preflight"); let checks = 0;
-      Reflect.set(instance, "preflight", async (request: Request) => {
-        const body = await request.clone().json() as {txId: string};
-        if (body.txId === id && ++checks === 1) {
-          expect(await writeStatus(graph, "integrated:negative-disjoint", [fact(same)])).toMatchObject({status: 200});
-          return new Response(JSON.stringify({canAdmit: false, shouldSplit: false}));
-        }
-        return preflight.call(instance, request);
-      });
-      try {expect(await writeStatus(graph, id, [fact(first)])).toMatchObject({status: 200}); expect(checks).toBe(2);}
-      finally {Reflect.set(instance, "preflight", preflight);}
     });
   });
 

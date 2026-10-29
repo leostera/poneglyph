@@ -19,7 +19,6 @@ type Intent = Readonly<{tx_id: string; graph_id: string; payload_hash: string; b
 type LocalWitness = Readonly<{status: "committed" | "aborted"; txId: string; graphId: string; payloadHash: string;
   commitSeq: number; statementTimeMs: number; identityTimeMs: number; shardPrefix: string; shardGeneration: number; directoryEpoch: number; factCount: number}>;
 type ParticipantFailure = Readonly<{participant: number; status: number; reasonCode: ParticipantFailureCode}>;
-type PreflightFailure = Readonly<{participant: number; status: number; reasonCode: ParticipantFailureCode | "split-required" | "capacity-not-admitted" | "invalid-preflight-response"}>;
 type PlanningResult = {kind: "continue"; plan: WritePlan} | {kind: "respond"; response: Response};
 type PreparationResult = {kind: "continue"} | {kind: "respond"; response: Response};
 
@@ -112,46 +111,12 @@ export class DistributedTransaction {
     return this.env.GRAPH_SHARDS.getByName(shardObjectName(intent.graph_id, participant.address.prefix)).fetch(`https://shard.internal/${action}`, {
       method: "POST", body: JSON.stringify({graphId: intent.graph_id, shardPrefix: participant.address.prefix,
         shardGeneration: participant.address.generation, directoryEpoch: owner.directoryEpoch, txId: this.txId, payloadHash: intent.payload_hash,
-        commitSeq: action === "_preflight" || action === "_prepare" || action === "_cancel" ? 0 : owner.publicationSeq,
+        commitSeq: action === "_prepare" || action === "_cancel" ? 0 : owner.publicationSeq,
         statementTimeMs: intent.statement_time_ms, identityTimeMs: intent.created_at_ms,
-        ...(action === "_preflight" || action === "_prepare" || action === "_atomic" ? {facts: participant.entries.map(entry =>
+        ...(action === "_prepare" || action === "_atomic" ? {facts: participant.entries.map(entry =>
           ({...entry, fact: factAsJson(batch.facts[entry.index]!)}))} : {})}),
     });
   }
-  private async preflight(intent: Intent, plan: WritePlan, batch: FactBatch): Promise<readonly PreflightFailure[]> {
-    const replies = await Promise.all(plan.participants.map(p => this.participant(intent, plan, p, batch, "_preflight")));
-    const failures: PreflightFailure[] = [];
-    for (const [participant, response] of replies.entries()) {
-      let body: unknown;
-      try { body = await response.json(); }
-      catch {
-        failures.push({participant, status: response.status, reasonCode: "invalid-preflight-response"});
-        console.error(JSON.stringify({event: "poneglyph.transaction.preflight-failed", participant, status: response.status,
-          reasonCode: "invalid-preflight-response"}));
-        if (response.status >= 500) throw new Error("provisional capacity preflight unavailable");
-        continue;
-      }
-      if (!response.ok) {
-        failures.push({participant, status: response.status, reasonCode: classifyParticipantFailure(response.status, body)});
-        if (response.status >= 500) {
-          console.error(JSON.stringify({event: "poneglyph.transaction.preflight-failed", participant, status: response.status,
-            reasonCode: classifyParticipantFailure(response.status, body)}));
-          throw new Error("provisional capacity preflight unavailable");
-        }
-        continue;
-      }
-      if (!isRecord(body) || typeof body["canAdmit"] !== "boolean" || typeof body["shouldSplit"] !== "boolean") {
-        failures.push({participant, status: response.status, reasonCode: "invalid-preflight-response"});
-        console.error(JSON.stringify({event: "poneglyph.transaction.preflight-failed", participant, status: response.status,
-          reasonCode: "invalid-preflight-response"}));
-        throw new Error("provisional capacity preflight returned an invalid response");
-      }
-      if (body["shouldSplit"] === true) failures.push({participant, status: response.status, reasonCode: "split-required"});
-      if (body["canAdmit"] !== true) failures.push({participant, status: response.status, reasonCode: "capacity-not-admitted"});
-    }
-    return failures;
-  }
-
   private async advance(recovery: boolean): Promise<Response> {
     let intent = this.read();
     if (intent === undefined) throw new Error("durable transaction intent is missing");
@@ -220,7 +185,6 @@ export class DistributedTransaction {
       return {kind: "respond", response: jsonResponse({error: "participant limit exceeded", retryable: false}, 413)};
     }
 
-    const preflightFailures = await this.preflight(intent, initialPlan, batch);
     // Persist exact possible ownership before the first reservation RPC.
     this.storage.sql.exec("UPDATE candidate_transactions SET phase = 'reserving', plan_json = ?, trees_json = ? WHERE tx_id = ?",
       JSON.stringify(initialPlan), JSON.stringify(initialPlan.owners.map(owner => owner.prefix)), this.txId);
@@ -248,17 +212,6 @@ export class DistributedTransaction {
       JSON.stringify(plan), Date.now(), this.txId);
     intent = this.read()!;
 
-    // A provisional rejection is not authoritative after visibility changed.
-    // Positive preflight never replaces actual prepare/atomic admission.
-    if (preflightFailures.length > 0) {
-      const recheckFailures = await this.preflight(intent, plan, batch);
-      if (recheckFailures.length > 0) {
-        console.error(JSON.stringify({event: "poneglyph.transaction.aborted", phase: "preflight",
-          reasonCode: "capacity-or-routing-rejected", initialFailures: preflightFailures, recheckFailures}));
-        await this.cancel(this.phase("cancelling"), plan, batch);
-        return {kind: "respond", response: this.aborted(this.read()!)};
-      }
-    }
     return {kind: "continue", plan};
   }
 

@@ -114,7 +114,6 @@ export class GraphShardDO extends DurableObject<Env> {
       if (request.method === "POST") {
         switch (path) {
           case "/_route": return await this.route(request);
-          case "/_preflight": return await this.preflight(request);
           case "/_begin-split": return await this.beginSplit(request);
           case "/_init-child": return await this.initChild(request);
           case "/_export": return await this.exportPage(request);
@@ -308,8 +307,7 @@ export class GraphShardDO extends DurableObject<Env> {
       // Replay is decided from the durable outcome, not the now-changed fact state
       // or another capacity reservation for the same transaction.
       this.validatePreparedBatch(batch.value);
-      const capacity = this.capacityFor(batch.value.facts.map(indexed => indexed.fact));
-      if (!capacity.canAdmit) throw new ShardProtocolError(413, `per-DO accounted capacity limit exceeded (${capacity.projectedAccountedBytes} bytes)`);
+      const capacity = this.assertCapacity(batch.value.facts.map(indexed => indexed.fact));
       const reservedGrowth = Object.values(capacity.pending).reduce((sum, bytes) => sum + bytes, 0) - this.preparedGrowth();
       this.ctx.storage.sql.exec(`INSERT INTO shard_transactions
         (tx_id, payload_hash, payload_json, status, created_at_ms, reserved_mutation_bytes, decision_context_json)
@@ -1255,29 +1253,6 @@ export class GraphShardDO extends DurableObject<Env> {
     return { rowCount, reservedBytes: Math.ceil(payloadBytes * 3) + 1_000_000 };
   }
 
-  private async preflight(request: Request): Promise<Response> {
-    const input = await readJsonBody(request, MAX_TRANSACTION_BYTES);
-    if (!input.ok) return jsonResponse({ error: input.error.message }, 400);
-    const batch = parseParticipantBatch(input.value);
-    if (!batch.ok) return jsonResponse({ error: batch.error.message }, 400);
-    for (const indexed of batch.value.facts) {
-      const key = await virtualKeyForEntity(batch.value.graphId, indexed.fact.entity);
-      if (key !== indexed.virtualKey || !matchesPrefix(key, batch.value.shardPrefix)) {
-        return jsonResponse({ error: "preflight facts do not belong to this shard range" }, 409);
-      }
-    }
-    const identity = this.ctx.storage.transactionSync(() => this.assertIdentity(batch.value.graphId, batch.value.shardPrefix));
-    if (identity.role !== "leaf" || identity.generation !== batch.value.shardGeneration || identity.migration_state !== "active") {
-      return jsonResponse({ error: "shard route is stale or topology is moving" }, 409);
-    }
-    const prior = this.atomicRecord(batch.value.txId);
-    if (prior?.decision_kind === "distributed" && prior.decision_context_json === decisionContext(batch.value)) {
-      if (prior.payload_hash !== batch.value.payloadHash || prior.status === "cancelled") return jsonResponse({error: "participant replay conflict"}, 409);
-      return jsonResponse({canAdmit: true, shouldSplit: false, replay: true});
-    }
-    return jsonResponse(this.capacityFor(batch.value.facts.map((indexed) => indexed.fact)));
-  }
-
   private assertWritableIdentity(graphId: string, prefix: VirtualPrefix, generation: number): void {
     const identity = this.assertIdentity(graphId, prefix);
     if (identity.role !== "leaf" || identity.generation !== generation || identity.migration_state !== "active") {
@@ -1352,9 +1327,13 @@ export class GraphShardDO extends DurableObject<Env> {
     return this.ctx.storage.sql.exec<{bytes: number}>("SELECT COALESCE(SUM(reserved_mutation_bytes), 0) AS bytes FROM shard_transactions WHERE status = 'prepared'").one().bytes;
   }
 
-  private assertCapacity(facts: readonly import("../domain/fact.js").FactDraft[]): void {
+  // The authoritative admission check: atomic and prepare decide here, at the
+  // fenced shard, so the ledger needs no separate capacity round trip.
+  private assertCapacity(facts: readonly import("../domain/fact.js").FactDraft[]): ReturnType<typeof accountStorage> {
     const account = this.capacityFor(facts);
     if (!account.canAdmit) throw new ShardProtocolError(413, `per-DO accounted capacity limit exceeded (${account.projectedAccountedBytes} bytes)`);
+    if (account.shouldSplit) throw new ShardProtocolError(413, "shard must split before admitting more writes");
+    return account;
   }
 }
 
