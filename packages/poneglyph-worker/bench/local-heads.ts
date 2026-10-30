@@ -32,14 +32,16 @@ export async function runLocalReadHeads(count: number): Promise<string> {
   await mkdir(out, {recursive: true});
   const roundsPerPlacement: readonly ReadPhase[] = [{kind: "point", concurrency: 16, count}, {kind: "combined", concurrency: 128, count}];
   const plan = {runId, localOnly: true, graphId: "control-plane-validation", seedToken: `local-heads:${runId}:seed`,
-    heads: [0, 1, 4, 8], roundsPerPlacement,
+    heads: [0, 8], roundsPerPlacement,
     warmupPerQuery: 64, deadlineMs: 10_000, stateDirectory: directory};
   await writeFile(resolve(out, "plan.json"), JSON.stringify(plan, null, 2) + "\n");
   let runtime: Miniflare | undefined, succeeded = false;
   const rounds: object[] = [], warmups: object[] = [];
+  const publication: object[] = [];
   let stopReason = "setup-error";
+  let stage = "setup";
   const checkpoint = async () => {
-    const report = {plan, stopReason, completed: succeeded, warmups, rounds, scope: "One local machine, real native RPC/SQLite, warm closed-loop waves, no geographic or hosted capacity certification. Placement/load rounds of ONE architecture, not distinct architectures."};
+    const report = {plan, stopReason, completed: succeeded, stage, warmups, rounds, publication, scope: "One local machine, real native RPC/SQLite, warm closed-loop waves, no geographic or hosted capacity certification. Placement/load rounds of ONE architecture, not distinct architectures."};
     const bytes = gzipSync(JSON.stringify(report));
     await writeFile(resolve(out, "report.json.gz"), bytes);
     await writeFile(resolve(out, "report.sha256"), createHash("sha256").update(bytes).digest("hex") + "\n");
@@ -82,11 +84,27 @@ export async function runLocalReadHeads(count: number): Promise<string> {
     const control = async (path: string) => {
       if (runtime === undefined) throw new Error("Local runtime unavailable");
       const worker = await runtime.getWorker("admin");
-      const response = await worker.fetch(`https://local.internal${path}`, {method: "POST"});
-      const body: unknown = await response.json();
-      if (response.status !== 200) throw new Error("Local control was not confirmed; do not replay seed");
+      let response: Response;
+      try { response = await worker.fetch(`https://local.internal${path}`, {method: "POST"}); }
+      catch (error) {
+        const name = error instanceof Error ? error.name : "unknown";
+        const message = error instanceof Error ? error.message.slice(0, 200) : "";
+        console.error(JSON.stringify({event: "local-control-transport-failed", path, errorName: name, message}));
+        throw new Error(`Local control ${path} transport failed (${name}); delivery may be unknown`);
+      }
+      let body: unknown;
+      try { body = await response.json(); } catch {
+        console.error(JSON.stringify({event: "local-control-non-json", path, httpStatus: response.status}));
+        throw new Error(`Local control ${path} returned a non-JSON response (${response.status})`);
+      }
+      if (response.status !== 200) {
+        const name = isRecord(body) && typeof body["name"] === "string" ? body["name"] : "unknown";
+        console.error(JSON.stringify({event: "local-control-failed", path, httpStatus: response.status, publicErrorName: name}));
+        throw new Error(`Local control ${path} was not confirmed (HTTP ${response.status}, ${name}); do not replay`);
+      }
       return body;
     };
+    stage = "seed";
     const receipt = await control("/seed");
     if (!isRecord(receipt) || typeof receipt["txId"] !== "string") throw new Error("Uncertain local seed; do not replay");
     await writeFile(resolve(out, "seed-receipt.json"), JSON.stringify(receipt) + "\n");
@@ -157,12 +175,62 @@ export async function runLocalReadHeads(count: number): Promise<string> {
         console.log(JSON.stringify({runId, heads, kind: phase.kind, concurrency: phase.concurrency, observedMaxInFlight: settled.observedMaxInFlight, issued: round.issued, completed: round.completed, callerP99: allLatency.p99, rootReadCutCalls: round.rootReadCutCalls, headValidations: round.headValidations}));
         if (stopReason === "failed-round") throw new Error("Local read round failed; no subsequent rounds issued");
       }
+      if (heads === 8) {
+        stage = "pre-publication-counts";
+        const beforeWrite = counters(await control("/counts"));
+        stage = "publish-8-heads";
+        const writeStarted = performance.now();
+        const writeReceipt = await control("/flip");
+        const writeMs = performance.now() - writeStarted;
+        if (!isRecord(writeReceipt) || typeof writeReceipt["txId"] !== "string") {
+          console.error(JSON.stringify({event: "local-write-receipt-invalid", keys: isRecord(writeReceipt) ? Object.keys(writeReceipt).sort() : []}));
+          throw new Error("The local 8-head write returned no receipt; delivery may be unknown");
+        }
+        stage = "first-read-after-publication";
+        const pointAfterWrite = async () => {
+          if (runtime === undefined) throw new Error("Local runtime unavailable");
+          const response = await runtime.dispatchFetch("https://local.test/point-after", {method: "POST"});
+          const result = parseProbeResult(await response.json(), runId);
+          if (response.status !== (result.kind === "complete" ? 200 : 502)) throw new Error("Invalid post-publication response status");
+          return result;
+        };
+        const first = await pointAfterWrite();
+        if (first.kind !== "complete" || first.metrics.snapshotSeq !== 2 || first.metrics.cacheHits !== 0) {
+          throw new Error("The first post-publication read did not refresh the changed cached result");
+        }
+        stage = "count-before-post-publication-warm-reads";
+        const beforeWarm = counters(await control("/counts"));
+        stage = "post-publication-warm-reads";
+        const warm = await settledWaves({kind: "point", count: 500, concurrency: 128}, pointAfterWrite,
+          wave => wave.every(outcome => outcome.status === "fulfilled" && outcome.value.kind === "complete"));
+        const warmResults = warm.outcomes.map(outcome => outcome.status === "fulfilled" ? outcome.value : undefined);
+        if (warmResults.length !== 500 || warmResults.some(result => result?.kind !== "complete" || result.metrics.snapshotSeq !== 2 || result.metrics.cacheHits !== 1)) {
+          throw new Error("A post-publication warm read returned an incomplete or stale answer");
+        }
+        const afterWarm = counters(await control("/counts"));
+        const readCutDelta = afterWarm.readCutCalls - beforeWarm.readCutCalls;
+        const headDeltas = afterWarm.heads.map(head => ({member: head.member,
+          calls: head.validations - (beforeWarm.heads.find(previous => previous.member === head.member)?.validations ?? 0)}));
+        if (readCutDelta !== 0 || headDeltas.reduce((total, head) => total + head.calls, 0) !== 500) {
+          throw new Error("Post-publication cache hits did not validate through read heads");
+        }
+        publication.push({heads, writeMs, acknowledged: true, firstPostWrite: first,
+          measuredWarmReads: warmResults.length, completedWarmReads: warmResults.length, failedWarmReads: 0,
+          observedMaxInFlight: warm.observedMaxInFlight, cacheHits: warmResults.length,
+          canonicalReadCutsAfterWarm: readCutDelta, headValidations: headDeltas,
+          minCallsPerHead: Math.min(...headDeltas.map(head => head.calls)),
+          maxCallsPerHead: Math.max(...headDeltas.map(head => head.calls)),
+          warmupCanonicalReadCutDelta: beforeWarm.readCutCalls - beforeWrite.readCutCalls});
+        await writeFile(resolve(out, "publication.json"), JSON.stringify(publication, null, 2) + "\n");
+        await checkpoint();
+      }
     }
     succeeded = true; stopReason = "all-local-rounds-completed";
     return out;
   } catch {
     if (stopReason !== "failed-round") stopReason = "unconfirmed-local-operation";
-    throw new Error("Local read experiment stopped; inspect retained artifacts/state, never automatically replay its seed");
+    console.error(JSON.stringify({event: "local-read-experiment-stopped", runId, stage, stateDirectory: directory}));
+    throw new Error(`Local read experiment stopped at ${stage}; inspect retained artifacts/state, never automatically replay`);
   } finally {
     await runtime?.dispose();
     await checkpoint();

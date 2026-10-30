@@ -15,7 +15,44 @@ import {parseGraphId} from "../../poneglyph/src/domain/graph-id.js";
 import {dispatchInternalTransaction} from "../../poneglyph/src/storage/transaction-request.js";
 export {TodoHubDO};
 export class InspectionFacadeDO extends GraphCoordinatorDO {
+  private readHeadJoin: Promise<void> | undefined;
+
   authorityStatus(_role: AuthorityRole, after: number) {return facadeAuthority(after);}
+
+  override async fetch(request: Request): Promise<Response> {
+    if (new URL(request.url).pathname === "/_query-read-cut") {
+      const input: unknown = await request.clone().json().catch(() => undefined);
+      if (typeof input === "object" && input !== null && !Array.isArray(input) && typeof (input as Record<string, unknown>)["graphId"] === "string") {
+        await (this.readHeadJoin ??= this.joinOneReadHead((input as Record<string, unknown>)["graphId"] as string));
+      }
+    }
+    return super.fetch(request);
+  }
+
+  private async joinOneReadHead(graphId: string): Promise<void> {
+    // Candidate-only oracle mode: every graph queried by the independent
+    // conformance suite gets one actual replicated freshness authority before
+    // its first read cut. This is not in the canonical Worker or deployment.
+    const send = (path: string, body: unknown) => super.fetch(new Request(`https://conformance.internal/${path}`, {
+      method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify(body),
+    }));
+    const status = async () => {
+      const response = await send("_read-head-status", {graphId});
+      if (!response.ok) throw new Error("read-head oracle status unavailable");
+      const value: unknown = await response.json();
+      if (typeof value !== "object" || value === null || Array.isArray(value) ||
+          !Number.isSafeInteger((value as Record<string, unknown>)["generation"]) || !Array.isArray((value as Record<string, unknown>)["members"])) {
+        throw new Error("malformed read-head oracle status");
+      }
+      return value as {generation: number; members: number[]};
+    };
+    const current = await status();
+    if (current.members.length === 0) {
+      const joined = await send("_read-head-join", {graphId, expectedGeneration: current.generation});
+      if (joined.status === 202) await this.alarm();
+    }
+    if ((await status()).members.length === 0) throw new Error("read-head oracle did not activate");
+  }
 }
 export class InspectionLedgerDO extends GraphLedgerDO {
   authorityStatus(_role: AuthorityRole, after: number) {return ledgerAuthority(this.ctx.storage, after);}

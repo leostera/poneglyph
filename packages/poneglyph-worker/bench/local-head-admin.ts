@@ -24,6 +24,14 @@ export default {
     if (path === "/seed") return Response.json(await env.PONEGLYPH.transact({
       graphId, facts, clientRequestToken: `local-heads:${env.RUN_ID}:seed`,
     }));
+    if (path === "/flip") return Response.json(await env.PONEGLYPH.transact({
+      graphId,
+      facts: [
+        {...text(`${tenant}:feature-settings`, "control:config:enabled", "false"), retraction: true},
+        text(`${tenant}:feature-settings`, "control:config:enabled", "true"),
+      ],
+      clientRequestToken: `local-heads:${env.RUN_ID}:flip`,
+    }));
     const root = env.FACADE.getByName(coordinatorObjectName(graphId));
     if (path === "/join") {
       const response = await root.fetch("https://local.internal/_read-head-status", {method: "POST", body: JSON.stringify({graphId})});

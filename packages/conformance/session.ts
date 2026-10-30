@@ -84,8 +84,9 @@ export class Session {
     }
     return result;
   }
-  async query(query: Query, remember = true) {
-    const result = await this.request({action: "query", query: query.source});
+  async query(query: Query, remember = true, requireReadHeadHit = false) {
+    const result = await this.request({action: "query", query: query.source,
+      ...(requireReadHeadHit ? {requireReadHeadHit: true} : {})});
     assert.equal(result.status, 200, `query ${query.source}: ${JSON.stringify(result.body)}`);
     assert.ok(Array.isArray(result.body["rows"]), "complete parsed query response");
     equalBag(result.body["rows"], this.model.query(query), `public query ${query.source}`);

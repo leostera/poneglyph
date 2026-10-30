@@ -23,16 +23,19 @@ export default {
     const path = new URL(request.url).pathname;
     if (request.headers.has("origin")) return new Response("Forbidden", {status: 403});
     if (path === "/health" && request.method === "GET") return Response.json({runId: env.RUN_ID, readOnly: true});
-    if (request.method !== "POST" || path !== "/point" && path !== "/combined") return new Response("Not found", {status: 404});
+    const isPoint = path === "/point" || path === "/point-after";
+    if (request.method !== "POST" || !isPoint && path !== "/combined") return new Response("Not found", {status: 404});
     const started = performance.now();
     try {
       // One native service-binding RPC in each independent HTTP invocation.
-      const result = await env.PONEGLYPH.query({graphId: "control-plane-validation", query: path === "/point" ? point : combined});
-      const row = result.rows[0], keys = path === "/point" ? ["Enabled"] : ["Tenant", "Enabled", "TokenVersion", "Status"];
-      const expected = result.snapshotSeq === 1 && result.rows.length === 1 && row !== undefined &&
+      const result = await env.PONEGLYPH.query({graphId: "control-plane-validation", query: path === "/combined" ? combined : point});
+      const row = result.rows[0], keys = path === "/combined" ? ["Tenant", "Enabled", "TokenVersion", "Status"] : ["Enabled"];
+      const expectedSequence = path === "/point-after" ? 2 : 1;
+      const expectedEnabled = path === "/point-after" ? "true" : "false";
+      const expected = result.snapshotSeq === expectedSequence && result.rows.length === 1 && row !== undefined &&
         Object.keys(row).length === keys.length && keys.every(key => Object.hasOwn(row, key) && row[key]?.type === "string") &&
-        row.Enabled?.value === "false" &&
-        (path === "/point" || row.Tenant?.value === tenant && row.Status?.value === "active" &&
+        row.Enabled?.value === expectedEnabled &&
+        (path !== "/combined" || row.Tenant?.value === tenant && row.Status?.value === "active" &&
           row.TokenVersion?.value === "fake-token-test-only-v0-d9d839ba-4c07-41dc-a5bd-77ccc5763413");
       if (!expected) return response(env.RUN_ID, {kind: "unexpected-answer", hostedMs: performance.now() - started});
       const {timing, cacheHits, treeReadLeaseAcquisitions} = result.metrics;
