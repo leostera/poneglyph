@@ -11,7 +11,7 @@ export function parseReadIdentity(input: unknown, expected: readonly VirtualPref
     throw new Error("invalid read identity coverage");
   }
   const seen = new Set<string>();
-  const identity = input.map(item => {
+  const identity = Array.from(input, (item: unknown) => {
     if (!isRecord(item) || Object.keys(item).some(key => !["prefix", "snapshotSeq", "directoryEpoch"].includes(key))) {
       throw new Error("invalid read identity component");
     }

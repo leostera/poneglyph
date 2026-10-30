@@ -3,10 +3,10 @@ import { isRecord, rejected, type ParseResult } from "../domain/result.js";
 import { factAsJson } from "./protocol.js";
 
 export async function readJsonBody(
-  request: Request,
+  request: Pick<Request, "body">,
   maxBytes: number,
 ): Promise<ParseResult<unknown>> {
-  if (request.body === null) return rejected("body", "request body is required");
+  if (request.body === null) return rejected("body", "body is required");
   const reader = request.body.getReader();
   const decoder = new TextDecoder();
   let text = "";

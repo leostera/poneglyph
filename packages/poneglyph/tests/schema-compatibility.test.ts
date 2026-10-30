@@ -15,8 +15,8 @@ const initializers: readonly Readonly<{
 ];
 
 describe("Durable Object schema compatibility", () => {
-  it.each([{version: 2, accepted: true}, {version: 3, accepted: false}])(
-    "rollback accepts facade 2 only: persisted version $version, accepted=$accepted",
+  it.each([{version: 2, accepted: true}, {version: 3, accepted: true}, {version: 4, accepted: false}])(
+    "candidate accepts only explicitly supported facade marker versions: $version, accepted=$accepted",
     ({version, accepted}) => {
       const statements: string[] = [];
       const storage = {

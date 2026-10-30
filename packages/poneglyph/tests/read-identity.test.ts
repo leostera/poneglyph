@@ -18,7 +18,10 @@ describe("completed result read identity", () => {
   });
 
   it("rejects incomplete, duplicate, foreign, malformed and lease-bearing identities", () => {
-    for (const input of [undefined, [], [identity[0]], [identity[0], identity[0]],
+    // Native structured clone can preserve sparse arrays even though JSON cannot.
+    const sparse: unknown[] = new Array(2);
+    sparse[0] = identity[0];
+    for (const input of [undefined, [], sparse, [identity[0]], [identity[0], identity[0]],
       [identity[0], {...identity[1], prefix: TREE_PREFIXES[2]}],
       [identity[0], {...identity[1], snapshotSeq: -1}],
       [identity[0], {...identity[1], directoryEpoch: 1.5}],

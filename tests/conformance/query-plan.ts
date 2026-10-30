@@ -28,13 +28,13 @@ export const queryPlanCases: Case[] = [{name: "query-plan/owner-local-bag-join",
     {source: "agent:other-owner", entity: "test:another-entity", field: "test:title", value: {type: "null"}},
   ]);
   assert.equal(s.model.query(joined).length, 401);
-  await s.query(joined);
+  await s.query(joined, true, true); // The second identical query must validate through the replicated head.
   await s.query({...joined, source: joined.source + ', eq(Title, "Name")', filter: row => row["Title"]?.type === "string" && row["Title"].value === "Name"});
   await s.write("join-replace", [categories[0]!]); // Same source tuple replaces, rather than adds multiplicity.
-  await s.query(joined);
+  await s.query(joined, true, true); // Stale cached vector must fall back, then the refreshed result may hit.
   await s.write("join-retract", [{...categories[1]!, retraction: true}, {...titles[1]!, retraction: true}]);
   assert.equal(s.model.query(joined).length, 362);
-  await s.query(joined);
+  await s.query(joined, true, true);
   await s.query({
     source: 'test:category(Page, "captain"), test:category(Page, Category)',
     atoms: [joined.atoms[0]!, {field: "test:category", entity: {variable: "Page"}, value: {variable: "Category"}}],

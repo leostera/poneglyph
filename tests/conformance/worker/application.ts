@@ -11,7 +11,7 @@ async function internalWrite(env: ApplicationEnv, graph: string, txId: string, f
 export default {
   async fetch(request: Request, env: ApplicationEnv): Promise<Response> {
     if (request.headers.get("authorization") !== `Bearer ${env.CONFORMANCE_TOKEN}`) return new Response("unauthorized", {status: 401});
-    const body = await request.json() as {graph: string; action: string; txId: string; facts: FactInput[]; query: string; entity: string; path: string; body: unknown};
+    const body = await request.json() as {graph: string; action: string; txId: string; facts: FactInput[]; query: string; entity: string; path: string; body: unknown; requireReadHeadHit?: boolean};
     const database = createDatabase({url: "https://database.internal", graphId: body.graph,
       fetch: (input, init) => env.DATABASE.fetch(input, init)});
     try {
@@ -25,7 +25,16 @@ export default {
           // real committed database receipt. This is not a fabricated commit.
           return Response.json({error: "injected lost application reply", retryable: true}, {status: 502});
         }
-        case "query": return Response.json(await database.query(body.query));
+        case "query": {
+          const result = await database.query(body.query);
+          if (body.requireReadHeadHit !== true) return Response.json(result);
+          const validated = await database.query(body.query);
+          if (validated.metrics.cacheHits !== 1 || validated.snapshotSeq !== result.snapshotSeq ||
+              JSON.stringify(validated.rows) !== JSON.stringify(result.rows)) {
+            return Response.json({error: "read-head oracle replay was not an exact fresh cache hit"}, {status: 502});
+          }
+          return Response.json(validated);
+        }
         case "entity": return env.DATABASE.fetch(`https://database.internal/v1/graphs/${body.graph}/entities?uri=${encodeURIComponent(body.entity)}`);
         case "raw": return env.DATABASE.fetch(`https://database.internal/v1/graphs/${body.graph}/${body.path}`, {
           method: "POST", body: JSON.stringify(body.body), headers: {"content-type": "application/json"},

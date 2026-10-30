@@ -25,6 +25,7 @@ import { readFailureDiagnostic } from "../../poneglyph/src/storage/read-diagnost
 import { BoundedReadCache, utf8Bytes } from "../../poneglyph/src/storage/read-cache.js";
 import type { ReadIdentity } from "../../poneglyph/src/storage/read-identity.js";
 import { MAX_QUERY_CACHE_BYTES, MAX_QUERY_CACHE_ENTRIES, MAX_QUERY_CACHE_ENTRY_BYTES } from "../../poneglyph/src/storage/constants.js";
+import { completedReadHeadRouter } from "./read-head-routing.js";
 
 type CompletedQuery = Readonly<{rowsJson: string; identity: ReadIdentity}>;
 // Completed immutable data only: never retain promises, streams, stubs, leases,
@@ -137,6 +138,14 @@ async function acquireWorkerQueryCut(
   expectedPrefixes: readonly VirtualPrefix[],
   knownSnapshot?: ReadIdentity,
 ): Promise<WorkerReadCut> {
+  if (knownSnapshot !== undefined) {
+    const validation = await completedReadHeadRouter.validate(env, graphId, query, knownSnapshot);
+    tracing.getActiveSpan()?.setAttribute("poneglyph.query.read_head.hit", validation.kind === "unchanged");
+    if (validation.kind === "unchanged") {
+      return {unchanged: true, snapshotSeq: Math.max(...knownSnapshot.map(owner => owner.snapshotSeq))};
+    }
+    tracing.getActiveSpan()?.setAttribute("poneglyph.query.read_head.fallback", validation.reason);
+  }
   let response: Response;
   try {
     response = await env.GRAPH_FACADES.getByName(coordinatorObjectName(graphId)).fetch("https://facade.internal/_query-read-cut", {
@@ -145,6 +154,8 @@ async function acquireWorkerQueryCut(
       body: JSON.stringify({graphId, query, ...(knownSnapshot === undefined ? {} : {knownSnapshot})}),
     });
   } catch (cause) {
+    console.error({event: "candidate-canonical-cut-transport", errorName: cause instanceof Error ? cause.name : "unknown",
+      errorMessage: cause instanceof Error ? cause.message.slice(0, 300) : String(cause).slice(0, 300)});
     throw new PoneglyphNetworkError("Graph read is unavailable", cause);
   }
 
