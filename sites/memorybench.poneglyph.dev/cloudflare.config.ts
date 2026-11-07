@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
     entrypoint: local ? operator : site, compatibilityDate: "2026-10-13",
     compatibilityFlags: ["nodejs_compat"], workersDev: false, previewUrls: false,
     domains: local ? [] : ["memorybench.poneglyph.dev"],
-    observability: { enabled: true, logs: { enabled: true }, traces: { enabled: true, headSamplingRate: 1 } },
+    observability: { enabled: true, headSamplingRate: 0.01, logs: { enabled: true, headSamplingRate: 0.01 }, traces: { enabled: true, headSamplingRate: 0.01 } },
     env: local ? operatorBindings : siteBindings,
   } };
 });

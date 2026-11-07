@@ -11,6 +11,6 @@ export default defineConfig({
     previewUrls: false,
     domains: ["poneglyph.dev"],
     assets: { notFoundHandling: "404-page", htmlHandling: "auto-trailing-slash" },
-    observability: { enabled: true, logs: { enabled: true } },
+    observability: { enabled: true, headSamplingRate: 0.01, logs: { enabled: true, headSamplingRate: 0.01 }, traces: { enabled: true, headSamplingRate: 0.01 } },
   },
 });
