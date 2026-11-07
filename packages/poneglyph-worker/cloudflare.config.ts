@@ -35,7 +35,7 @@ function makeServiceWorker(name: string, grants: GrantJson) {
     workersDev: false,
     previewUrls: false,
     domains: [],
-    observability: { enabled: true, logs: { enabled: true }, traces: { enabled: true, headSamplingRate: 1.0 } },
+    observability: { enabled: true, headSamplingRate: 0.01, logs: { enabled: true, headSamplingRate: 0.01 }, traces: { enabled: true, headSamplingRate: 0.01 } },
     env: {
       GRAPH_FACADES: bindings.durableObject({ worker: name, exportName: "GraphCoordinatorDO" }),
       GRAPH_LEDGERS: bindings.durableObject({ worker: name, exportName: "GraphLedgerDO" }),
